@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import CatalogView from '@/views/CatalogView.vue'
-import { eur, mm, pct, qtyRule, suggestedQty, toField, type Accessory, type Color, type Material, type PricingSettings } from '@/lib/catalog'
+import { eur, km, mm, pct, qtyRule, suggestedQty, toField, type Accessory, type Color, type DeliveryEstimate, type DeliverySettings, type Material, type PricingSettings } from '@/lib/catalog'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 import { useAuthStore } from '@/stores/auth'
 import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
@@ -27,6 +27,19 @@ const ACCS: Accessory[] = [
   { id: 'a4', nom: 'Vis inox', prix: 0.4, unite: 'piece', modeles: ['couvertine', 'bandeau'], quantiteAuto: 'aucune', quantiteFixe: 0, actif: false, position: 4 },
 ]
 
+const DELIVERY: DeliverySettings = {
+  retraitActif: true,
+  retraitInfo: 'Du lundi au jeudi, 7h30-16h.',
+  atelierAdresse: '42490 Fraisses',
+  atelierLabel: 'Fraisses 42490',
+  zones: [
+    { distanceMax: 30, prix: 39, franco: 500 },
+    { distanceMax: 80, prix: 69, franco: null },
+  ],
+  longueurSeuil: null,
+  longueurPrix: 0,
+}
+
 const SETTINGS: PricingSettings = {
   prixPliMl: 0.9,
   miseEnRoute: 18,
@@ -50,6 +63,7 @@ async function setup(path = '/catalogue', extra: Parameters<typeof mockApi>[0] =
     'GET /catalog/colors': [200, { colors: COLS }],
     'GET /catalog/settings': [200, { settings: SETTINGS }],
     'GET /catalog/accessories': [200, { accessories: ACCS }],
+    'GET /catalog/delivery': [200, { delivery: DELIVERY }],
     ...extra,
   })
   const pinia = freshPinia()
@@ -333,5 +347,147 @@ describe('Accessoires', () => {
     expect(n(describeEntry(e).text)).toBe('A modifié l’accessoire Bouchon de couvertine : prix 6,90 € → 7,20 €, quantité proposée nombre fixe → une par pièce')
     const c = { action: 'catalog.accessory_created', details: { nom: 'Embouts de bavette', prix: 9.6, unite: 'paire' } } as unknown as AuditEntry
     expect(n(describeEntry(c).text)).toBe('A ajouté l’accessoire Embouts de bavette (9,60 € la paire)')
+  })
+})
+
+describe('Livraison', () => {
+  const open = async (extra: Parameters<typeof mockApi>[0] = {}) => {
+    const r = await setup('/catalogue?onglet=livraison', extra)
+    return { ...r, p: r.panel('livraison') }
+  }
+  type P = Awaited<ReturnType<typeof open>>['p']
+  const btn = (p: P, text: string) => p.findAll('button').find((b) => b.text().includes(text))!
+  const val = (p: P, sel: string) => (p.get(sel).element as HTMLInputElement).value
+
+  it('affiche le retrait, l’adresse localisée et les zones à la française', async () => {
+    const { p } = await open()
+    expect((p.get('#d-retrait').element as HTMLInputElement).checked).toBe(true)
+    expect(val(p, '#d-retrait-info')).toBe('Du lundi au jeudi, 7h30-16h.')
+    expect(p.text()).toContain('Localisée : Fraisses 42490')
+    expect(p.findAll('.zones li')).toHaveLength(2)
+    expect(val(p, '#d-prix-0')).toBe('39,00')
+    expect(val(p, '#d-franco-0')).toBe('500,00')
+    expect(val(p, '#d-franco-1')).toBe('')
+    expect(p.find('#d-seuil').exists()).toBe(false)
+    expect(km(14.66)).toBe('14,7 km')
+  })
+
+  it('n’active l’enregistrement qu’après une modification, et sait annuler', async () => {
+    const { p } = await open()
+    expect(btn(p, 'Enregistrer').attributes('disabled')).toBeDefined()
+    await p.get('#d-retrait').setValue(false)
+    expect(p.find('#d-retrait-info').exists()).toBe(false)
+    expect(p.text()).toContain('Modifications non enregistrées')
+    await btn(p, 'Annuler les modifications').trigger('click')
+    expect((p.get('#d-retrait').element as HTMLInputElement).checked).toBe(true)
+    expect(btn(p, 'Enregistrer').attributes('disabled')).toBeDefined()
+  })
+
+  it('ajoute une zone, active le supplément pièces longues et envoie tout', async () => {
+    const { p, calls } = await open({ 'PATCH /catalog/delivery': [200, { delivery: { ...DELIVERY, longueurSeuil: 2500, longueurPrix: 20 } }] })
+    await btn(p, 'Ajouter une zone').trigger('click')
+    expect(val(p, '#d-km-2')).toBe('130')
+    expect(val(p, '#d-prix-2')).toBe('99,00')
+    await p.get('button[aria-label="Supprimer la zone 3"]').trigger('click')
+    await p.get('#d-longueur').setValue(true)
+    expect(val(p, '#d-seuil')).toBe('2500')
+    expect(val(p, '#d-supplement')).toBe('20,00')
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({
+      retraitActif: true,
+      retraitInfo: 'Du lundi au jeudi, 7h30-16h.',
+      atelierAdresse: '42490 Fraisses',
+      zones: [
+        { distanceMax: '30', prix: '39,00', franco: '500,00' },
+        { distanceMax: '80', prix: '69,00', franco: '' },
+      ],
+      longueurSeuil: '2500',
+      longueurPrix: '20,00',
+    })
+    expect(p.text()).toContain('Réglages de livraison enregistrés')
+  })
+
+  it('désactiver le supplément envoie un seuil vide', async () => {
+    const { p, calls } = await open({
+      'GET /catalog/delivery': [200, { delivery: { ...DELIVERY, longueurSeuil: 2500, longueurPrix: 20 } }],
+      'PATCH /catalog/delivery': [200, { delivery: DELIVERY }],
+    })
+    await p.get('#d-longueur').setValue(false)
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    const body = calls.find((c) => c.method === 'PATCH')!.body
+    expect(body.longueurSeuil).toBe('')
+    expect(body).not.toHaveProperty('longueurPrix')
+  })
+
+  it('affiche l’erreur des zones et celle de l’adresse sous leur champ', async () => {
+    const { p } = await open({ 'PATCH /catalog/delivery': [400, { error: 'Adresse introuvable : précisez la rue, le code postal et la commune.', field: 'atelierAdresse' }] })
+    await p.get('#d-adresse').setValue('Nulle part')
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(p.get('#d-adresse').attributes('aria-invalid')).toBe('true')
+    expect(p.text()).toContain('Adresse introuvable')
+  })
+
+  it('teste une adresse : distance, zone, livraison offerte et supplément', async () => {
+    const result: DeliveryEstimate = {
+      adresse: 'Saint-Étienne 42000',
+      distanceKm: 14.7,
+      methode: 'route',
+      retrait: { actif: true, info: '' },
+      zone: DELIVERY.zones[0]!,
+      offerte: true,
+      supplement: 20,
+      total: 20,
+    }
+    const { p, calls } = await open({ 'POST /catalog/delivery/estimate': [200, result] })
+    await p.get('#sim-adresse').setValue('42000 Saint-Étienne')
+    await p.get('#sim-montant').setValue('650')
+    await p.get('#sim-longueur').setValue('2800')
+    await p.get('form[aria-label="Tester une adresse"]').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ adresse: '42000 Saint-Étienne', montant: '650', longueurMax: '2800' })
+    const r = n(p.get('.result').text())
+    expect(r).toContain('Saint-Étienne 42000')
+    expect(r).toContain('14,7 km par la route')
+    expect(r).toContain('Livraison offerte : la commande atteint 500,00 € HT.')
+    expect(r).toContain('+20,00 €')
+    expect(r).toContain('Livraison : 20,00 € HT')
+  })
+
+  it('annonce « hors zone » et le retrait possible', async () => {
+    const out: DeliveryEstimate = { adresse: 'Paris 75001', distanceKm: 512, methode: 'estimation', retrait: { actif: true, info: '' }, zone: null, offerte: false, supplement: 0, total: null }
+    const { p } = await open({ 'POST /catalog/delivery/estimate': [200, out] })
+    await p.get('#sim-adresse').setValue('Paris')
+    await p.get('form[aria-label="Tester une adresse"]').trigger('submit')
+    await flushPromises()
+    expect(p.get('.result').text()).toContain('Hors zone : pas de livraison au-delà de 80 km.')
+    expect(p.get('.result').text()).toContain('estimation à vol d’oiseau')
+    expect(p.get('.result').text()).toContain('Retrait à l’atelier possible')
+  })
+
+  it('affiche l’erreur du service d’adresses', async () => {
+    const { p } = await open({ 'POST /catalog/delivery/estimate': [503, { error: 'Le service de localisation des adresses ne répond pas. Réessayez dans quelques minutes.' }] })
+    await p.get('#sim-adresse').setValue('42000')
+    await p.get('form[aria-label="Tester une adresse"]').trigger('submit')
+    await flushPromises()
+    expect(p.text()).toContain('ne répond pas')
+  })
+
+  it('décrit les changements de livraison dans le journal', () => {
+    const e = {
+      action: 'catalog.delivery_updated',
+      details: {
+        changements: {
+          zones: { avant: [{ distanceMax: 30, prix: 39, franco: null }], apres: [{ distanceMax: 30, prix: 39, franco: 500 }] },
+          longueurSeuil: { avant: null, apres: 2500 },
+          retraitActif: { avant: true, apres: false },
+        },
+      },
+    } as unknown as AuditEntry
+    expect(n(describeEntry(e).text)).toBe(
+      'A modifié la livraison : zones de livraison 30 km : 39,00 € → 30 km : 39,00 € (offerte dès 500,00 €), seuil des pièces longues aucun → 2500 mm, retrait à l’atelier proposé → désactivé',
+    )
   })
 })

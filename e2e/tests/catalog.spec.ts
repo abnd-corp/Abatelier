@@ -106,6 +106,63 @@ test.describe('Tarifs et catalogue', () => {
     await expect(adminPage.getByRole('cell', { name: new RegExp(`A ajouté l’accessoire ${nom} \\(3,20\\s€ la pièce\\)`) })).toBeVisible()
   })
 
+  test('la direction règle la livraison et teste une adresse de chantier', async ({ adminPage }) => {
+    // Réglages partagés par tous les tests : on remet les valeurs de départ à la fin
+    await adminPage.goto('/catalogue')
+    await adminPage.getByRole('tab', { name: /Livraison/ }).click()
+    await expect(adminPage).toHaveURL(/onglet=livraison/)
+    const panel = adminPage.getByRole('tabpanel', { name: 'Livraison' })
+    const reglages = panel.getByRole('form', { name: 'Réglages de livraison' })
+    const save = reglages.getByRole('button', { name: 'Enregistrer', exact: true })
+    await expect(reglages.getByLabel('Zone 1 : prix')).toHaveValue('39,00')
+    await expect(save).toBeDisabled()
+
+    // Livraison offerte dès 300 € dans la première zone, supplément pièces longues
+    await reglages.getByLabel('Zone 1 : livraison offerte dès').fill('300')
+    await reglages.getByLabel('Supplément de livraison pour les pièces longues').check()
+    await reglages.getByLabel('Au-delà de').fill('2500')
+    await reglages.getByLabel('Supplément', { exact: true }).fill('25')
+    await save.click()
+    await expect(panel.getByText('Réglages de livraison enregistrés')).toBeVisible()
+    await adminPage.reload()
+    await expect(reglages.getByLabel('Zone 1 : livraison offerte dès')).toHaveValue('300,00')
+    await expect(reglages.getByLabel('Au-delà de')).toHaveValue('2500')
+
+    // Une zone en double est refusée
+    await reglages.getByLabel('Zone 2 : distance maximum').fill('30')
+    await save.click()
+    await expect(reglages.getByRole('alert')).toContainText('de la plus proche à la plus lointaine')
+    await reglages.getByRole('button', { name: 'Annuler les modifications' }).click()
+
+    // Simulateur : Saint-Étienne, commande de 400 €, une pièce de 2,8 m
+    const sim = panel.getByRole('form', { name: 'Tester une adresse' })
+    await sim.getByLabel('Adresse du chantier').fill('10 place Jean Jaurès, 42000 Saint-Étienne')
+    await sim.getByLabel('Montant commande').fill('400')
+    await sim.getByLabel('Pièce la plus longue').fill('2800')
+    await sim.getByRole('button', { name: 'Calculer' }).click()
+    const result = sim.getByRole('status')
+    await expect(result).toContainText('Saint-Étienne 42000')
+    await expect(result).toContainText('Zone jusqu’à 30 km')
+    await expect(result).toContainText('Livraison offerte')
+    await expect(result).toContainText(/Livraison : 25,00\s€ HT/)
+    // Trop loin
+    await sim.getByLabel('Adresse du chantier').fill('75001 Paris')
+    await sim.getByRole('button', { name: 'Calculer' }).click()
+    await expect(result).toContainText('Hors zone : pas de livraison au-delà de 80 km.')
+
+    // Au journal
+    await adminPage.goto('/journal')
+    await adminPage.getByRole('button', { name: 'Catalogue et prix' }).click()
+    await expect(adminPage.getByRole('cell', { name: /A modifié la livraison : .*offerte dès 300,00\s€.*seuil des pièces longues aucun → 2500 mm/ }).first()).toBeVisible()
+
+    // Retour aux valeurs de départ pour les autres tests
+    const res = await adminPage.request.patch('/api/catalog/delivery', {
+      data: { zones: [{ distanceMax: 30, prix: 39, franco: null }, { distanceMax: 80, prix: 69, franco: null }], longueurSeuil: null, longueurPrix: 0 },
+      headers: { Origin: new URL(adminPage.url()).origin },
+    })
+    expect(res.status()).toBe(200)
+  })
+
   test('la direction règle le façonnage et les remises quantité', async ({ adminPage }) => {
     // Réglages partagés par tous les tests : on remet les valeurs de départ à la fin
     await adminPage.goto('/catalogue')
@@ -158,6 +215,7 @@ test.describe('Tarifs et catalogue', () => {
       await expect(page.getByRole('link', { name: 'Tarifs et catalogue' })).toHaveCount(0)
       expect((await page.request.get('/api/catalog/materials')).status()).toBe(403)
       expect((await page.request.get('/api/catalog/accessories')).status()).toBe(403)
+      expect((await page.request.get('/api/catalog/delivery')).status()).toBe(403)
       await page.context().close()
     }
   })

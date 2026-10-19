@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply } from 'fastify'
+import type { FastifyInstance } from 'fastify'
 import { asc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
@@ -6,26 +6,7 @@ import { accessories, colors, materials, MODELES, pricingSettings, QUANTITES_AUT
 import { getPricingSettings } from '../pricing.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
-
-// Les nombres arrivent du formulaire en texte français (« 62,50 ») ou en nombre
-const decimal = (min: number, max: number, label: string, unit: string) =>
-  z.preprocess(
-    (v) => (typeof v === 'string' ? Number(v.replace(/\s/g, '').replace(',', '.')) : v),
-    z
-      .number({ error: `${label} : nombre attendu.` })
-      .min(min, `${label} : ${min} ${unit} minimum.`)
-      .max(max, `${label} : ${max} ${unit} maximum.`)
-      .transform((n) => Math.round(n * 100) / 100),
-  )
-const integer = (min: number, max: number, label: string, unit: string) =>
-  z.preprocess(
-    (v) => (typeof v === 'string' ? Number(v.trim()) : v),
-    z
-      .number({ error: `${label} : nombre attendu.` })
-      .int(`${label} : nombre entier attendu.`)
-      .min(min, `${label} : ${min} ${unit} minimum.`)
-      .max(max, `${label} : ${max} ${unit} maximum.`),
-  )
+import { decimal, diff, integer, invalid, isUniqueViolation } from '../validation.js'
 
 const materialFields = {
   nom: z.string().trim().min(1, 'Le nom de la matière est requis.').max(60),
@@ -58,23 +39,6 @@ const accessoryFields = {
   quantiteAuto: z.enum(QUANTITES_AUTO, { error: 'Quantité proposée invalide.' }),
   quantiteFixe: integer(0, 100, 'Quantité fixe', 'unités'),
   actif: z.boolean().optional(),
-}
-
-function invalid(reply: FastifyReply, e: z.ZodError) {
-  const issue = e.issues[0]
-  return reply.code(400).send({ error: issue?.message ?? 'Données invalides.', field: issue?.path[0] !== undefined ? String(issue.path[0]) : undefined })
-}
-
-const isUniqueViolation = (e: unknown) => {
-  const err = e as { code?: string; cause?: { code?: string } }
-  return err?.code === '23505' || err?.cause?.code === '23505'
-}
-
-/** Différences avant / après, pour le journal (utile pour suivre l'historique des prix). Les tableaux sont comparés par leur contenu. */
-function diff<T extends Record<string, unknown>>(before: T, changes: Partial<T>) {
-  const out: Record<string, { avant: unknown; apres: unknown }> = {}
-  for (const [k, v] of Object.entries(changes)) if (v !== undefined && JSON.stringify(v) !== JSON.stringify(before[k])) out[k] = { avant: before[k], apres: v }
-  return out
 }
 
 const validId = (id: string) => z.uuid().safeParse(id).success

@@ -18,6 +18,7 @@ const PAGES = [
   { name: '11-catalogue-coloris', path: '/catalogue?onglet=coloris' },
   { name: '12-catalogue-faconnage', path: '/catalogue?onglet=faconnage' },
   { name: '13-catalogue-accessoires', path: '/catalogue?onglet=accessoires' },
+  { name: '14-catalogue-livraison', path: '/catalogue?onglet=livraison' },
 ]
 
 test('captures', async ({ page, baseURL }, info) => {

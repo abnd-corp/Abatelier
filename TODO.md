@@ -15,7 +15,7 @@
 - [x] Coloris (référence, teinte, majoration, délai)
 - [x] Façonnage et conditions (pli, mise en route, minimum, remise pro, TVA, délai, remises quantité, limites machines)
 - [x] Accessoires (prix HT à la pièce ou à la paire, modèles concernés, quantité proposée : fixe, par pièce ou par jonction)
-- [ ] **Livraison** : retrait à l'atelier (gratuit), zones de livraison (distance maximum, prix)
+- [x] Livraison (retrait atelier activable, zones par distance avec livraison offerte dès un montant, supplément pièces longues, distance par la route via l'IGN, simulateur d'adresse)
 - [ ] Simulateur de prix (facultatif) : une pièce type dont le prix se recalcule quand on change un tarif
 
 ### Modèles de devis et de factures

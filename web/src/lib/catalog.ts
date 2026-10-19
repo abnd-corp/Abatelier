@@ -111,3 +111,33 @@ export function qtyRule(a: Pick<Accessory, 'quantiteAuto' | 'quantiteFixe'>) {
       return '—'
   }
 }
+
+export interface DeliveryZone {
+  distanceMax: number
+  prix: number
+  franco: number | null
+}
+
+export interface DeliverySettings {
+  retraitActif: boolean
+  retraitInfo: string
+  atelierAdresse: string
+  atelierLabel: string | null
+  zones: DeliveryZone[]
+  longueurSeuil: number | null
+  longueurPrix: number
+}
+
+export interface DeliveryEstimate {
+  adresse: string
+  distanceKm: number
+  methode: 'route' | 'estimation'
+  retrait: { actif: boolean; info: string }
+  zone: DeliveryZone | null
+  offerte: boolean
+  supplement: number
+  total: number | null
+}
+
+/** 14.7 → « 14,7 km » */
+export const km = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km`

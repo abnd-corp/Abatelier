@@ -193,9 +193,42 @@ export const pricingSettings = pgTable(
   (t) => [check('pricing_settings_single_row', sql`${t.id} = 1`)],
 )
 
+export interface DeliveryZone {
+  // Jusqu'à cette distance par la route depuis l'atelier, en km…
+  distanceMax: number
+  // …prix HT de la livraison
+  prix: number
+  // Livraison offerte à partir de ce montant de commande HT (null : jamais offerte)
+  franco: number | null
+}
+
+// Réglages de livraison : une seule ligne (id = 1), modifiée par la direction
+export const deliverySettings = pgTable(
+  'delivery_settings',
+  {
+    id: integer('id').primaryKey().default(1),
+    // Retrait gratuit à l'atelier
+    retraitActif: boolean('retrait_actif').notNull().default(true),
+    retraitInfo: text('retrait_info').notNull().default(''),
+    // Point de départ des livraisons. Les coordonnées viennent du géocodage de l'adresse.
+    atelierAdresse: text('atelier_adresse').notNull(),
+    atelierLabel: text('atelier_label'),
+    atelierLat: numeric('atelier_lat', { precision: 9, scale: 6, mode: 'number' }),
+    atelierLon: numeric('atelier_lon', { precision: 9, scale: 6, mode: 'number' }),
+    // Paliers de distance, du plus proche au plus loin. Au-delà du dernier : pas de livraison.
+    zones: jsonb('zones').$type<DeliveryZone[]>().notNull(),
+    // Supplément si une pièce dépasse cette longueur en mm (null : pas de supplément)
+    longueurSeuil: integer('longueur_seuil'),
+    longueurPrix: numeric('longueur_prix', { precision: 8, scale: 2, mode: 'number' }).notNull().default(0),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [check('delivery_settings_single_row', sql`${t.id} = 1`)],
+)
+
 export type User = typeof users.$inferSelect
 export type Employee = typeof employees.$inferSelect
 export type Material = typeof materials.$inferSelect
 export type Color = typeof colors.$inferSelect
 export type PricingSettings = typeof pricingSettings.$inferSelect
 export type Accessory = typeof accessories.$inferSelect
+export type DeliverySettings = typeof deliverySettings.$inferSelect

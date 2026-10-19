@@ -47,6 +47,18 @@ const CATALOG_FIELDS: Record<string, { label: string; fmt: (v: unknown) => strin
   modeles: { label: 'modèles', fmt: (v) => (Array.isArray(v) ? v.join(', ') : String(v)) },
   quantiteAuto: { label: 'quantité proposée', fmt: (v) => QTY[String(v)] ?? String(v) },
   quantiteFixe: { label: 'quantité fixe', fmt: (v) => String(v) },
+  retraitActif: { label: 'retrait à l’atelier', fmt: (v) => (v ? 'proposé' : 'désactivé') },
+  retraitInfo: { label: 'infos de retrait', fmt: (v) => `« ${v} »` },
+  atelierAdresse: { label: 'adresse de départ', fmt: (v) => `« ${v} »` },
+  longueurSeuil: { label: 'seuil des pièces longues', fmt: (v) => (v === null ? 'aucun' : `${v} mm`) },
+  longueurPrix: { label: 'supplément pièces longues', fmt: eur },
+  zones: {
+    label: 'zones de livraison',
+    fmt: (v) =>
+      Array.isArray(v) && v.length
+        ? v.map((z: { distanceMax: number; prix: number; franco: number | null }) => `${z.distanceMax} km : ${eur(z.prix)}${z.franco !== null ? ` (offerte dès ${eur(z.franco)})` : ''}`).join(', ')
+        : 'aucune',
+  },
   remisesQuantite: {
     label: 'remises quantité',
     fmt: (v) =>
@@ -116,6 +128,8 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A ajouté l’accessoire ${d.nom} (${eur(d.prix)} ${d.unite === 'paire' ? 'la paire' : 'la pièce'})`, tone: 'accent' }
     case 'catalog.accessory_updated':
       return { text: `A modifié l’accessoire ${d.nom} : ${changes(d.changements)}`, tone: 'accent' }
+    case 'catalog.delivery_updated':
+      return { text: `A modifié la livraison : ${changes(d.changements)}`, tone: 'accent' }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

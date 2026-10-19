@@ -9,6 +9,8 @@ const defaults: Record<string, string> = {
   LOGIN_RATE_LIMIT: '30',
   IDLE_TIMEOUT_HOURS: '12',
   SESSION_TTL_DAYS: '30',
+  // Aucun appel aux services de l'IGN pendant les tests (voir src/geo.ts)
+  GEO_FAKE: '1',
 }
 if (!process.env.DATABASE_URL) {
   Object.assign(defaults, { DB_HOST: 'localhost', DB_NAME: 'patalu_test', DB_PASSWORD_FILE: '../secrets/db_password.txt' })

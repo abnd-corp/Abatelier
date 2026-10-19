@@ -12,6 +12,7 @@ const PAGES = [
   { path: '/catalogue', heading: 'Tarifs et catalogue' },
   { path: '/catalogue?onglet=coloris', heading: 'Tarifs et catalogue' },
   { path: '/catalogue?onglet=accessoires', heading: 'Tarifs et catalogue' },
+  { path: '/catalogue?onglet=livraison', heading: 'Tarifs et catalogue' },
   { path: '/catalogue?onglet=faconnage', heading: 'Tarifs et catalogue' },
   { path: '/mon-compte', heading: 'Mon compte' },
 ]
