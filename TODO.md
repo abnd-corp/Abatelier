@@ -37,9 +37,17 @@ Les clients arriveront surtout par le panier du site (coordonnées saisies à la
 - [ ] **RGPD, à trancher** : suppression du compte à la demande du client, ou conservation pendant une durée annoncée puis suppression. Les factures doivent de toute façon être gardées 10 ans : on pourrait anonymiser la fiche (nom, contact) en gardant les factures. À valider avec leur comptable.
 - [x] Lecture seule pour la RH (permission `clients.read`)
 
-### Stock (prochaine étape)
-- [ ] Articles : tôles par matière, épaisseur et coloris ; accessoires
-- [ ] Décompte automatique quand une commande passe « en fabrication », mouvements tracés, alertes de stock bas
+### Fiches de fabrication (prochaine étape)
+- [ ] Modèle de fiche de fabrication imprimable (PDF, comme les modèles de devis) : numéro, date prévue, pièces avec profil coté, plis et sens, quantités, accessoires, case « fait » par pièce. Jamais de client ni de prix.
+- [ ] Bouton « Imprimer la fiche » dans Fabrication
+
+### Stock et découpe (ensuite)
+Le pliage commence par de la découpe : chaque pièce est une bande de « développé × longueur » prise dans une feuille.
+- [ ] Feuilles en stock par matière, épaisseur, coloris et **format** (ex. 1250 × 3000 mm) ; accessoires
+- [ ] **Plan de découpe calculé** (pas estimé) : placer les bandes de chaque commande dans les feuilles (découpe à la cisaille, en guillotine), nombre de feuilles nécessaires, schéma par feuille
+- [ ] **Chutes** : chaque chute a ses dimensions. Au-dessus d'une taille minimum, elle est remise en stock et réutilisée en priorité par les plans suivants ; en dessous, elle est perdue. Taux de chute par commande et par mois.
+- [ ] Décompte automatique quand une commande passe « en fabrication » (feuilles entamées, chutes créées), mouvements tracés, alertes de stock bas
+- [ ] **Questions pour l'atelier** : formats de feuilles achetés par matière ; sens de laquage à respecter (pièces dans le sens de la longueur ?) ; taille minimum d'une chute réutilisable ; largeur perdue à chaque coupe
 
 ### Trésorerie
 - [ ] Encaissements : factures payées, en attente, en retard ; relances
@@ -59,6 +67,8 @@ Les clients arriveront surtout par le panier du site (coordonnées saisies à la
 - [ ] Configurateur de pliage public (sans compte), prix en direct à partir du catalogue
 - [ ] Comptes clients séparés des comptes de l'équipe : inscription, connexion, mot de passe oublié par e-mail
 - [ ] Commander (compte obligatoire), suivre et gérer ses commandes, recommander à l'identique
+- [ ] **Devis imprimable par le client** depuis son panier (PDF au modèle de devis, numéro D-…, valable N jours), transformable en commande
+- [ ] **Espace client** : ses commandes (suivi des étapes), ses devis, ses factures en PDF, ses adresses de chantier
 
 ## 4. Technique et administration
 - [ ] **Recréer le dépôt GitHub** quand le réseau le permet :
