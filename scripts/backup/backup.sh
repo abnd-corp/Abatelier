@@ -104,7 +104,7 @@ verify() {
 
   status=0
   printf '  %-20s %10s %10s\n' table actuelle sauvegarde
-  for t in users employees materials colors pricing_settings piece_models accessories delivery_settings company_settings document_template document_counters clients client_sites orders order_lines order_events sessions login_attempts audit_log; do
+  for t in users employees materials colors pricing_settings piece_models accessories delivery_settings company_settings document_template document_counters clients client_sites orders order_lines order_events billing_documents sessions login_attempts audit_log; do
     now=$(psql -Atc "select count(*) from \"$t\"")
     saved=$(psql -d "$VERIFY_DB" -Atc "select count(*) from \"$t\"" 2>/dev/null) || { saved=ABSENTE; status=1; }
     printf '  %-20s %10s %10s\n' "$t" "$now" "$saved"

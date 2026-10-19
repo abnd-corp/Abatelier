@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify'
-import { and, desc, eq, inArray, like, lt, or, type SQL } from 'drizzle-orm'
+import { and, desc, eq, inArray, like, lt, notLike, or, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import { auditLog, users } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
+import { can } from '../auth/permissions.js'
 import { describeDevice } from '../audit.js'
 
 const query = z.object({
@@ -24,7 +25,7 @@ const TYPE_FILTERS: Record<string, SQL | undefined> = {
     like(auditLog.action, 'session.%'),
   ),
   catalog: like(auditLog.action, 'catalog.%'),
-  documents: like(auditLog.action, 'documents.%'),
+  documents: or(like(auditLog.action, 'documents.%'), like(auditLog.action, 'billing.%')),
   clients: like(auditLog.action, 'client.%'),
   orders: like(auditLog.action, 'order.%'),
 }
@@ -35,7 +36,13 @@ export async function auditRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: 'Filtre invalide.' })
     const { userId, type, before, limit } = parsed.data
 
-    const filters = [TYPE_FILTERS[type], userId ? eq(auditLog.userId, userId) : undefined, before ? lt(auditLog.id, before) : undefined]
+    const filters = [
+      TYPE_FILTERS[type],
+      userId ? eq(auditLog.userId, userId) : undefined,
+      before ? lt(auditLog.id, before) : undefined,
+      // La RH lit le journal, mais ne voit ni les devis, ni les factures
+      can(req.user!.role, 'billing.manage') ? undefined : notLike(auditLog.action, 'billing.%'),
+    ]
     const rows = await db
       .select({
         id: auditLog.id,

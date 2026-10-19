@@ -20,6 +20,7 @@ const employeesParent = { label: 'Salariés', to: { name: 'employees' } }
 const clientsParent = { label: 'Clients', to: { name: 'clients' } }
 const ordersParent = { label: 'Commandes', to: { name: 'orders' } }
 const productionParent = { label: 'Fabrication', to: { name: 'production' } }
+const billingParent = { label: 'Devis et factures', to: { name: 'billing' } }
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -84,6 +85,18 @@ export const router = createRouter({
           name: 'order',
           component: () => import('@/views/OrderView.vue'),
           meta: { perm: 'orders.manage', section: 'Ventes', parent: ordersParent, title: 'Commande', menu: 'orders' },
+        },
+        {
+          path: 'factures',
+          name: 'billing',
+          component: () => import('@/views/BillingView.vue'),
+          meta: { perm: 'billing.manage', section: 'Ventes', title: 'Devis et factures' },
+        },
+        {
+          path: 'factures/:id',
+          name: 'billing-doc',
+          component: () => import('@/views/BillingDocView.vue'),
+          meta: { perm: 'billing.manage', section: 'Ventes', parent: billingParent, title: 'Document', menu: 'billing' },
         },
         {
           path: 'fabrication',

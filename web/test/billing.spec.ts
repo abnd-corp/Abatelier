@@ -1,0 +1,274 @@
+import { describe, expect, it } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import BillingView from '@/views/BillingView.vue'
+import BillingDocView from '@/views/BillingDocView.vue'
+import OrderView from '@/views/OrderView.vue'
+import type { BillingDetail, BillingDoc, BillingSummary } from '@/lib/billing'
+import type { OrderDetail } from '@/lib/orders'
+import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
+import { useAuthStore, type User } from '@/stores/auth'
+import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
+
+// Les montants utilisent des espaces insécables
+const norm = (t: string) => t.replace(/[  ]/g, ' ')
+
+async function mountAt(component: object, path: string, routes: Parameters<typeof mockApi>[0], user: User = ADMIN) {
+  const calls = mockApi(routes)
+  const pinia = freshPinia()
+  useAuthStore().user = user
+  const router = makeRouter()
+  await router.push(path)
+  await router.isReady()
+  const wrapper = mount(component, { global: { plugins: [pinia, router] } })
+  await flushPromises()
+  return { wrapper, router, calls }
+}
+const button = (w: ReturnType<typeof mount>, text: string) => w.findAll('button').find((b) => b.text().includes(text))
+const sent = (calls: ReturnType<typeof mockApi>) => calls.filter((c) => c.method !== 'GET').map((c) => ({ method: c.method, path: c.path, body: c.body }))
+
+const SUMMARY: BillingSummary = {
+  id: 'f1',
+  type: 'facture',
+  numero: 'F-2026-0001',
+  orderId: 'o1',
+  orderNumero: 'C-2026-0001',
+  clientId: 'c1',
+  client: 'Toitures du Forez',
+  emisLe: '2026-10-20T08:00:00Z',
+  echeance: '2026-11-19',
+  ht: 400,
+  ttc: 480,
+  payeLe: null,
+  statut: 'en_retard',
+}
+const LIST = {
+  documents: [SUMMARY, { ...SUMMARY, id: 'f2', numero: 'F-2026-0002', client: 'Jean Dupont', statut: 'payee', payeLe: '2026-10-20', ttc: 120 }],
+  totals: { en_retard: { n: 1, ttc: 480 }, payee: { n: 1, ttc: 120 } },
+}
+
+const DOC: BillingDoc = {
+  id: 'f1',
+  type: 'facture',
+  numero: 'F-2026-0001',
+  orderId: 'o1',
+  clientId: 'c1',
+  factureId: null,
+  emisLe: '2026-10-20T08:00:00Z',
+  echeance: '2026-11-19',
+  clientNom: 'Toitures du Forez',
+  clientAdresse: '8 avenue de la Gare\n42700 Firminy\nSIRET 732 829 320 00074',
+  lignes: [
+    { designation: 'Couvertine · Mur sud', detail: 'Aluminium 1,5 mm · Gris anthracite (RAL 7016)', quantite: 4, prixUnitaire: 100.08 },
+    { designation: 'Remise professionnelle', quantite: 1, prixUnitaire: -40.03 },
+  ],
+  ht: 360.29,
+  tauxTva: 20,
+  tva: 72.06,
+  ttc: 432.35,
+  motif: null,
+  envoyeLe: null,
+  reponse: null,
+  reponseLe: null,
+  payeLe: null,
+  modePaiement: null,
+  createdByNom: 'Le Chef',
+  statut: 'emise',
+}
+const detail = (over: Partial<BillingDoc> = {}, lie: BillingDetail['lie'] = null): BillingDetail => ({
+  document: { ...DOC, ...over },
+  order: { id: 'o1', numero: 'C-2026-0001', statut: 'livree', statutLabel: 'Livrée / retirée' },
+  lie,
+})
+
+describe('Liste des devis et factures', () => {
+  it('affiche les factures avec leur statut, et les montants à encaisser et en retard', async () => {
+    const { wrapper, calls } = await mountAt(BillingView, '/factures', { 'GET /billing': [200, LIST] })
+    expect(calls[0]!.path).toBe('/billing?type=facture')
+    const txt = norm(wrapper.text())
+    expect(txt).toContain('F-2026-0001')
+    expect(txt).toContain('Toitures du Forez')
+    expect(txt).toContain('C-2026-0001')
+    expect(txt).toContain('Payée le')
+    const figures = wrapper.findAll('.figure').map((f) => norm(f.text()))
+    expect(figures[0]).toContain('À encaisser480,00 €1 facture')
+    expect(figures[1]).toContain('En retard480,00 €')
+    expect(wrapper.find('[role="tab"][aria-selected="true"]').text()).toBe('Factures')
+    expect(wrapper.find('.pill.bad').text()).toBe('En retard')
+  })
+
+  it('filtre par statut, change de type et ouvre un document', async () => {
+    const { wrapper, router, calls } = await mountAt(BillingView, '/factures', { 'GET /billing': [200, LIST] })
+    await button(wrapper, 'En retard')!.trigger('click')
+    await flushPromises()
+    expect(calls.at(-1)!.path).toBe('/billing?type=facture&statut=en_retard')
+    expect(router.currentRoute.value.query).toEqual({ statut: 'en_retard' })
+    await wrapper.findAll('[role="tab"]')[0]!.trigger('click')
+    await flushPromises()
+    expect(calls.at(-1)!.path).toBe('/billing?type=devis')
+    expect(router.currentRoute.value.query).toEqual({ type: 'devis' })
+    expect(button(wrapper, 'Accepté')).toBeTruthy()
+    await wrapper.find('tbody tr').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.name).toBe('billing-doc')
+  })
+
+  it('explique où se font les documents quand il n’y en a pas', async () => {
+    const { wrapper } = await mountAt(BillingView, '/factures?type=avoir', { 'GET /billing': [200, { documents: [], totals: {} }] })
+    expect(wrapper.text()).toContain('Aucun avoir pour l’instant.')
+    expect(wrapper.text()).toContain('Un avoir s’établit depuis une facture')
+  })
+})
+
+describe('Fiche d’un document', () => {
+  it('montre le détail, le client imprimé et le PDF émis', async () => {
+    const { wrapper } = await mountAt(BillingDocView, '/factures/f1', { 'GET /billing/f1': [200, detail()] })
+    const txt = norm(wrapper.text())
+    expect(wrapper.find('h1').text()).toBe('F-2026-0001')
+    expect(txt).toContain('Couvertine · Mur sud')
+    expect(txt).toContain('400,32 €')
+    expect(txt).toContain('-40,03 €')
+    expect(txt).toContain('432,35 €')
+    expect(txt).toContain('SIRET 732 829 320 00074')
+    expect(wrapper.find('a[href="/api/billing/f1/pdf"]').attributes('target')).toBe('_blank')
+    expect(wrapper.find('.pill').text()).toBe('À envoyer')
+  })
+
+  it('marque la facture envoyée puis enregistre le paiement', async () => {
+    const { wrapper, calls } = await mountAt(BillingDocView, '/factures/f1', {
+      'GET /billing/f1': [200, detail()],
+      'POST /billing/f1/envoi': [200, { envoyeLe: '2026-10-20T09:00:00Z' }],
+      'POST /billing/f1/paiement': [200, { statut: 'payee' }],
+    })
+    await button(wrapper, 'Marquer envoyée')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Facture marquée comme envoyée.')
+    await button(wrapper, 'Enregistrer le paiement')!.trigger('click')
+    await wrapper.find('#pay-date').setValue('2026-10-20')
+    await wrapper.find('#pay-mode').setValue('cheque')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(sent(calls)).toEqual([
+      { method: 'POST', path: '/billing/f1/envoi', body: {} },
+      { method: 'POST', path: '/billing/f1/paiement', body: { date: '2026-10-20', mode: 'cheque' } },
+    ])
+    expect(wrapper.text()).toContain('Paiement enregistré.')
+  })
+
+  it('affiche l’erreur de date sous le champ du paiement', async () => {
+    const { wrapper } = await mountAt(BillingDocView, '/factures/f1', {
+      'GET /billing/f1': [200, detail()],
+      'POST /billing/f1/paiement': [400, { error: 'La date de paiement ne peut pas être dans le futur.', field: 'date' }],
+    })
+    await button(wrapper, 'Enregistrer le paiement')!.trigger('click')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.find('#pay-error').text()).toBe('La date de paiement ne peut pas être dans le futur.')
+    expect(wrapper.find('#pay-date').attributes('aria-invalid')).toBe('true')
+  })
+
+  it('émet un avoir avec son motif, puis ouvre l’avoir', async () => {
+    const { wrapper, router, calls } = await mountAt(BillingDocView, '/factures/f1', {
+      'GET /billing/f1': [200, detail({ payeLe: '2026-10-20', modePaiement: 'virement', statut: 'payee' })],
+      'POST /billing/f1/avoir': [201, { id: 'a1', numero: 'A-2026-0001' }],
+      'GET /billing/a1': [200, detail({ id: 'a1', type: 'avoir', numero: 'A-2026-0001', statut: 'emis', motif: 'Erreur de coloris', echeance: null }, { id: 'f1', numero: 'F-2026-0001' })],
+    })
+    expect(button(wrapper, 'Enregistrer le paiement')).toBeUndefined()
+    expect(button(wrapper, 'Annuler le paiement')).toBeTruthy()
+    await button(wrapper, 'Faire un avoir')!.trigger('click')
+    expect(wrapper.text()).toContain('pensez à rembourser le client')
+    expect(button(wrapper, 'Émettre l’avoir')!.attributes('disabled')).toBeDefined()
+    await wrapper.find('#avoir-motif').setValue('Erreur de coloris')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(sent(calls)).toEqual([{ method: 'POST', path: '/billing/f1/avoir', body: { motif: 'Erreur de coloris' } }])
+    expect(router.currentRoute.value.params.id).toBe('a1')
+    await flushPromises()
+    expect(wrapper.find('h1').text()).toBe('A-2026-0001')
+    expect(wrapper.text()).toContain('Annule la facture')
+    expect(wrapper.text()).toContain('Erreur de coloris')
+    expect(button(wrapper, 'Faire un avoir')).toBeUndefined()
+  })
+
+  it('devis : accepté ou refusé, mais plus accepté une fois expiré', async () => {
+    const devis = { type: 'devis' as const, numero: 'D-2026-0001' }
+    const { wrapper, calls } = await mountAt(BillingDocView, '/factures/f1', {
+      'GET /billing/f1': [200, detail({ ...devis, statut: 'envoye', envoyeLe: '2026-10-20T09:00:00Z' })],
+      'POST /billing/f1/reponse': [200, { statut: 'accepte' }],
+    })
+    expect(button(wrapper, 'Marquer envoyé')).toBeUndefined()
+    expect(button(wrapper, 'Enregistrer le paiement')).toBeUndefined()
+    await button(wrapper, 'Accepté par le client')!.trigger('click')
+    await flushPromises()
+    expect(sent(calls)).toEqual([{ method: 'POST', path: '/billing/f1/reponse', body: { reponse: 'accepte' } }])
+
+    const expired = await mountAt(BillingDocView, '/factures/f1', { 'GET /billing/f1': [200, detail({ ...devis, statut: 'expire' })] })
+    expect(button(expired.wrapper, 'Accepté par le client')).toBeUndefined()
+    expect(button(expired.wrapper, 'Refusé')).toBeTruthy()
+    expect(expired.wrapper.text()).toContain('Ce devis a expiré')
+  })
+})
+
+describe('Devis et factures sur la commande', () => {
+  const ORDER = {
+    order: {
+      brut: 400, tauxRemisePro: 0, remisePro: 0, complementMinimum: 0, livraisonPrix: 0, ht: 400, tauxTva: 20, tva: 80, ttc: 480, delaiJours: 5,
+      id: 'o1', numero: 'C-2026-0001', statut: 'validee', statutLabel: 'Validée', next: ['fabrication', 'annulee'], clientId: 'c1',
+      livraisonMode: 'retrait', livraisonAdresse: null, livraisonCodePostal: null, livraisonVille: null, distanceKm: null, notes: null, datePrevue: '2026-10-27', createdAt: '2026-10-19T08:00:00Z',
+    },
+    client: { id: 'c1', nom: 'Jean Dupont', type: 'particulier', telephone: null, email: null },
+    lignes: [],
+    events: [{ statut: 'recue', at: '2026-10-19T08:00:00Z', note: null, nom: 'Le Chef' }],
+  } as unknown as OrderDetail
+
+  it('liste les documents et émet une facture', async () => {
+    const { wrapper, router, calls } = await mountAt(OrderView, '/commandes/o1', {
+      'GET /orders/o1': [200, ORDER],
+      'GET /billing': [200, { documents: [{ ...SUMMARY, type: 'devis', numero: 'D-2026-0001', statut: 'accepte' }], totals: {} }],
+      'POST /billing/orders/o1/facture': [201, { id: 'f9', numero: 'F-2026-0009' }],
+    })
+    expect(calls.find((c) => c.path.startsWith('/billing'))!.path).toBe('/billing?orderId=o1')
+    const section = wrapper.find('[aria-labelledby="billing-title"]')
+    expect(section.text()).toContain('D-2026-0001')
+    expect(section.text()).toContain('Accepté')
+    expect(button(wrapper, 'Faire un devis')).toBeTruthy()
+    await button(wrapper, 'Facturer')!.trigger('click')
+    await flushPromises()
+    expect(sent(calls)).toEqual([{ method: 'POST', path: '/billing/orders/o1/facture', body: undefined }])
+    expect(router.currentRoute.value).toMatchObject({ name: 'billing-doc', params: { id: 'f9' } })
+  })
+
+  it('ne propose pas de refacturer une commande déjà facturée', async () => {
+    const { wrapper } = await mountAt(OrderView, '/commandes/o1', {
+      'GET /orders/o1': [200, ORDER],
+      'GET /billing': [200, { documents: [{ ...SUMMARY, statut: 'emise' }], totals: {} }],
+    })
+    expect(button(wrapper, 'Facturer')).toBeUndefined()
+  })
+
+  it('est absente sans le droit de facturer', async () => {
+    const user: User = { ...ADMIN, permissions: ADMIN.permissions.filter((p) => p !== 'billing.manage') }
+    const { wrapper, calls } = await mountAt(OrderView, '/commandes/o1', { 'GET /orders/o1': [200, ORDER] }, user)
+    expect(wrapper.find('[aria-labelledby="billing-title"]').exists()).toBe(false)
+    expect(calls.some((c) => c.path.startsWith('/billing'))).toBe(false)
+  })
+})
+
+describe('Journal', () => {
+  const entry = (action: string, details: Record<string, unknown>): AuditEntry => ({
+    id: 1, at: '2026-10-20T08:00:00Z', action, identifiant: 'chef', nom: 'Le Chef', userId: 'u1', targetType: 'billing', targetId: 'f1', targetName: null, ip: null, device: '', details,
+  })
+  it('décrit les devis, factures, paiements et avoirs', () => {
+    expect(norm(describeEntry(entry('billing.facture_created', { numero: 'F-2026-0001', client: 'Jean Dupont', commande: 'C-2026-0001', ttc: 480 })).text)).toBe(
+      'A émis la facture F-2026-0001 pour Jean Dupont (commande C-2026-0001, 480,00 € TTC)',
+    )
+    expect(norm(describeEntry(entry('billing.paid', { numero: 'F-2026-0001', ttc: 480, mode: 'cheque', date: '2026-10-20' })).text)).toBe(
+      'A enregistré le paiement de la facture F-2026-0001 (480,00 €, chèque, le 20/10/2026)',
+    )
+    expect(describeEntry(entry('billing.avoir_created', { numero: 'A-2026-0001', facture: 'F-2026-0001', client: 'Jean Dupont', motif: 'Erreur' }))).toEqual({
+      text: 'A émis l’avoir A-2026-0001 qui annule la facture F-2026-0001 de Jean Dupont : Erreur',
+      tone: 'bad',
+    })
+    expect(describeEntry(entry('billing.sent', { numero: 'D-2026-0001', client: 'Jean Dupont' })).text).toBe('A marqué le devis D-2026-0001 comme envoyé à Jean Dupont')
+    expect(describeEntry(entry('billing.devis_answered', { numero: 'D-2026-0001', client: 'Jean Dupont', reponse: 'refuse' })).text).toBe('A noté le devis D-2026-0001 comme refusé par Jean Dupont')
+  })
+})

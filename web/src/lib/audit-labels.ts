@@ -27,6 +27,9 @@ const quote = (v: unknown) => {
 
 const ORDER_STEPS: Record<string, string> = { recue: 'Reçue', validee: 'Validée', fabrication: 'En fabrication', prete: 'Prête', livree: 'Livrée / retirée', annulee: 'Annulée' }
 
+const MODES: Record<string, string> = { virement: 'virement', cheque: 'chèque', carte: 'carte bancaire', especes: 'espèces' }
+const day = (v: unknown) => (typeof v === 'string' ? new Date(`${v}T00:00:00Z`).toLocaleDateString('fr-FR', { timeZone: 'UTC' }) : String(v))
+
 const QTY: Record<string, string> = { aucune: 'aucune', fixe: 'nombre fixe', par_piece: 'une par pièce', jonctions: 'une par jonction' }
 
 // Libellés et unités des champs du catalogue, pour décrire un changement de prix lisiblement
@@ -210,6 +213,20 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       }
     case 'order.sheet_printed':
       return { text: `A imprimé la fiche de fabrication de la commande ${d.numero}`, tone: 'neutral' }
+    case 'billing.devis_created':
+      return { text: `A émis le devis ${d.numero} pour ${d.client} (commande ${d.commande}, ${eur(d.ttc)} TTC)`, tone: 'accent' }
+    case 'billing.facture_created':
+      return { text: `A émis la facture ${d.numero} pour ${d.client} (commande ${d.commande}, ${eur(d.ttc)} TTC)`, tone: 'accent' }
+    case 'billing.avoir_created':
+      return { text: `A émis l’avoir ${d.numero} qui annule la facture ${d.facture} de ${d.client}${d.motif ? ` : ${d.motif}` : ''}`, tone: 'bad' }
+    case 'billing.sent':
+      return { text: `A marqué ${String(d.numero).startsWith('D') ? 'le devis' : 'la facture'} ${d.numero} comme envoyé${String(d.numero).startsWith('D') ? '' : 'e'} à ${d.client}`, tone: 'neutral' }
+    case 'billing.devis_answered':
+      return { text: `A noté le devis ${d.numero} comme ${d.reponse === 'accepte' ? 'accepté' : 'refusé'} par ${d.client}`, tone: d.reponse === 'accepte' ? 'accent' : 'neutral' }
+    case 'billing.paid':
+      return { text: `A enregistré le paiement de la facture ${d.numero} (${eur(d.ttc)}, ${MODES[d.mode] ?? d.mode}, le ${day(d.date)})`, tone: 'accent' }
+    case 'billing.payment_cancelled':
+      return { text: `A annulé le paiement enregistré sur la facture ${d.numero}`, tone: 'bad' }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

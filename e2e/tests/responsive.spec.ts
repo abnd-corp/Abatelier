@@ -22,6 +22,8 @@ const PAGES = [
   { path: '/commandes', heading: 'Commandes' },
   { path: '/commandes/nouvelle', heading: 'Nouvelle commande' },
   { path: '/fabrication', heading: 'Fabrication' },
+  { path: '/factures', heading: 'Devis et factures' },
+  { path: '/factures?type=devis', heading: 'Devis et factures' },
   { path: '/clients/nouveau', heading: 'Nouveau client' },
   { path: '/mon-compte', heading: 'Mon compte' },
 ]
@@ -77,6 +79,28 @@ test.describe('Responsive @responsive', () => {
     await adminPage.request.post(`/api/orders/${id}/status`, { data: { statut: 'validee' }, headers })
     await adminPage.goto(`/fabrication/${id}`)
     await expect(adminPage.getByRole('heading', { level: 1 })).toBeInViewport()
+    expect(await noHorizontalScroll(adminPage)).toBe(true)
+  })
+
+  test('devis et facture : fiche lisible, pas de défilement horizontal', async ({ adminPage, baseURL, uid }) => {
+    const headers = { Origin: baseURL! }
+    const client = await (await adminPage.request.post('/api/clients', { data: { type: 'professionnel', raisonSociale: `Couverture Très Longue Raison Sociale ${uid}`, adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' }, headers })).json()
+    const catalog = await (await adminPage.request.get('/api/orders/catalog')).json()
+    const m = catalog.models[0]
+    const ligne = { repere: 'Mur sud', modelId: m.id, materialId: catalog.materials[0].id, colorId: catalog.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: m.longueur, quantite: m.quantite, accessoires: [] }
+    const order = await (await adminPage.request.post('/api/orders', { data: { clientId: client.id, lignes: [ligne], livraison: { mode: 'retrait' } }, headers })).json()
+    await adminPage.request.post(`/api/orders/${order.id}/status`, { data: { statut: 'validee' }, headers })
+    const facture = await (await adminPage.request.post(`/api/billing/orders/${order.id}/facture`, { headers })).json()
+    await adminPage.goto(`/factures/${facture.id}`)
+    await expect(adminPage.getByRole('heading', { level: 1 })).toBeInViewport()
+    await expect(adminPage.getByRole('button', { name: 'Enregistrer le paiement' })).toBeVisible()
+    expect(await noHorizontalScroll(adminPage)).toBe(true)
+    await adminPage.getByRole('button', { name: 'Enregistrer le paiement' }).click()
+    await expect(adminPage.getByLabel('Date du paiement')).toBeVisible()
+    expect(await noHorizontalScroll(adminPage)).toBe(true)
+    // La commande, avec sa section devis et factures
+    await adminPage.goto(`/commandes/${order.id}`)
+    await expect(adminPage.getByRole('region', { name: 'Devis et factures' })).toContainText(facture.numero)
     expect(await noHorizontalScroll(adminPage)).toBe(true)
   })
 

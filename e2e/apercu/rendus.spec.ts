@@ -33,6 +33,10 @@ const PAGES = [
   { name: '23-fiche-commande', path: 'FICHE_COMMANDE' },
   { name: '24-fabrication', path: '/fabrication' },
   { name: '25-fiche-fabrication', path: 'FICHE_FABRICATION' },
+  { name: '26-factures', path: '/factures' },
+  { name: '27-devis', path: '/factures?type=devis' },
+  { name: '28-fiche-facture', path: 'FICHE_FACTURE' },
+  { name: '29-fiche-avoir', path: 'FICHE_AVOIR' },
 ]
 
 test('captures', async ({ page, baseURL }, info) => {
@@ -44,7 +48,10 @@ test('captures', async ({ page, baseURL }, info) => {
   const clientId = clients[0]!.id
   const orders = (await (await page.request.get('/api/orders?filtre=toutes')).json()).orders as { id: string; statut: string }[]
   const orderId = orders.find((o) => o.statut === 'fabrication')!.id
+  const docs = (await (await page.request.get('/api/billing')).json()).documents as { id: string; type: string; statut: string }[]
   const SPECIAL: Record<string, string> = {
+    FICHE_FACTURE: `/factures/${docs.find((d) => d.type === 'facture' && d.statut !== 'annulee')?.id}`,
+    FICHE_AVOIR: `/factures/${docs.find((d) => d.type === 'avoir')?.id}`,
     FICHE: `/salaries/${ficheId}`,
     FICHE_CLIENT: `/clients/${clientId}`,
     NOUVELLE_COMMANDE: `/commandes/nouvelle?client=${clientId}`,

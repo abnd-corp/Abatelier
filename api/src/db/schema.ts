@@ -1,4 +1,4 @@
-import { bigint, boolean, check, customType, date, index, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, check, customType, type AnyPgColumn, date, index, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 const ts = (name: string) => timestamp(name, { withTimezone: true })
@@ -303,8 +303,8 @@ export const documentTemplate = pgTable(
 
 export const DOCUMENT_TYPES = ['devis', 'facture'] as const
 export type DocumentType = (typeof DOCUMENT_TYPES)[number]
-// Compteurs : devis et factures (numérotation légale), et commandes
-export const COUNTER_TYPES = [...DOCUMENT_TYPES, 'commande'] as const
+// Compteurs : devis, factures et avoirs (numérotation légale), et commandes
+export const COUNTER_TYPES = [...DOCUMENT_TYPES, 'avoir', 'commande'] as const
 export type CounterType = (typeof COUNTER_TYPES)[number]
 
 // Dernier numéro attribué, par type et par année. La ligne est verrouillée pendant l'attribution :
@@ -485,6 +485,72 @@ export const orderEvents = pgTable(
   (t) => [index('order_events_order_idx').on(t.orderId)],
 )
 
+// --- Devis, factures et avoirs (direction) ---
+// Créés depuis une commande. Une fois émis, leur contenu (lignes, montants, PDF) est figé :
+// un déclencheur de la base refuse toute modification et toute suppression (migration 0014).
+// Seul le suivi (envoi, réponse au devis, paiement) évolue. Une facture se corrige par un avoir.
+
+export const BILLING_TYPES = ['devis', 'facture', 'avoir'] as const
+export type BillingType = (typeof BILLING_TYPES)[number]
+export const DEVIS_REPONSES = ['accepte', 'refuse'] as const
+export const PAIEMENT_MODES = ['virement', 'cheque', 'carte', 'especes'] as const
+export type PaiementMode = (typeof PAIEMENT_MODES)[number]
+
+export interface BillingLine {
+  designation: string
+  detail?: string
+  quantite: number
+  prixUnitaire: number
+}
+
+export const billingDocuments = pgTable(
+  'billing_documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    type: text('type', { enum: BILLING_TYPES }).notNull(),
+    // D-2026-0001, F-2026-0001, A-2026-0001
+    numero: text('numero').notNull().unique(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'restrict' }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => clients.id, { onDelete: 'restrict' }),
+    // Avoir : la facture qu'il annule (un seul avoir par facture)
+    factureId: uuid('facture_id').references((): AnyPgColumn => billingDocuments.id, { onDelete: 'restrict' }),
+    emisLe: ts('emis_le').notNull().defaultNow(),
+    // Devis : valable jusqu'au ; facture : à payer avant le
+    echeance: date('echeance', { mode: 'string' }),
+    // Client tel qu'imprimé sur le document
+    clientNom: text('client_nom').notNull(),
+    clientAdresse: text('client_adresse').notNull(),
+    lignes: jsonb('lignes').$type<BillingLine[]>().notNull(),
+    ht: money('ht'),
+    tauxTva: numeric('taux_tva', { precision: 5, scale: 2, mode: 'number' }).notNull(),
+    tva: money('tva'),
+    ttc: money('ttc'),
+    // Le PDF remis au client, conservé tel quel
+    pdf: bytea('pdf').notNull(),
+    // Avoir : raison de l'annulation
+    motif: text('motif'),
+    // Suivi
+    envoyeLe: ts('envoye_le'),
+    reponse: text('reponse', { enum: DEVIS_REPONSES }),
+    reponseLe: ts('reponse_le'),
+    payeLe: date('paye_le', { mode: 'string' }),
+    modePaiement: text('mode_paiement', { enum: PAIEMENT_MODES }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('billing_documents_order_idx').on(t.orderId),
+    index('billing_documents_client_idx').on(t.clientId),
+    index('billing_documents_type_idx').on(t.type, t.emisLe),
+    uniqueIndex('billing_documents_facture_idx').on(t.factureId),
+    check('billing_documents_avoir', sql`(${t.type} = 'avoir') = (${t.factureId} is not null)`),
+  ],
+)
+
 export type User = typeof users.$inferSelect
 export type Employee = typeof employees.$inferSelect
 export type Material = typeof materials.$inferSelect
@@ -498,3 +564,4 @@ export type Client = typeof clients.$inferSelect
 export type ClientSite = typeof clientSites.$inferSelect
 export type Order = typeof orders.$inferSelect
 export type OrderLine = typeof orderLines.$inferSelect
+export type BillingDocument = typeof billingDocuments.$inferSelect

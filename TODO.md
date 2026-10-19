@@ -34,10 +34,15 @@
 - [x] Numérotation D-2026-0001 / F-2026-0001 sans trou (compteur verrouillé), préfixes fixes, reprise de l'ancien logiciel possible jusqu'au premier document créé
 - [ ] Mentions légales types à faire valider par leur comptable (pénalités, indemnité de 40 €, escompte)
 
-### Devis et factures (prochaine étape, décidé le 19/10/2026)
-- [ ] Tables des devis et des factures (numéros D-/F- déjà prêts), créés depuis une commande, PDF au modèle commun
-- [ ] Facture figée une fois émise et conservée 10 ans ; avoirs pour corriger
-- [ ] Suivi : devis envoyé / accepté / refusé / expiré ; facture payée / en retard
+### Devis et factures
+- [x] Table `billing_documents` (devis D-, factures F-, avoirs A-, numéros sans trou), créés depuis une commande, PDF au modèle commun conservé tel qu'émis
+- [x] Document figé une fois émis : un déclencheur de la base refuse toute modification du contenu et toute suppression (conservation 10 ans) ; seul le suivi évolue
+- [x] Avoir = annulation totale d'une facture (montants opposés, motif), puis nouvelle facture possible ; une commande facturée ne peut pas être annulée sans avoir
+- [x] Suivi : devis émis / envoyé / accepté / refusé / expiré ; facture à envoyer / envoyée / en retard / payée (date et mode) / annulée
+- [x] Page « Devis et factures » (onglets, chiffres clés, filtres, recherche), fiche d'un document, section sur la fiche commande ; réservé à la direction (`billing.manage`), invisible pour la RH (journal compris)
+- [ ] Avoir partiel (une ligne, un montant)
+- [ ] Remise exceptionnelle sur une commande, relances des factures en retard (avec l'envoi d'e-mails)
+- [ ] Mentions légales types à faire valider par leur comptable
 
 ### Clients et commandes
 Les clients arriveront surtout par le panier du site (coordonnées saisies à la fin de la commande, puis espace client : suivi, dépenses, factures). En attendant, l'équipe peut créer une fiche à la main.
@@ -47,7 +52,8 @@ Les clients arriveront surtout par le panier du site (coordonnées saisies à la
 - [x] Sur la fiche client : historique des commandes, total dépensé
 - [x] Vue atelier « Fabrication » : commandes validées à prêtes, profil coté, sans client ni prix
 - [x] Pièce en 3D dans la saisie de commande (three.js chargé à la demande, au coloris choisi, qu'on fait tourner) ; à réutiliser dans le futur configurateur client
-- [ ] Commandes : remise exceptionnelle sur une commande, devis et facture PDF depuis la commande
+- [x] Devis et facture PDF depuis la commande
+- [ ] Commandes : remise exceptionnelle sur une commande
 - [ ] Fidélité : remise pro, remises selon l'historique d'achat
 - [ ] **RGPD, à trancher** : suppression du compte à la demande du client, ou conservation pendant une durée annoncée puis suppression. Les factures doivent de toute façon être gardées 10 ans : on pourrait anonymiser la fiche (nom, contact) en gardant les factures. À valider avec leur comptable.
 - [x] Lecture seule pour la RH (permission `clients.read`)

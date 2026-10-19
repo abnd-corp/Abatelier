@@ -315,6 +315,11 @@ button {
 .pill.neutral {
   background: var(--surface-2);
 }
+.pill.bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+  border-color: transparent;
+}
 .btn svg {
   flex: none;
 }

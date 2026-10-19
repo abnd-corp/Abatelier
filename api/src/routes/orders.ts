@@ -11,6 +11,7 @@ import { GeoUnavailable } from '../geo.js'
 import { colorLabel, isError, materialLabel, priceLine, priceOrder, type PricedLine, type Totals } from '../quote.js'
 import { changeStatus, eventsOf, loadCatalog, NEXT, STATUT_LABELS } from '../orders.js'
 import { clientName } from './clients.js'
+import { activeInvoice } from '../billing.js'
 
 const int = (min: number, max: number, label: string) =>
   z.preprocess(
@@ -293,6 +294,10 @@ export async function orderRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: `Une commande « ${STATUT_LABELS[o.statut]} » ne peut pas passer à « ${STATUT_LABELS[statut]} ».`, field: 'statut' })
     }
     if (statut === 'annulee' && !note) return reply.code(400).send({ error: 'Indiquez la raison de l’annulation.', field: 'note' })
+    if (statut === 'annulee') {
+      const facture = await activeInvoice(o.id)
+      if (facture) return reply.code(409).send({ error: `La commande est facturée (${facture.numero}) : faites d’abord un avoir pour annuler la facture.`, field: 'statut' })
+    }
     const datePrevue = await changeStatus(req, o, statut, note)
     return { statut, datePrevue }
   })

@@ -59,13 +59,31 @@ export default async function seed(config: FullConfig) {
     { client: forez, lignes: [bandeau], livraison: { mode: 'retrait' }, etapes: ['validee'] },
     { client: others[1] ?? others[0], lignes: [piece({ quantite: 2 })], livraison: { mode: 'retrait' }, etapes: ['validee', 'fabrication', 'prete'] },
   ]
+  const ids: string[] = []
   for (const o of ORDERS) {
     if (!o.client) continue
     const res = await api.post('/api/orders', { data: { clientId: o.client.id, lignes: o.lignes, livraison: o.livraison } })
     if (!res.ok()) continue
     const { id } = await res.json()
+    ids.push(id)
     for (const statut of o.etapes) await api.post(`/api/orders/${id}/status`, { data: { statut } })
   }
+  // Devis et factures à différents stades : devis accepté puis facture envoyée, devis en attente,
+  // facture payée, et une facture annulée par un avoir puis refaite
+  const emit = async (orderId: string | undefined, type: 'devis' | 'facture') => (orderId ? ((await (await api.post(`/api/billing/orders/${orderId}/${type}`)).json()).id as string) : '')
+  const [o1, o2, o3, o4] = ids
+  const d1 = await emit(o1, 'devis')
+  if (d1) await api.post(`/api/billing/${d1}/reponse`, { data: { reponse: 'accepte' } })
+  const f1 = await emit(o1, 'facture')
+  if (f1) await api.post(`/api/billing/${f1}/envoi`)
+  const d2 = await emit(o2, 'devis')
+  if (d2) await api.post(`/api/billing/${d2}/envoi`)
+  const f4 = await emit(o4, 'facture')
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date())
+  if (f4) await api.post(`/api/billing/${f4}/paiement`, { data: { date: today, mode: 'virement' } })
+  const f3 = await emit(o3, 'facture')
+  if (f3) await api.post(`/api/billing/${f3}/avoir`, { data: { motif: 'Erreur sur le coloris du bandeau' } })
+  await emit(o3, 'facture')
   // Un échec de connexion, pour que le journal et le tableau de bord ne soient pas vides
   await api.post('/api/auth/login', { data: { identifiant: 'inconnu', password: 'faux' } })
   await api.dispose()

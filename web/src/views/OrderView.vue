@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
 import { eur } from '@/lib/catalog'
 import { dateTime } from '@/lib/format'
 import { formatDay } from '@/lib/employees'
 import type { Client, ClientSite } from '@/lib/clients'
 import { PRODUCTION_STATUTS, sheetUrl, shortDay, statutOf, STATUTS, STEP_ACTIONS, toLineForm, type OrderCatalog, type OrderDetail, type OrderForm, type OrderStatut } from '@/lib/orders'
+import { DEVIS_STATUTS, FACTURE_STATUTS, statutOf as billingStatut, typeOf, type BillingSummary } from '@/lib/billing'
 import { useUiStore } from '@/stores/ui'
+import { useAuthStore } from '@/stores/auth'
 import AppIcon from '@/components/AppIcon.vue'
 import OrderLineCard from '@/components/orders/OrderLineCard.vue'
 import OrderEditor from '@/components/orders/OrderEditor.vue'
 
 const route = useRoute()
+const router = useRouter()
 const ui = useUiStore()
+const auth = useAuthStore()
 const id = computed(() => route.params.id as string)
 
 const detail = ref<OrderDetail | null>(null)
@@ -29,6 +33,34 @@ async function load() {
     document.title = `${detail.value.order.numero} · Commandes · Atelier · Alu Pliage Service`
   } catch (e) {
     loadError.value = e instanceof ApiError ? e.message : 'Chargement impossible.'
+  }
+  await loadDocuments()
+}
+
+// --- Devis et factures de la commande (direction) ---
+const documents = ref<BillingSummary[]>([])
+async function loadDocuments() {
+  if (!auth.can('billing.manage')) return
+  try {
+    documents.value = (await api<{ documents: BillingSummary[] }>(`/billing?orderId=${id.value}`)).documents
+  } catch {
+    documents.value = []
+  }
+}
+const invoiced = computed(() => documents.value.some((d) => d.type === 'facture' && d.statut !== 'annulee'))
+const canQuote = computed(() => !!o.value && DEVIS_STATUTS.includes(o.value.statut))
+const canInvoice = computed(() => !!o.value && FACTURE_STATUTS.includes(o.value.statut) && !invoiced.value)
+async function issue(type: 'devis' | 'facture') {
+  actionError.value = null
+  notice.value = ''
+  busy.value = true
+  try {
+    const res = await api<{ id: string }>(`/billing/orders/${id.value}/${type}`, { method: 'POST' })
+    await router.push({ name: 'billing-doc', params: { id: res.id } })
+  } catch (e) {
+    actionError.value = e instanceof ApiError ? { msg: e.message, field: e.field } : { msg: 'L’émission a échoué.' }
+  } finally {
+    busy.value = false
   }
 }
 onMounted(load)
@@ -211,6 +243,23 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
               <dd class="big">{{ eur(o.ttc) }}</dd>
             </dl>
           </section>
+          <section v-if="auth.can('billing.manage')" class="card block" aria-labelledby="billing-title">
+            <h2 id="billing-title">Devis et factures</h2>
+            <ul v-if="documents.length" class="docs">
+              <li v-for="d in documents" :key="d.id">
+                <RouterLink :to="{ name: 'billing-doc', params: { id: d.id } }" class="mono">{{ d.numero }}</RouterLink>
+                <span class="muted">{{ typeOf(d.type).one }}</span>
+                <span class="pill" :class="billingStatut(d.type, d.statut).tone">{{ billingStatut(d.type, d.statut).label }}</span>
+                <span class="doc-ttc">{{ eur(d.ttc) }}</span>
+              </li>
+            </ul>
+            <p v-else class="muted">Aucun devis ni facture pour cette commande.</p>
+            <div v-if="canQuote || canInvoice" class="actions">
+              <button v-if="canQuote" class="btn" type="button" :disabled="busy" @click="issue('devis')"><AppIcon name="receipt" :size="16" />Faire un devis</button>
+              <button v-if="canInvoice" class="btn primary" type="button" :disabled="busy" @click="issue('facture')"><AppIcon name="receipt" :size="16" />Facturer</button>
+            </div>
+            <p v-if="o.statut === 'recue'" class="muted small">La facture se fait une fois la commande validée.</p>
+          </section>
           <section class="card block">
             <h2>{{ o.livraisonMode === 'retrait' ? 'Retrait' : 'Livraison' }}</h2>
             <p v-if="o.livraisonMode === 'retrait'">Le client vient chercher sa commande à l’atelier.</p>
@@ -377,6 +426,28 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
 }
 .notes {
   white-space: pre-wrap;
+}
+.docs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.docs li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+.doc-ttc {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.small {
+  font-size: 0.8rem;
 }
 @media (max-width: 960px) {
   .grid {

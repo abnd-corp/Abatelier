@@ -35,7 +35,7 @@ export function publicCompany(c: CompanySettings) {
 /** Année du document, à l'heure de Paris (un devis du 31 décembre à 23 h 30 reste sur l'année en cours). */
 export const yearOf = (d: Date) => Number(new Intl.DateTimeFormat('fr-FR', { year: 'numeric', timeZone: 'Europe/Paris' }).format(d))
 
-export const PREFIXES: Record<CounterType, string> = { devis: 'D', facture: 'F', commande: 'C' }
+export const PREFIXES: Record<CounterType, string> = { devis: 'D', facture: 'F', avoir: 'A', commande: 'C' }
 
 /** devis, 2026, 1 → « D-2026-0001 » */
 export const formatNumber = (type: CounterType, annee: number, n: number) => `${PREFIXES[type]}-${annee}-${String(n).padStart(4, '0')}`

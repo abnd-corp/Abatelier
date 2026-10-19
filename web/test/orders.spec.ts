@@ -366,7 +366,8 @@ describe('Fiche commande', () => {
     const livree = { ...ORDER, order: { ...ORDER.order, statut: 'livree' as const, statutLabel: 'Livrée / retirée', next: [] } }
     const { wrapper } = await mountAt(OrderView, '/commandes/o1', { 'GET /orders/o1': [200, livree] })
     expect(wrapper.findAll('.steps li.done')).toHaveLength(5)
-    expect(wrapper.find('.actions').exists()).toBe(false)
+    // Plus d'étape à franchir ; seule la facturation reste possible
+    expect(wrapper.find('[aria-labelledby="steps-title"] .actions').exists()).toBe(false)
   })
 
   it('propose la fiche de fabrication seulement une fois la commande validée', async () => {

@@ -58,6 +58,13 @@ export function makeRouter() {
       { path: '/commandes', name: 'orders', component: page('orders'), meta: { section: 'Ventes', title: 'Commandes' } },
       { path: '/commandes/nouvelle', name: 'order-new', component: page('order-new'), meta: { menu: 'orders' } },
       { path: '/commandes/:id', name: 'order', component: page('order'), meta: { menu: 'orders' } },
+      { path: '/factures', name: 'billing', component: page('billing'), meta: { section: 'Ventes', title: 'Devis et factures' } },
+      {
+        path: '/factures/:id',
+        name: 'billing-doc',
+        component: page('billing-doc'),
+        meta: { section: 'Ventes', parent: { label: 'Devis et factures', to: { name: 'billing' } }, title: 'Document', menu: 'billing' },
+      },
       { path: '/fabrication', name: 'production', component: page('production'), meta: { section: 'Atelier', title: 'Fabrication' } },
       { path: '/fabrication/:id', name: 'production-order', component: page('production-order'), meta: { menu: 'production' } },
       { path: '/salaries', name: 'employees', component: page('employees'), meta: { section: 'Équipe', title: 'Salariés' } },
@@ -84,7 +91,7 @@ export const ADMIN: User = {
   nom: 'Le Chef',
   role: 'direction',
   mustChangePassword: false,
-  permissions: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage', 'documents.manage', 'clients.manage', 'clients.read', 'orders.manage', 'orders.production'],
+  permissions: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage', 'documents.manage', 'clients.manage', 'clients.read', 'orders.manage', 'orders.production', 'billing.manage'],
 }
 
 export const ATELIER: User = {

@@ -11,17 +11,29 @@ export interface DocLine {
   prixUnitaire: number
 }
 
+export type PdfType = DocumentType | 'avoir'
+
 export interface DocData {
-  type: DocumentType
+  type: PdfType
   numero: string
   date: Date
+  // Validité du devis ou échéance de la facture. Sans elle : date + durée du modèle.
+  echeance?: Date
+  // Lignes sous la date : commande, livraison…
+  references?: string[]
   client: { nom: string; adresse: string }
   lignes: DocLine[]
   // Taux de TVA en %
   tva: number
+  // Montants imposés (un avoir reprend exactement l'opposé de la facture)
+  totaux?: { ht: number; tva: number; ttc: number }
+  // Avoir : facture annulée et raison
+  avoir?: { facture: string; factureDate: Date; motif: string }
   // Filigrane « APERÇU » : document d'exemple, sans valeur
   apercu?: boolean
 }
+
+const TITRES: Record<PdfType, string> = { devis: 'Devis', facture: 'Facture', avoir: 'Avoir' }
 
 type Company = Omit<CompanySettings, 'id' | 'updatedAt' | 'logo' | 'logoType' | 'logoUpdatedAt'>
 type Template = Omit<DocumentTemplate, 'id' | 'updatedAt'>
@@ -78,7 +90,7 @@ export function drawBrandMark(doc: PDFKit.PDFDocument, x: number, y: number, hei
 }
 
 export function renderDocument(company: Company, template: Template, logo: Buffer | null, data: DocData): Promise<Buffer> {
-  const doc = new PDFDocument({ size: 'A4', margin: PAGE.m, bufferPages: true, info: { Title: clean(`${data.type === 'devis' ? 'Devis' : 'Facture'} ${data.numero}`), Author: clean(company.raisonSociale) } })
+  const doc = new PDFDocument({ size: 'A4', margin: PAGE.m, bufferPages: true, info: { Title: clean(`${TITRES[data.type]} ${data.numero}`), Author: clean(company.raisonSociale) } })
   const chunks: Buffer[] = []
   doc.on('data', (c: Buffer) => chunks.push(c))
   const done = new Promise<Buffer>((resolve, reject) => {
@@ -88,6 +100,7 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
 
   const accent = template.couleur
   const isDevis = data.type === 'devis'
+  const isAvoir = data.type === 'avoir'
   const text = (s: string, x: number, y: number, o: PDFKit.Mixins.TextOptions = {}) => doc.text(clean(s), x, y, o)
 
   // --- En-tête : logo et entreprise à gauche, titre et numéro à droite ---
@@ -113,15 +126,16 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
   const colX = 330
   const colW = RIGHT - colX
   doc.font('Helvetica-Bold').fontSize(24).fillColor(accent)
-  text(isDevis ? 'DEVIS' : 'FACTURE', colX, 44, { width: colW, align: 'right', characterSpacing: 1 })
+  text(TITRES[data.type].toUpperCase(), colX, 44, { width: colW, align: 'right', characterSpacing: 1 })
   doc.font('Helvetica-Bold').fontSize(11).fillColor(INK)
   text(`N° ${data.numero}`, colX, doc.y + 2, { width: colW, align: 'right' })
   doc.font('Helvetica').fontSize(9.5)
-  const limite = addDays(data.date, isDevis ? template.validiteDevis : template.echeanceFacture)
-  text(`Date : ${day(data.date)}\n${isDevis ? 'Valable jusqu’au' : 'Échéance'} : ${day(limite)}`, colX, doc.y + 2, { width: colW, align: 'right', lineGap: 1 })
+  const limite = data.echeance ?? addDays(data.date, isDevis ? template.validiteDevis : template.echeanceFacture)
+  const dates = [`Date : ${day(data.date)}`, isAvoir ? `Facture : ${data.avoir?.facture ?? ''}` : `${isDevis ? 'Valable jusqu’au' : 'Échéance'} : ${day(limite)}`, ...(data.references ?? [])]
+  text(dates.join('\n'), colX, doc.y + 2, { width: colW, align: 'right', lineGap: 1 })
 
-  // Bloc client
-  const boxY = 132
+  // Bloc client, sous les références
+  const boxY = Math.max(132, doc.y + 12)
   doc.font('Helvetica-Bold').fontSize(10.5)
   const nameH = doc.heightOfString(clean(data.client.nom), { width: colW - 24 })
   doc.font('Helvetica').fontSize(9.5)
@@ -194,7 +208,7 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
   doc.moveTo(PAGE.m, y).lineTo(RIGHT, y).lineWidth(0.6).strokeColor(LINE).stroke()
 
   // --- Totaux ---
-  const t = totals(data.lignes, data.tva)
+  const t = data.totaux ?? totals(data.lignes, data.tva)
   ensure(80)
   y += 12
   const rows: [string, string, boolean][] = [
@@ -225,15 +239,19 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
     text(body, PAGE.m, doc.y + 3, { width: WIDTH, lineGap: 1.5 })
     y = doc.y + 12
   }
-  section(
-    isDevis ? 'Validité' : 'Échéance',
-    isDevis
-      ? `Ce devis est valable ${template.validiteDevis} jours, jusqu’au ${day(limite)}.`
-      : `Paiement au plus tard le ${day(limite)} (${template.echeanceFacture} jours).`,
-  )
-  section('Conditions de paiement', template.conditionsPaiement)
-  if (!isDevis && company.iban) section('Règlement par virement', [`IBAN : ${company.iban}`, company.bic && `BIC : ${company.bic}`].filter(Boolean).join('   ·   '))
-  section(isDevis ? 'À noter' : 'À noter', isDevis ? template.noteDevis : template.noteFacture)
+  const jours = Math.round((limite.getTime() - data.date.getTime()) / 86_400_000)
+  if (isAvoir && data.avoir) {
+    section('Annulation', `Cet avoir annule la facture ${data.avoir.facture} du ${day(data.avoir.factureDate)}.`)
+    section('Motif', data.avoir.motif)
+  } else {
+    section(
+      isDevis ? 'Validité' : 'Échéance',
+      isDevis ? `Ce devis est valable ${jours} jours, jusqu’au ${day(limite)}.` : `Paiement au plus tard le ${day(limite)} (${jours} jours).`,
+    )
+    section('Conditions de paiement', template.conditionsPaiement)
+    if (!isDevis && company.iban) section('Règlement par virement', [`IBAN : ${company.iban}`, company.bic && `BIC : ${company.bic}`].filter(Boolean).join('   ·   '))
+    section('À noter', isDevis ? template.noteDevis : template.noteFacture)
+  }
 
   if (isDevis) {
     ensure(92)

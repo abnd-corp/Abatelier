@@ -24,6 +24,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
     title: 'Ventes',
     items: [
       { to: { name: 'orders' }, name: 'orders', label: 'Commandes', icon: 'box', perm: 'orders.manage' },
+      { to: { name: 'billing' }, name: 'billing', label: 'Devis et factures', icon: 'receipt', perm: 'billing.manage' },
       { to: { name: 'clients' }, name: 'clients', label: 'Clients', icon: 'users', perm: 'clients.read' },
     ],
   },

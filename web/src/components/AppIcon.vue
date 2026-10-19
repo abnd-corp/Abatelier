@@ -41,6 +41,8 @@ const PATHS = {
   // Profil de couvertine vu en coupe
   profile: 'M3 18v-6l3-3h12l3 3v6',
   printer: 'M7 9V3h10v6 M7 17H4v-8h16v8h-3 M7 13h10v8H7z',
+  // Ticket de caisse : devis et factures
+  receipt: 'M6 3h12v18l-3-2-3 2-3-2-3 2V3Z M9 8h6 M9 12h6 M9 16h3',
 } as const
 
 defineProps<{ name: keyof typeof PATHS; size?: number }>()

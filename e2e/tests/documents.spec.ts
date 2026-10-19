@@ -74,8 +74,15 @@ test.describe('Modèles de documents', () => {
     await adminPage.goto('/modeles-documents?onglet=numerotation')
     const form = adminPage.getByRole('form', { name: 'Modèles de documents' })
     const year = new Date().getFullYear()
+    // Les autres tests (devis et factures) créent des documents sur la même base : la numérotation est alors verrouillée
+    const field = form.getByLabel('Prochain numéro').nth(1)
+    await expect(field).toBeVisible()
+    if (await field.isDisabled()) {
+      await expect(form.getByLabel('Prochain numéro').first()).toBeDisabled()
+      return
+    }
     // On avance à partir du numéro actuel : l'autre navigateur a pu le changer
-    const next = Number(await form.getByLabel('Prochain numéro').nth(1).inputValue()) + 50
+    const next = Number(await field.inputValue()) + 50
     await form.getByLabel('Prochain numéro').nth(1).fill(String(next))
     await expect(form.getByText(`Prochaine facture : F-${year}-${String(next).padStart(4, '0')}`)).toBeVisible()
     await form.getByRole('button', { name: 'Enregistrer', exact: true }).click()

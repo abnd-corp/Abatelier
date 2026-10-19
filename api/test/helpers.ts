@@ -1,3 +1,4 @@
+import { inflateSync } from 'node:zlib'
 import { sql, eq } from 'drizzle-orm'
 import { buildApp } from '../src/app.js'
 import { db } from '../src/db/index.js'
@@ -13,7 +14,7 @@ export const PASSWORD = 'Plieuse-numerique-2026'
 export { buildApp }
 
 export async function resetDb() {
-  await db.execute(sql`truncate audit_log, login_attempts, sessions, employees, users, materials, colors, pricing_settings, piece_models, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events restart identity cascade`)
+  await db.execute(sql`truncate audit_log, login_attempts, sessions, employees, users, materials, colors, pricing_settings, piece_models, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events, billing_documents restart identity cascade`)
 }
 
 // Les quatre modèles de départ, avec les identifiants de la migration 0013
@@ -105,4 +106,28 @@ export async function auditActions(userId?: string) {
     .where(userId ? eq(auditLog.userId, userId) : undefined)
     .orderBy(auditLog.id)
   return rows.map((r) => r.action)
+}
+
+// Codes 0x80 à 0x9f du jeu WinAnsi (les autres sont ceux du latin-1)
+const CP1252 = '€\x81‚ƒ„…†‡ˆ‰Š‹Œ\x8dŽ\x8f\x90‘’“”•–—˜™š›œ\x9džŸ'
+const winAnsi = { decode: (b: Buffer) => [...b].map((c) => (c >= 0x80 && c < 0xa0 ? CP1252[c - 0x80] : String.fromCharCode(c))).join('') }
+
+/** Texte d'un PDF généré par pdfkit : flux décompressés, chaînes hexadécimales des opérateurs TJ remises bout à bout. */
+export function pdfText(pdf: Buffer) {
+  const raw = pdf.toString('latin1')
+  let out = ''
+  for (const m of raw.matchAll(/stream\r?\n/g)) {
+    const start = m.index! + m[0].length
+    const end = raw.indexOf('endstream', start)
+    let content: string
+    try {
+      content = inflateSync(pdf.subarray(start, end)).toString('latin1')
+    } catch {
+      continue
+    }
+    for (const tj of content.matchAll(/\[(.*?)\] TJ/g)) {
+      out += [...tj[1]!.matchAll(/<([0-9a-f]*)>/g)].map((h) => winAnsi.decode(Buffer.from(h[1]!, 'hex'))).join('') + '\n'
+    }
+  }
+  return out
 }

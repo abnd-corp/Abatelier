@@ -5,9 +5,8 @@ import { accessories, auditLog, colors, materials, orderLines, orders } from '..
 import { yearOf } from '../src/documents.js'
 import { addWorkingDays, quantityDiscount } from '../src/quote.js'
 import { todayParis } from '../src/departures.js'
-import { inflateSync } from 'node:zlib'
 import { accessoryTotals, renderProductionSheet } from '../src/production-sheet.js'
-import { buildApp, createUser, loginAs, M, resetDb, seedModels, type App, type Client } from './helpers.js'
+import { buildApp, createUser, loginAs, M, pdfText, resetDb, seedModels, type App, type Client } from './helpers.js'
 
 let app: App
 let direction: Client
@@ -355,30 +354,6 @@ describe('Fabrication (atelier)', () => {
     expect((await db.select().from(orders))[0]!.statut).toBe('livree')
   })
 })
-
-// Codes 0x80 à 0x9f du jeu WinAnsi (les autres sont ceux du latin-1)
-const CP1252 = '€\x81‚ƒ„…†‡ˆ‰Š‹Œ\x8dŽ\x8f\x90‘’“”•–—˜™š›œ\x9džŸ'
-const winAnsi = { decode: (b: Buffer) => [...b].map((c) => (c >= 0x80 && c < 0xa0 ? CP1252[c - 0x80] : String.fromCharCode(c))).join('') }
-
-/** Texte d'un PDF généré par pdfkit : flux décompressés, chaînes hexadécimales des opérateurs TJ remises bout à bout. */
-function pdfText(pdf: Buffer) {
-  const raw = pdf.toString('latin1')
-  let out = ''
-  for (const m of raw.matchAll(/stream\r?\n/g)) {
-    const start = m.index! + m[0].length
-    const end = raw.indexOf('endstream', start)
-    let content: string
-    try {
-      content = inflateSync(pdf.subarray(start, end)).toString('latin1')
-    } catch {
-      continue
-    }
-    for (const tj of content.matchAll(/\[(.*?)\] TJ/g)) {
-      out += [...tj[1]!.matchAll(/<([0-9a-f]*)>/g)].map((h) => winAnsi.decode(Buffer.from(h[1]!, 'hex'))).join('') + '\n'
-    }
-  }
-  return out
-}
 
 describe('Fiche de fabrication (PDF)', () => {
   const validated = async (over: Record<string, unknown> = {}) => {
