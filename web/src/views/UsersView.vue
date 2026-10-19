@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { api, ApiError } from '@/api'
-import { ROLE_LABELS, useAuthStore, type Role } from '@/stores/auth'
+import { ROLE_LABELS, ROLE_OPTIONS, useAuthStore, type Role } from '@/stores/auth'
 import { relative, dateTime } from '@/lib/format'
 import AppIcon from '@/components/AppIcon.vue'
 import TempPasswordPanel from '@/components/TempPasswordPanel.vue'
@@ -134,8 +134,7 @@ const CONFIRM: Record<Kind, string> = {
       <div class="field">
         <label for="new-role">Rôle</label>
         <select id="new-role" v-model="form.role" class="input">
-          <option value="atelier">Atelier : accès standard</option>
-          <option value="admin">Administrateur : gère les comptes et voit le journal</option>
+          <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }} : {{ r.description }}</option>
         </select>
       </div>
     </div>
@@ -180,8 +179,7 @@ const CONFIRM: Record<Kind, string> = {
                 :aria-label="`Rôle de ${u.nom}`"
                 @change="changeRole(u, ($event.target as HTMLSelectElement).value as Role)"
               >
-                <option value="atelier">{{ ROLE_LABELS.atelier }}</option>
-                <option value="admin">{{ ROLE_LABELS.admin }}</option>
+                <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }}</option>
               </select>
             </td>
             <td>

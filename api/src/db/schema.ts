@@ -2,7 +2,8 @@ import { bigint, boolean, date, index, integer, jsonb, pgTable, text, timestamp,
 
 const ts = (name: string) => timestamp(name, { withTimezone: true })
 
-export const ROLES = ['admin', 'atelier'] as const
+// direction : tout ; rh : salariés et journal ; atelier : production et stock
+export const ROLES = ['direction', 'rh', 'atelier'] as const
 export type Role = (typeof ROLES)[number]
 
 export const users = pgTable('users', {
@@ -85,7 +86,7 @@ export const employees = pgTable(
     dateSortie: date('date_sortie', { mode: 'string' }),
     telephone: text('telephone'),
     email: text('email'),
-    // Visibles uniquement par les administrateurs
+    // Visibles uniquement par la direction et la RH
     notes: text('notes'),
     userId: uuid('user_id')
       .unique()

@@ -92,7 +92,8 @@ Avant de considérer un travail fini, lancer `make check`, `make test-api`, `mak
 
 - La base est sauvegardée chaque nuit par le container `backup` (`scripts/backup/backup.sh`).
 - Toute nouvelle table doit être ajoutée à la liste vérifiée par `verify` dans ce script.
-- Le compte `admin` sert uniquement à l'administration. L'usage quotidien passe par des comptes personnels.
+- Le compte `admin` (rôle Direction) sert uniquement à l'administration. L'usage quotidien passe par des comptes personnels.
+- Une nouvelle fonctionnalité déclare sa permission dans `api/src/auth/permissions.ts` et l'attribue aux bons rôles (Direction, RH, Atelier), selon l'espace de la feuille de route.
 
 ## Conventions de code
 

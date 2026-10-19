@@ -72,7 +72,7 @@ export async function authRoutes(app: FastifyInstance) {
 
       if (user.disabledAt) {
         await audit(req, 'login.disabled', { actor: { id: user.id, identifiant: user.identifiant } })
-        return reply.code(403).send({ error: 'Ce compte est désactivé. Contactez l’administrateur.' })
+        return reply.code(403).send({ error: 'Ce compte est désactivé. Contactez la direction.' })
       }
 
       await clearFailures(identifiant)

@@ -72,8 +72,8 @@ describe('Libellés du journal', () => {
   })
 
   it('décrit un changement de rôle', () => {
-    const r = describeEntry({ ...base, action: 'user.updated', targetName: 'Paul', details: { role: { avant: 'atelier', apres: 'admin' } } })
-    expect(r.text).toBe('A modifié le compte de Paul : rôle atelier → administrateur')
+    const r = describeEntry({ ...base, action: 'user.updated', targetName: 'Paul', details: { role: { avant: 'atelier', apres: 'direction' } } })
+    expect(r.text).toBe('A modifié le compte de Paul : rôle atelier → direction')
   })
 
   it('affiche l’action brute si elle est inconnue (nouvelle action non traduite)', () => {

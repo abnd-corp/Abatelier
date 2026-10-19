@@ -38,7 +38,7 @@ describe('Protection CSRF', () => {
   const mutating = () => routes().filter((r) => r.method !== 'GET')
 
   it('refuse toute modification sans en-tête Origin, même connecté', async () => {
-    await createUser({ identifiant: 'chef', role: 'admin' })
+    await createUser({ identifiant: 'chef', role: 'direction' })
     const c = await loginAs(app, 'chef')
     for (const r of mutating()) {
       const res = await app.inject({ method: r.method as 'POST', url: r.path, headers: { host: HOST, cookie: c.cookie }, payload: {} })
@@ -47,7 +47,7 @@ describe('Protection CSRF', () => {
   })
 
   it('refuse une modification venant d’un autre site', async () => {
-    await createUser({ identifiant: 'chef', role: 'admin' })
+    await createUser({ identifiant: 'chef', role: 'direction' })
     const c = await loginAs(app, 'chef')
     for (const r of mutating()) {
       const res = await app.inject({

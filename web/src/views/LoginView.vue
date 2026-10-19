@@ -81,7 +81,7 @@ async function submit() {
         {{ loading ? 'Connexion…' : 'Se connecter' }}
       </button>
 
-      <p class="help muted">Mot de passe oublié ? Demandez à un administrateur de le réinitialiser.</p>
+      <p class="help muted">Mot de passe oublié ? Demandez à la direction de le réinitialiser.</p>
     </form>
   </main>
 </template>

@@ -16,12 +16,13 @@ const GENERIC = 'Identifiant ou mot de passe incorrect.'
 
 describe('POST /api/auth/login', () => {
   it('connecte avec le bon mot de passe et ne renvoie jamais le hash', async () => {
-    const u = await createUser({ identifiant: 'paul', role: 'admin' })
+    const u = await createUser({ identifiant: 'paul', role: 'direction' })
     const res = await client(app).post('/api/auth/login', { identifiant: 'paul', password: PASSWORD })
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body.user).toMatchObject({ id: u.id, identifiant: 'paul', role: 'admin', mustChangePassword: false })
+    expect(body.user).toMatchObject({ id: u.id, identifiant: 'paul', role: 'direction', mustChangePassword: false })
     expect(body.user.permissions).toEqual(['users.manage', 'employees.manage', 'audit.read'])
+    expect(body.user.role).toBe('direction')
     expect(res.body).not.toContain('argon2')
     expect(res.body).not.toContain('passwordHash')
   })

@@ -6,7 +6,7 @@ import EmployeeView from '@/views/EmployeeView.vue'
 import { accountStatus, employmentStatus, formatDay, suggestIdentifiant, type Employee } from '@/lib/employees'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
-import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
+import { ADMIN, RH, freshPinia, makeRouter, mockApi } from './helpers'
 
 const PAUL: Employee = {
   id: 'e1',
@@ -127,10 +127,10 @@ describe('Ajout d’un salarié', () => {
     await wrapper.get('#f-nom').setValue('Martin')
     await wrapper.get('#f-poste').setValue('Plieur')
     await wrapper.get('#f-contrat').setValue('cdi')
-    await wrapper.get('#f-role').setValue('admin')
+    await wrapper.get('#f-role').setValue('direction')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(calls[0]!.body).toMatchObject({ prenom: 'Paul', nom: 'Martin', poste: 'Plieur', contrat: 'cdi', compte: { identifiant: 'paul', role: 'admin' } })
+    expect(calls[0]!.body).toMatchObject({ prenom: 'Paul', nom: 'Martin', poste: 'Plieur', contrat: 'cdi', compte: { identifiant: 'paul', role: 'direction' } })
     expect(router.currentRoute.value.fullPath).toBe('/salaries/e9')
     expect(useUiStore().tempPassword).toEqual({ for: '/salaries/e9', nom: 'Paul Martin', identifiant: 'paul', password: 'aaaa-bbbb-cccc-dddd' })
   })
@@ -257,5 +257,45 @@ describe('Fiche salarié', () => {
   it('affiche une erreur si la fiche n’existe pas', async () => {
     const { wrapper } = await mountAt(EmployeeView, '/salaries/zz', { 'GET /employees/zz': [404, { error: 'Salarié introuvable.' }] })
     expect(wrapper.get('[role="alert"]').text()).toBe('Salarié introuvable.')
+  })
+})
+
+describe('Rôle RH', () => {
+  async function asRh(component: object, path: string, routes: Parameters<typeof mockApi>[0]) {
+    const calls = mockApi(routes)
+    const pinia = freshPinia()
+    useAuthStore().user = RH
+    const router = makeRouter()
+    await router.push(path)
+    await router.isReady()
+    const wrapper = mount(component, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    return { wrapper, calls }
+  }
+
+  it('n’affiche pas la création de compte dans le formulaire d’ajout', async () => {
+    const { wrapper, calls } = await asRh(EmployeeNewView, '/salaries/nouveau', { 'POST /employees': [201, { id: 'e9', tempPassword: null }] })
+    expect(wrapper.find('#f-with-account').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Compte de connexion')
+    await wrapper.get('#f-prenom').setValue('Paul')
+    await wrapper.get('#f-nom').setValue('Martin')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls[0]!.body.compte).toBeNull()
+  })
+
+  it('voit le compte lié sur la fiche, sans pouvoir le gérer', async () => {
+    const fiche = { employee: PAUL, activity: [] }
+    const { wrapper } = await asRh(EmployeeView, '/salaries/e1', { 'GET /employees/e1': [200, fiche] })
+    expect(wrapper.text()).toContain('paul')
+    expect(wrapper.text()).toContain('réservée à la direction')
+    expect(wrapper.find('#account-role').exists()).toBe(false)
+    expect(wrapper.findAll('button').some((b) => ['Désactiver le compte', 'Nouveau mot de passe'].includes(b.text()))).toBe(false)
+  })
+
+  it('ne propose pas de créer un compte à un salarié qui n’en a pas', async () => {
+    const { wrapper } = await asRh(EmployeeView, '/salaries/e2', { 'GET /employees/e2': [200, { employee: MARIE, activity: [] }] })
+    expect(wrapper.text()).toContain('Seule la direction peut lui créer un compte')
+    expect(wrapper.findAll('button').some((b) => b.text().includes('Créer un compte'))).toBe(false)
   })
 })

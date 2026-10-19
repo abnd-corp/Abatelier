@@ -7,7 +7,7 @@ import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
 const now = new Date().toISOString()
 const USERS = {
   users: [
-    { id: ADMIN.id, identifiant: 'chef', nom: 'Le Chef', role: 'admin', mustChangePassword: false, disabledAt: null, createdAt: now, lastLoginAt: now, activeSessions: 1 },
+    { id: ADMIN.id, identifiant: 'chef', nom: 'Le Chef', role: 'direction', mustChangePassword: false, disabledAt: null, createdAt: now, lastLoginAt: now, activeSessions: 1 },
     { id: 'p1', identifiant: 'paul', nom: 'Paul Martin', role: 'atelier', mustChangePassword: true, disabledAt: null, createdAt: now, lastLoginAt: null, activeSessions: 0 },
     { id: 'm1', identifiant: 'marie', nom: 'Marie', role: 'atelier', mustChangePassword: false, disabledAt: now, createdAt: now, lastLoginAt: now, activeSessions: 0 },
   ],
@@ -48,10 +48,10 @@ describe('Gestion des comptes', () => {
     await wrapper.findAll('button').find((b) => b.text().includes('Ajouter un compte'))!.trigger('click')
     await wrapper.get('#new-nom').setValue('Jean Dupont')
     await wrapper.get('#new-identifiant').setValue('jean')
-    await wrapper.get('#new-role').setValue('admin')
+    await wrapper.get('#new-role').setValue('direction')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ identifiant: 'jean', nom: 'Jean Dupont', role: 'admin' })
+    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ identifiant: 'jean', nom: 'Jean Dupont', role: 'direction' })
     expect(wrapper.text()).toContain('Mot de passe temporaire de Jean Dupont')
     expect(wrapper.get('.temp-pw code').text()).toBe('aaaa-bbbb-cccc-dddd')
     await wrapper.findAll('button').find((b) => b.text() === 'J’ai noté')!.trigger('click')
@@ -76,9 +76,9 @@ describe('Gestion des comptes', () => {
   })
 
   it('affiche l’erreur renvoyée par le serveur', async () => {
-    const { wrapper, row } = await setup({ 'PATCH /users/p1': [400, { error: 'Il doit rester au moins un administrateur actif.' }] })
-    await row('Paul Martin').get('select').setValue('admin')
+    const { wrapper, row } = await setup({ 'PATCH /users/p1': [400, { error: 'Il doit rester au moins un compte Direction actif.' }] })
+    await row('Paul Martin').get('select').setValue('direction')
     await flushPromises()
-    expect(wrapper.get('[role="alert"]').text()).toBe('Il doit rester au moins un administrateur actif.')
+    expect(wrapper.get('[role="alert"]').text()).toBe('Il doit rester au moins un compte Direction actif.')
   })
 })

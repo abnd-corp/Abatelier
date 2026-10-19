@@ -50,7 +50,7 @@ test.describe('Sécurité dans le navigateur', () => {
 
   test('l’API refuse une requête envoyée depuis un autre site', async ({ adminPage }) => {
     const res = await adminPage.request.post('/api/users', {
-      data: { identifiant: 'pirate', nom: 'Pirate', role: 'admin' },
+      data: { identifiant: 'pirate', nom: 'Pirate', role: 'direction' },
       headers: { Origin: 'https://site-pirate.example' },
     })
     expect(res.status()).toBe(403)

@@ -18,7 +18,7 @@ make setup     # hooks Git, .env, secrets/ et dépendances
 make dev       # http://localhost:5173 : l'API et le front se rechargent à chaque modification
 ```
 
-Le premier compte, administrateur, s'appelle `ADMIN_IDENTIFIANT` (par défaut `admin`). Son mot de passe est dans `secrets/admin_password.txt`. Le compte est créé au premier démarrage, si la base est vide.
+Le premier compte, avec le rôle Direction, s'appelle `ADMIN_IDENTIFIANT` (par défaut `admin`). Son mot de passe est dans `secrets/admin_password.txt`. Le compte est créé au premier démarrage, si la base est vide.
 
 `make help` liste toutes les commandes. En dev, l'API et le front se rechargent tout seuls à chaque modification. Il faut relancer `make dev` seulement après l'ajout d'un paquet npm, ou après une modification d'un Dockerfile ou d'un compose.
 
@@ -65,13 +65,13 @@ La CI vérifie à chaque PR qu'une sauvegarde se restaure vraiment après une pe
 
 | Compte | Rôle | Usage |
 |---|---|---|
-| `admin` | Administrateur | Uniquement pour gérer les comptes et lire le journal. Créé au premier démarrage. |
-| Un compte par salarié | Atelier | Usage quotidien. Il est créé depuis la fiche salarié, et chaque action est tracée au nom de la personne. |
+| `admin` | Direction | Compte technique d'administration, créé au premier démarrage. |
+| Un compte par salarié | Atelier, RH ou Direction | Usage quotidien. Il est créé depuis la fiche salarié, et chaque action est tracée au nom de la personne. |
 | `atelier` (facultatif) | Atelier | Compte commun, par exemple pour le poste de l'atelier. |
 
 ## Salariés
 
-Menu **Équipe → Salariés** (administrateurs) :
+Menu **Équipe → Salariés** (Direction et RH) :
 - fiche avec poste, contrat, dates d'entrée et de sortie, coordonnées et notes internes ;
 - compte de connexion facultatif, créé en même temps que la fiche ou plus tard.
 
@@ -101,10 +101,10 @@ Les comptes sans fiche (`admin`, poste partagé) se gèrent dans **Équipe → C
 - Protection CSRF : l'API vérifie l'en-tête Origin.
 
 **Comptes**
-- Rôles admin et atelier, avec des permissions par rôle (`api/src/auth/permissions.ts`).
+- Rôles **Direction** (tout), **RH** (salariés, journal, sans les comptes) et **Atelier**, avec des permissions par rôle (`api/src/auth/permissions.ts`). Les espaces prévus sont décrits dans la [feuille de route](docs/feuille-de-route.md).
 - Mot de passe temporaire à la création, à changer à la première connexion.
 - Désactivation d'un compte au départ d'un employé : la personne est déconnectée partout et son historique est conservé.
-- Impossible de désactiver ou de rétrograder le dernier admin.
+- Impossible de désactiver ou de rétrograder le dernier compte Direction.
 
 **Journal**
 - Connexions, échecs et actions sur les comptes, avec auteur, IP et appareil.

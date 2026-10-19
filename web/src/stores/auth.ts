@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '@/api'
 
-export type Role = 'admin' | 'atelier'
+export type Role = 'direction' | 'rh' | 'atelier'
 export type Permission = 'users.manage' | 'employees.manage' | 'audit.read'
 
 export interface User {
@@ -14,7 +14,14 @@ export interface User {
   permissions: Permission[]
 }
 
-export const ROLE_LABELS: Record<Role, string> = { admin: 'Administrateur', atelier: 'Atelier' }
+export const ROLE_LABELS: Record<Role, string> = { direction: 'Direction', rh: 'RH', atelier: 'Atelier' }
+
+/** Rôles proposés dans les listes de choix, du moins au plus étendu. */
+export const ROLE_OPTIONS: { value: Role; label: string; description: string }[] = [
+  { value: 'atelier', label: 'Atelier', description: 'production et stock' },
+  { value: 'rh', label: 'RH', description: 'salariés, journal, clients en lecture' },
+  { value: 'direction', label: 'Direction', description: 'tout, dont les comptes, tarifs, devis et factures' },
+]
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)

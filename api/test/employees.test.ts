@@ -15,7 +15,7 @@ beforeEach(async () => {
 afterEach(() => app.close())
 beforeEach(async () => {
   await resetDb()
-  adminId = (await createUser({ identifiant: 'chef', nom: 'Le Chef', role: 'admin' })).id
+  adminId = (await createUser({ identifiant: 'chef', nom: 'Le Chef', role: 'direction' })).id
   admin = await loginAs(app, 'chef')
 })
 
@@ -49,6 +49,41 @@ describe('Accès', () => {
       paul.post(`/api/employees/${id}/account`, { identifiant: 'x', role: 'atelier' }),
     ]))
       expect(res.statusCode).toBe(403)
+  })
+})
+
+describe('Rôle RH', () => {
+  let rh: Client
+  beforeEach(async () => {
+    await createUser({ identifiant: 'rh', role: 'rh' })
+    rh = await loginAs(app, 'rh')
+  })
+
+  it('gère les fiches salariés et lit le journal', async () => {
+    const res = await rh.post('/api/employees', PAUL)
+    expect(res.statusCode).toBe(201)
+    expect((await rh.patch(`/api/employees/${res.json().id}`, { poste: 'Chef d’atelier' })).statusCode).toBe(200)
+    expect((await rh.get('/api/employees')).statusCode).toBe(200)
+    expect((await rh.get('/api/audit')).statusCode).toBe(200)
+  })
+
+  it('ne crée pas de compte de connexion, ni avec la fiche ni après', async () => {
+    const withAccount = await rh.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })
+    expect(withAccount.statusCode).toBe(403)
+    expect(await db.select().from(employees)).toHaveLength(0)
+    const { id } = (await rh.post('/api/employees', PAUL)).json()
+    expect((await rh.post(`/api/employees/${id}/account`, { identifiant: 'paul', role: 'atelier' })).statusCode).toBe(403)
+  })
+
+  it('n’a pas accès à la gestion des comptes', async () => {
+    expect((await rh.get('/api/users')).statusCode).toBe(403)
+    expect((await rh.post('/api/users', { identifiant: 'x', nom: 'X', role: 'direction' })).statusCode).toBe(403)
+  })
+
+  it('voit le compte lié sur la fiche, en lecture', async () => {
+    const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })).json()
+    const fiche = (await rh.get(`/api/employees/${id}`)).json()
+    expect(fiche.employee.account).toMatchObject({ identifiant: 'paul' })
   })
 })
 

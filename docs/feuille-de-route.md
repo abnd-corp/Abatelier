@@ -7,19 +7,31 @@ L'application est découpée en espaces. Chaque personne ne voit que les espaces
 | Espace | Pour qui | Contenu |
 |---|---|---|
 | **Atelier** | Équipe de production | Commandes à fabriquer, planning, **gestion de stock** (tôles, coloris, accessoires) |
-| **Bureau** | Commercial, secrétariat | Devis, commandes clients, **facturation**, clients et fidélité |
-| **RH et administration** | Direction | Salariés, comptes de connexion, journal d'activité |
+| **Direction** | Direction | Tarifs, devis, **facturation**, vitrine, clients, trésorerie, comptes |
+| **RH** | Bureau | Salariés, journal d'activité, clients en lecture seule |
 | **Espace client** (site public) | Clients | Configurateur de pliage, devis, commandes, suivi |
 
-Le stock reste dans l'Atelier. La facturation, les devis et la RH ne sont pas visibles depuis l'Atelier.
+Le stock reste dans l'Atelier. La facturation, les devis et la RH ne sont pas visibles depuis l'Atelier, et la RH ne voit ni les devis, ni les factures, ni la trésorerie.
 
-### Rôles retenus (octobre 2026)
+### Utilisateurs et rôles (octobre 2026)
 
-| Rôle | Atelier | Bureau | RH et administration |
-|---|---|---|---|
-| **Atelier** | ✅ | ❌ | ❌ |
-| **Bureau** | Stock en lecture seule (pour les devis) | ✅ | ❌ |
-| **Direction** (aujourd'hui « Administrateur ») | ✅ | ✅ | ✅ |
+| Qui | Accès |
+|---|---|
+| **Visiteur anonyme** | Site vitrine, configurateur avec prix en direct |
+| **Client** (compte client) | En plus : commander, suivre et gérer ses commandes, fidélité |
+| **Atelier** | Production, stock |
+| **RH** (au bureau) | Salariés, journal d'activité, clients en lecture seule |
+| **Direction** | Tout : catalogue et tarifs, modèles de devis et de factures, vitrine (textes et photos), clients, trésorerie, comptes, RH |
+
+On développe un rôle jusqu'au bout avant de passer au suivant, en commençant par la Direction.
+
+### Espace Direction, dans l'ordre
+
+1. **Tarifs et catalogue** : matières, épaisseurs, coloris, prix au m², prix par pli, accessoires, remises, livraison. C'est la base des devis, de la vitrine et du configurateur.
+2. **Modèles de devis et de factures** : logo, en-tête, mentions légales, conditions, pied de page, aperçu PDF.
+3. **Site vitrine** intégré à l'application, à la place du WordPress : pages publiques dont la direction édite les textes et les photos.
+4. **Clients** : fiches, historique, fidélité.
+5. **Trésorerie** : encaissements (payé, en attente, en retard), dépenses, tableau de bord chiffré (chiffre d'affaires, marge, prévisionnel).
 
 ### Stock (retenu)
 
@@ -42,10 +54,10 @@ Le stock reste dans l'Atelier. La facturation, les devis et la RH ne sont pas vi
 
 1. ✅ Base technique : connexion sécurisée, comptes, journal, sauvegardes, tests, CI, branches protégées.
 2. ✅ Équipe : salariés, fiches, comptes, désactivation à la date de sortie, menu latéral, responsive.
-3. ⏳ Rôles Atelier, Bureau et Direction, avec un menu cloisonné par espace.
+3. ⏳ Rôles Direction, RH et Atelier, avec un menu cloisonné par espace.
 4. Atelier : gestion de stock (articles, mouvements tracés, alertes de stock bas).
-5. Bureau : clients, tarifs, devis, commandes.
+5. Direction : tarifs et catalogue, modèles de devis et de factures, vitrine, clients, trésorerie.
 6. Atelier : commandes à fabriquer, planning, fiche de fabrication.
-7. Bureau : facturation.
+7. Direction : facturation et trésorerie.
 8. Espace client : configurateur public, comptes clients, commande en ligne, suivi, fidélité.
 9. Mise en production sur le Raspberry Pi 5.

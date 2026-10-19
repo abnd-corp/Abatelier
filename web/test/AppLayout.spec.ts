@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import AppLayout from '@/components/AppLayout.vue'
 import { useAuthStore, type User } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
-import { ADMIN, ATELIER, freshPinia, makeRouter, mockApi } from './helpers'
+import { ADMIN, ATELIER, RH, freshPinia, makeRouter, mockApi } from './helpers'
 
 async function setup(user: User, path = '/') {
   const pinia = freshPinia()
@@ -27,10 +27,15 @@ beforeEach(() => {
 })
 
 describe('Menu latéral', () => {
-  it('montre toutes les sections à un administrateur', async () => {
+  it('montre toutes les sections à la direction', async () => {
     const { links, sections } = await setup(ADMIN)
     expect(links()).toEqual(['Tableau de bord', 'Salariés', 'Comptes', 'Journal d’activité'])
     expect(sections()).toEqual(['Équipe', 'Administration'])
+  })
+
+  it('montre les salariés et le journal à la RH, sans les comptes', async () => {
+    const { links } = await setup(RH)
+    expect(links()).toEqual(['Tableau de bord', 'Salariés', 'Journal d’activité'])
   })
 
   it('cache les sections sans droits au rôle atelier', async () => {

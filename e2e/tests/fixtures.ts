@@ -16,7 +16,7 @@ export async function apiLogin(request: APIRequestContext, baseURL: string, iden
   expect(res.status(), await res.text()).toBe(200)
 }
 
-export async function createUser(request: APIRequestContext, baseURL: string, user: { identifiant: string; nom: string; role?: 'admin' | 'atelier' }) {
+export async function createUser(request: APIRequestContext, baseURL: string, user: { identifiant: string; nom: string; role?: 'direction' | 'rh' | 'atelier' }) {
   const res = await request.post('/api/users', { data: { role: 'atelier', ...user }, headers: { Origin: baseURL } })
   expect(res.status(), await res.text()).toBe(201)
   return (await res.json()).tempPassword as string

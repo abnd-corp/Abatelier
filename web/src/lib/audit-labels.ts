@@ -15,7 +15,7 @@ export interface AuditEntry {
 
 export type Tone = 'neutral' | 'bad' | 'accent'
 
-const ROLE: Record<string, string> = { admin: 'administrateur', atelier: 'atelier' }
+const ROLE: Record<string, string> = { direction: 'direction', admin: 'direction', rh: 'RH', atelier: 'atelier' }
 
 /** Phrase lisible et couleur pour une ligne du journal. Les futures actions métier s'ajoutent ici. */
 export function describe(e: AuditEntry): { text: string; tone: Tone } {

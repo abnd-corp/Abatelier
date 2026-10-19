@@ -17,7 +17,7 @@ export async function seedAdmin(log: { info: (msg: string) => void; warn: (msg: 
     identifiant: env.ADMIN_IDENTIFIANT.trim().toLowerCase(),
     nom: env.ADMIN_NOM,
     passwordHash: await hashPassword(env.ADMIN_PASSWORD),
-    role: 'admin',
+    role: 'direction',
   })
   log.info(`Compte admin « ${env.ADMIN_IDENTIFIANT} » créé.`)
 }

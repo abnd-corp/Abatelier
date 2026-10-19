@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { db } from '../db/index.js'
 import { auditLog, CONTRATS, employees, ROLES, sessions, users, type Employee } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
+import { can } from '../auth/permissions.js'
 import { audit, describeDevice } from '../audit.js'
 import { createAccount, IdentifiantTaken, identifiantSchema } from '../accounts.js'
 import { applyDepartures, todayParis } from '../departures.js'
@@ -158,6 +159,9 @@ export async function employeeRoutes(app: FastifyInstance) {
     const parsed = createBody.safeParse(req.body)
     if (!parsed.success) return invalid(reply, parsed.error)
     const { compte, ...data } = parsed.data
+    if (compte && !can(req.user!.role, 'users.manage')) {
+      return reply.code(403).send({ error: 'Seule la direction peut créer des comptes de connexion.' })
+    }
 
     try {
       const result = await db.transaction(async (tx) => {
@@ -269,6 +273,7 @@ export async function employeeRoutes(app: FastifyInstance) {
 
   // Créer un compte de connexion pour un salarié qui n'en a pas
   app.post('/:id/account', async (req, reply) => {
+    if (!can(req.user!.role, 'users.manage')) return reply.code(403).send({ error: 'Seule la direction peut créer des comptes de connexion.' })
     const e = await findEmployee((req.params as { id: string }).id, reply)
     if (!e) return
     if (e.userId) return reply.code(409).send({ error: 'Ce salarié a déjà un compte.' })

@@ -87,7 +87,7 @@ const errorFor = (field: string, error?: { field?: string; msg: string } | null)
       <div class="field">
         <label for="f-notes" class="sr-only">Notes internes</label>
         <textarea id="f-notes" v-model="model.notes" class="input" rows="4" placeholder="Habilitations, permis cariste, remarques…" aria-describedby="h-notes" />
-        <span id="h-notes" class="hint muted">Visibles uniquement par les administrateurs.</span>
+        <span id="h-notes" class="hint muted">Visibles uniquement par la direction et la RH.</span>
       </div>
     </fieldset>
 

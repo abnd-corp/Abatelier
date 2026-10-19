@@ -11,7 +11,7 @@ beforeEach(async () => {
 afterEach(() => app.close())
 beforeEach(async () => {
   await resetDb()
-  adminId = (await createUser({ identifiant: 'chef', nom: 'Le Chef', role: 'admin' })).id
+  adminId = (await createUser({ identifiant: 'chef', nom: 'Le Chef', role: 'direction' })).id
   admin = await loginAs(app, 'chef')
 })
 

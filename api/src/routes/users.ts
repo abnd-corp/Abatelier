@@ -27,12 +27,12 @@ async function findUser(id: string, reply: FastifyReply) {
   return u ?? null
 }
 
-/** Nombre d'admins actifs autres que userId : on refuse de retirer le dernier. */
+/** Nombre de comptes Direction actifs autres que userId : on refuse de retirer le dernier. */
 async function otherActiveAdmins(userId: string) {
   const [row] = await db
     .select({ n: count() })
     .from(users)
-    .where(and(eq(users.role, 'admin'), isNull(users.disabledAt), ne(users.id, userId)))
+    .where(and(eq(users.role, 'direction'), isNull(users.disabledAt), ne(users.id, userId)))
   return row?.n ?? 0
 }
 
@@ -89,8 +89,8 @@ export async function userRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: firstError(parsed.error) })
     const changes = parsed.data
 
-    if (changes.role && changes.role !== 'admin' && u.role === 'admin' && !u.disabledAt && (await otherActiveAdmins(u.id)) === 0) {
-      return reply.code(400).send({ error: 'Il doit rester au moins un administrateur actif.' })
+    if (changes.role && changes.role !== 'direction' && u.role === 'direction' && !u.disabledAt && (await otherActiveAdmins(u.id)) === 0) {
+      return reply.code(400).send({ error: 'Il doit rester au moins un compte Direction actif.' })
     }
     const diff: Record<string, { avant: string; apres: string }> = {}
     if (changes.nom && changes.nom !== u.nom) diff.nom = { avant: u.nom, apres: changes.nom }
@@ -107,8 +107,8 @@ export async function userRoutes(app: FastifyInstance) {
     if (!u) return
     if (u.id === req.user!.id) return reply.code(400).send({ error: 'Vous ne pouvez pas désactiver votre propre compte.' })
     if (u.disabledAt) return { ok: true }
-    if (u.role === 'admin' && (await otherActiveAdmins(u.id)) === 0) {
-      return reply.code(400).send({ error: 'Il doit rester au moins un administrateur actif.' })
+    if (u.role === 'direction' && (await otherActiveAdmins(u.id)) === 0) {
+      return reply.code(400).send({ error: 'Il doit rester au moins un compte Direction actif.' })
     }
     await db.update(users).set({ disabledAt: new Date() }).where(eq(users.id, u.id))
     const closed = await deleteUserSessions(u.id)

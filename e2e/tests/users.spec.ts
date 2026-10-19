@@ -55,7 +55,7 @@ test.describe('Arrivée et départ d’un employé', () => {
     await employee.getByLabel('Identifiant').fill(uid)
     await employee.getByLabel('Mot de passe', { exact: true }).fill(NEW_PASSWORD)
     await employee.getByRole('button', { name: 'Se connecter' }).click()
-    await expect(employee.getByRole('alert')).toHaveText('Ce compte est désactivé. Contactez l’administrateur.')
+    await expect(employee.getByRole('alert')).toHaveText('Ce compte est désactivé. Contactez la direction.')
     await employee.context().close()
   })
 

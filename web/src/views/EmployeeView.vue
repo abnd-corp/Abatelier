@@ -14,7 +14,7 @@ import {
 } from '@/lib/employees'
 import { describe, type AuditEntry } from '@/lib/audit-labels'
 import { dateTime, relative } from '@/lib/format'
-import { ROLE_LABELS, useAuthStore, type Role } from '@/stores/auth'
+import { ROLE_LABELS, ROLE_OPTIONS, useAuthStore, type Role } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import AppIcon from '@/components/AppIcon.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
@@ -34,6 +34,8 @@ const actionError = ref('')
 const id = computed(() => route.params.id as string)
 const name = computed(() => (employee.value ? fullName(employee.value) : ''))
 const isMe = computed(() => !!employee.value?.account && employee.value.account.id === auth.user?.id)
+// La RH voit le compte lié mais ne le gère pas : c'est réservé à la direction
+const canAccounts = computed(() => auth.can('users.manage'))
 
 async function load() {
   try {
@@ -238,7 +240,7 @@ async function changeRole(role: Role) {
           <h2>Notes internes</h2>
           <p v-if="employee.notes" class="notes">{{ employee.notes }}</p>
           <p v-else class="muted">Aucune note.</p>
-          <p class="hint muted">Visibles uniquement par les administrateurs.</p>
+          <p class="hint muted">Visibles uniquement par la direction et la RH.</p>
         </section>
       </div>
 
@@ -254,8 +256,9 @@ async function changeRole(role: Role) {
               <dd>
                 <span class="pill" :class="accountStatus(employee.account).tone">{{ accountStatus(employee.account).label }}</span>
               </dd>
-              <dt><label for="account-role">Rôle</label></dt>
-              <dd>
+              <dt><label v-if="canAccounts" for="account-role">Rôle</label><template v-else>Rôle</template></dt>
+              <dd v-if="!canAccounts">{{ ROLE_LABELS[employee.account.role] }}</dd>
+              <dd v-else>
                 <select
                   id="account-role"
                   class="input compact"
@@ -263,8 +266,7 @@ async function changeRole(role: Role) {
                   :disabled="isMe || !!employee.account.disabledAt"
                   @change="changeRole(($event.target as HTMLSelectElement).value as Role)"
                 >
-                  <option value="atelier">{{ ROLE_LABELS.atelier }}</option>
-                  <option value="admin">{{ ROLE_LABELS.admin }}</option>
+                  <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }}</option>
                 </select>
               </dd>
               <dt>Dernière connexion</dt>
@@ -273,7 +275,8 @@ async function changeRole(role: Role) {
               <dd class="mono">{{ employee.account.activeSessions ?? 0 }}</dd>
             </dl>
 
-            <p v-if="isMe" class="muted hint">C’est votre compte : gérez-le depuis « Mon compte ».</p>
+            <p v-if="!canAccounts" class="muted hint">La gestion des comptes est réservée à la direction.</p>
+            <p v-else-if="isMe" class="muted hint">C’est votre compte : gérez-le depuis « Mon compte ».</p>
             <div v-else-if="pending" class="confirm">
               <span>{{ CONFIRM[pending] }}</span>
               <button class="btn small" :class="pending === 'disable' ? 'danger' : 'primary'" type="button" :disabled="busy" @click="run(pending)">Confirmer</button>
@@ -290,7 +293,8 @@ async function changeRole(role: Role) {
 
           <template v-else>
             <p class="muted">Cette personne n’a pas de compte : elle ne peut pas se connecter.</p>
-            <form v-if="showAccountForm" class="account-form" novalidate @submit.prevent="createAccount">
+            <p v-if="!canAccounts" class="muted hint">Seule la direction peut lui créer un compte.</p>
+            <form v-else-if="showAccountForm" class="account-form" novalidate @submit.prevent="createAccount">
               <p v-if="accountError && accountError.field !== 'identifiant'" class="alert bad" role="alert">{{ accountError.msg }}</p>
               <div class="field">
                 <label for="new-identifiant">Identifiant de connexion</label>
@@ -300,8 +304,7 @@ async function changeRole(role: Role) {
               <div class="field">
                 <label for="new-role">Rôle</label>
                 <select id="new-role" v-model="newAccount.role" class="input">
-                  <option value="atelier">{{ ROLE_LABELS.atelier }} : accès standard</option>
-                  <option value="admin">{{ ROLE_LABELS.admin }} : gère l’équipe, les comptes et le journal</option>
+                  <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }} : {{ r.description }}</option>
                 </select>
               </div>
               <div class="account-actions">

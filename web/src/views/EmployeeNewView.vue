@@ -3,20 +3,23 @@ import { reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
 import { emptyFields, fullName, suggestIdentifiant } from '@/lib/employees'
-import { ROLE_LABELS, type Role } from '@/stores/auth'
+import { ROLE_OPTIONS, useAuthStore, type Role } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import EmployeeForm from '@/components/EmployeeForm.vue'
 
 const router = useRouter()
 const ui = useUiStore()
+const auth = useAuthStore()
+// Seule la direction crée des comptes de connexion ; la RH saisit uniquement la fiche
+const canAccounts = auth.can('users.manage')
 
 const fields = reactive(emptyFields())
-const withAccount = ref(true)
+const withAccount = ref(canAccounts)
 const account = reactive({ identifiant: '', role: 'atelier' as Role })
 const error = ref<{ field?: string; msg: string } | null>(null)
 const saving = ref(false)
 
-// L'identifiant suit le prénom tant que l'admin ne l'a pas modifié lui-même
+// L'identifiant suit le prénom tant que la personne ne l'a pas modifié elle-même
 const identifiantTouched = ref(false)
 watch(
   () => [fields.prenom, fields.nom],
@@ -56,7 +59,7 @@ async function save() {
     <p v-if="error" class="alert bad" role="alert">{{ error.msg }}</p>
 
     <EmployeeForm v-model="fields" :error="error">
-      <fieldset class="card group">
+      <fieldset v-if="canAccounts" class="card group">
         <legend>Compte de connexion</legend>
         <label class="check">
           <input id="f-with-account" v-model="withAccount" type="checkbox" />
@@ -83,8 +86,7 @@ async function save() {
           <div class="field">
             <label for="f-role">Rôle</label>
             <select id="f-role" v-model="account.role" class="input">
-              <option value="atelier">{{ ROLE_LABELS.atelier }} : accès standard</option>
-              <option value="admin">{{ ROLE_LABELS.admin }} : gère l’équipe, les comptes et le journal</option>
+              <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }} : {{ r.description }}</option>
             </select>
           </div>
         </div>
