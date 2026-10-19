@@ -17,6 +17,8 @@ const PAGES = [
   { path: '/modeles-documents', heading: 'Modèles de documents' },
   { path: '/modeles-documents?onglet=modele', heading: 'Modèles de documents' },
   { path: '/modeles-documents?onglet=numerotation', heading: 'Modèles de documents' },
+  { path: '/clients', heading: 'Clients' },
+  { path: '/clients/nouveau', heading: 'Nouveau client' },
   { path: '/mon-compte', heading: 'Mon compte' },
 ]
 
@@ -42,6 +44,19 @@ test.describe('Responsive @responsive', () => {
       expect(await noHorizontalScroll(adminPage)).toBe(true)
     })
   }
+
+  test('/clients/:id : fiche client lisible, pas de défilement horizontal', async ({ adminPage, baseURL, uid }) => {
+    const res = await adminPage.request.post('/api/clients', {
+      data: { type: 'professionnel', raisonSociale: `Couverture Très Longue Raison Sociale ${uid}`, prenom: 'Luc', nom: 'Morel', email: `${uid}@exemple.fr`, adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' },
+      headers: { Origin: baseURL! },
+    })
+    const { id } = await res.json()
+    await adminPage.request.post(`/api/clients/${id}/sites`, { data: { libelle: 'Maison Rivière', adresse: '12 chemin du Bois', codePostal: '42240', ville: 'Unieux' }, headers: { Origin: baseURL! } })
+    await adminPage.goto(`/clients/${id}`)
+    await expect(adminPage.getByRole('heading', { level: 1 })).toBeInViewport()
+    await expect(adminPage.getByText('Maison Rivière', { exact: true })).toBeVisible()
+    expect(await noHorizontalScroll(adminPage)).toBe(true)
+  })
 
   test('le menu est accessible sur tous les écrans', async ({ adminPage }) => {
     await adminPage.goto('/')

@@ -17,6 +17,7 @@ declare module 'vue-router' {
 }
 
 const employeesParent = { label: 'Salariés', to: { name: 'employees' } }
+const clientsParent = { label: 'Clients', to: { name: 'clients' } }
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -45,6 +46,24 @@ export const router = createRouter({
           name: 'employee',
           component: () => import('@/views/EmployeeView.vue'),
           meta: { perm: 'employees.manage', section: 'Équipe', parent: employeesParent, title: 'Fiche salarié', menu: 'employees' },
+        },
+        {
+          path: 'clients',
+          name: 'clients',
+          component: () => import('@/views/ClientsView.vue'),
+          meta: { perm: 'clients.read', section: 'Ventes', title: 'Clients' },
+        },
+        {
+          path: 'clients/nouveau',
+          name: 'client-new',
+          component: () => import('@/views/ClientNewView.vue'),
+          meta: { perm: 'clients.manage', section: 'Ventes', parent: clientsParent, title: 'Nouveau client', menu: 'clients' },
+        },
+        {
+          path: 'clients/:id',
+          name: 'client',
+          component: () => import('@/views/ClientView.vue'),
+          meta: { perm: 'clients.read', section: 'Ventes', parent: clientsParent, title: 'Fiche client', menu: 'clients' },
         },
         {
           path: 'catalogue',

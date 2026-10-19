@@ -21,6 +21,22 @@ export const integer = (min: number, max: number, label: string, unit: string) =
       .max(max, `${label} : ${max} ${unit} maximum.`),
   )
 
+export const digits = (s: string) => s.replace(/\D/g, '')
+/** Clé de Luhn, utilisée par les numéros SIREN et SIRET. */
+export const luhn = (n: string) =>
+  n
+    .split('')
+    .reverse()
+    .reduce((sum, c, i) => {
+      let d = Number(c)
+      if (i % 2 === 1) d = d * 2 > 9 ? d * 2 - 9 : d * 2
+      return sum + d
+    }, 0) %
+    10 ===
+  0
+/** 73282932000074 → « 732 829 320 00074 » */
+export const formatSiret = (s: string) => `${s.slice(0, 3)} ${s.slice(3, 6)} ${s.slice(6, 9)} ${s.slice(9)}`
+
 export function invalid(reply: FastifyReply, e: z.ZodError) {
   const issue = e.issues[0]
   return reply.code(400).send({ error: issue?.message ?? 'Données invalides.', field: issue?.path[0] !== undefined ? String(issue.path[0]) : undefined })

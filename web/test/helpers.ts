@@ -47,6 +47,14 @@ export function makeRouter() {
       { path: '/journal', name: 'audit', component: page('audit') },
       { path: '/catalogue', name: 'catalog', component: page('catalog'), meta: { section: 'Direction', title: 'Tarifs et catalogue' } },
       { path: '/modeles-documents', name: 'documents', component: page('documents'), meta: { section: 'Direction', title: 'Modèles de documents' } },
+      { path: '/clients', name: 'clients', component: page('clients'), meta: { section: 'Ventes', title: 'Clients' } },
+      { path: '/clients/nouveau', name: 'client-new', component: page('client-new'), meta: { menu: 'clients' } },
+      {
+        path: '/clients/:id',
+        name: 'client',
+        component: page('client'),
+        meta: { section: 'Ventes', parent: { label: 'Clients', to: { name: 'clients' } }, title: 'Fiche client', menu: 'clients' },
+      },
       { path: '/salaries', name: 'employees', component: page('employees'), meta: { section: 'Équipe', title: 'Salariés' } },
       { path: '/salaries/nouveau', name: 'employee-new', component: page('employee-new'), meta: { menu: 'employees' } },
       {
@@ -71,7 +79,7 @@ export const ADMIN: User = {
   nom: 'Le Chef',
   role: 'direction',
   mustChangePassword: false,
-  permissions: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage', 'documents.manage'],
+  permissions: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage', 'documents.manage', 'clients.manage', 'clients.read'],
 }
 
 export const ATELIER: User = {
@@ -89,5 +97,5 @@ export const RH: User = {
   nom: 'Claire Petit',
   role: 'rh',
   mustChangePassword: false,
-  permissions: ['employees.manage', 'audit.read'],
+  permissions: ['employees.manage', 'audit.read', 'clients.read'],
 }

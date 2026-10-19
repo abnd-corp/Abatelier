@@ -1,4 +1,4 @@
-import { bigint, boolean, check, customType, date, index, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, check, customType, date, index, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 const ts = (name: string) => timestamp(name, { withTimezone: true })
@@ -297,6 +297,63 @@ export const documentCounters = pgTable(
   (t) => [primaryKey({ columns: [t.type, t.annee] })],
 )
 
+// --- Clients (direction ; lecture seule pour la RH) ---
+// Ils arriveront surtout par le panier du site ; en attendant, l'équipe crée les fiches à la main.
+// On ne supprime pas un client : on l'archive, pour garder ses commandes et factures lisibles.
+
+export const CLIENT_TYPES = ['particulier', 'professionnel'] as const
+export type ClientType = (typeof CLIENT_TYPES)[number]
+export const CLIENT_ORIGINES = ['site', 'atelier', 'telephone', 'email'] as const
+export type ClientOrigine = (typeof CLIENT_ORIGINES)[number]
+
+export const clients = pgTable(
+  'clients',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    type: text('type', { enum: CLIENT_TYPES }).notNull(),
+    // Professionnel : raison sociale obligatoire, prénom et nom du contact facultatifs
+    raisonSociale: text('raison_sociale'),
+    siret: text('siret'),
+    tvaIntra: text('tva_intra'),
+    prenom: text('prenom'),
+    nom: text('nom'),
+    email: text('email'),
+    telephone: text('telephone'),
+    // Adresse de facturation
+    adresse: text('adresse'),
+    codePostal: text('code_postal'),
+    ville: text('ville'),
+    origine: text('origine', { enum: CLIENT_ORIGINES }).notNull(),
+    notes: text('notes'),
+    archivedAt: ts('archived_at'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    // Une adresse e-mail désigne un seul client (elle servira à son compte sur le site)
+    uniqueIndex('clients_email_idx').on(sql`lower(${t.email})`),
+    index('clients_nom_idx').on(t.nom, t.prenom),
+    check('clients_identite', sql`(${t.type} = 'professionnel' and ${t.raisonSociale} is not null) or (${t.type} = 'particulier' and ${t.nom} is not null)`),
+  ],
+)
+
+// Adresses de chantier (livraison) d'un client
+export const clientSites = pgTable(
+  'client_sites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => clients.id, { onDelete: 'cascade' }),
+    libelle: text('libelle').notNull(),
+    adresse: text('adresse').notNull(),
+    codePostal: text('code_postal').notNull(),
+    ville: text('ville').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('client_sites_client_idx').on(t.clientId)],
+)
+
 export type User = typeof users.$inferSelect
 export type Employee = typeof employees.$inferSelect
 export type Material = typeof materials.$inferSelect
@@ -306,3 +363,5 @@ export type Accessory = typeof accessories.$inferSelect
 export type DeliverySettings = typeof deliverySettings.$inferSelect
 export type CompanySettings = typeof companySettings.$inferSelect
 export type DocumentTemplate = typeof documentTemplate.$inferSelect
+export type Client = typeof clients.$inferSelect
+export type ClientSite = typeof clientSites.$inferSelect

@@ -27,12 +27,12 @@
 
 ### Clients et commandes (prochaine étape)
 Les clients arriveront surtout par le panier du site (coordonnées saisies à la fin de la commande, puis espace client : suivi, dépenses, factures). En attendant, l'équipe peut créer une fiche à la main.
-- [ ] Fiches clients : particulier ou professionnel, coordonnées, adresses de chantier, origine (site, atelier, téléphone)
-- [ ] Commandes liées au client, suivi complet : Reçue → Validée → En fabrication → Prête → Livrée / retirée (+ Annulée), chaque étape datée et notée au journal
+- [x] Fiches clients : particulier ou professionnel (SIRET, TVA vérifiés), coordonnées, adresse de facturation, adresses de chantier, origine, notes, archivage, e-mail unique
+- [ ] Commandes liées au client (prochaine étape), suivi complet : Reçue → Validée → En fabrication → Prête → Livrée / retirée (+ Annulée), chaque étape datée et notée au journal
 - [ ] Lignes chiffrées avec le catalogue (modèle, matière, coloris, développé, plis, longueur, quantité, accessoires, remises, mise en route, livraison) : même calcul que le futur panier du site
 - [ ] Sur la fiche client : historique des commandes, total dépensé
 - [ ] Fidélité : remise pro, remises selon l'historique d'achat
-- [ ] Lecture seule pour la RH (permission `clients.read`)
+- [x] Lecture seule pour la RH (permission `clients.read`)
 
 ### Stock (ensuite)
 - [ ] Articles : tôles par matière, épaisseur et coloris ; accessoires

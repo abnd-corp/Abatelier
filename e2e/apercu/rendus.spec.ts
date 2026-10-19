@@ -22,6 +22,9 @@ const PAGES = [
   { name: '15-documents-entreprise', path: '/modeles-documents' },
   { name: '16-documents-modele', path: '/modeles-documents?onglet=modele' },
   { name: '17-documents-numerotation', path: '/modeles-documents?onglet=numerotation' },
+  { name: '18-clients', path: '/clients' },
+  { name: '19-fiche-client', path: 'FICHE_CLIENT' },
+  { name: '20-nouveau-client', path: '/clients/nouveau' },
 ]
 
 test('captures', async ({ page, baseURL }, info) => {
@@ -29,12 +32,14 @@ test('captures', async ({ page, baseURL }, info) => {
   await apiLogin(page.request, baseURL!, ADMIN.identifiant, ADMIN.password)
   const list = (await (await page.request.get('/api/employees?statut=tous')).json()).employees as { id: string; prenom: string }[]
   const ficheId = list.find((e) => e.prenom === 'Paul')!.id
+  const clients = (await (await page.request.get('/api/clients?q=forez')).json()).clients as { id: string }[]
+  const clientId = clients[0]!.id
 
   const dir = `${OUT}${info.project.name}`
   mkdirSync(dir, { recursive: true })
 
   for (const p of PAGES) {
-    const target = p.path === 'FICHE' ? `/salaries/${ficheId}` : p.path
+    const target = p.path === 'FICHE' ? `/salaries/${ficheId}` : p.path === 'FICHE_CLIENT' ? `/clients/${clientId}` : p.path
     if (p.anonymous) {
       const anon = await page.context().browser()!.newContext({ ...info.project.use, baseURL })
       const ap = await anon.newPage()

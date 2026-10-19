@@ -71,6 +71,13 @@
       "when": 1792432830829,
       "tag": "0009_numerotation_fixe",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792433361618,
+      "tag": "0010_clients",
+      "breakpoints": true
     }
   ]
 }

@@ -2,12 +2,15 @@ export class ApiError extends Error {
   status: number
   code?: string
   field?: string
+  // Corps complet de la réponse (ex. l'id d'une fiche déjà existante)
+  data?: Record<string, unknown>
 
-  constructor(status: number, message: string, code?: string, field?: string) {
+  constructor(status: number, message: string, code?: string, field?: string, data?: Record<string, unknown>) {
     super(message)
     this.status = status
     this.code = code
     this.field = field
+    this.data = data
   }
 }
 
@@ -35,7 +38,7 @@ async function request(path: string, options: Options): Promise<Response> {
     const data = await res.json().catch(() => null)
     const message =
       data?.error ?? (res.status === 429 ? 'Trop de tentatives. Réessayez dans une minute.' : 'Le serveur a rencontré un problème. Réessayez.')
-    const err = new ApiError(res.status, message, data?.code, data?.field)
+    const err = new ApiError(res.status, message, data?.code, data?.field, data ?? undefined)
     if (res.status === 401 && path !== '/auth/login') apiEvents.onUnauthorized()
     if (res.status === 403 && err.code === 'PASSWORD_CHANGE_REQUIRED') apiEvents.onPasswordChangeRequired()
     throw err

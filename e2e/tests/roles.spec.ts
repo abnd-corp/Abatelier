@@ -1,7 +1,7 @@
 import { apiLogin, createUser, expect, NEW_PASSWORD, test } from './fixtures'
 
 test.describe('Rôles', () => {
-  test('la RH gère les salariés et lit le journal, sans toucher aux comptes', async ({ adminPage, browser, baseURL, uid }) => {
+  test('la RH gère les salariés, consulte les clients et lit le journal, sans toucher aux comptes', async ({ adminPage, browser, baseURL, uid }) => {
     // La direction crée un compte RH ; la personne choisit son mot de passe
     const temp = await createUser(adminPage.request, baseURL!, { identifiant: uid, nom: `Claire ${uid.slice(-4)}`, role: 'rh' })
     const rh = await (await browser.newContext()).newPage()
@@ -11,7 +11,7 @@ test.describe('Rôles', () => {
 
     await rh.goto('/')
     const nav = rh.getByRole('navigation', { name: 'Navigation principale' })
-    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Salariés', 'Journal d’activité'])
+    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Clients', 'Salariés', 'Journal d’activité'])
 
     // Pas d'accès aux comptes, même en tapant l'adresse
     await rh.goto('/utilisateurs')

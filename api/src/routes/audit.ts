@@ -8,7 +8,7 @@ import { describeDevice } from '../audit.js'
 
 const query = z.object({
   userId: z.uuid().optional(),
-  type: z.enum(['all', 'login', 'failures', 'accounts', 'catalog', 'documents']).default('all'),
+  type: z.enum(['all', 'login', 'failures', 'accounts', 'catalog', 'documents', 'clients']).default('all'),
   before: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 })
@@ -25,6 +25,7 @@ const TYPE_FILTERS: Record<string, SQL | undefined> = {
   ),
   catalog: like(auditLog.action, 'catalog.%'),
   documents: like(auditLog.action, 'documents.%'),
+  clients: like(auditLog.action, 'client.%'),
 }
 
 export async function auditRoutes(app: FastifyInstance) {

@@ -21,6 +21,10 @@ interface Item {
 const SECTIONS: { title?: string; items: Item[] }[] = [
   { items: [{ to: { name: 'dashboard' }, name: 'dashboard', label: 'Tableau de bord', icon: 'home' }] },
   {
+    title: 'Ventes',
+    items: [{ to: { name: 'clients' }, name: 'clients', label: 'Clients', icon: 'users', perm: 'clients.read' }],
+  },
+  {
     title: 'Direction',
     items: [
       { to: { name: 'catalog' }, name: 'catalog', label: 'Tarifs et catalogue', icon: 'tag', perm: 'catalog.manage' },

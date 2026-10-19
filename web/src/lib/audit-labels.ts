@@ -170,6 +170,20 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A envoyé un nouveau logo (${d.type === 'image/png' ? 'PNG' : 'JPEG'}, ${d.largeur} × ${d.hauteur} px)`, tone: 'accent' }
     case 'documents.logo_removed':
       return { text: 'A remis le logo de l’appli sur les documents', tone: 'accent' }
+    case 'client.created':
+      return { text: `A ajouté le client ${d.nom}${d.type === 'professionnel' ? ' (professionnel)' : ''}`, tone: 'accent' }
+    case 'client.updated':
+      return { text: `A modifié la fiche de ${d.nom} (${(d.champs ?? []).join(', ')})`, tone: 'neutral' }
+    case 'client.archived':
+      return { text: `A archivé le client ${d.nom}`, tone: 'neutral' }
+    case 'client.unarchived':
+      return { text: `A sorti le client ${d.nom} des archives`, tone: 'neutral' }
+    case 'client.site_added':
+      return { text: `A ajouté le chantier « ${d.chantier} » (${d.ville}) à ${d.nom}`, tone: 'neutral' }
+    case 'client.site_updated':
+      return { text: `A modifié le chantier « ${d.chantier} » de ${d.nom}`, tone: 'neutral' }
+    case 'client.site_removed':
+      return { text: `A retiré le chantier « ${d.chantier} » de ${d.nom}`, tone: 'neutral' }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

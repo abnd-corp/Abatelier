@@ -8,23 +8,10 @@ import { inspectImage, renderDocument, sampleDocument } from '../pdf.js'
 import { getPricingSettings } from '../pricing.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
-import { diff, integer, invalid } from '../validation.js'
+import { diff, digits, formatSiret, integer, invalid, luhn } from '../validation.js'
 
 const LOGO_MAX = 1024 * 1024
 
-const digits = (s: string) => s.replace(/\D/g, '')
-/** Clé de Luhn, utilisée par les numéros SIREN et SIRET. */
-const luhn = (n: string) =>
-  n
-    .split('')
-    .reverse()
-    .reduce((sum, c, i) => {
-      let d = Number(c)
-      if (i % 2 === 1) d = d * 2 > 9 ? d * 2 - 9 : d * 2
-      return sum + d
-    }, 0) %
-    10 ===
-  0
 /** Contrôle modulo 97 d'un IBAN. */
 const ibanOk = (iban: string) => {
   const r = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55))
@@ -55,7 +42,7 @@ const companyFields = {
     .trim()
     .transform((s) => (s ? digits(s) : ''))
     .pipe(orEmpty(z.string().length(14, 'SIRET : 14 chiffres attendus.').refine(luhn, 'SIRET invalide : vérifiez les chiffres.')))
-    .transform((s) => (s ? `${s.slice(0, 3)} ${s.slice(3, 6)} ${s.slice(6, 9)} ${s.slice(9)}` : '')),
+    .transform((s) => (s ? formatSiret(s) : '')),
   rcs: line(80, 'RCS'),
   tvaIntra: z
     .string()
