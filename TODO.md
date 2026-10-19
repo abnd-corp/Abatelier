@@ -24,26 +24,33 @@
 - [x] PDF côté serveur (pdfkit) et aperçu en direct dans la page (pdf.js)
 - [x] Numérotation D-2026-0001 / F-2026-0001 sans trou (compteur verrouillé), reprise d'une numérotation existante
 - [ ] Mentions légales types à faire valider par leur comptable (pénalités, indemnité de 40 €, escompte)
+- [ ] Numérotation : préfixes D / F à fixer dans le code, et « prochain numéro » à verrouiller dès le premier document créé (il ne sert qu'à reprendre la suite de l'ancien logiciel)
 
-### Site vitrine (remplace le WordPress actuel)
-- [ ] Pages publiques : accueil, produits (couvertines, bavettes, bandeaux), réalisations, contact
-- [ ] Éditeur de textes et de **photos** pour la direction (envoi d'images, redimensionnement, légendes)
-- [ ] Référencement : titres, descriptions, plan du site, données structurées « entreprise locale »
-- [ ] Récupérer les photos et les textes du site actuel (déjà copiés dans `entreprise/sources/`)
-
-### Clients
-- [ ] Fiches clients : particulier ou professionnel, coordonnées, adresses de chantier
-- [ ] Historique des devis et commandes, chiffre d'affaires par client
+### Clients et commandes (prochaine étape)
+Les clients arriveront surtout par le panier du site (coordonnées saisies à la fin de la commande, puis espace client : suivi, dépenses, factures). En attendant, l'équipe peut créer une fiche à la main.
+- [ ] Fiches clients : particulier ou professionnel, coordonnées, adresses de chantier, origine (site, atelier, téléphone)
+- [ ] Commandes liées au client, suivi complet : Reçue → Validée → En fabrication → Prête → Livrée / retirée (+ Annulée), chaque étape datée et notée au journal
+- [ ] Lignes chiffrées avec le catalogue (modèle, matière, coloris, développé, plis, longueur, quantité, accessoires, remises, mise en route, livraison) : même calcul que le futur panier du site
+- [ ] Sur la fiche client : historique des commandes, total dépensé
 - [ ] Fidélité : remise pro, remises selon l'historique d'achat
 - [ ] Lecture seule pour la RH (permission `clients.read`)
+
+### Stock (ensuite)
+- [ ] Articles : tôles par matière, épaisseur et coloris ; accessoires
+- [ ] Décompte automatique quand une commande passe « en fabrication », mouvements tracés, alertes de stock bas
 
 ### Trésorerie
 - [ ] Encaissements : factures payées, en attente, en retard ; relances
 - [ ] Dépenses : achats de tôles, fournisseurs, frais
 - [ ] Tableau de bord chiffré : chiffre d'affaires du mois et de l'année, marge estimée, prévisionnel
 
+### Site vitrine (à la fin, remplace le WordPress actuel)
+- [ ] Pages publiques : accueil, produits (couvertines, bavettes, bandeaux), réalisations, contact
+- [ ] Éditeur de textes et de **photos** pour la direction (envoi d'images, redimensionnement, légendes)
+- [ ] Référencement : titres, descriptions, plan du site, données structurées « entreprise locale »
+- [ ] Récupérer les photos et les textes du site actuel (déjà copiés dans `entreprise/sources/`)
+
 ## 2. Espace Atelier
-- [ ] Stock : articles (tôles par matière, épaisseur et coloris ; accessoires), mouvements tracés, alertes de stock bas
 - [ ] Commandes à fabriquer, planning, fiche de fabrication
 
 ## 3. Espace client et site public
