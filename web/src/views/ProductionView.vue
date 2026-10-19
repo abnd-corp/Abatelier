@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api, ApiError } from '@/api'
-import { shortDay, statutOf, STEP_ACTIONS, type OrderStatut } from '@/lib/orders'
+import { sheetUrl, shortDay, statutOf, STEP_ACTIONS, type OrderStatut } from '@/lib/orders'
 import { todayParis } from '@/lib/employees'
 import AppIcon from '@/components/AppIcon.vue'
 
@@ -85,7 +85,10 @@ const groups = computed(() => GROUPS.map((g) => ({ ...g, orders: orders.value.fi
           <span><AppIcon name="layers" :size="15" /> {{ o.pieces }} pièce{{ o.pieces > 1 ? 's' : '' }} ({{ o.lignes }} réf.)</span>
           <span><AppIcon :name="o.livraisonMode === 'retrait' ? 'home' : 'truck'" :size="15" /> {{ o.livraisonMode === 'retrait' ? 'Retrait' : 'Livraison' }}</span>
         </p>
-        <button v-if="o.next" class="btn small" :class="{ primary: o.statut !== 'prete' }" type="button" :disabled="busy === o.id" @click="advance(o)">{{ STEP_ACTIONS[o.next] }}</button>
+        <div class="row-actions">
+          <button v-if="o.next" class="btn small" :class="{ primary: o.statut !== 'prete' }" type="button" :disabled="busy === o.id" @click="advance(o)">{{ STEP_ACTIONS[o.next] }}</button>
+          <a class="btn small" :href="sheetUrl(o.id)" target="_blank" rel="noopener" :aria-label="`Imprimer la fiche ${o.numero}`" title="Imprimer la fiche"><AppIcon name="printer" :size="15" />Fiche</a>
+        </div>
       </article>
     </section>
   </div>
@@ -153,9 +156,11 @@ const groups = computed(() => GROUPS.map((g) => ({ ...g, orders: orders.value.fi
 .late-label {
   color: var(--bad);
 }
-.order .btn {
+.row-actions {
   grid-column: 1 / -1;
-  justify-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .empty {
   padding: 40px 20px;

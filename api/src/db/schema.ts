@@ -137,9 +137,26 @@ export const colors = pgTable('colors', {
   updatedAt: ts('updated_at').notNull().defaultNow(),
 })
 
-// Modèles de pièces du configurateur, auxquels un accessoire peut s'appliquer
-export const MODELES = ['couvertine', 'bavette', 'bandeau'] as const
-export type Modele = (typeof MODELES)[number]
+// Modèles de pièces (couvertine, bavette…) : une forme de départ que l'on ajuste à chaque commande.
+// Gérés par la direction ; on les désactive au lieu de les supprimer.
+export const pieceModels = pgTable('piece_models', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nom: text('nom').notNull().unique(),
+  // Forme de départ : cotes en mm, angles signés (négatif = pli dans l'autre sens), nom de chaque cote
+  cotes: integer('cotes').array().notNull(),
+  angles: integer('angles').array().notNull(),
+  noms: text('noms').array().notNull(),
+  // Direction du premier segment sur le dessin, en degrés (orientation de la vue en coupe)
+  cap: integer('cap').notNull().default(0),
+  // Valeurs proposées pour une nouvelle pièce
+  longueur: integer('longueur').notNull(),
+  quantite: integer('quantite').notNull().default(1),
+  actif: boolean('actif').notNull().default(true),
+  position: integer('position').notNull().default(0),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+})
+export type PieceModel = typeof pieceModels.$inferSelect
 
 export const UNITES = ['piece', 'paire'] as const
 // Quantité proposée pour une ligne de N pièces : aucune (saisie libre), un nombre fixe,
@@ -152,7 +169,8 @@ export const accessories = pgTable('accessories', {
   // Prix de vente HT, par unité (la pièce ou la paire)
   prix: numeric('prix', { precision: 10, scale: 2, mode: 'number' }).notNull(),
   unite: text('unite', { enum: UNITES }).notNull().default('piece'),
-  modeles: text('modeles', { enum: MODELES }).array().notNull(),
+  // Modèles de pièces avec lesquels l'accessoire est proposé (identifiants de piece_models)
+  modeles: uuid('modeles').array().notNull(),
   quantiteAuto: text('quantite_auto', { enum: QUANTITES_AUTO }).notNull().default('aucune'),
   // Utilisé seulement quand quantiteAuto = 'fixe'
   quantiteFixe: integer('quantite_fixe').notNull().default(0),
@@ -188,6 +206,10 @@ export const pricingSettings = pgTable(
     longueurMin: integer('longueur_min').notNull(),
     longueurMax: integer('longueur_max').notNull(),
     plisMax: integer('plis_max').notNull(),
+    // Angle intérieur possible d'un pli, en degrés, et pince (pli écrasé à plat) faisable ou non
+    angleMin: integer('angle_min').notNull().default(30),
+    angleMax: integer('angle_max').notNull().default(175),
+    pinceAutorisee: boolean('pince_autorisee').notNull().default(false),
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },
   (t) => [check('pricing_settings_single_row', sql`${t.id} = 1`)],
@@ -364,8 +386,6 @@ export const clientSites = pgTable(
 export const ORDER_STATUTS = ['recue', 'validee', 'fabrication', 'prete', 'livree', 'annulee'] as const
 export type OrderStatut = (typeof ORDER_STATUTS)[number]
 export const LIVRAISON_MODES = ['retrait', 'livraison'] as const
-export const LINE_MODELES = [...MODELES, 'autre'] as const
-export type LineModele = (typeof LINE_MODELES)[number]
 
 export interface OrderLineAccessory {
   accessoryId: string
@@ -424,7 +444,10 @@ export const orderLines = pgTable(
     position: integer('position').notNull(),
     // Repère libre (« Mur sud », « Fenêtre cuisine »)
     repere: text('repere'),
-    modele: text('modele', { enum: LINE_MODELES }).notNull(),
+    // Modèle de départ, et son nom et son orientation recopiés (la ligne reste lisible si le modèle change)
+    modelId: uuid('model_id').references(() => pieceModels.id, { onDelete: 'set null' }),
+    modeleLabel: text('modele_label').notNull(),
+    cap: integer('cap').notNull().default(0),
     materialId: uuid('material_id').references(() => materials.id, { onDelete: 'set null' }),
     materialLabel: text('material_label').notNull(),
     colorId: uuid('color_id').references(() => colors.id, { onDelete: 'set null' }),

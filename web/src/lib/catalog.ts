@@ -52,9 +52,11 @@ export interface PricingSettings {
   longueurMin: number
   longueurMax: number
   plisMax: number
+  angleMin: number
+  angleMax: number
+  pinceAutorisee: boolean
 }
 
-export type Modele = 'couvertine' | 'bavette' | 'bandeau'
 export type Unite = 'piece' | 'paire'
 export type QuantiteAuto = 'aucune' | 'fixe' | 'par_piece' | 'jonctions'
 
@@ -63,18 +65,27 @@ export interface Accessory {
   nom: string
   prix: number
   unite: Unite
-  modeles: Modele[]
+  // Identifiants des modèles de pièces avec lesquels l'accessoire est proposé
+  modeles: string[]
   quantiteAuto: QuantiteAuto
   quantiteFixe: number
   actif: boolean
   position: number
 }
 
-export const MODELES: { id: Modele; label: string }[] = [
-  { id: 'couvertine', label: 'Couvertine' },
-  { id: 'bavette', label: 'Bavette' },
-  { id: 'bandeau', label: 'Bandeau' },
-]
+/** Modèle de pièce, tel que la direction le gère dans le catalogue. */
+export interface PieceModel {
+  id: string
+  nom: string
+  cotes: number[]
+  angles: number[]
+  noms: string[]
+  cap: number
+  longueur: number
+  quantite: number
+  actif: boolean
+  position: number
+}
 export const UNITES: Record<Unite, string> = { piece: 'la pièce', paire: 'la paire' }
 export const QUANTITES: Record<QuantiteAuto, string> = {
   aucune: 'Aucune (saisie libre)',

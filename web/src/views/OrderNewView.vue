@@ -72,7 +72,7 @@ const addresses = computed(() => {
   return list
 })
 
-const emptyCatalog = computed(() => !!catalog.value && (!catalog.value.materials.length || !catalog.value.colors.length))
+const emptyCatalog = computed(() => !!catalog.value && (!catalog.value.models.length || !catalog.value.materials.length || !catalog.value.colors.length))
 
 async function save() {
   if (!form.value) return
@@ -99,7 +99,7 @@ async function save() {
 
   <p v-if="loadError" class="alert bad" role="alert">{{ loadError }}</p>
   <p v-if="emptyCatalog" class="alert bad" role="alert">
-    Ajoutez d’abord au moins une matière et un coloris actifs dans « Tarifs et catalogue ».
+    Ajoutez d’abord au moins un modèle de pièce, une matière et un coloris actifs dans « Tarifs et catalogue ».
   </p>
 
   <template v-else-if="catalog">

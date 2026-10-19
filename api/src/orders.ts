@@ -1,7 +1,7 @@
 import type { FastifyRequest } from 'fastify'
 import { asc, eq } from 'drizzle-orm'
 import { db } from './db/index.js'
-import { accessories, colors, materials, orderEvents, orders, users, type Order, type OrderStatut } from './db/schema.js'
+import { accessories, colors, materials, orderEvents, orders, pieceModels, users, type Order, type OrderStatut } from './db/schema.js'
 import { getPricingSettings } from './pricing.js'
 import { getDeliverySettings } from './delivery.js'
 import { addWorkingDays, type Catalog } from './quote.js'
@@ -32,14 +32,15 @@ export const PRODUCTION_STATUTS: OrderStatut[] = ['validee', 'fabrication', 'pre
 export const PRODUCTION_STEPS: OrderStatut[] = ['fabrication', 'prete', 'livree']
 
 export async function loadCatalog(): Promise<Catalog> {
-  const [m, c, a, settings, delivery] = await Promise.all([
+  const [models, m, c, a, settings, delivery] = await Promise.all([
+    db.select().from(pieceModels),
     db.select().from(materials),
     db.select().from(colors),
     db.select().from(accessories),
     getPricingSettings(),
     getDeliverySettings(),
   ])
-  return { materials: m, colors: c, accessories: a, settings, delivery }
+  return { models, materials: m, colors: c, accessories: a, settings, delivery }
 }
 
 /** Passe la commande à l'étape suivante (déjà vérifiée), la date dans l'historique et le journal. */

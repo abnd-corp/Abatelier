@@ -1,7 +1,7 @@
 import { sql, eq } from 'drizzle-orm'
 import { buildApp } from '../src/app.js'
 import { db } from '../src/db/index.js'
-import { auditLog, users, type Role } from '../src/db/schema.js'
+import { auditLog, pieceModels, users, type Role } from '../src/db/schema.js'
 import { hashPassword } from '../src/auth/password.js'
 
 export type App = Awaited<ReturnType<typeof buildApp>>
@@ -13,7 +13,23 @@ export const PASSWORD = 'Plieuse-numerique-2026'
 export { buildApp }
 
 export async function resetDb() {
-  await db.execute(sql`truncate audit_log, login_attempts, sessions, employees, users, materials, colors, pricing_settings, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events restart identity cascade`)
+  await db.execute(sql`truncate audit_log, login_attempts, sessions, employees, users, materials, colors, pricing_settings, piece_models, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events restart identity cascade`)
+}
+
+// Les quatre modèles de départ, avec les identifiants de la migration 0013
+export const M = {
+  couvertine: '00000000-0000-4000-a000-000000000001',
+  bavette: '00000000-0000-4000-a000-000000000002',
+  bandeau: '00000000-0000-4000-a000-000000000003',
+  autre: '00000000-0000-4000-a000-000000000004',
+}
+export async function seedModels() {
+  await db.insert(pieceModels).values([
+    { id: M.couvertine, nom: 'Couvertine', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'], cap: -45, longueur: 3000, quantite: 4, position: 1 },
+    { id: M.bavette, nom: 'Bavette d’appui', cotes: [30, 220, 45, 15], angles: [-95, 95, 135], noms: ['Rejingot', 'Dessus', 'Nez', 'Retour'], cap: 90, longueur: 1400, quantite: 2, position: 2 },
+    { id: M.bandeau, nom: 'Bandeau', cotes: [40, 150], angles: [-90], noms: ['Retour', 'Face'], cap: 180, longueur: 3000, quantite: 6, position: 3 },
+    { id: M.autre, nom: 'Autre profil', cotes: [60, 120], angles: [90], noms: ['', ''], cap: 0, longueur: 2000, quantite: 1, position: 4 },
+  ])
 }
 
 let counter = 0

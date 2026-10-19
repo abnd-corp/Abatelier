@@ -6,7 +6,7 @@ import { eur } from '@/lib/catalog'
 import { dateTime } from '@/lib/format'
 import { formatDay } from '@/lib/employees'
 import type { Client, ClientSite } from '@/lib/clients'
-import { shortDay, statutOf, STATUTS, STEP_ACTIONS, toLineForm, type OrderCatalog, type OrderDetail, type OrderForm, type OrderStatut } from '@/lib/orders'
+import { PRODUCTION_STATUTS, sheetUrl, shortDay, statutOf, STATUTS, STEP_ACTIONS, toLineForm, type OrderCatalog, type OrderDetail, type OrderForm, type OrderStatut } from '@/lib/orders'
 import { useUiStore } from '@/stores/ui'
 import AppIcon from '@/components/AppIcon.vue'
 import OrderLineCard from '@/components/orders/OrderLineCard.vue'
@@ -176,6 +176,7 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
         </div>
         <div v-else-if="forward.length || canCancel || o.statut === 'recue'" class="actions">
           <button v-for="s in forward" :key="s" class="btn primary" type="button" :disabled="busy" @click="step(s)">{{ STEP_ACTIONS[s] }}</button>
+          <a v-if="PRODUCTION_STATUTS.includes(o.statut)" class="btn" :href="sheetUrl(o.id)" target="_blank" rel="noopener"><AppIcon name="printer" :size="16" />Fiche de fabrication</a>
           <button v-if="o.statut === 'recue'" class="btn" type="button" @click="startEdit"><AppIcon name="pencil" :size="16" />Modifier les pièces</button>
           <button v-if="canCancel" class="btn danger-ghost" type="button" @click="cancelling = true">Annuler la commande</button>
         </div>

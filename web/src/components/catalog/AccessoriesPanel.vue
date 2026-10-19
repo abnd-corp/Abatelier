@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { api, ApiError } from '@/api'
-import { eur, MODELES, QUANTITES, qtyRule, suggestedQty, toMoneyField, UNITES, type Accessory, type Modele, type QuantiteAuto, type Unite } from '@/lib/catalog'
+import { eur, QUANTITES, qtyRule, suggestedQty, toMoneyField, UNITES, type Accessory, type PieceModel, type QuantiteAuto, type Unite } from '@/lib/catalog'
 import AppIcon from '@/components/AppIcon.vue'
 
 const emit = defineEmits<{ count: [n: number] }>()
 
 const items = ref<Accessory[]>([])
+// Modèles de pièces : rechargés à chaque ouverture du formulaire (ils se gèrent dans l'onglet voisin)
+const models = ref<PieceModel[]>([])
 const showInactive = ref(false)
 const loadError = ref('')
 const notice = ref('')
 
 async function load() {
   try {
-    items.value = (await api<{ accessories: Accessory[] }>('/catalog/accessories')).accessories
+    const [a, m] = await Promise.all([api<{ accessories: Accessory[] }>('/catalog/accessories'), api<{ models: PieceModel[] }>('/catalog/models')])
+    items.value = a.accessories
+    models.value = m.models
     emit('count', items.value.filter((a) => a.actif).length)
   } catch (e) {
     loadError.value = e instanceof ApiError ? e.message : 'Chargement impossible.'
@@ -25,17 +29,29 @@ const visible = computed(() => items.value.filter((a) => showInactive.value || a
 const inactiveCount = computed(() => items.value.filter((a) => !a.actif).length)
 
 const editing = ref<'new' | string | null>(null)
-const form = reactive({ nom: '', prix: '', unite: 'piece' as Unite, modeles: [] as Modele[], quantiteAuto: 'aucune' as QuantiteAuto, quantiteFixe: '1' })
+const form = reactive({ nom: '', prix: '', unite: 'piece' as Unite, modeles: [] as string[], quantiteAuto: 'aucune' as QuantiteAuto, quantiteFixe: '1' })
 const error = ref<{ field?: string; msg: string } | null>(null)
 const saving = ref(false)
 
+async function refreshModels() {
+  try {
+    models.value = (await api<{ models: PieceModel[] }>('/catalog/models')).models
+  } catch {
+    // On garde la liste déjà chargée
+  }
+}
+// Proposés : les modèles actifs, plus ceux déjà cochés même s'ils ont été désactivés depuis
+const choices = computed(() => models.value.filter((m) => m.actif || form.modeles.includes(m.id)))
+
 function openNew() {
+  refreshModels()
   Object.assign(form, { nom: '', prix: '', unite: 'piece', modeles: [], quantiteAuto: 'aucune', quantiteFixe: '1' })
   error.value = null
   notice.value = ''
   editing.value = 'new'
 }
 function openEdit(a: Accessory) {
+  refreshModels()
   Object.assign(form, {
     nom: a.nom,
     prix: toMoneyField(a.prix),
@@ -85,7 +101,7 @@ async function toggle(a: Accessory) {
 }
 
 const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
-const modelesLabel = (a: Accessory) => a.modeles.map((m) => MODELES.find((x) => x.id === m)?.label ?? m).join(', ')
+const modelesLabel = (a: Accessory) => a.modeles.map((id) => models.value.find((m) => m.id === id)?.nom ?? 'modèle supprimé').join(', ')
 </script>
 
 <template>
@@ -128,9 +144,9 @@ const modelesLabel = (a: Accessory) => a.modeles.map((m) => MODELES.find((x) => 
       <fieldset class="field models" :class="{ invalid: !!err('modeles') }" :aria-describedby="err('modeles') ? 'a-modeles-error' : undefined">
         <legend>Proposé pour</legend>
         <div class="chips">
-          <label v-for="m in MODELES" :key="m.id" class="chip">
+          <label v-for="m in choices" :key="m.id" class="chip">
             <input v-model="form.modeles" type="checkbox" :value="m.id" />
-            {{ m.label }}
+            {{ m.nom }}<template v-if="!m.actif"> (désactivé)</template>
           </label>
         </div>
         <span v-if="err('modeles')" id="a-modeles-error" class="field-error">{{ err('modeles') }}</span>

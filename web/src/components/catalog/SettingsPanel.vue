@@ -8,7 +8,7 @@ import AppIcon from '@/components/AppIcon.vue'
 // Les nombres sont édités comme du texte « à la française » (1,10) et envoyés tels quels : l'API les convertit
 const MONEY = new Set(['prixPliMl', 'miseEnRoute', 'minimumCommande'])
 const show = (k: string, v: number) => (MONEY.has(k) ? toMoneyField(v) : toField(v))
-type Form = { [K in Exclude<keyof PricingSettings, 'remisesQuantite'>]: string } & { remisesQuantite: { seuil: string; remise: string }[] }
+type Form = { [K in Exclude<keyof PricingSettings, 'remisesQuantite' | 'pinceAutorisee'>]: string } & { remisesQuantite: { seuil: string; remise: string }[]; pinceAutorisee: boolean }
 
 const original = ref<PricingSettings | null>(null)
 const form = reactive<Form>({
@@ -23,6 +23,9 @@ const form = reactive<Form>({
   longueurMin: '',
   longueurMax: '',
   plisMax: '',
+  angleMin: '',
+  angleMax: '',
+  pinceAutorisee: false,
 })
 const loadError = ref('')
 const error = ref<{ field?: string; msg: string } | null>(null)
@@ -33,6 +36,7 @@ function fill(s: PricingSettings) {
   original.value = s
   for (const k of Object.keys(form) as (keyof Form)[]) {
     if (k === 'remisesQuantite') form.remisesQuantite = s.remisesQuantite.map((p) => ({ seuil: String(p.seuil), remise: toField(p.remise) }))
+    else if (k === 'pinceAutorisee') form.pinceAutorisee = s.pinceAutorisee
     else form[k] = show(k, s[k])
   }
 }
@@ -53,6 +57,7 @@ const saved = computed(() => {
   const f = {} as Form
   for (const k of Object.keys(form) as (keyof Form)[]) {
     if (k === 'remisesQuantite') f.remisesQuantite = s.remisesQuantite.map((p) => ({ seuil: String(p.seuil), remise: toField(p.remise) }))
+    else if (k === 'pinceAutorisee') f.pinceAutorisee = s.pinceAutorisee
     else f[k] = show(k, s[k])
   }
   return snapshot(f)
@@ -109,7 +114,7 @@ const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
   <form class="settings" novalidate aria-label="Façonnage et conditions" @submit.prevent="save">
     <p v-if="loadError" class="alert bad" role="alert">{{ loadError }}</p>
     <p v-if="notice" class="alert ok" role="status">{{ notice }}</p>
-    <p v-if="error && !['prixPliMl', 'miseEnRoute', 'minimumCommande', 'remisePro', 'tva', 'delaiStandard', 'remisesQuantite', 'largeurTole', 'longueurMin', 'longueurMax', 'plisMax'].includes(error.field ?? '')" class="alert bad" role="alert">{{ error.msg }}</p>
+    <p v-if="error && !['prixPliMl', 'miseEnRoute', 'minimumCommande', 'remisePro', 'tva', 'delaiStandard', 'remisesQuantite', 'largeurTole', 'longueurMin', 'longueurMax', 'plisMax', 'angleMin', 'angleMax', 'pinceAutorisee'].includes(error.field ?? '')" class="alert bad" role="alert">{{ error.msg }}</p>
 
     <div v-if="original" class="groups">
       <fieldset class="card group">
@@ -198,6 +203,24 @@ const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
           <span class="unit"><input id="s-plis" v-model="form.plisMax" class="input mono" inputmode="numeric" :aria-invalid="!!err('plisMax') || undefined" /><span>plis</span></span>
           <span v-if="err('plisMax')" class="field-error">{{ err('plisMax') }}</span>
         </div>
+        <div class="row">
+          <div class="field">
+            <label for="s-amin">Angle minimum</label>
+            <span class="unit"><input id="s-amin" v-model="form.angleMin" class="input mono" inputmode="numeric" :aria-invalid="!!err('angleMin') || undefined" /><span>°</span></span>
+            <span v-if="err('angleMin')" class="field-error">{{ err('angleMin') }}</span>
+          </div>
+          <div class="field">
+            <label for="s-amax">Angle maximum</label>
+            <span class="unit"><input id="s-amax" v-model="form.angleMax" class="input mono" inputmode="numeric" :aria-invalid="!!err('angleMax') || undefined" /><span>°</span></span>
+            <span v-if="err('angleMax')" class="field-error">{{ err('angleMax') }}</span>
+          </div>
+        </div>
+        <span class="hint muted">Angle intérieur d’un pli : 90° pour un angle droit, plus petit pour un pli plus fermé.</span>
+        <label class="check">
+          <input v-model="form.pinceAutorisee" type="checkbox" />
+          <span>L’atelier fait les pinces <span class="muted">(tôle repliée à plat sur elle-même, saisie 0°)</span></span>
+        </label>
+        <span v-if="err('pinceAutorisee')" class="field-error">{{ err('pinceAutorisee') }}</span>
       </fieldset>
     </div>
 

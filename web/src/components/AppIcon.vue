@@ -38,6 +38,9 @@ const PATHS = {
   file: 'M6 3h8l4 4v14H6z M14 3v4h4 M9 12h6 M9 16h6',
   upload: 'M12 16V4 M7 9l5-5 5 5 M4 20h16',
   download: 'M12 4v12 M7 11l5 5 5-5 M4 20h16',
+  // Profil de couvertine vu en coupe
+  profile: 'M3 18v-6l3-3h12l3 3v6',
+  printer: 'M7 9V3h10v6 M7 17H4v-8h16v8h-3 M7 13h10v8H7z',
 } as const
 
 defineProps<{ name: keyof typeof PATHS; size?: number }>()

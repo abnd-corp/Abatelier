@@ -11,6 +11,7 @@ const PAGES = [
   { path: '/journal', heading: 'Journal d’activité' },
   { path: '/catalogue', heading: 'Tarifs et catalogue' },
   { path: '/catalogue?onglet=coloris', heading: 'Tarifs et catalogue' },
+  { path: '/catalogue?onglet=modeles', heading: 'Tarifs et catalogue' },
   { path: '/catalogue?onglet=accessoires', heading: 'Tarifs et catalogue' },
   { path: '/catalogue?onglet=livraison', heading: 'Tarifs et catalogue' },
   { path: '/catalogue?onglet=faconnage', heading: 'Tarifs et catalogue' },
@@ -81,6 +82,8 @@ test.describe('Responsive @responsive', () => {
 
   test('le menu est accessible sur tous les écrans', async ({ adminPage }) => {
     await adminPage.goto('/')
+    // isDrawer() ne patiente pas : on attend que la page soit affichée avant de choisir le cas tiroir ou menu fixe
+    await expect(adminPage.getByRole('heading', { level: 1 })).toBeVisible()
     const nav = adminPage.getByRole('navigation', { name: 'Navigation principale' })
     if (await isDrawer(adminPage)) {
       await expect(nav).not.toBeInViewport()

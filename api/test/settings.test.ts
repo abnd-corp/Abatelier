@@ -68,6 +68,9 @@ describe('Façonnage et conditions', () => {
     [{ prixPliMl: 'cher' }, 'prixPliMl', /nombre attendu/],
     [{ delaiStandard: 0 }, 'delaiStandard', /1 jours minimum/],
     [{ plisMax: 2.5 }, 'plisMax', /entier/],
+    [{ angleMin: 10 }, 'angleMin', /15 ° minimum/],
+    [{ angleMax: 180 }, 'angleMax', /179 ° maximum/],
+    [{ pinceAutorisee: 'oui' }, 'pinceAutorisee', /oui ou non/],
     [{ remisesQuantite: [{ seuil: 50, remise: 10 }, { seuil: 20, remise: 15 }] }, 'remisesQuantite', /du plus petit au plus grand/],
     [{ remisesQuantite: [{ seuil: 20, remise: 10 }, { seuil: 50, remise: 5 }] }, 'remisesQuantite', /plus forte que le précédent/],
     [{ remisesQuantite: [{ seuil: 1, remise: 5 }] }, 'remisesQuantite', /2 pièces minimum/],
@@ -84,5 +87,15 @@ describe('Façonnage et conditions', () => {
     expect(res.statusCode).toBe(400)
     expect(res.json().field).toBe('longueurMin')
     expect((await settings()).longueurMin).toBe(200)
+  })
+
+  it('enregistre les angles possibles et la pince, en gardant le minimum sous le maximum', async () => {
+    expect(await settings()).toMatchObject({ angleMin: 30, angleMax: 175, pinceAutorisee: false })
+    const bad = await direction.patch('/api/catalog/settings', { angleMin: 120, angleMax: 100 })
+    expect(bad.json()).toEqual({ error: 'L’angle minimum ne peut pas dépasser l’angle maximum.', field: 'angleMin' })
+    const res = await direction.patch('/api/catalog/settings', { angleMin: '45', angleMax: 170, pinceAutorisee: true })
+    expect(res.json().settings).toMatchObject({ angleMin: 45, angleMax: 170, pinceAutorisee: true })
+    const [entry] = await db.select().from(auditLog).where(eq(auditLog.action, 'catalog.settings_updated'))
+    expect(entry!.details).toEqual({ changements: { angleMin: { avant: 30, apres: 45 }, angleMax: { avant: 175, apres: 170 }, pinceAutorisee: { avant: false, apres: true } } })
   })
 })

@@ -17,6 +17,8 @@ const PAGES = [
   { name: '10-catalogue-matieres', path: '/catalogue' },
   { name: '11-catalogue-coloris', path: '/catalogue?onglet=coloris' },
   { name: '12-catalogue-faconnage', path: '/catalogue?onglet=faconnage' },
+  { name: '12b-catalogue-modeles', path: '/catalogue?onglet=modeles' },
+  { name: '12c-modele-edition', path: '/catalogue?onglet=modeles', editModel: true },
   { name: '13-catalogue-accessoires', path: '/catalogue?onglet=accessoires' },
   { name: '14-catalogue-livraison', path: '/catalogue?onglet=livraison' },
   { name: '15-documents-entreprise', path: '/modeles-documents' },
@@ -27,6 +29,7 @@ const PAGES = [
   { name: '20-nouveau-client', path: '/clients/nouveau' },
   { name: '21-commandes', path: '/commandes?filtre=toutes' },
   { name: '22-nouvelle-commande', path: 'NOUVELLE_COMMANDE' },
+  { name: '22b-piece-en-3d', path: 'NOUVELLE_COMMANDE', view3d: true },
   { name: '23-fiche-commande', path: 'FICHE_COMMANDE' },
   { name: '24-fabrication', path: '/fabrication' },
   { name: '25-fiche-fabrication', path: 'FICHE_FABRICATION' },
@@ -63,6 +66,7 @@ test('captures', async ({ page, baseURL }, info) => {
       await anon.close()
       continue
     }
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
     await page.goto(target)
     await page.waitForLoadState('networkidle')
     if (p.openMenu) {
@@ -76,6 +80,14 @@ test('captures', async ({ page, baseURL }, info) => {
     if (p.path.startsWith('/modeles-documents')) await page.getByRole('img', { name: /Aperçu du devis, page 1/ }).waitFor()
     // Le chiffrage se fait après la saisie : on attend le total
     if (p.path === 'NOUVELLE_COMMANDE') await page.getByText('Total TTC').waitFor()
+    if (p.editModel) await page.getByRole('button', { name: 'Modifier Couvertine' }).click()
+    // Vue 3D de la première pièce, arrêtée (sans rotation) pour une capture stable
+    if (p.view3d) {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await page.getByRole('region', { name: 'Pièce 1' }).getByRole('button', { name: '3D' }).click()
+      await page.getByRole('img', { name: 'Pièce 1 en 3D' }).waitFor()
+      await page.waitForTimeout(500)
+    }
     await page.screenshot({ path: `${dir}/${p.name}.png`, fullPage: !p.openMenu })
   }
 })

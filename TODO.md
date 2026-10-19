@@ -15,6 +15,15 @@
 - [x] Coloris (référence, teinte, majoration, délai)
 - [x] Façonnage et conditions (pli, mise en route, minimum, remise pro, TVA, délai, remises quantité, limites machines)
 - [x] Accessoires (prix HT à la pièce ou à la paire, modèles concernés, quantité proposée : fixe, par pièce ou par jonction)
+- [x] **Modèles de pièces** gérés par la direction (onglet « Modèles de pièces ») : nom, forme de départ, nom des cotes, orientation du dessin, longueur et quantité proposées, accessoires liés ; une commande garde le nom et l'orientation du modèle
+- [ ] Dessin 2D à l'écran (`ProfileSketch.vue`) : les étiquettes des petites cotes se chevauchent (ex. « 135° » sur « A 20 » de la couvertine) ; reprendre le décalage automatique déjà fait dans la fiche PDF
+- [ ] Vue 3D ailleurs que dans la saisie de commande, si besoin : fiche commande, vue Fabrication, futur configurateur client
+- [ ] Contrôles de collision avec la plieuse (profondeur d'un U ou d'un caisson, aile mini entre deux plis rapprochés) : après les réponses de l'atelier
+- [ ] Jours fériés et fermetures de l'atelier (le délai ne saute aujourd'hui que les week-ends)
+- [ ] Prix du pli par matière ou par épaisseur (aujourd'hui un seul prix)
+- [ ] Données de démonstration chargeables pour une présentation (« make demo »)
+- [x] Limites de pliage : angle minimum / maximum, pince activable (saisie 0°, enregistrée ±1° pour garder le sens), refus d'un profil qui se referme sur lui-même
+- [ ] **Questions pour l'atelier sur le pliage** : angle le plus fermé et le plus ouvert que fait la plieuse ; pinces faites ou non ; plus petite aile entre deux plis rapprochés ; profondeur maximale d'un U ou d'un caisson (collision avec la machine) ; longueur et plis maximum selon l'épaisseur
 - [x] Livraison (retrait atelier activable, zones par distance avec livraison offerte dès un montant, supplément pièces longues, distance par la route via l'IGN, simulateur d'adresse)
 - [ ] Simulateur de prix (facultatif) : une pièce type dont le prix se recalcule quand on change un tarif
 
@@ -25,6 +34,11 @@
 - [x] Numérotation D-2026-0001 / F-2026-0001 sans trou (compteur verrouillé), préfixes fixes, reprise de l'ancien logiciel possible jusqu'au premier document créé
 - [ ] Mentions légales types à faire valider par leur comptable (pénalités, indemnité de 40 €, escompte)
 
+### Devis et factures (prochaine étape, décidé le 19/10/2026)
+- [ ] Tables des devis et des factures (numéros D-/F- déjà prêts), créés depuis une commande, PDF au modèle commun
+- [ ] Facture figée une fois émise et conservée 10 ans ; avoirs pour corriger
+- [ ] Suivi : devis envoyé / accepté / refusé / expiré ; facture payée / en retard
+
 ### Clients et commandes
 Les clients arriveront surtout par le panier du site (coordonnées saisies à la fin de la commande, puis espace client : suivi, dépenses, factures). En attendant, l'équipe peut créer une fiche à la main.
 - [x] Fiches clients : particulier ou professionnel (SIRET, TVA vérifiés), coordonnées, adresse de facturation, adresses de chantier, origine, notes, archivage, e-mail unique
@@ -32,14 +46,15 @@ Les clients arriveront surtout par le panier du site (coordonnées saisies à la
 - [x] Lignes chiffrées avec le catalogue (modèle, matière, coloris, développé, plis, longueur, quantité, accessoires, remises, mise en route, livraison) : même calcul que le futur panier du site
 - [x] Sur la fiche client : historique des commandes, total dépensé
 - [x] Vue atelier « Fabrication » : commandes validées à prêtes, profil coté, sans client ni prix
-- [ ] Commandes : remise exceptionnelle sur une commande, impression de la fiche de fabrication, devis et facture PDF depuis la commande
+- [x] Pièce en 3D dans la saisie de commande (three.js chargé à la demande, au coloris choisi, qu'on fait tourner) ; à réutiliser dans le futur configurateur client
+- [ ] Commandes : remise exceptionnelle sur une commande, devis et facture PDF depuis la commande
 - [ ] Fidélité : remise pro, remises selon l'historique d'achat
 - [ ] **RGPD, à trancher** : suppression du compte à la demande du client, ou conservation pendant une durée annoncée puis suppression. Les factures doivent de toute façon être gardées 10 ans : on pourrait anonymiser la fiche (nom, contact) en gardant les factures. À valider avec leur comptable.
 - [x] Lecture seule pour la RH (permission `clients.read`)
 
-### Fiches de fabrication (prochaine étape)
-- [ ] Modèle de fiche de fabrication imprimable (PDF, comme les modèles de devis) : numéro, date prévue, pièces avec profil coté, plis et sens, quantités, accessoires, case « fait » par pièce. Jamais de client ni de prix.
-- [ ] Bouton « Imprimer la fiche » dans Fabrication
+### Fiches de fabrication
+- [x] Modèle de fiche de fabrication imprimable (PDF, comme les modèles de devis) : numéro, date prévue, pièces avec profil coté, plis et sens, quantités, accessoires, case « fait » par pièce. Jamais de client ni de prix. Récapitulatif des accessoires à préparer, cases « Plié par / Contrôlé par / Date »
+- [x] Bouton « Imprimer la fiche » dans Fabrication (liste et détail) et sur la commande côté Direction, impression notée au journal
 
 ### Stock et découpe (ensuite)
 Le pliage commence par de la découpe : chaque pièce est une bande de « développé × longueur » prise dans une feuille.

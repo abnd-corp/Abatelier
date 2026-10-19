@@ -18,6 +18,9 @@ export const DEFAULT_SETTINGS: Omit<PricingSettings, 'id' | 'updatedAt'> = {
   longueurMin: 200,
   longueurMax: 3000,
   plisMax: 8,
+  angleMin: 30,
+  angleMax: 175,
+  pinceAutorisee: false,
 }
 
 /** Réglages de chiffrage actuels (recréés avec les valeurs de départ s'ils n'existent pas). */

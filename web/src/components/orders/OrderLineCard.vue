@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { eur } from '@/lib/catalog'
-import { developpe, letter, MODELES, type LineModele } from '@/lib/orders'
+import { angleText, developpe, letter } from '@/lib/orders'
 import ProfileSketch from './ProfileSketch.vue'
 
 // Une pièce de la commande : profil coté, matière, quantité ; les prix seulement si on les passe
@@ -8,7 +8,8 @@ defineProps<{
   index: number
   line: {
     repere: string | null
-    modele: LineModele
+    modeleLabel: string
+    cap: number
     materialLabel: string
     colorLabel: string
     colorHex: string
@@ -30,11 +31,11 @@ const n = (v: number) => v.toLocaleString('fr-FR')
 <template>
   <article class="card piece" :aria-label="`Pièce ${index + 1}`">
     <div class="sketch">
-      <ProfileSketch :cotes="line.cotes" :angles="line.angles" :cap="MODELES[line.modele].cap" :color="line.colorHex" :label="`Profil de la pièce ${index + 1}`" />
+      <ProfileSketch :cotes="line.cotes" :angles="line.angles" :cap="line.cap" :color="line.colorHex" :label="`Profil de la pièce ${index + 1}`" />
     </div>
     <div class="info">
       <h3>
-        <span class="muted">{{ index + 1 }}.</span> {{ MODELES[line.modele].label }}<template v-if="line.repere"> · {{ line.repere }}</template>
+        <span class="muted">{{ index + 1 }}.</span> {{ line.modeleLabel }}<template v-if="line.repere"> · {{ line.repere }}</template>
       </h3>
       <p class="mat"><span class="swatch" :style="{ background: line.colorHex }" aria-hidden="true" />{{ line.materialLabel }} · {{ line.colorLabel }}</p>
       <dl class="facts">
@@ -47,7 +48,7 @@ const n = (v: number) => v.toLocaleString('fr-FR')
         <template v-if="line.angles.length">
           <dt>Plis</dt>
           <dd class="mono">
-            <span v-for="(a, j) in line.angles" :key="j" class="c">{{ Math.abs(a) }}° {{ a < 0 ? '↓' : '↑' }}</span>
+            <span v-for="(a, j) in line.angles" :key="j" class="c">{{ angleText(a) }} {{ a < 0 ? '↓' : '↑' }}</span>
           </dd>
         </template>
         <dt>Développé</dt>

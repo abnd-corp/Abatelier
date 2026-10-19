@@ -5,6 +5,9 @@ import { db } from '../db/index.js'
 import { ORDER_STATUTS, orderLines, orders } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
 import { changeStatus, eventsOf, NEXT, PRODUCTION_STATUTS, PRODUCTION_STEPS, STATUT_LABELS } from '../orders.js'
+import { getCompany, getTemplate } from '../documents.js'
+import { renderProductionSheet } from '../production-sheet.js'
+import { audit } from '../audit.js'
 
 // Vue de l'atelier : les commandes à fabriquer, sans rien sur le client (ni nom, ni coordonnées, ni adresse) et sans les prix.
 
@@ -18,6 +21,29 @@ async function findOrder(id: string, reply: FastifyReply) {
     return null
   }
   return o
+}
+
+/** Pièces de la commande, sans les prix ni les identifiants du catalogue. */
+async function linesOf(orderId: string) {
+  const rows = await db
+    .select({
+      id: orderLines.id,
+      repere: orderLines.repere,
+      modeleLabel: orderLines.modeleLabel,
+      cap: orderLines.cap,
+      materialLabel: orderLines.materialLabel,
+      colorLabel: orderLines.colorLabel,
+      colorHex: orderLines.colorHex,
+      cotes: orderLines.cotes,
+      angles: orderLines.angles,
+      longueur: orderLines.longueur,
+      quantite: orderLines.quantite,
+      accessoires: orderLines.accessoires,
+    })
+    .from(orderLines)
+    .where(eq(orderLines.orderId, orderId))
+    .orderBy(asc(orderLines.position))
+  return rows.map((l) => ({ ...l, accessoires: l.accessoires.map((a) => ({ nom: a.nom, unite: a.unite, quantite: a.quantite })) }))
 }
 
 const next = (statut: (typeof ORDER_STATUTS)[number]) => NEXT[statut].find((s) => PRODUCTION_STEPS.includes(s)) ?? null
@@ -52,28 +78,29 @@ export async function productionRoutes(app: FastifyInstance) {
   app.get('/:id', async (req, reply) => {
     const o = await findOrder((req.params as { id: string }).id, reply)
     if (!o) return
-    const lignes = await db
-      .select({
-        id: orderLines.id,
-        repere: orderLines.repere,
-        modele: orderLines.modele,
-        materialLabel: orderLines.materialLabel,
-        colorLabel: orderLines.colorLabel,
-        colorHex: orderLines.colorHex,
-        cotes: orderLines.cotes,
-        angles: orderLines.angles,
-        longueur: orderLines.longueur,
-        quantite: orderLines.quantite,
-        accessoires: orderLines.accessoires,
-      })
-      .from(orderLines)
-      .where(eq(orderLines.orderId, o.id))
-      .orderBy(asc(orderLines.position))
+    const lignes = await linesOf(o.id)
     return {
       order: { id: o.id, numero: o.numero, statut: o.statut, statutLabel: STATUT_LABELS[o.statut], livraisonMode: o.livraisonMode, datePrevue: o.datePrevue, next: next(o.statut) },
-      lignes: lignes.map((l) => ({ ...l, accessoires: l.accessoires.map((a) => ({ nom: a.nom, unite: a.unite, quantite: a.quantite })) })),
+      lignes,
       events: await eventsOf(o.id),
     }
+  })
+
+  // Fiche imprimable : ouverte dans un nouvel onglet, le navigateur l'imprime
+  app.get('/:id/fiche.pdf', async (req, reply) => {
+    const o = await findOrder((req.params as { id: string }).id, reply)
+    if (!o) return
+    const [lignes, company, template] = await Promise.all([linesOf(o.id), getCompany(), getTemplate()])
+    const pdf = await renderProductionSheet(
+      { numero: o.numero, statutLabel: STATUT_LABELS[o.statut], datePrevue: o.datePrevue, livraisonMode: o.livraisonMode, imprimeLe: new Date(), lignes },
+      { accent: template.couleur, logo: company.logo },
+    )
+    await audit(req, 'order.sheet_printed', { targetType: 'order', targetId: o.id, details: { numero: o.numero, statut: o.statut } })
+    return reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `inline; filename="fiche-${o.numero}.pdf"`)
+      .header('Cache-Control', 'no-store')
+      .send(pdf)
   })
 
   app.post('/:id/status', async (req, reply) => {

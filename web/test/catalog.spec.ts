@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import CatalogView from '@/views/CatalogView.vue'
-import { eur, km, mm, pct, qtyRule, suggestedQty, toField, type Accessory, type Color, type DeliveryEstimate, type DeliverySettings, type Material, type PricingSettings } from '@/lib/catalog'
+import { eur, km, mm, pct, qtyRule, suggestedQty, toField, type Accessory, type Color, type DeliveryEstimate, type DeliverySettings, type Material, type PieceModel, type PricingSettings } from '@/lib/catalog'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 import { useAuthStore } from '@/stores/auth'
 import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
@@ -55,7 +55,18 @@ const SETTINGS: PricingSettings = {
   longueurMin: 200,
   longueurMax: 3000,
   plisMax: 8,
+  angleMin: 30,
+  angleMax: 175,
+  pinceAutorisee: false,
 }
+
+// Les identifiants des modèles reprennent leur nom, pour la lisibilité des tests
+const PIECES: PieceModel[] = [
+  { id: 'couvertine', nom: 'Couvertine', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'], cap: -45, longueur: 3000, quantite: 4, actif: true, position: 1 },
+  { id: 'bavette', nom: 'Bavette d’appui', cotes: [30, 220, 45, 15], angles: [-95, 95, 135], noms: ['Rejingot', 'Dessus', 'Nez', 'Retour'], cap: 90, longueur: 1400, quantite: 2, actif: true, position: 2 },
+  { id: 'bandeau', nom: 'Bandeau', cotes: [40, 150], angles: [-90], noms: ['Retour', 'Face'], cap: 180, longueur: 3000, quantite: 6, actif: true, position: 3 },
+  { id: 'solin', nom: 'Solin', cotes: [80, 60], angles: [90], noms: ['', ''], cap: 0, longueur: 2000, quantite: 1, actif: false, position: 4 },
+]
 
 async function setup(path = '/catalogue', extra: Parameters<typeof mockApi>[0] = {}) {
   const calls = mockApi({
@@ -63,6 +74,7 @@ async function setup(path = '/catalogue', extra: Parameters<typeof mockApi>[0] =
     'GET /catalog/colors': [200, { colors: COLS }],
     'GET /catalog/settings': [200, { settings: SETTINGS }],
     'GET /catalog/accessories': [200, { accessories: ACCS }],
+    'GET /catalog/models': [200, { models: PIECES }],
     'GET /catalog/delivery': [200, { delivery: DELIVERY }],
     ...extra,
   })
@@ -227,6 +239,20 @@ describe('Façonnage et conditions', () => {
     expect(save(p).attributes('disabled')).toBeDefined()
   })
 
+  it('règle les angles possibles et la pince', async () => {
+    const { p, calls } = await open({ 'PATCH /catalog/settings': [200, { settings: { ...SETTINGS, angleMin: 45, pinceAutorisee: true } }] })
+    expect((p.get('#s-amin').element as HTMLInputElement).value).toBe('30')
+    expect((p.get('#s-amax').element as HTMLInputElement).value).toBe('175')
+    await p.get('#s-amin').setValue('45')
+    await p.get('input[type="checkbox"]').setValue(true)
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toMatchObject({ angleMin: '45', angleMax: '175', pinceAutorisee: true })
+    expect(save(p).attributes('disabled')).toBeDefined()
+    const e = { action: 'catalog.settings_updated', details: { changements: { angleMin: { avant: 30, apres: 45 }, pinceAutorisee: { avant: false, apres: true } } } } as unknown as AuditEntry
+    expect(describeEntry(e).text).toBe('A modifié le façonnage et les conditions : angle minimum 30° → 45°, pinces non faites → faites')
+  })
+
   it('n’autorise pas plus de 6 paliers', async () => {
     const { p } = await open()
     const add = () => p.findAll('button').find((b) => b.text().includes('Ajouter un palier'))!
@@ -250,6 +276,76 @@ describe('Façonnage et conditions', () => {
       details: { changements: { remisesQuantite: { avant: [{ seuil: 20, remise: 5 }], apres: [] }, tva: { avant: 20, apres: 5.5 } } },
     } as unknown as AuditEntry
     expect(describeEntry(e).text).toBe('A modifié le façonnage et les conditions : remises quantité −5 % dès 20 → aucune, TVA 20 % → 5,5 %')
+  })
+})
+
+describe('Modèles de pièces', () => {
+  const open = async (extra: Parameters<typeof mockApi>[0] = {}) => {
+    const r = await setup('/catalogue?onglet=modeles', extra)
+    return { ...r, p: r.panel('modeles') }
+  }
+  const btn = (p: ReturnType<Awaited<ReturnType<typeof setup>>['panel']>, text: string) => p.findAll('button').find((b) => b.text().includes(text))!
+
+  it('liste les modèles actifs avec leur forme, et les désactivés à la demande', async () => {
+    const { p, wrapper } = await open()
+    expect(wrapper.get('#tab-modeles').text()).toContain('3')
+    const cards = p.findAll('li.model')
+    expect(cards.map((c) => c.get('b').text())).toEqual(['Couvertine', 'Bavette d’appui', 'Bandeau'])
+    expect(n(cards[0]!.text())).toContain('4 plis · développé 480 mm')
+    expect(cards[0]!.text()).toContain('A 20B 70C 300D 70E 20')
+    expect(cards[0]!.text()).toContain('135° ↓90° ↑')
+    expect(cards[0]!.find('svg[aria-label="Forme du modèle Couvertine"]').exists()).toBe(true)
+    await p.get('#models-inactive').setValue(true)
+    expect(p.findAll('li.model')[3]!.text()).toContain('désactivé')
+  })
+
+  it('crée un modèle : nom des cotes, plis avec leur sens, pince, orientation', async () => {
+    const { p, calls } = await open({ 'POST /catalog/models': [201, { model: { ...PIECES[0], id: 'faitiere', nom: 'Faîtière' } }] })
+    await btn(p, 'Ajouter un modèle').trigger('click')
+    await p.get('#m-nom').setValue('Faîtière')
+    await btn(p, 'Ajouter un pli').trigger('click')
+    await p.get('#m-nom0').setValue('Pan')
+    await p.get('#m-cote0').setValue('150')
+    await p.get('#m-cote2').setValue('15')
+    // Pli 2 en pince, dans l'autre sens
+    await p.get('button[aria-label="Inverser le sens du pli 2"]').trigger('click')
+    await p.get('#m-angle1').setValue('0')
+    expect(p.text()).toContain('° pince')
+    await p.get('button[aria-label="Tourner le dessin de 15° à droite"]').trigger('click')
+    await p.get('button[aria-label="Tourner le dessin de 15° à droite"]').trigger('click')
+    expect(p.find('svg[aria-label="Forme du modèle Faîtière"]').exists()).toBe(true)
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ nom: 'Faîtière', cotes: [150, 120, 15], angles: [90, -1], noms: ['Pan', '', ''], cap: 30, longueur: 2000, quantite: 1 })
+    expect(p.text()).toContain('Faîtière ajouté.')
+  })
+
+  it('montre l’erreur sur la cote fautive', async () => {
+    const { p } = await open({ 'PATCH /catalog/models/couvertine': [400, { error: 'Cote : 1 mm minimum.', field: 'cotes.2' }] })
+    await p.get('button[aria-label="Modifier Couvertine"]').trigger('click')
+    expect((p.get('#m-nom2').element as HTMLInputElement).value).toBe('Dessus')
+    await p.get('#m-cote2').setValue('0')
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(p.get('#m-cote2').attributes('aria-invalid')).toBe('true')
+    expect(p.get('#m-cote1').attributes('aria-invalid')).toBeUndefined()
+    expect(p.get('[role="alert"]').text()).toBe('Cote : 1 mm minimum.')
+  })
+
+  it('désactive un modèle', async () => {
+    const { p, calls } = await open({ 'PATCH /catalog/models/bandeau': [200, { model: { ...PIECES[2], actif: false } }] })
+    await p.get('button[aria-label="Désactiver Bandeau"]').trigger('click')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ actif: false })
+    expect(p.text()).toContain('Bandeau désactivé : il ne sera plus proposé dans les nouvelles commandes.')
+  })
+
+  it('décrit les modèles dans le journal', () => {
+    const e = (action: string, details: object) => describeEntry({ action, details } as unknown as AuditEntry).text
+    expect(e('catalog.model_created', { nom: 'Faîtière', forme: 'A 150 · 90° · B 120' })).toBe('A ajouté le modèle de pièce Faîtière (A 150 · 90° · B 120)')
+    expect(e('catalog.model_updated', { nom: 'Bandeau', changements: { cotes: { avant: [40, 150], apres: [40, 150, 20] }, angles: { avant: [-90], apres: [-90, 1] } } })).toBe(
+      'A modifié le modèle de pièce Bandeau : cotes A 40 B 150 → A 40 B 150 C 20, plis 90°↓ → 90°↓ pince',
+    )
   })
 })
 

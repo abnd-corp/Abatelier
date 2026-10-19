@@ -50,9 +50,18 @@ const CATALOG_FIELDS: Record<string, { label: string; fmt: (v: unknown) => strin
   longueurMin: { label: 'longueur minimum', fmt: (v) => `${v} mm` },
   longueurMax: { label: 'longueur maximum', fmt: (v) => `${v} mm` },
   plisMax: { label: 'plis maximum', fmt: (v) => String(v) },
+  angleMin: { label: 'angle minimum', fmt: (v) => `${v}°` },
+  angleMax: { label: 'angle maximum', fmt: (v) => `${v}°` },
+  pinceAutorisee: { label: 'pinces', fmt: (v) => (v ? 'faites' : 'non faites') },
   prix: { label: 'prix', fmt: eur },
   unite: { label: 'unité', fmt: (v) => (v === 'paire' ? 'à la paire' : 'à la pièce') },
   modeles: { label: 'modèles', fmt: (v) => (Array.isArray(v) ? v.join(', ') : String(v)) },
+  cotes: { label: 'cotes', fmt: (v) => (Array.isArray(v) ? v.map((c, i) => `${String.fromCharCode(65 + i)} ${c}`).join(' ') : String(v)) },
+  angles: { label: 'plis', fmt: (v) => (Array.isArray(v) ? v.map((a: number) => (Math.abs(a) === 1 ? 'pince' : `${Math.abs(a)}°${a < 0 ? '↓' : '↑'}`)).join(' ') : String(v)) },
+  noms: { label: 'noms des cotes', fmt: (v) => (Array.isArray(v) ? v.map((n) => n || '—').join(', ') : String(v)) },
+  cap: { label: 'orientation du dessin', fmt: (v) => `${v}°` },
+  longueur: { label: 'longueur proposée', fmt: (v) => `${v} mm` },
+  quantite: { label: 'quantité proposée', fmt: (v) => `${v} pièce${Number(v) > 1 ? 's' : ''}` },
   quantiteAuto: { label: 'quantité proposée', fmt: (v) => QTY[String(v)] ?? String(v) },
   quantiteFixe: { label: 'quantité fixe', fmt: (v) => String(v) },
   retraitActif: { label: 'retrait à l’atelier', fmt: (v) => (v ? 'proposé' : 'désactivé') },
@@ -160,6 +169,10 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A ajouté l’accessoire ${d.nom} (${eur(d.prix)} ${d.unite === 'paire' ? 'la paire' : 'la pièce'})`, tone: 'accent' }
     case 'catalog.accessory_updated':
       return { text: `A modifié l’accessoire ${d.nom} : ${changes(d.changements)}`, tone: 'accent' }
+    case 'catalog.model_created':
+      return { text: `A ajouté le modèle de pièce ${d.nom} (${d.forme})`, tone: 'accent' }
+    case 'catalog.model_updated':
+      return { text: `A modifié le modèle de pièce ${d.nom} : ${changes(d.changements)}`, tone: 'accent' }
     case 'catalog.delivery_updated':
       return { text: `A modifié la livraison : ${changes(d.changements)}`, tone: 'accent' }
     case 'documents.company_updated':
@@ -195,6 +208,8 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
         text: d.apres === 'annulee' ? `A annulé la commande ${d.numero}${d.note ? ` : ${d.note}` : ''}` : `A passé la commande ${d.numero} à « ${ORDER_STEPS[d.apres] ?? d.apres} »`,
         tone: d.apres === 'annulee' ? 'bad' : 'neutral',
       }
+    case 'order.sheet_printed':
+      return { text: `A imprimé la fiche de fabrication de la commande ${d.numero}`, tone: 'neutral' }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

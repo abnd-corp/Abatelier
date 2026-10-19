@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { api, ApiError } from '@/api'
 import { eur } from '@/lib/catalog'
-import { accessoriesFor, developpe, letter, MODELE_KEYS, MODELES, newLine, suggestedQuantity, type LineForm, type LineModele, type OrderCatalog, type OrderForm, type PricedLine, type Totals } from '@/lib/orders'
+import { accessoriesFor, developpe, isPince, letter, modelOf, PINCE, newLine, suggestedQuantity, type LineForm, type OrderCatalog, type OrderForm, type PricedLine, type Totals } from '@/lib/orders'
 import AppIcon from '@/components/AppIcon.vue'
 import ProfileSketch from './ProfileSketch.vue'
+
+// three.js n'est chargé que si l'on ouvre la vue 3D
+const Profile3D = defineAsyncComponent(() => import('./Profile3D.vue'))
 
 // Saisie des pièces et de la livraison, avec le prix recalculé par l'API à chaque changement.
 const props = defineProps<{
@@ -57,10 +60,13 @@ watch(
 onBeforeUnmount(() => clearTimeout(timer))
 
 // --- Pièces ---
-function setModele(l: LineForm, modele: LineModele) {
-  const fresh = newLine(props.catalog, modele, l)
-  Object.assign(l, { modele, cotes: fresh.cotes, angles: fresh.angles, accessoires: fresh.accessoires })
+function setModele(l: LineForm, modelId: string) {
+  const fresh = newLine(props.catalog, modelId, l)
+  Object.assign(l, { modelId, cotes: fresh.cotes, angles: fresh.angles, accessoires: fresh.accessoires })
 }
+// Orientation du dessin et noms des cotes du modèle (un modèle désactivé depuis : dessin à plat, cotes sans nom)
+const capOf = (l: LineForm) => modelOf(props.catalog, l.modelId)?.cap ?? 0
+const coteName = (l: LineForm, j: number) => modelOf(props.catalog, l.modelId)?.noms[j] ?? ''
 function setQuantite(l: LineForm, value: string) {
   const before = l.quantite
   l.quantite = Number(value) || 0
@@ -79,7 +85,7 @@ function removePli(l: LineForm) {
   l.cotes.pop()
   l.angles.pop()
 }
-const addLine = () => form.value.lignes.push(newLine(props.catalog, 'couvertine', form.value.lignes.at(-1)))
+const addLine = () => form.value.lignes.push(newLine(props.catalog, undefined, form.value.lignes.at(-1)))
 const duplicate = (i: number) => form.value.lignes.splice(i + 1, 0, JSON.parse(JSON.stringify(form.value.lignes[i])))
 const removeLine = (i: number) => form.value.lignes.splice(i, 1)
 const accName = (id: string) => props.catalog.accessories.find((a) => a.id === id)
@@ -97,6 +103,21 @@ function useAddress(i: string) {
   const a = props.addresses[Number(i)]
   if (a && form.value.livraison.mode === 'livraison') Object.assign(form.value.livraison, { adresse: a.adresse, codePostal: a.codePostal, ville: a.ville })
 }
+
+// Vue de chaque pièce : profil coté ou 3D (par numéro de ligne)
+const views = reactive<Record<number, '2d' | '3d'>>({})
+const epaisseur = (id: string) => props.catalog.materials.find((m) => m.id === id)?.epaisseur ?? 1
+
+// Angle saisi : la valeur, le sens étant gardé par le bouton ↑ / ↓. 0 = pince, enregistrée ±PINCE.
+function setAngle(l: LineForm, j: number, raw: string) {
+  const sign = l.angles[j]! < 0 ? -1 : 1
+  const v = Number(raw)
+  l.angles[j] = raw.trim() !== '' && v === 0 ? sign * PINCE : (v || 0) * sign
+}
+const angleHint = computed(() => {
+  const { angleMin, angleMax, pince } = props.catalog.limits
+  return `Plis de ${angleMin}° à ${angleMax}°${pince ? ', 0° pour une pince' : ''}.`
+})
 
 const t = computed(() => quote.value?.totals)
 defineExpose({ refresh })
@@ -118,8 +139,9 @@ defineExpose({ refresh })
         <div class="row">
           <div class="field">
             <label :for="`l${i}-modele`">Modèle</label>
-            <select :id="`l${i}-modele`" class="input" :value="l.modele" @change="setModele(l, ($event.target as HTMLSelectElement).value as LineModele)">
-              <option v-for="m in MODELE_KEYS" :key="m" :value="m">{{ MODELES[m].label }}</option>
+            <select :id="`l${i}-modele`" class="input" :value="l.modelId" :aria-invalid="bad(`lignes.${i}.modelId`)" @change="setModele(l, ($event.target as HTMLSelectElement).value)">
+              <option v-if="!modelOf(catalog, l.modelId)" value="" disabled>Modèle désactivé : choisissez-en un</option>
+              <option v-for="m in catalog.models" :key="m.id" :value="m.id">{{ m.nom }}</option>
             </select>
           </div>
           <div class="field">
@@ -146,14 +168,30 @@ defineExpose({ refresh })
         </div>
 
         <div class="shape">
-          <div class="preview">
-            <ProfileSketch :cotes="l.cotes" :angles="l.angles" :cap="MODELES[l.modele].cap" :color="colorHex(l.colorId)" :label="`Profil de la pièce ${i + 1}`" />
+          <div class="view">
+            <div class="switch" role="group" :aria-label="`Vue de la pièce ${i + 1}`">
+              <button type="button" class="chip" :aria-pressed="views[i] !== '3d'" @click="views[i] = '2d'">Profil</button>
+              <button type="button" class="chip" :aria-pressed="views[i] === '3d'" @click="views[i] = '3d'">3D</button>
+            </div>
+            <div class="preview">
+              <Profile3D
+                v-if="views[i] === '3d'"
+                :cotes="l.cotes"
+                :angles="l.angles"
+                :cap="capOf(l)"
+                :longueur="l.longueur"
+                :epaisseur="epaisseur(l.materialId)"
+                :color="colorHex(l.colorId)"
+                :label="`Pièce ${i + 1} en 3D`"
+              />
+              <ProfileSketch v-else :cotes="l.cotes" :angles="l.angles" :cap="capOf(l)" :color="colorHex(l.colorId)" :label="`Profil de la pièce ${i + 1}`" />
+            </div>
           </div>
           <fieldset class="cotes">
             <legend>Cotes extérieures et plis</legend>
             <template v-for="(_, j) in l.cotes" :key="j">
               <div class="cote">
-                <label :for="`l${i}-cote${j}`"><b>{{ letter(j) }}</b> {{ MODELES[l.modele].noms[j] ?? '' }}</label>
+                <label :for="`l${i}-cote${j}`"><b>{{ letter(j) }}</b> {{ coteName(l, j) }}</label>
                 <span class="unit">
                   <input :id="`l${i}-cote${j}`" v-model.number="l.cotes[j]" class="input mono" type="number" inputmode="numeric" min="1" :aria-invalid="bad(`lignes.${i}.cotes.${j}`) || bad(`lignes.${i}.cotes`)" /><span>mm</span>
                 </span>
@@ -166,12 +204,12 @@ defineExpose({ refresh })
                     class="input mono"
                     type="number"
                     inputmode="numeric"
-                    min="1"
-                    max="179"
-                    :value="Math.abs(l.angles[j]!)"
-                    :aria-invalid="bad(`lignes.${i}.angles.${j}`)"
-                    @input="l.angles[j] = (Number(($event.target as HTMLInputElement).value) || 0) * (l.angles[j]! < 0 ? -1 : 1)"
-                  /><span>°</span>
+                    :min="catalog.limits.pince ? 0 : catalog.limits.angleMin"
+                    :max="catalog.limits.angleMax"
+                    :value="isPince(l.angles[j]!) ? 0 : Math.abs(l.angles[j]!)"
+                    :aria-invalid="bad(`lignes.${i}.angles.${j}`) || bad(`lignes.${i}.angles`)"
+                    @input="setAngle(l, j, ($event.target as HTMLInputElement).value)"
+                  /><span>{{ isPince(l.angles[j]!) ? '° pince' : '°' }}</span>
                 </span>
                 <button class="btn small sens" type="button" :aria-label="`Inverser le sens du pli ${j + 1}`" :title="l.angles[j]! < 0 ? 'Pli vers le bas' : 'Pli vers le haut'" @click="l.angles[j] = -l.angles[j]!">
                   {{ l.angles[j]! < 0 ? '↓' : '↑' }}
@@ -182,6 +220,7 @@ defineExpose({ refresh })
               <button class="btn small" type="button" :disabled="l.angles.length >= catalog.limits.plisMax" @click="addPli(l)"><AppIcon name="plus" :size="14" />Ajouter un pli</button>
               <button class="btn small" type="button" :disabled="l.cotes.length < 2" @click="removePli(l)">Retirer le dernier pli</button>
             </div>
+            <p class="muted hint">{{ angleHint }}</p>
             <p class="muted hint">Développé : <b class="mono">{{ developpe(l.cotes).toLocaleString('fr-FR') }} mm</b> sur {{ catalog.limits.largeurTole.toLocaleString('fr-FR') }} mm de tôle.</p>
           </fieldset>
         </div>
@@ -208,7 +247,7 @@ defineExpose({ refresh })
             <input :id="`l${i}-acc${j}`" v-model.number="a.quantite" class="input mono qty" type="number" inputmode="numeric" min="0" :aria-invalid="bad(`lignes.${i}.accessoires.${j}`)" />
           </div>
         </fieldset>
-        <p v-else-if="accessoriesFor(catalog, l.modele).length === 0" class="muted hint">Aucun accessoire pour ce modèle.</p>
+        <p v-else-if="accessoriesFor(catalog, l.modelId).length === 0" class="muted hint">Aucun accessoire pour ce modèle.</p>
 
         <p v-if="priced(i)" class="line-price">
           <span>{{ eur(priced(i)!.prixUnitaire) }} la pièce<template v-if="priced(i)!.remiseQuantite"> · remise quantité {{ priced(i)!.remiseQuantite.toLocaleString('fr-FR') }} %</template> · mise en route {{ eur(priced(i)!.miseEnRoute) }}</span>
@@ -367,6 +406,34 @@ defineExpose({ refresh })
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
+}
+.view {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.switch {
+  display: flex;
+  gap: 6px;
+}
+.chip {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.chip[aria-pressed='true'] {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+@media (pointer: coarse) {
+  .chip {
+    min-height: 40px;
+  }
 }
 .preview {
   aspect-ratio: 4 / 3;
@@ -532,7 +599,8 @@ textarea.input {
     grid-template-columns: minmax(0, 1fr);
   }
   .preview {
-    max-height: 220px;
+    aspect-ratio: auto;
+    height: 220px;
   }
 }
 </style>

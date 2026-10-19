@@ -59,7 +59,7 @@ test.describe('Commandes', () => {
     const nav = atelier.getByRole('navigation', { name: 'Navigation principale' })
     await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication'])
     await nav.getByRole('link', { name: 'Fabrication' }).click()
-    await atelier.getByRole('link', { name: numero }).click()
+    await atelier.getByRole('link', { name: numero, exact: true }).click()
     await expect(atelier.getByRole('heading', { level: 1 })).toHaveText(numero)
     await expect(atelier.getByText('6 × 3 000 mm')).toBeVisible()
     await expect(atelier.getByText(raison)).toHaveCount(0)
@@ -67,6 +67,13 @@ test.describe('Commandes', () => {
     await expect(atelier.getByText(/€/)).toHaveCount(0)
     await atelier.getByRole('button', { name: 'Lancer la fabrication' }).click()
     await expect(atelier.getByText('Commande passée à l’étape « En fabrication »')).toBeVisible()
+    // Fiche imprimable : un PDF ouvert dans un nouvel onglet, sans le client
+    const fiche = atelier.getByRole('link', { name: 'Imprimer la fiche' })
+    await expect(fiche).toHaveAttribute('target', '_blank')
+    const pdf = await atelier.request.get((await fiche.getAttribute('href'))!)
+    expect(pdf.status()).toBe(200)
+    expect(pdf.headers()['content-type']).toBe('application/pdf')
+    expect((await pdf.body()).subarray(0, 5).toString()).toBe('%PDF-')
     await atelier.getByRole('button', { name: 'Marquer prête' }).click()
     await expect(atelier.getByText('Commande passée à l’étape « Prête »')).toBeVisible()
     // Pas d'accès aux commandes ni aux clients, même en tapant l'adresse
@@ -90,6 +97,7 @@ test.describe('Commandes', () => {
     await adminPage.getByRole('button', { name: 'Commandes', exact: true }).click()
     await expect(adminPage.getByRole('cell', { name: `A passé la commande ${numero} à « Livrée / retirée »` })).toBeVisible()
     await expect(adminPage.getByRole('cell', { name: new RegExp(`A enregistré la commande ${numero} de ${raison}`) })).toBeVisible()
+    await expect(adminPage.getByRole('cell', { name: `A imprimé la fiche de fabrication de la commande ${numero}` })).toBeVisible()
   })
 
   test('une commande annulée garde sa raison', async ({ adminPage, baseURL, uid }) => {

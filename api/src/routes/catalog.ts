@@ -1,8 +1,9 @@
-import type { FastifyInstance } from 'fastify'
-import { asc, eq, sql } from 'drizzle-orm'
+import type { FastifyInstance, FastifyReply } from 'fastify'
+import { asc, eq, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { accessories, colors, materials, MODELES, pricingSettings, QUANTITES_AUTO, UNITES } from '../db/schema.js'
+import { accessories, colors, materials, pieceModels, pricingSettings, QUANTITES_AUTO, UNITES, type PieceModel } from '../db/schema.js'
+import { isPince, selfIntersection } from '../profile.js'
 import { getPricingSettings } from '../pricing.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
@@ -31,14 +32,55 @@ const accessoryFields = {
   nom: z.string().trim().min(1, 'Le nom de l’accessoire est requis.').max(60),
   prix: decimal(0, 10000, 'Prix', '€'),
   unite: z.enum(UNITES, { error: 'Unité invalide : à la pièce ou à la paire.' }),
-  // Rangés dans l'ordre du configurateur, sans doublon
+  // Identifiants des modèles de pièces, sans doublon (leur existence est vérifiée à l'enregistrement)
   modeles: z
-    .array(z.enum(MODELES, { error: 'Modèle inconnu.' }), { error: 'Choisissez au moins un modèle.' })
+    .array(z.uuid('Modèle inconnu.'), { error: 'Choisissez au moins un modèle.' })
     .min(1, 'Choisissez au moins un modèle.')
-    .transform((l) => MODELES.filter((m) => l.includes(m))),
+    .max(50)
+    .transform((l) => [...new Set(l)]),
   quantiteAuto: z.enum(QUANTITES_AUTO, { error: 'Quantité proposée invalide.' }),
   quantiteFixe: integer(0, 100, 'Quantité fixe', 'unités'),
   actif: z.boolean().optional(),
+}
+
+const modelFields = {
+  nom: z.string().trim().min(1, 'Le nom du modèle est requis.').max(60, 'Nom : 60 caractères maximum.'),
+  cotes: z.array(integer(1, 2000, 'Cote', 'mm'), { error: 'Cotes invalides.' }).min(1, 'Au moins une cote.').max(20, '20 cotes maximum.'),
+  // Angle intérieur signé ; ±1 pour une pince
+  angles: z.array(integer(-179, 179, 'Angle', '°').refine((a) => a !== 0, 'Angle : 0° impossible.'), { error: 'Angles invalides.' }).max(19),
+  noms: z.array(z.string().trim().max(30, 'Nom de cote : 30 caractères maximum.'), { error: 'Noms de cotes invalides.' }).max(20),
+  cap: integer(-180, 180, 'Orientation', '°'),
+  longueur: integer(1, 20000, 'Longueur proposée', 'mm'),
+  quantite: integer(1, 9999, 'Quantité proposée', 'pièces'),
+  actif: z.boolean().optional(),
+}
+type ModelShape = Pick<PieceModel, 'cotes' | 'angles' | 'noms'>
+
+/** Forme cohérente : un angle par pli, un nom par cote (complété à vide), profil qui ne se referme pas. */
+function checkShape(m: ModelShape): { error: string; field: string } | ModelShape {
+  if (m.angles.length !== m.cotes.length - 1) return { error: 'Il faut un angle pour chaque pli.', field: 'angles' }
+  if (m.noms.length > m.cotes.length) return { error: 'Un nom par cote au maximum.', field: 'noms' }
+  if (selfIntersection(m.cotes, m.angles, 0.5)) return { error: 'Le profil se referme sur lui-même : vérifiez les angles et le sens des plis.', field: 'angles' }
+  return { ...m, noms: m.cotes.map((_, i) => m.noms[i] ?? '') }
+}
+/** Erreur de validation avec le chemin complet (« cotes.2 »), pour désigner la cote fautive. */
+const invalidPath = (reply: FastifyReply, e: z.ZodError) => {
+  const issue = e.issues[0]
+  return reply.code(400).send({ error: issue?.message ?? 'Données invalides.', field: issue?.path.length ? issue.path.join('.') : undefined })
+}
+const shapeError = (x: ReturnType<typeof checkShape>): x is { error: string; field: string } => 'error' in x
+
+/** Résumé lisible d'un modèle pour le journal. */
+const describeModel = (m: Pick<PieceModel, 'nom' | 'cotes' | 'angles'>) => ({
+  nom: m.nom,
+  forme: m.cotes.map((c, i) => `${String.fromCharCode(65 + i)} ${c}${i < m.angles.length ? ` · ${isPince(m.angles[i]!) ? 'pince' : `${m.angles[i]}°`}` : ''}`).join(' · '),
+})
+
+/** Les modèles cités par un accessoire doivent exister. */
+async function unknownModels(ids: string[] | undefined) {
+  if (!ids?.length) return false
+  const found = await db.select({ id: pieceModels.id }).from(pieceModels).where(inArray(pieceModels.id, ids))
+  return found.length !== ids.length
 }
 
 const validId = (id: string) => z.uuid().safeParse(id).success
@@ -65,6 +107,9 @@ const settingsFields = {
   longueurMin: integer(10, 10000, 'Longueur minimum', 'mm'),
   longueurMax: integer(100, 10000, 'Longueur maximum', 'mm'),
   plisMax: integer(1, 30, 'Nombre de plis maximum', 'plis'),
+  angleMin: integer(15, 179, 'Angle minimum', '°'),
+  angleMax: integer(15, 179, 'Angle maximum', '°'),
+  pinceAutorisee: z.boolean({ error: 'Pince : oui ou non.' }),
 }
 
 export async function catalogRoutes(app: FastifyInstance) {
@@ -113,6 +158,57 @@ export async function catalogRoutes(app: FastifyInstance) {
     }
   })
 
+  // --- Modèles de pièces ---
+  app.get('/models', async () => ({
+    models: await db.select().from(pieceModels).orderBy(asc(pieceModels.position), asc(pieceModels.nom)),
+  }))
+
+  app.post('/models', async (req, reply) => {
+    const parsed = z.object(modelFields).partial({ noms: true, quantite: true }).safeParse(req.body)
+    if (!parsed.success) return invalidPath(reply, parsed.error)
+    const shape = checkShape({ ...parsed.data, noms: parsed.data.noms ?? [] })
+    if (shapeError(shape)) return reply.code(400).send(shape)
+    try {
+      const [m] = await db
+        .insert(pieceModels)
+        .values({ ...parsed.data, ...shape, position: sql`(select coalesce(max(position), 0) + 1 from piece_models)` })
+        .returning()
+      await audit(req, 'catalog.model_created', { targetType: 'model', targetId: m!.id, details: describeModel(m!) })
+      return reply.code(201).send({ model: m })
+    } catch (e) {
+      if (isUniqueViolation(e)) return reply.code(409).send({ error: 'Un modèle porte déjà ce nom.', field: 'nom' })
+      throw e
+    }
+  })
+
+  app.patch('/models/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const [before] = validId(id) ? await db.select().from(pieceModels).where(eq(pieceModels.id, id)) : []
+    if (!before) return reply.code(404).send({ error: 'Modèle introuvable.' })
+    const parsed = z.object(modelFields).partial().safeParse(req.body)
+    if (!parsed.success) return invalidPath(reply, parsed.error)
+    const data: Partial<PieceModel> = { ...parsed.data }
+    if (data.cotes || data.angles || data.noms) {
+      const shape = checkShape({ cotes: data.cotes ?? before.cotes, angles: data.angles ?? before.angles, noms: data.noms ?? before.noms })
+      if (shapeError(shape)) return reply.code(400).send(shape)
+      Object.assign(data, shape)
+    }
+    const changes = diff(before as Record<string, unknown>, data as Record<string, unknown>)
+    if (!Object.keys(changes).length) return { model: before }
+    try {
+      const [m] = await db
+        .update(pieceModels)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(pieceModels.id, id))
+        .returning()
+      await audit(req, 'catalog.model_updated', { targetType: 'model', targetId: id, details: { nom: m!.nom, changements: changes } })
+      return { model: m }
+    } catch (e) {
+      if (isUniqueViolation(e)) return reply.code(409).send({ error: 'Un modèle porte déjà ce nom.', field: 'nom' })
+      throw e
+    }
+  })
+
   // --- Façonnage et conditions (réglages uniques) ---
   app.get('/settings', async () => ({ settings: await getPricingSettings() }))
 
@@ -123,6 +219,9 @@ export async function catalogRoutes(app: FastifyInstance) {
     const merged = { ...before, ...parsed.data }
     if (merged.longueurMin >= merged.longueurMax) {
       return reply.code(400).send({ error: 'La longueur minimum doit être plus petite que la longueur maximum.', field: 'longueurMin' })
+    }
+    if (merged.angleMin > merged.angleMax) {
+      return reply.code(400).send({ error: 'L’angle minimum ne peut pas dépasser l’angle maximum.', field: 'angleMin' })
     }
     const changes = diff(before as Record<string, unknown>, parsed.data as Record<string, unknown>)
     if (!Object.keys(changes).length) return { settings: before }
@@ -189,6 +288,7 @@ export async function catalogRoutes(app: FastifyInstance) {
     const data = { ...parsed.data, quantiteFixe: parsed.data.quantiteFixe ?? 0 }
     const rule = checkFixed(data)
     if (rule) return reply.code(400).send(rule)
+    if (await unknownModels(data.modeles)) return reply.code(400).send({ error: 'Modèle inconnu.', field: 'modeles' })
     try {
       const [a] = await db
         .insert(accessories)
@@ -214,8 +314,15 @@ export async function catalogRoutes(app: FastifyInstance) {
     if (rule) return reply.code(400).send(rule)
     // La quantité fixe n'a de sens qu'avec la règle « fixe »
     if (merged.quantiteAuto !== 'fixe') data.quantiteFixe = 0
+    if (await unknownModels(data.modeles)) return reply.code(400).send({ error: 'Modèle inconnu.', field: 'modeles' })
     const changes = diff(before, data)
     if (!Object.keys(changes).length) return { accessory: before }
+    // Au journal, les modèles par leur nom plutôt que par leur identifiant
+    if (changes.modeles) {
+      const names = new Map((await db.select({ id: pieceModels.id, nom: pieceModels.nom }).from(pieceModels)).map((m) => [m.id, m.nom]))
+      const label = (ids: unknown) => (ids as string[]).map((id) => names.get(id) ?? id)
+      changes.modeles = { avant: label(changes.modeles.avant), apres: label(changes.modeles.apres) }
+    }
     try {
       const [a] = await db
         .update(accessories)

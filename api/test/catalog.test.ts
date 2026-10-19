@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
 import { auditLog } from '../src/db/schema.js'
-import { buildApp, createUser, loginAs, resetDb, type App, type Client } from './helpers.js'
+import { buildApp, createUser, loginAs, M, resetDb, seedModels, type App, type Client } from './helpers.js'
 
 let app: App
 let direction: Client
@@ -12,12 +12,14 @@ beforeEach(async () => {
 afterEach(() => app.close())
 beforeEach(async () => {
   await resetDb()
+  await seedModels()
   await createUser({ identifiant: 'chef', role: 'direction' })
   direction = await loginAs(app, 'chef')
 })
 
 const ALU15 = { nom: 'Aluminium', epaisseur: 1.5, prixM2: 62, retourMin: 10 }
-const BOUCHON = { nom: 'Bouchon de couvertine', prix: 6.9, unite: 'piece', modeles: ['couvertine'], quantiteAuto: 'fixe', quantiteFixe: 2 }
+const BOUCHON = { nom: 'Bouchon de couvertine', prix: 6.9, unite: 'piece', modeles: [M.couvertine], quantiteAuto: 'fixe', quantiteFixe: 2 }
+const FAITIERE = { nom: 'Faîtière', cotes: [30, 150, 150, 30], angles: [-120, 100, -120], noms: ['Retour', 'Pan', 'Pan', 'Retour'], cap: 30, longueur: 2000, quantite: 3 }
 const RAL7016 = { nom: 'Gris anthracite', reference: 'RAL 7016', hex: '#383E42', majoration: 0, delaiSup: 0 }
 
 describe('Accès', () => {
@@ -33,6 +35,9 @@ describe('Accès', () => {
         c.post('/api/catalog/colors', RAL7016),
         c.get('/api/catalog/accessories'),
         c.post('/api/catalog/accessories', BOUCHON),
+        c.get('/api/catalog/models'),
+        c.post('/api/catalog/models', FAITIERE),
+        c.patch(`/api/catalog/models/${M.bandeau}`, { nom: 'Bandeau large' }),
       ]))
         expect(res.statusCode, who).toBe(403)
     }
@@ -169,12 +174,12 @@ describe('Accessoires', () => {
   })
 
   it('range les modèles dans l’ordre du configurateur et retire les doublons', async () => {
-    const res = await direction.post('/api/catalog/accessories', { ...BOUCHON, nom: 'Vis inox', modeles: ['bandeau', 'couvertine', 'bandeau'], quantiteAuto: 'aucune' })
-    expect(res.json().accessory.modeles).toEqual(['couvertine', 'bandeau'])
+    const res = await direction.post('/api/catalog/accessories', { ...BOUCHON, nom: 'Vis inox', modeles: [M.bandeau, M.couvertine, M.bandeau], quantiteAuto: 'aucune' })
+    expect(res.json().accessory.modeles).toEqual([M.bandeau, M.couvertine])
   })
 
   it('accepte un prix à la française et une quantité fixe absente si la règle ne l’utilise pas', async () => {
-    const res = await direction.post('/api/catalog/accessories', { nom: 'Embouts de bavette', prix: '9,60', unite: 'paire', modeles: ['bavette'], quantiteAuto: 'par_piece' })
+    const res = await direction.post('/api/catalog/accessories', { nom: 'Embouts de bavette', prix: '9,60', unite: 'paire', modeles: [M.bavette], quantiteAuto: 'par_piece' })
     expect(res.statusCode).toBe(201)
     expect(res.json().accessory).toMatchObject({ prix: 9.6, unite: 'paire', quantiteFixe: 0 })
   })
@@ -193,6 +198,7 @@ describe('Accessoires', () => {
     [{ unite: 'metre' }, 'unite', /pièce ou à la paire/],
     [{ modeles: [] }, 'modeles', /au moins un modèle/],
     [{ modeles: ['gouttiere'] }, 'modeles', /Modèle inconnu/],
+    [{ modeles: ['00000000-0000-4000-a000-0000000000ff'] }, 'modeles', /Modèle inconnu/],
     [{ quantiteAuto: 'beaucoup' }, 'quantiteAuto', /invalide/],
     [{ quantiteFixe: 0 }, 'quantiteFixe', /1 au minimum/],
     [{ quantiteFixe: 1.5 }, 'quantiteFixe', /entier/],
@@ -205,12 +211,12 @@ describe('Accessoires', () => {
 
   it('modifie le prix et les modèles, et note l’avant / après au journal', async () => {
     const { accessory } = (await direction.post('/api/catalog/accessories', BOUCHON)).json()
-    const res = await direction.patch(`/api/catalog/accessories/${accessory.id}`, { prix: '7,20', modeles: ['couvertine', 'bandeau'] })
-    expect(res.json().accessory).toMatchObject({ prix: 7.2, modeles: ['couvertine', 'bandeau'] })
+    const res = await direction.patch(`/api/catalog/accessories/${accessory.id}`, { prix: '7,20', modeles: [M.couvertine, M.bandeau] })
+    expect(res.json().accessory).toMatchObject({ prix: 7.2, modeles: [M.couvertine, M.bandeau] })
     const [entry] = await db.select().from(auditLog).where(eq(auditLog.action, 'catalog.accessory_updated'))
     expect(entry!.details).toEqual({
       nom: 'Bouchon de couvertine',
-      changements: { prix: { avant: 6.9, apres: 7.2 }, modeles: { avant: ['couvertine'], apres: ['couvertine', 'bandeau'] } },
+      changements: { prix: { avant: 6.9, apres: 7.2 }, modeles: { avant: ['Couvertine'], apres: ['Couvertine', 'Bandeau'] } },
     })
   })
 
@@ -226,7 +232,7 @@ describe('Accessoires', () => {
 
   it('ne note rien si rien ne change (même liste de modèles), désactive, et répond 404 si inconnu', async () => {
     const { accessory } = (await direction.post('/api/catalog/accessories', BOUCHON)).json()
-    await direction.patch(`/api/catalog/accessories/${accessory.id}`, { prix: 6.9, modeles: ['couvertine'] })
+    await direction.patch(`/api/catalog/accessories/${accessory.id}`, { prix: 6.9, modeles: [M.couvertine] })
     expect(await db.select().from(auditLog).where(eq(auditLog.action, 'catalog.accessory_updated'))).toHaveLength(0)
     await direction.patch(`/api/catalog/accessories/${accessory.id}`, { actif: false })
     expect((await direction.get('/api/catalog/accessories')).json().accessories[0].actif).toBe(false)
@@ -234,3 +240,55 @@ describe('Accessoires', () => {
     expect((await direction.patch('/api/catalog/accessories/abc', { prix: 1 })).statusCode).toBe(404)
   })
 })
+
+describe('Modèles de pièces', () => {
+  const models = async () => (await direction.get('/api/catalog/models')).json().models as { id: string; nom: string }[]
+
+  it('liste les modèles dans l’ordre et en ajoute un, noté au journal', async () => {
+    expect((await models()).map((m) => m.nom)).toEqual(['Couvertine', 'Bavette d’appui', 'Bandeau', 'Autre profil'])
+    const res = await direction.post('/api/catalog/models', { ...FAITIERE, nom: '  Faîtière  ', quantite: undefined })
+    expect(res.statusCode, res.body).toBe(201)
+    expect(res.json().model).toMatchObject({ nom: 'Faîtière', cotes: [30, 150, 150, 30], angles: [-120, 100, -120], cap: 30, quantite: 1, actif: true, position: 5 })
+    const [entry] = await db.select().from(auditLog).where(eq(auditLog.action, 'catalog.model_created'))
+    expect(entry!.details).toEqual({ nom: 'Faîtière', forme: 'A 30 · -120° · B 150 · 100° · C 150 · -120° · D 30' })
+  })
+
+  it('complète les noms de cotes manquants', async () => {
+    const res = await direction.post('/api/catalog/models', { ...FAITIERE, noms: ['Retour'] })
+    expect(res.json().model.noms).toEqual(['Retour', '', '', ''])
+  })
+
+  it.each([
+    [{ nom: '' }, 'nom', /nom du modèle est requis/],
+    [{ cotes: [] }, 'cotes', /Au moins une cote/],
+    [{ cotes: [30, 0, 150, 30] }, 'cotes.1', /1 mm minimum/],
+    [{ angles: [-120, 100] }, 'angles', /un angle pour chaque pli/],
+    [{ angles: [-120, 0, -120] }, 'angles.1', /0° impossible/],
+    [{ noms: ['a', 'b', 'c', 'd', 'e'] }, 'noms', /Un nom par cote/],
+    [{ cotes: [100, 100, 100, 100], angles: [90, 90, 90] }, 'angles', /se referme sur lui-même/],
+    [{ cap: 270 }, 'cap', /180 ° maximum/],
+    [{ longueur: 0 }, 'longueur', /1 mm minimum/],
+  ])('refuse %o et désigne le champ', async (body, field, msg) => {
+    const res = await direction.post('/api/catalog/models', { ...FAITIERE, ...body })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().field).toBe(field)
+    expect(res.json().error).toMatch(msg)
+  })
+
+  it('refuse un nom déjà pris', async () => {
+    const res = await direction.post('/api/catalog/models', { ...FAITIERE, nom: 'Bandeau' })
+    expect(res.statusCode).toBe(409)
+    expect(res.json()).toEqual({ error: 'Un modèle porte déjà ce nom.', field: 'nom' })
+  })
+
+  it('modifie la forme en vérifiant sa cohérence avec ce qui est enregistré, et désactive', async () => {
+    expect((await direction.patch(`/api/catalog/models/${M.bandeau}`, { cotes: [40, 150, 20] })).json()).toEqual({ error: 'Il faut un angle pour chaque pli.', field: 'angles' })
+    const res = await direction.patch(`/api/catalog/models/${M.bandeau}`, { cotes: [40, 150, 20], angles: [-90, 90], nom: 'Bandeau à goutte' })
+    expect(res.json().model).toMatchObject({ nom: 'Bandeau à goutte', cotes: [40, 150, 20], noms: ['Retour', 'Face', ''] })
+    const [entry] = await db.select().from(auditLog).where(eq(auditLog.action, 'catalog.model_updated'))
+    expect(entry!.details).toMatchObject({ nom: 'Bandeau à goutte', changements: { nom: { avant: 'Bandeau', apres: 'Bandeau à goutte' }, cotes: { avant: [40, 150], apres: [40, 150, 20] } } })
+    expect((await direction.patch(`/api/catalog/models/${M.bandeau}`, { actif: false })).json().model.actif).toBe(false)
+    expect((await direction.patch('/api/catalog/models/pas-un-id', { actif: false })).statusCode).toBe(404)
+  })
+})
+

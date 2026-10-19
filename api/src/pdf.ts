@@ -60,7 +60,7 @@ export function totals(lignes: DocLine[], tva: number) {
 }
 
 /** Logo de l'appli (voir web/src/components/BrandMark.vue), dessiné en vectoriel. */
-function drawBrandMark(doc: PDFKit.PDFDocument, x: number, y: number, height: number) {
+export function drawBrandMark(doc: PDFKit.PDFDocument, x: number, y: number, height: number) {
   const s = height / 234
   doc.save().translate(x - 8 * s, y - 18 * s).scale(s)
   const shapes: { points: [number, number][]; y1: number; y2: number; stops: [number, string][] }[] = [

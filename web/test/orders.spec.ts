@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import OrdersView from '@/views/OrdersView.vue'
 import OrderNewView from '@/views/OrderNewView.vue'
@@ -9,6 +9,7 @@ import ClientView from '@/views/ClientView.vue'
 import ProfileSketch from '@/components/orders/ProfileSketch.vue'
 import { accessoriesFor, newLine, profilePoints, suggestedQuantity, type OrderCatalog, type OrderDetail, type OrderSummary, type Totals } from '@/lib/orders'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
+import { pieceParts } from '@/lib/piece3d'
 import { useAuthStore, type User } from '@/stores/auth'
 import { ADMIN, ATELIER, RH, freshPinia, makeRouter, mockApi } from './helpers'
 
@@ -16,8 +17,16 @@ import { ADMIN, ATELIER, RH, freshPinia, makeRouter, mockApi } from './helpers'
 const norm = (t: string) => t.replace(/[\u202f\u00a0]/g, ' ')
 const wait = (ms = 400) => new Promise((r) => setTimeout(r, ms))
 
+// Les identifiants des modèles reprennent leur nom, pour la lisibilité des tests
+const MODELS = [
+  { id: 'couvertine', nom: 'Couvertine', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'], cap: -45, longueur: 3000, quantite: 4 },
+  { id: 'bavette', nom: 'Bavette d’appui', cotes: [30, 220, 45, 15], angles: [-95, 95, 135], noms: ['Rejingot', 'Dessus', 'Nez', 'Retour'], cap: 90, longueur: 1400, quantite: 2 },
+  { id: 'bandeau', nom: 'Bandeau', cotes: [40, 150], angles: [-90], noms: ['Retour', 'Face'], cap: 180, longueur: 3000, quantite: 6 },
+]
+
 const CATALOG: OrderCatalog = {
-  materials: [{ id: 'm1', label: 'Aluminium 1,5 mm', retourMin: 10 }],
+  models: MODELS,
+  materials: [{ id: 'm1', label: 'Aluminium 1,5 mm', epaisseur: 1.5, retourMin: 10 }],
   colors: [
     { id: 'k1', label: 'Gris anthracite (RAL 7016)', hex: '#383e42' },
     { id: 'k2', label: 'Noir sablé (2100 Sablé)', hex: '#27282b' },
@@ -27,13 +36,15 @@ const CATALOG: OrderCatalog = {
     { id: 'a2', nom: 'Éclisse de jonction', prix: 7.8, unite: 'piece', modeles: ['couvertine'], quantiteAuto: 'jonctions', quantiteFixe: 0 },
     { id: 'a3', nom: 'Angle de bandeau', prix: 14.5, unite: 'piece', modeles: ['bandeau'], quantiteAuto: 'aucune', quantiteFixe: 0 },
   ],
-  limits: { largeurTole: 1250, longueurMin: 200, longueurMax: 3000, plisMax: 8 },
+  limits: { largeurTole: 1250, longueurMin: 200, longueurMax: 3000, plisMax: 8, angleMin: 30, angleMax: 175, pince: true },
   retrait: true,
 }
 const TOTALS: Totals = { brut: 432.12, tauxRemisePro: 0, remisePro: 0, complementMinimum: 0, livraisonPrix: 0, ht: 432.12, tauxTva: 20, tva: 86.42, ttc: 518.54, delaiJours: 5 }
 const LINE = {
   repere: 'Mur sud',
-  modele: 'couvertine' as const,
+  modelId: 'couvertine',
+  modeleLabel: 'Couvertine',
+  cap: -45,
   materialLabel: 'Aluminium 1,5 mm',
   colorLabel: 'Gris anthracite (RAL 7016)',
   colorHex: '#383e42',
@@ -114,7 +125,8 @@ describe('Outils commandes', () => {
     expect(suggestedQuantity(eclisse!, 0)).toBe(0)
     expect(suggestedQuantity(angle!, 4)).toBe(0)
     expect(accessoriesFor(CATALOG, 'bandeau').map((a) => a.id)).toEqual(['a3'])
-    expect(accessoriesFor(CATALOG, 'autre')).toHaveLength(3)
+    // Seuls les accessoires qui citent le modèle sont proposés
+    expect(accessoriesFor(CATALOG, 'bavette')).toHaveLength(0)
   })
 
   it('prépare une pièce du modèle avec ses accessoires', () => {
@@ -138,6 +150,23 @@ describe('Outils commandes', () => {
     expect(w.findAll('text.cote').map((t) => t.text())).toEqual(['A 20', 'B 70', 'C 300'])
     expect(w.findAll('text.angle').map((t) => t.text())).toEqual(['90°', '90°'])
     expect(w.get('svg').attributes('aria-label')).toBe('Profil, développé 390 mm')
+  })
+
+  it('prépare la pièce en 3D : une plaque par cote, un cylindre par pli, centrée', () => {
+    const p = pieceParts([100, 50], [90], 0, 2000, 1.5)
+    expect(p.plates).toHaveLength(2)
+    expect(p.joints).toHaveLength(1)
+    expect(p.plates[0]).toMatchObject({ len: 100, angle: -0 })
+    // Profil de 100 × 50 : centré sur l'origine, l'axe y vers le haut
+    expect(p.plates[0]!.x).toBeCloseTo(0)
+    expect(p.plates[0]!.y).toBeCloseTo(25)
+    expect(p.joints[0]!.x).toBeCloseTo(50)
+    expect(p.span).toBe(100)
+    // 2 m pour 100 mm de profil : raccourcie à 4 fois le profil pour rester lisible ; épaisseur grossie
+    expect(p).toMatchObject({ length: 400, shortened: true })
+    expect(p.thickness).toBe(1.5)
+    expect(pieceParts([400, 200], [90], 0, 1200, 3)).toMatchObject({ length: 1200, shortened: false })
+    expect(pieceParts([400, 200], [90], 0, 1200, 3).thickness).toBeCloseTo(400 / 90)
   })
 
   it('décrit les commandes dans le journal', () => {
@@ -237,6 +266,35 @@ describe('Nouvelle commande', () => {
     expect(button(wrapper, 'Enregistrer la commande').attributes('disabled')).toBeDefined()
   })
 
+  it('saisit une pince (0°) en gardant le sens du pli, avec les angles possibles en aide', async () => {
+    const { wrapper, calls } = await mountAt(OrderNewView, '/commandes/nouvelle?client=c1', routes())
+    expect(norm(wrapper.get('[aria-label="Pièce 1"]').text())).toContain('Plis de 30° à 175°, 0° pour une pince.')
+    expect(wrapper.get('#l0-angle0').attributes()).toMatchObject({ min: '0', max: '175' })
+    // Le premier pli de la couvertine se fait vers le bas : la pince aussi
+    await wrapper.get('#l0-angle0').setValue('0')
+    expect(norm(wrapper.get('[aria-label="Pièce 1"]').text())).toContain('° pince')
+    await wait()
+    await flushPromises()
+    expect(calls.filter((c) => c.path === '/orders/quote').at(-1)!.body.lignes[0].angles).toEqual([-1, 90, 90, -135])
+    expect(wrapper.get('svg[aria-label="Profil de la pièce 1"]').text()).toContain('pince')
+  })
+
+  it('montre la pièce en 3D à la demande, ou prévient si l’appareil ne sait pas', async () => {
+    // jsdom ne fait pas de WebGL : la vue 3D doit le dire sans planter
+    const spy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    const { wrapper } = await mountAt(OrderNewView, '/commandes/nouvelle?client=c1', routes())
+    const piece = wrapper.get('[aria-label="Pièce 1"]')
+    expect(piece.get('button[aria-pressed="true"]').text()).toBe('Profil')
+    await button(wrapper, '3D').trigger('click')
+    // Le temps de charger three.js
+    await vi.waitFor(() => expect(piece.text()).toContain('La vue 3D'), { timeout: 5000 })
+    expect(piece.find('svg[aria-label="Profil de la pièce 1"]').exists()).toBe(false)
+    expect(piece.text()).toContain('La vue 3D n’est pas disponible sur cet appareil.')
+    await button(wrapper, 'Profil').trigger('click')
+    expect(piece.find('svg[aria-label="Profil de la pièce 1"]').exists()).toBe(true)
+    spy.mockRestore()
+  })
+
   it('ajoute, duplique et retire des pièces', async () => {
     const { wrapper } = await mountAt(OrderNewView, '/commandes/nouvelle?client=c1', routes())
     await button(wrapper, 'Ajouter une pièce').trigger('click')
@@ -250,8 +308,10 @@ describe('Nouvelle commande', () => {
   })
 
   it('prévient quand le catalogue est vide', async () => {
-    const { wrapper } = await mountAt(OrderNewView, '/commandes/nouvelle', routes({ 'GET /orders/catalog': [200, { ...CATALOG, materials: [] }] }))
-    expect(norm(wrapper.text())).toContain('Ajoutez d’abord au moins une matière et un coloris')
+    for (const vide of [{ materials: [] }, { models: [] }]) {
+      const { wrapper } = await mountAt(OrderNewView, '/commandes/nouvelle', routes({ 'GET /orders/catalog': [200, { ...CATALOG, ...vide }] }))
+      expect(norm(wrapper.text())).toContain('Ajoutez d’abord au moins un modèle de pièce, une matière et un coloris actifs')
+    }
   })
 })
 
@@ -308,6 +368,16 @@ describe('Fiche commande', () => {
     expect(wrapper.findAll('.steps li.done')).toHaveLength(5)
     expect(wrapper.find('.actions').exists()).toBe(false)
   })
+
+  it('propose la fiche de fabrication seulement une fois la commande validée', async () => {
+    const recue = await mountAt(OrderView, '/commandes/o1', { 'GET /orders/o1': [200, ORDER] })
+    expect(recue.wrapper.find('a[href$="/fiche.pdf"]').exists()).toBe(false)
+    const validee = { ...ORDER, order: { ...ORDER.order, statut: 'validee' as const, statutLabel: 'Validée', next: ['fabrication', 'annulee'] } }
+    const { wrapper } = await mountAt(OrderView, '/commandes/o1', { 'GET /orders/o1': [200, validee] })
+    const link = wrapper.get('a[href$="/fiche.pdf"]')
+    expect(link.attributes()).toMatchObject({ href: '/api/production/o1/fiche.pdf', target: '_blank', rel: 'noopener' })
+    expect(norm(link.text())).toBe('Fiche de fabrication')
+  })
 })
 
 describe('Atelier', () => {
@@ -327,6 +397,13 @@ describe('Atelier', () => {
     expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ statut: 'fabrication' })
   })
 
+  it('donne la fiche imprimable de chaque commande', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: ROWS }] }, ATELIER)
+    const links = wrapper.findAll('a[href$="/fiche.pdf"]')
+    expect(links.map((l) => l.attributes('href'))).toEqual(['/api/production/o1/fiche.pdf', '/api/production/o2/fiche.pdf'])
+    expect(links[0]!.attributes()).toMatchObject({ target: '_blank', 'aria-label': 'Imprimer la fiche C-2026-0001' })
+  })
+
   it('montre la fiche de fabrication sans prix', async () => {
     const detail = {
       order: { id: 'o1', numero: 'C-2026-0001', statut: 'fabrication', statutLabel: 'En fabrication', livraisonMode: 'retrait', datePrevue: '2026-10-26', next: 'prete' },
@@ -338,6 +415,7 @@ describe('Atelier', () => {
     expect(norm(wrapper.text())).toContain('2 × Bouchon de couvertine')
     expect(norm(wrapper.text())).toContain('135° ↓')
     expect(norm(wrapper.text())).not.toContain('€')
+    expect(wrapper.get('a[href="/api/production/o1/fiche.pdf"]').text()).toContain('Imprimer la fiche')
     await button(wrapper, 'Marquer prête').trigger('click')
     await flushPromises()
     expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ statut: 'prete' })

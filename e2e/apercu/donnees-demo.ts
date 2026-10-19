@@ -40,8 +40,9 @@ export default async function seed(config: FullConfig) {
   const clientList = (await (await api.get('/api/clients')).json()).clients as { id: string; raisonSociale: string | null }[]
   const forez = clientList.find((c) => c.raisonSociale === 'Toitures du Forez')
   const others = clientList.filter((c) => c !== forez)
+  const model = (nom: string) => (catalog.models as { id: string; nom: string }[]).find((m) => m.nom === nom)!.id
   const piece = (over: Record<string, unknown> = {}) => ({
-    modele: 'couvertine',
+    modelId: model('Couvertine'),
     materialId: catalog.materials[0].id,
     colorId: catalog.colors[0].id,
     cotes: [20, 70, 300, 70, 20],
@@ -51,10 +52,10 @@ export default async function seed(config: FullConfig) {
     accessoires: [],
     ...over,
   })
-  const bandeau = piece({ modele: 'bandeau', repere: 'Rive est', colorId: catalog.colors[1]?.id ?? catalog.colors[0].id, cotes: [40, 150], angles: [-90], quantite: 8 })
+  const bandeau = piece({ modelId: model('Bandeau'), repere: 'Rive est', colorId: catalog.colors[1]?.id ?? catalog.colors[0].id, cotes: [40, 150], angles: [-90], quantite: 8 })
   const ORDERS = [
     { client: forez, lignes: [piece({ repere: 'Mur sud' }), bandeau], livraison: { mode: 'livraison', adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' }, etapes: ['validee', 'fabrication'] },
-    { client: others[0], lignes: [piece({ modele: 'bavette', cotes: [30, 220, 45, 15], angles: [-95, 95, 135], longueur: 1400, quantite: 2 })], livraison: { mode: 'retrait' }, etapes: [] },
+    { client: others[0], lignes: [piece({ modelId: model('Bavette d’appui'), cotes: [30, 220, 45, 15], angles: [-95, 95, 135], longueur: 1400, quantite: 2 })], livraison: { mode: 'retrait' }, etapes: [] },
     { client: forez, lignes: [bandeau], livraison: { mode: 'retrait' }, etapes: ['validee'] },
     { client: others[1] ?? others[0], lignes: [piece({ quantite: 2 })], livraison: { mode: 'retrait' }, etapes: ['validee', 'fabrication', 'prete'] },
   ]

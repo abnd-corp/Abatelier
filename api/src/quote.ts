@@ -4,12 +4,13 @@
 //           + nombre de plis × prix du pli au mètre × longueur (m)
 // Par ligne : pièces × quantité − remise quantité, + accessoires, + mise en route (une par ligne)
 // Commande  : somme des lignes − remise pro, complétée jusqu'au minimum de commande, + livraison, + TVA
-import type { Accessory, Color, DeliverySettings, LineModele, Material, OrderLineAccessory, PricingSettings } from './db/schema.js'
+import type { Accessory, Color, DeliverySettings, Material, OrderLineAccessory, PieceModel, PricingSettings } from './db/schema.js'
 import { deliveryQuote } from './delivery.js'
+import { isPince, selfIntersection } from './profile.js'
 
 export interface LineInput {
   repere?: string | null
-  modele: LineModele
+  modelId: string
   materialId: string
   colorId: string
   cotes: number[]
@@ -20,6 +21,7 @@ export interface LineInput {
 }
 
 export interface Catalog {
+  models: PieceModel[]
   materials: Material[]
   colors: Color[]
   accessories: Accessory[]
@@ -29,7 +31,9 @@ export interface Catalog {
 
 export interface PricedLine {
   repere: string | null
-  modele: LineModele
+  modelId: string
+  modeleLabel: string
+  cap: number
   materialId: string
   materialLabel: string
   colorId: string
@@ -86,6 +90,8 @@ export const quantityDiscount = (s: Pick<PricingSettings, 'remisesQuantite'>, qu
 export function priceLine(input: LineInput, i: number, c: Catalog): PricedLine | QuoteError {
   const f = (name: string) => `lignes.${i}.${name}`
   const s = c.settings
+  const model = c.models.find((m) => m.id === input.modelId && m.actif)
+  if (!model) return { error: 'Modèle inconnu ou désactivé.', field: f('modelId') }
   const material = c.materials.find((m) => m.id === input.materialId && m.actif)
   if (!material) return { error: 'Matière inconnue ou désactivée.', field: f('materialId') }
   const color = c.colors.find((x) => x.id === input.colorId && x.actif)
@@ -94,9 +100,21 @@ export function priceLine(input: LineInput, i: number, c: Catalog): PricedLine |
   const plis = input.cotes.length - 1
   if (input.angles.length !== plis) return { error: 'Il faut un angle pour chaque pli.', field: f('angles') }
   if (plis > s.plisMax) return { error: `${s.plisMax} plis maximum par pièce.`, field: f('cotes') }
+  for (const [j, a] of input.angles.entries()) {
+    if (isPince(a)) {
+      if (!s.pinceAutorisee) return { error: `Pli ${j + 1} : l’atelier ne fait pas de pince.`, field: f(`angles.${j}`) }
+    } else if (Math.abs(a) < s.angleMin || Math.abs(a) > s.angleMax) {
+      return { error: `Pli ${j + 1} : angle entre ${s.angleMin}° et ${s.angleMax}°${s.pinceAutorisee ? ' (ou 0° pour une pince)' : ''}.`, field: f(`angles.${j}`) }
+    }
+  }
   const tooShort = input.cotes.findIndex((v) => v < material.retourMin)
   if (tooShort >= 0) {
     return { error: `Cote ${String.fromCharCode(65 + tooShort)} : ${material.retourMin} mm minimum en ${materialLabel(material)}.`, field: f(`cotes.${tooShort}`) }
+  }
+  const crossing = selfIntersection(input.cotes, input.angles, material.epaisseur)
+  if (crossing) {
+    const [a, b] = crossing.map((k) => String.fromCharCode(65 + k))
+    return { error: `Le profil se referme sur lui-même : les cotes ${a} et ${b} se touchent. Vérifiez les angles et le sens des plis.`, field: f('angles') }
   }
   const developpe = sum(input.cotes)
   if (developpe > s.largeurTole) return { error: `Développé de ${num(developpe)} mm : la tôle fait ${num(s.largeurTole)} mm de large au maximum.`, field: f('cotes') }
@@ -109,7 +127,7 @@ export function priceLine(input: LineInput, i: number, c: Catalog): PricedLine |
     if (!a.quantite) continue
     const acc = c.accessories.find((x) => x.id === a.accessoryId && x.actif)
     if (!acc) return { error: 'Accessoire inconnu ou désactivé.', field: f(`accessoires.${j}`) }
-    if (input.modele !== 'autre' && !acc.modeles.includes(input.modele)) return { error: `${acc.nom} : ne s’utilise pas avec ce modèle.`, field: f(`accessoires.${j}`) }
+    if (!acc.modeles.includes(model.id)) return { error: `${acc.nom} : ne s’utilise pas avec ce modèle.`, field: f(`accessoires.${j}`) }
     accessoires.push({ accessoryId: acc.id, nom: acc.nom, unite: acc.unite, prix: acc.prix, quantite: a.quantite })
   }
 
@@ -121,7 +139,9 @@ export function priceLine(input: LineInput, i: number, c: Catalog): PricedLine |
   const miseEnRoute = s.miseEnRoute
   return {
     repere: input.repere?.trim() || null,
-    modele: input.modele,
+    modelId: model.id,
+    modeleLabel: model.nom,
+    cap: model.cap,
     materialId: material.id,
     materialLabel: materialLabel(material),
     colorId: color.id,

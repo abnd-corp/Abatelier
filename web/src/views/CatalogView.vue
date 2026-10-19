@@ -3,26 +3,28 @@ import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MaterialsPanel from '@/components/catalog/MaterialsPanel.vue'
 import ColorsPanel from '@/components/catalog/ColorsPanel.vue'
+import ModelsPanel from '@/components/catalog/ModelsPanel.vue'
 import AccessoriesPanel from '@/components/catalog/AccessoriesPanel.vue'
 import DeliveryPanel from '@/components/catalog/DeliveryPanel.vue'
 import SettingsPanel from '@/components/catalog/SettingsPanel.vue'
 import AppIcon from '@/components/AppIcon.vue'
 
-type Tab = 'matieres' | 'coloris' | 'accessoires' | 'livraison' | 'faconnage'
+type Tab = 'matieres' | 'coloris' | 'modeles' | 'accessoires' | 'livraison' | 'faconnage'
 const route = useRoute()
 const router = useRouter()
 
 // L'onglet ouvert est gardé dans l'adresse (?onglet=coloris) pour pouvoir le partager ou y revenir
-const TAB_IDS: Tab[] = ['matieres', 'coloris', 'accessoires', 'livraison', 'faconnage']
+const TAB_IDS: Tab[] = ['matieres', 'coloris', 'modeles', 'accessoires', 'livraison', 'faconnage']
 const tab = ref<Tab>(TAB_IDS.find((t) => t === route.query.onglet) ?? 'matieres')
 watch(tab, (t) => router.replace({ query: t === 'matieres' ? {} : { onglet: t } }))
 
-const counts = ref<Record<Tab, number | null>>({ matieres: null, coloris: null, accessoires: null, livraison: null, faconnage: null })
+const counts = ref<Record<Tab, number | null>>({ matieres: null, coloris: null, modeles: null, accessoires: null, livraison: null, faconnage: null })
 
 // « more » : fin du libellé masquée sur téléphone pour que les onglets tiennent sur une ligne
-const TABS: { id: Tab; label: string; more?: string; icon: 'layers' | 'palette' | 'box' | 'truck' | 'sliders' }[] = [
+const TABS: { id: Tab; label: string; more?: string; icon: 'layers' | 'palette' | 'profile' | 'box' | 'truck' | 'sliders' }[] = [
   { id: 'matieres', label: 'Matières', icon: 'layers' },
   { id: 'coloris', label: 'Coloris', icon: 'palette' },
+  { id: 'modeles', label: 'Modèles', more: ' de pièces', icon: 'profile' },
   { id: 'accessoires', label: 'Accessoires', icon: 'box' },
   { id: 'livraison', label: 'Livraison', icon: 'truck' },
   { id: 'faconnage', label: 'Façonnage', more: ' et conditions', icon: 'sliders' },
@@ -69,6 +71,9 @@ function onKey(e: KeyboardEvent) {
   </section>
   <section v-show="tab === 'coloris'" id="panel-coloris" role="tabpanel" aria-labelledby="tab-coloris">
     <ColorsPanel @count="counts.coloris = $event" />
+  </section>
+  <section v-show="tab === 'modeles'" id="panel-modeles" role="tabpanel" aria-labelledby="tab-modeles">
+    <ModelsPanel @count="counts.modeles = $event" />
   </section>
   <section v-show="tab === 'accessoires'" id="panel-accessoires" role="tabpanel" aria-labelledby="tab-accessoires">
     <AccessoriesPanel @count="counts.accessoires = $event" />

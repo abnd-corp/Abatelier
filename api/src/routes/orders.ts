@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { clients, LINE_MODELES, ORDER_STATUTS, orderEvents, orderLines, orders, type Client } from '../db/schema.js'
+import { clients, ORDER_STATUTS, orderEvents, orderLines, orders, type Client } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
 import { allocateNumber } from '../documents.js'
@@ -20,11 +20,11 @@ const int = (min: number, max: number, label: string) =>
 
 const line = z.object({
   repere: z.string().trim().max(60, 'Repère : 60 caractères maximum.').nullish(),
-  modele: z.enum(LINE_MODELES, { error: 'Modèle inconnu.' }),
+  modelId: z.uuid('Choisissez un modèle.'),
   materialId: z.uuid('Choisissez une matière.'),
   colorId: z.uuid('Choisissez un coloris.'),
   cotes: z.array(int(1, 2000, 'Cote')).min(1, 'Au moins une cote.').max(20, '20 cotes maximum.'),
-  // Angle intérieur du pli ; négatif quand le pli se fait dans l'autre sens
+  // Angle intérieur du pli ; négatif quand le pli se fait dans l'autre sens ; ±1 pour une pince (voir profile.ts)
   angles: z.array(int(-179, 179, 'Angle').refine((a) => a !== 0, 'Angle : 0° impossible.')).max(19),
   longueur: int(1, 20000, 'Longueur'),
   quantite: int(1, 9999, 'Quantité'),
@@ -204,10 +204,11 @@ export async function orderRoutes(app: FastifyInstance) {
     const s = c.settings
     const byPos = <T extends { position: number; nom: string }>(a: T[]) => a.sort((x, y) => x.position - y.position || x.nom.localeCompare(y.nom))
     return {
-      materials: byPos(c.materials.filter((m) => m.actif)).map((m) => ({ id: m.id, label: materialLabel(m), retourMin: m.retourMin })),
+      models: byPos(c.models.filter((m) => m.actif)).map((m) => ({ id: m.id, nom: m.nom, cotes: m.cotes, angles: m.angles, noms: m.noms, cap: m.cap, longueur: m.longueur, quantite: m.quantite })),
+      materials: byPos(c.materials.filter((m) => m.actif)).map((m) => ({ id: m.id, label: materialLabel(m), epaisseur: m.epaisseur, retourMin: m.retourMin })),
       colors: byPos(c.colors.filter((x) => x.actif)).map((x) => ({ id: x.id, label: colorLabel(x), hex: x.hex })),
       accessories: byPos(c.accessories.filter((a) => a.actif)).map((a) => ({ id: a.id, nom: a.nom, prix: a.prix, unite: a.unite, modeles: a.modeles, quantiteAuto: a.quantiteAuto, quantiteFixe: a.quantiteFixe })),
-      limits: { largeurTole: s.largeurTole, longueurMin: s.longueurMin, longueurMax: s.longueurMax, plisMax: s.plisMax },
+      limits: { largeurTole: s.largeurTole, longueurMin: s.longueurMin, longueurMax: s.longueurMax, plisMax: s.plisMax, angleMin: s.angleMin, angleMax: s.angleMax, pince: s.pinceAutorisee },
       retrait: c.delivery.retraitActif,
     }
   })

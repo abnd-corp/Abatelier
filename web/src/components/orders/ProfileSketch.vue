@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { developpe, letter, profilePoints } from '@/lib/orders'
+import { angleText, developpe, letter, profilePoints } from '@/lib/orders'
 
 // Profil de la pièce vu en coupe, avec ses cotes (A, B, C…) et ses angles
 const props = withDefaults(defineProps<{ cotes: number[]; angles: number[]; cap?: number; color?: string; labels?: boolean; label?: string }>(), {
@@ -68,7 +68,7 @@ const drawing = computed(() => {
         arc: `M${v[0] + u1[0]! * r} ${v[1] + u1[1]! * r} A${r} ${r} 0 0 ${cross > 0 ? 1 : 0} ${v[0] + u2[0]! * r} ${v[1] + u2[1]! * r}`,
         x: v[0] + (bis[0]! / bn) * 27 * k,
         y: v[1] + (bis[1]! / bn) * 27 * k,
-        v: `${Math.abs(angle)}°`,
+        v: angleText(angle),
       },
     ]
   })

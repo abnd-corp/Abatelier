@@ -1,5 +1,4 @@
 export type OrderStatut = 'recue' | 'validee' | 'fabrication' | 'prete' | 'livree' | 'annulee'
-export type LineModele = 'couvertine' | 'bavette' | 'bandeau' | 'autre'
 export type Tone = 'ok' | 'warn' | 'accent' | 'neutral'
 
 export const STATUTS: { value: OrderStatut; label: string; tone: Tone }[] = [
@@ -22,18 +21,24 @@ export const STEP_ACTIONS: Record<OrderStatut, string> = {
   annulee: 'Annuler la commande',
 }
 
-/** Modèles de pièces, avec une forme de départ que l'on ajuste. Angles signés : négatif = pli dans l'autre sens. */
-export const MODELES: Record<LineModele, { label: string; cotes: number[]; angles: number[]; longueur: number; quantite: number; cap: number; noms: string[] }> = {
-  couvertine: { label: 'Couvertine', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], longueur: 3000, quantite: 4, cap: -45, noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'] },
-  bavette: { label: 'Bavette d’appui', cotes: [30, 220, 45, 15], angles: [-95, 95, 135], longueur: 1400, quantite: 2, cap: 90, noms: ['Rejingot', 'Dessus', 'Nez', 'Retour'] },
-  bandeau: { label: 'Bandeau', cotes: [40, 150], angles: [-90], longueur: 3000, quantite: 6, cap: 180, noms: ['Retour', 'Face'] },
-  autre: { label: 'Autre profil', cotes: [60, 120], angles: [90], longueur: 2000, quantite: 1, cap: 0, noms: [] },
+/** Modèle de pièce du catalogue : une forme de départ que l'on ajuste. Angles signés : négatif = pli dans l'autre sens. */
+export interface CatalogModel {
+  id: string
+  nom: string
+  cotes: number[]
+  angles: number[]
+  // Nom de chaque cote (Larmier, Retombée…), vide si aucun
+  noms: string[]
+  // Orientation du dessin : direction du premier segment, en degrés
+  cap: number
+  longueur: number
+  quantite: number
 }
-export const MODELE_KEYS = Object.keys(MODELES) as LineModele[]
 
 export interface CatalogMaterial {
   id: string
   label: string
+  epaisseur: number
   retourMin: number
 }
 export interface CatalogColor {
@@ -51,16 +56,17 @@ export interface CatalogAccessory {
   quantiteFixe: number
 }
 export interface OrderCatalog {
+  models: CatalogModel[]
   materials: CatalogMaterial[]
   colors: CatalogColor[]
   accessories: CatalogAccessory[]
-  limits: { largeurTole: number; longueurMin: number; longueurMax: number; plisMax: number }
+  limits: { largeurTole: number; longueurMin: number; longueurMax: number; plisMax: number; angleMin: number; angleMax: number; pince: boolean }
   retrait: boolean
 }
 
 export interface LineForm {
   repere: string
-  modele: LineModele
+  modelId: string
   materialId: string
   colorId: string
   cotes: number[]
@@ -81,7 +87,9 @@ export interface OrderForm {
 
 export interface PricedLine {
   repere: string | null
-  modele: LineModele
+  modelId: string | null
+  modeleLabel: string
+  cap: number
   materialLabel: string
   colorLabel: string
   colorHex: string
@@ -166,29 +174,30 @@ export function suggestedQuantity(a: CatalogAccessory, n: number) {
   return 0
 }
 
-/** Accessoires qui s'utilisent avec ce modèle (tous pour un profil libre). */
-export const accessoriesFor = (c: OrderCatalog, modele: LineModele) => c.accessories.filter((a) => modele === 'autre' || a.modeles.includes(modele))
+/** Accessoires qui s'utilisent avec ce modèle. */
+export const accessoriesFor = (c: OrderCatalog, modelId: string) => c.accessories.filter((a) => a.modeles.includes(modelId))
+export const modelOf = (c: OrderCatalog, modelId: string) => c.models.find((m) => m.id === modelId)
 
 /** Nouvelle ligne du modèle donné, avec les accessoires proposés. */
-export function newLine(c: OrderCatalog, modele: LineModele = 'couvertine', from?: Partial<LineForm>): LineForm {
-  const m = MODELES[modele]
+export function newLine(c: OrderCatalog, modelId = c.models[0]?.id ?? '', from?: Partial<LineForm>): LineForm {
+  const m = modelOf(c, modelId) ?? { cotes: [60, 120], angles: [90], longueur: 2000, quantite: 1 }
   return {
     repere: '',
-    modele,
+    modelId,
     materialId: from?.materialId ?? c.materials[0]?.id ?? '',
     colorId: from?.colorId ?? c.colors[0]?.id ?? '',
     cotes: [...m.cotes],
     angles: [...m.angles],
     longueur: m.longueur,
     quantite: m.quantite,
-    accessoires: accessoriesFor(c, modele).map((a) => ({ accessoryId: a.id, quantite: suggestedQuantity(a, m.quantite) })),
+    accessoires: accessoriesFor(c, modelId).map((a) => ({ accessoryId: a.id, quantite: suggestedQuantity(a, m.quantite) })),
   }
 }
 
 /** Ligne enregistrée remise en formulaire. */
 export const toLineForm = (l: OrderDetail['lignes'][number]): LineForm => ({
   repere: l.repere ?? '',
-  modele: l.modele,
+  modelId: l.modelId ?? '',
   materialId: l.materialId ?? '',
   colorId: l.colorId ?? '',
   cotes: [...l.cotes],
@@ -197,6 +206,12 @@ export const toLineForm = (l: OrderDetail['lignes'][number]): LineForm => ({
   quantite: l.quantite,
   accessoires: l.accessoires.filter((a) => a.accessoryId).map((a) => ({ accessoryId: a.accessoryId!, quantite: a.quantite })),
 })
+
+// Une pince (tôle repliée à plat, 0°) s'enregistre ±1 pour garder son sens (voir api/src/profile.ts)
+export const PINCE = 1
+export const isPince = (a: number) => Math.abs(a) === PINCE
+/** « 135° », ou « pince » */
+export const angleText = (a: number) => (isPince(a) ? 'pince' : `${Math.abs(a)}°`)
 
 export const letter = (i: number) => String.fromCharCode(65 + i)
 export const developpe = (cotes: number[]) => cotes.reduce((s, v) => s + (Number(v) || 0), 0)
@@ -219,6 +234,10 @@ export function profilePoints(cotes: number[], angles: number[], cap = 0) {
   })
   return { pts, heads }
 }
+
+// Étapes où la commande est à l'atelier, et sa fiche de fabrication imprimable (PDF ouvert dans un nouvel onglet)
+export const PRODUCTION_STATUTS: OrderStatut[] = ['validee', 'fabrication', 'prete']
+export const sheetUrl = (id: string) => `/api/production/${id}/fiche.pdf`
 
 const dayFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
 /** « 2026-10-26 » → « lun. 26 oct. » */
