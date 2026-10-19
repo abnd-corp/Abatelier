@@ -30,7 +30,7 @@ make test-web   # 73 tests des composants Vue
 make e2e        # 22 parcours Playwright × 2 navigateurs, sur une stack de production jetable
 ```
 
-Chaque élément du site doit être couvert par des tests et des contrôles de sécurité avant d'être mergé. Le fonctionnement des branches est décrit dans [CONTRIBUTING.md](CONTRIBUTING.md).
+Chaque élément du site doit être couvert par des tests et des contrôles de sécurité avant d'être mergé. Les règles, les branches et les conventions sont dans [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Production et staging
 
