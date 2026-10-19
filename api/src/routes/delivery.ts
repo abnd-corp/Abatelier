@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import { deliverySettings, type DeliverySettings } from '../db/schema.js'
-import { deliveryQuote, getDeliverySettings } from '../delivery.js'
+import { atelier, deliveryQuote, getDeliverySettings } from '../delivery.js'
 import { geo, GeoUnavailable } from '../geo.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
@@ -39,15 +39,6 @@ const estimateBody = z.object({
 const unavailable = (reply: FastifyReply) => reply.code(503).send({ error: 'Le service de localisation des adresses ne répond pas. Réessayez dans quelques minutes.' })
 const notFound = (reply: FastifyReply, field: string) =>
   reply.code(400).send({ error: 'Adresse introuvable : précisez la rue, le code postal et la commune.', field })
-
-/** Coordonnées de l'atelier : localisées une fois, puis gardées en base. */
-async function atelier(s: DeliverySettings) {
-  if (s.atelierLat !== null && s.atelierLon !== null) return { lat: s.atelierLat, lon: s.atelierLon }
-  const place = await geo.geocode(s.atelierAdresse)
-  if (!place) return null
-  await db.update(deliverySettings).set({ atelierLabel: place.label, atelierLat: place.lat, atelierLon: place.lon }).where(eq(deliverySettings.id, 1))
-  return place
-}
 
 export async function deliveryRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requirePerm('catalog.manage'))

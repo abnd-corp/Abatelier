@@ -18,6 +18,8 @@ declare module 'vue-router' {
 
 const employeesParent = { label: 'Salariés', to: { name: 'employees' } }
 const clientsParent = { label: 'Clients', to: { name: 'clients' } }
+const ordersParent = { label: 'Commandes', to: { name: 'orders' } }
+const productionParent = { label: 'Fabrication', to: { name: 'production' } }
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -64,6 +66,36 @@ export const router = createRouter({
           name: 'client',
           component: () => import('@/views/ClientView.vue'),
           meta: { perm: 'clients.read', section: 'Ventes', parent: clientsParent, title: 'Fiche client', menu: 'clients' },
+        },
+        {
+          path: 'commandes',
+          name: 'orders',
+          component: () => import('@/views/OrdersView.vue'),
+          meta: { perm: 'orders.manage', section: 'Ventes', title: 'Commandes' },
+        },
+        {
+          path: 'commandes/nouvelle',
+          name: 'order-new',
+          component: () => import('@/views/OrderNewView.vue'),
+          meta: { perm: 'orders.manage', section: 'Ventes', parent: ordersParent, title: 'Nouvelle commande', menu: 'orders' },
+        },
+        {
+          path: 'commandes/:id',
+          name: 'order',
+          component: () => import('@/views/OrderView.vue'),
+          meta: { perm: 'orders.manage', section: 'Ventes', parent: ordersParent, title: 'Commande', menu: 'orders' },
+        },
+        {
+          path: 'fabrication',
+          name: 'production',
+          component: () => import('@/views/ProductionView.vue'),
+          meta: { perm: 'orders.production', section: 'Atelier', title: 'Fabrication' },
+        },
+        {
+          path: 'fabrication/:id',
+          name: 'production-order',
+          component: () => import('@/views/ProductionOrderView.vue'),
+          meta: { perm: 'orders.production', section: 'Atelier', parent: productionParent, title: 'Fiche de fabrication', menu: 'production' },
         },
         {
           path: 'catalogue',

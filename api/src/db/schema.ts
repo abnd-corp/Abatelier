@@ -281,6 +281,9 @@ export const documentTemplate = pgTable(
 
 export const DOCUMENT_TYPES = ['devis', 'facture'] as const
 export type DocumentType = (typeof DOCUMENT_TYPES)[number]
+// Compteurs : devis et factures (numérotation légale), et commandes
+export const COUNTER_TYPES = [...DOCUMENT_TYPES, 'commande'] as const
+export type CounterType = (typeof COUNTER_TYPES)[number]
 
 // Dernier numéro attribué, par type et par année. La ligne est verrouillée pendant l'attribution :
 // deux devis créés en même temps ne peuvent pas recevoir le même numéro, et une création annulée
@@ -289,7 +292,7 @@ export type DocumentType = (typeof DOCUMENT_TYPES)[number]
 export const documentCounters = pgTable(
   'document_counters',
   {
-    type: text('type', { enum: DOCUMENT_TYPES }).notNull(),
+    type: text('type', { enum: COUNTER_TYPES }).notNull(),
     annee: integer('annee').notNull(),
     dernier: integer('dernier').notNull().default(0),
     utilise: boolean('utilise').notNull().default(false),
@@ -354,6 +357,111 @@ export const clientSites = pgTable(
   (t) => [index('client_sites_client_idx').on(t.clientId)],
 )
 
+// --- Commandes ---
+// Les prix sont calculés avec le catalogue au moment de l'enregistrement, puis figés dans la commande :
+// un changement de tarif ne modifie pas une commande déjà passée.
+
+export const ORDER_STATUTS = ['recue', 'validee', 'fabrication', 'prete', 'livree', 'annulee'] as const
+export type OrderStatut = (typeof ORDER_STATUTS)[number]
+export const LIVRAISON_MODES = ['retrait', 'livraison'] as const
+export const LINE_MODELES = [...MODELES, 'autre'] as const
+export type LineModele = (typeof LINE_MODELES)[number]
+
+export interface OrderLineAccessory {
+  accessoryId: string
+  nom: string
+  unite: 'piece' | 'paire'
+  prix: number
+  quantite: number
+}
+
+const money = (name: string) => numeric(name, { precision: 12, scale: 2, mode: 'number' }).notNull()
+
+export const orders = pgTable(
+  'orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // C-2026-0001
+    numero: text('numero').notNull().unique(),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => clients.id, { onDelete: 'restrict' }),
+    statut: text('statut', { enum: ORDER_STATUTS }).notNull().default('recue'),
+    livraisonMode: text('livraison_mode', { enum: LIVRAISON_MODES }).notNull(),
+    // Adresse de livraison recopiée (elle reste lisible si la fiche client change)
+    livraisonAdresse: text('livraison_adresse'),
+    livraisonCodePostal: text('livraison_code_postal'),
+    livraisonVille: text('livraison_ville'),
+    distanceKm: numeric('distance_km', { precision: 7, scale: 1, mode: 'number' }),
+    notes: text('notes'),
+    // Totaux HT, TVA et TTC, en euros
+    brut: money('brut'),
+    remisePro: money('remise_pro'),
+    complementMinimum: money('complement_minimum'),
+    livraisonPrix: money('livraison_prix'),
+    ht: money('ht'),
+    tauxTva: numeric('taux_tva', { precision: 5, scale: 2, mode: 'number' }).notNull(),
+    tva: money('tva'),
+    ttc: money('ttc'),
+    // Délai en jours ouvrés, et date prévue fixée à la validation
+    delaiJours: integer('delai_jours').notNull(),
+    datePrevue: date('date_prevue', { mode: 'string' }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [index('orders_client_idx').on(t.clientId), index('orders_statut_idx').on(t.statut)],
+)
+
+// Pièces d'une commande, avec le détail du chiffrage
+export const orderLines = pgTable(
+  'order_lines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    // Repère libre (« Mur sud », « Fenêtre cuisine »)
+    repere: text('repere'),
+    modele: text('modele', { enum: LINE_MODELES }).notNull(),
+    materialId: uuid('material_id').references(() => materials.id, { onDelete: 'set null' }),
+    materialLabel: text('material_label').notNull(),
+    colorId: uuid('color_id').references(() => colors.id, { onDelete: 'set null' }),
+    colorLabel: text('color_label').notNull(),
+    colorHex: text('color_hex').notNull(),
+    // Cotes extérieures de chaque segment en mm, et angle intérieur de chaque pli en degrés
+    cotes: integer('cotes').array().notNull(),
+    angles: integer('angles').array().notNull(),
+    longueur: integer('longueur').notNull(),
+    quantite: integer('quantite').notNull(),
+    accessoires: jsonb('accessoires').$type<OrderLineAccessory[]>().notNull(),
+    prixUnitaire: money('prix_unitaire'),
+    remiseQuantite: numeric('remise_quantite', { precision: 5, scale: 2, mode: 'number' }).notNull(),
+    montantPieces: money('montant_pieces'),
+    montantAccessoires: money('montant_accessoires'),
+    miseEnRoute: money('mise_en_route'),
+    total: money('total'),
+  },
+  (t) => [index('order_lines_order_idx').on(t.orderId)],
+)
+
+// Chaque changement d'étape, daté, avec la personne qui l'a fait
+export const orderEvents = pgTable(
+  'order_events',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    statut: text('statut', { enum: ORDER_STATUTS }).notNull(),
+    at: ts('at').notNull().defaultNow(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    note: text('note'),
+  },
+  (t) => [index('order_events_order_idx').on(t.orderId)],
+)
+
 export type User = typeof users.$inferSelect
 export type Employee = typeof employees.$inferSelect
 export type Material = typeof materials.$inferSelect
@@ -365,3 +473,5 @@ export type CompanySettings = typeof companySettings.$inferSelect
 export type DocumentTemplate = typeof documentTemplate.$inferSelect
 export type Client = typeof clients.$inferSelect
 export type ClientSite = typeof clientSites.$inferSelect
+export type Order = typeof orders.$inferSelect
+export type OrderLine = typeof orderLines.$inferSelect

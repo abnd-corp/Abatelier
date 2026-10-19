@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { api } from '@/api'
 
 export type Role = 'direction' | 'rh' | 'atelier'
-export type Permission = 'users.manage' | 'employees.manage' | 'audit.read' | 'catalog.manage' | 'documents.manage' | 'clients.manage' | 'clients.read'
+export type Permission = 'users.manage' | 'employees.manage' | 'audit.read' | 'catalog.manage' | 'documents.manage' | 'clients.manage' | 'clients.read' | 'orders.manage' | 'orders.production'
 
 export interface User {
   id: string
@@ -18,9 +18,9 @@ export const ROLE_LABELS: Record<Role, string> = { direction: 'Direction', rh: '
 
 /** Rôles proposés dans les listes de choix, du moins au plus étendu. */
 export const ROLE_OPTIONS: { value: Role; label: string; description: string }[] = [
-  { value: 'atelier', label: 'Atelier', description: 'production et stock' },
+  { value: 'atelier', label: 'Atelier', description: 'commandes à fabriquer, sans les clients ni les prix' },
   { value: 'rh', label: 'RH', description: 'salariés, journal, clients en lecture' },
-  { value: 'direction', label: 'Direction', description: 'tout, dont les comptes, tarifs, devis et factures' },
+  { value: 'direction', label: 'Direction', description: 'tout, dont les comptes, tarifs, clients et commandes' },
 ]
 
 export const useAuthStore = defineStore('auth', () => {

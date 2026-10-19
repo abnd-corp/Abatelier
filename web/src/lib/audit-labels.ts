@@ -25,6 +25,8 @@ const quote = (v: unknown) => {
   return s ? `« ${s.length > 60 ? s.slice(0, 57) + '…' : s} »` : 'vide'
 }
 
+const ORDER_STEPS: Record<string, string> = { recue: 'Reçue', validee: 'Validée', fabrication: 'En fabrication', prete: 'Prête', livree: 'Livrée / retirée', annulee: 'Annulée' }
+
 const QTY: Record<string, string> = { aucune: 'aucune', fixe: 'nombre fixe', par_piece: 'une par pièce', jonctions: 'une par jonction' }
 
 // Libellés et unités des champs du catalogue, pour décrire un changement de prix lisiblement
@@ -184,6 +186,15 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A modifié le chantier « ${d.chantier} » de ${d.nom}`, tone: 'neutral' }
     case 'client.site_removed':
       return { text: `A retiré le chantier « ${d.chantier} » de ${d.nom}`, tone: 'neutral' }
+    case 'order.created':
+      return { text: `A enregistré la commande ${d.numero} de ${d.client} (${eur(d.ht)} HT)`, tone: 'accent' }
+    case 'order.updated':
+      return { text: `A modifié la commande ${d.numero} (${eur(d.avant)} → ${eur(d.apres)} HT)`, tone: 'neutral' }
+    case 'order.status_changed':
+      return {
+        text: d.apres === 'annulee' ? `A annulé la commande ${d.numero}${d.note ? ` : ${d.note}` : ''}` : `A passé la commande ${d.numero} à « ${ORDER_STEPS[d.apres] ?? d.apres} »`,
+        tone: d.apres === 'annulee' ? 'bad' : 'neutral',
+      }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

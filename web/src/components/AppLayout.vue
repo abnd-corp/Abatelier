@@ -22,7 +22,14 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
   { items: [{ to: { name: 'dashboard' }, name: 'dashboard', label: 'Tableau de bord', icon: 'home' }] },
   {
     title: 'Ventes',
-    items: [{ to: { name: 'clients' }, name: 'clients', label: 'Clients', icon: 'users', perm: 'clients.read' }],
+    items: [
+      { to: { name: 'orders' }, name: 'orders', label: 'Commandes', icon: 'box', perm: 'orders.manage' },
+      { to: { name: 'clients' }, name: 'clients', label: 'Clients', icon: 'users', perm: 'clients.read' },
+    ],
+  },
+  {
+    title: 'Atelier',
+    items: [{ to: { name: 'production' }, name: 'production', label: 'Fabrication', icon: 'layers', perm: 'orders.production' }],
   },
   {
     title: 'Direction',

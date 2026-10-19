@@ -25,6 +25,11 @@ const PAGES = [
   { name: '18-clients', path: '/clients' },
   { name: '19-fiche-client', path: 'FICHE_CLIENT' },
   { name: '20-nouveau-client', path: '/clients/nouveau' },
+  { name: '21-commandes', path: '/commandes?filtre=toutes' },
+  { name: '22-nouvelle-commande', path: 'NOUVELLE_COMMANDE' },
+  { name: '23-fiche-commande', path: 'FICHE_COMMANDE' },
+  { name: '24-fabrication', path: '/fabrication' },
+  { name: '25-fiche-fabrication', path: 'FICHE_FABRICATION' },
 ]
 
 test('captures', async ({ page, baseURL }, info) => {
@@ -34,12 +39,21 @@ test('captures', async ({ page, baseURL }, info) => {
   const ficheId = list.find((e) => e.prenom === 'Paul')!.id
   const clients = (await (await page.request.get('/api/clients?q=forez')).json()).clients as { id: string }[]
   const clientId = clients[0]!.id
+  const orders = (await (await page.request.get('/api/orders?filtre=toutes')).json()).orders as { id: string; statut: string }[]
+  const orderId = orders.find((o) => o.statut === 'fabrication')!.id
+  const SPECIAL: Record<string, string> = {
+    FICHE: `/salaries/${ficheId}`,
+    FICHE_CLIENT: `/clients/${clientId}`,
+    NOUVELLE_COMMANDE: `/commandes/nouvelle?client=${clientId}`,
+    FICHE_COMMANDE: `/commandes/${orderId}`,
+    FICHE_FABRICATION: `/fabrication/${orderId}`,
+  }
 
   const dir = `${OUT}${info.project.name}`
   mkdirSync(dir, { recursive: true })
 
   for (const p of PAGES) {
-    const target = p.path === 'FICHE' ? `/salaries/${ficheId}` : p.path === 'FICHE_CLIENT' ? `/clients/${clientId}` : p.path
+    const target = SPECIAL[p.path] ?? p.path
     if (p.anonymous) {
       const anon = await page.context().browser()!.newContext({ ...info.project.use, baseURL })
       const ap = await anon.newPage()
@@ -60,6 +74,8 @@ test('captures', async ({ page, baseURL }, info) => {
     await expect(page.locator('h1').first()).toBeVisible()
     // L'aperçu PDF se dessine après le chargement : on attend sa première page
     if (p.path.startsWith('/modeles-documents')) await page.getByRole('img', { name: /Aperçu du devis, page 1/ }).waitFor()
+    // Le chiffrage se fait après la saisie : on attend le total
+    if (p.path === 'NOUVELLE_COMMANDE') await page.getByText('Total TTC').waitFor()
     await page.screenshot({ path: `${dir}/${p.name}.png`, fullPage: !p.openMenu })
   }
 })

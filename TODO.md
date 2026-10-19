@@ -25,16 +25,19 @@
 - [x] Numérotation D-2026-0001 / F-2026-0001 sans trou (compteur verrouillé), préfixes fixes, reprise de l'ancien logiciel possible jusqu'au premier document créé
 - [ ] Mentions légales types à faire valider par leur comptable (pénalités, indemnité de 40 €, escompte)
 
-### Clients et commandes (prochaine étape)
+### Clients et commandes
 Les clients arriveront surtout par le panier du site (coordonnées saisies à la fin de la commande, puis espace client : suivi, dépenses, factures). En attendant, l'équipe peut créer une fiche à la main.
 - [x] Fiches clients : particulier ou professionnel (SIRET, TVA vérifiés), coordonnées, adresse de facturation, adresses de chantier, origine, notes, archivage, e-mail unique
-- [ ] Commandes liées au client (prochaine étape), suivi complet : Reçue → Validée → En fabrication → Prête → Livrée / retirée (+ Annulée), chaque étape datée et notée au journal
-- [ ] Lignes chiffrées avec le catalogue (modèle, matière, coloris, développé, plis, longueur, quantité, accessoires, remises, mise en route, livraison) : même calcul que le futur panier du site
-- [ ] Sur la fiche client : historique des commandes, total dépensé
+- [x] Commandes liées au client, suivi complet : Reçue → Validée → En fabrication → Prête → Livrée / retirée (+ Annulée), chaque étape datée et notée au journal
+- [x] Lignes chiffrées avec le catalogue (modèle, matière, coloris, développé, plis, longueur, quantité, accessoires, remises, mise en route, livraison) : même calcul que le futur panier du site
+- [x] Sur la fiche client : historique des commandes, total dépensé
+- [x] Vue atelier « Fabrication » : commandes validées à prêtes, profil coté, sans client ni prix
+- [ ] Commandes : remise exceptionnelle sur une commande, impression de la fiche de fabrication, devis et facture PDF depuis la commande
 - [ ] Fidélité : remise pro, remises selon l'historique d'achat
+- [ ] **RGPD, à trancher** : suppression du compte à la demande du client, ou conservation pendant une durée annoncée puis suppression. Les factures doivent de toute façon être gardées 10 ans : on pourrait anonymiser la fiche (nom, contact) en gardant les factures. À valider avec leur comptable.
 - [x] Lecture seule pour la RH (permission `clients.read`)
 
-### Stock (ensuite)
+### Stock (prochaine étape)
 - [ ] Articles : tôles par matière, épaisseur et coloris ; accessoires
 - [ ] Décompte automatique quand une commande passe « en fabrication », mouvements tracés, alertes de stock bas
 

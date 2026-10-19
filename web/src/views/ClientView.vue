@@ -6,6 +6,8 @@ import { clientName, contactName, hasIdentity, ORIGINE_LABELS, place, toFields, 
 import { describe, type AuditEntry } from '@/lib/audit-labels'
 import { dateTime, relative } from '@/lib/format'
 import { formatDay } from '@/lib/employees'
+import { eur } from '@/lib/catalog'
+import { statutOf, type OrderStatut } from '@/lib/orders'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import AppIcon from '@/components/AppIcon.vue'
@@ -21,6 +23,8 @@ const canManage = computed(() => auth.can('clients.manage'))
 const client = ref<Client | null>(null)
 const sites = ref<ClientSite[]>([])
 const activity = ref<AuditEntry[]>([])
+// Commandes du client (null si l'on n'a pas accès aux commandes, comme la RH)
+const commandes = ref<{ list: { id: string; numero: string; statut: OrderStatut; ttc: number; createdAt: string }[]; totalTtc: number } | null>(null)
 const loadError = ref('')
 const notice = ref('')
 const actionError = ref('')
@@ -30,8 +34,9 @@ const name = computed(() => (client.value ? clientName(client.value) : ''))
 
 async function load() {
   try {
-    const res = await api<{ client: Client; sites: ClientSite[]; activity: AuditEntry[] }>(`/clients/${id.value}`)
+    const res = await api<{ client: Client; sites: ClientSite[]; activity: AuditEntry[]; commandes: typeof commandes.value }>(`/clients/${id.value}`)
     client.value = res.client
+    commandes.value = res.commandes ?? null
     sites.value = res.sites
     activity.value = res.activity
     ui.crumb = { for: route.fullPath, label: clientName(res.client) }
@@ -215,6 +220,26 @@ const telHref = (t: string) => `tel:${t.replace(/[^+\d]/g, '')}`
       </div>
 
       <div class="col">
+        <section v-if="commandes" class="card block" aria-labelledby="orders-title">
+          <div class="block-head">
+            <h2 id="orders-title">Commandes</h2>
+            <RouterLink v-if="!client.archivedAt" class="btn small" :to="{ name: 'order-new', query: { client: client.id } }"><AppIcon name="plus" :size="15" />Nouvelle commande</RouterLink>
+          </div>
+          <ul v-if="commandes.list.length" class="orders">
+            <li v-for="o in commandes.list.slice(0, 8)" :key="o.id">
+              <RouterLink :to="{ name: 'order', params: { id: o.id } }" class="mono">{{ o.numero }}</RouterLink>
+              <span class="pill" :class="statutOf(o.statut).tone">{{ statutOf(o.statut).label }}</span>
+              <span class="sub">{{ formatDay(o.createdAt.slice(0, 10)) }}</span>
+              <span class="amount">{{ eur(o.ttc) }}</span>
+            </li>
+          </ul>
+          <p v-else class="muted">Aucune commande pour l’instant.</p>
+          <p v-if="commandes.list.length" class="spent">
+            Total dépensé : <b>{{ eur(commandes.totalTtc) }} TTC</b>
+            <RouterLink v-if="commandes.list.length > 8" :to="{ name: 'orders', query: { filtre: 'toutes', q: name } }">Tout voir</RouterLink>
+          </p>
+        </section>
+
         <section class="card block" aria-labelledby="sites-title">
           <div class="block-head">
             <h2 id="sites-title">Adresses de chantier</h2>
@@ -420,6 +445,40 @@ const telHref = (t: string) => `tel:${t.replace(/[^+\d]/g, '')}`
   min-width: 0;
   flex: 1;
   overflow-wrap: anywhere;
+}
+.orders {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.orders li {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.orders a {
+  color: var(--ink);
+  font-weight: 650;
+}
+.orders .sub {
+  display: inline;
+}
+.amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.spent {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .site-form {
   display: grid;

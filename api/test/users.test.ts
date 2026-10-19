@@ -47,7 +47,7 @@ describe('Création', () => {
     expect(tempPassword).toMatch(/^[A-Za-z0-9]{4}(-[A-Za-z0-9]{4}){3}$/)
     const login = await client(app).post('/api/auth/login', { identifiant: 'paul', password: tempPassword })
     expect(login.statusCode).toBe(200)
-    expect(login.json().user).toMatchObject({ nom: 'Paul Martin', mustChangePassword: true, permissions: [] })
+    expect(login.json().user).toMatchObject({ nom: 'Paul Martin', mustChangePassword: true, permissions: ['orders.production'] })
     expect(await auditActions(adminId)).toContain('user.created')
   })
 

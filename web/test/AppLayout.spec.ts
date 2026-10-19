@@ -29,8 +29,8 @@ beforeEach(() => {
 describe('Menu latéral', () => {
   it('montre toutes les sections à la direction', async () => {
     const { links, sections } = await setup(ADMIN)
-    expect(links()).toEqual(['Tableau de bord', 'Clients', 'Tarifs et catalogue', 'Modèles de documents', 'Salariés', 'Comptes', 'Journal d’activité'])
-    expect(sections()).toEqual(['Ventes', 'Direction', 'Équipe', 'Administration'])
+    expect(links()).toEqual(['Tableau de bord', 'Commandes', 'Clients', 'Fabrication', 'Tarifs et catalogue', 'Modèles de documents', 'Salariés', 'Comptes', 'Journal d’activité'])
+    expect(sections()).toEqual(['Ventes', 'Atelier', 'Direction', 'Équipe', 'Administration'])
   })
 
   it('montre les clients, les salariés et le journal à la RH, sans les comptes', async () => {
@@ -38,10 +38,10 @@ describe('Menu latéral', () => {
     expect(links()).toEqual(['Tableau de bord', 'Clients', 'Salariés', 'Journal d’activité'])
   })
 
-  it('cache les sections sans droits au rôle atelier', async () => {
+  it('ne montre que la fabrication au rôle atelier', async () => {
     const { links, sections } = await setup(ATELIER)
-    expect(links()).toEqual(['Tableau de bord'])
-    expect(sections()).toEqual([])
+    expect(links()).toEqual(['Tableau de bord', 'Fabrication'])
+    expect(sections()).toEqual(['Atelier'])
   })
 
   it('cache toute la navigation tant que le mot de passe est temporaire', async () => {

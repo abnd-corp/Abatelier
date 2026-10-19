@@ -11,6 +11,8 @@ import { catalogRoutes } from './routes/catalog.js'
 import { deliveryRoutes } from './routes/delivery.js'
 import { documentRoutes } from './routes/documents.js'
 import { clientRoutes } from './routes/clients.js'
+import { orderRoutes } from './routes/orders.js'
+import { productionRoutes } from './routes/production.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -83,6 +85,8 @@ export async function buildApp() {
   await app.register(deliveryRoutes, { prefix: '/api/catalog' })
   await app.register(documentRoutes, { prefix: '/api/documents' })
   await app.register(clientRoutes, { prefix: '/api/clients' })
+  await app.register(orderRoutes, { prefix: '/api/orders' })
+  await app.register(productionRoutes, { prefix: '/api/production' })
 
   return app
 }

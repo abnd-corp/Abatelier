@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { db } from './db/index.js'
-import { companySettings, documentCounters, documentTemplate, type CompanySettings, type DocumentTemplate, type DocumentType } from './db/schema.js'
+import { companySettings, documentCounters, documentTemplate, type CompanySettings, type CounterType, type DocumentTemplate, type DocumentType } from './db/schema.js'
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
@@ -35,13 +35,13 @@ export function publicCompany(c: CompanySettings) {
 /** Année du document, à l'heure de Paris (un devis du 31 décembre à 23 h 30 reste sur l'année en cours). */
 export const yearOf = (d: Date) => Number(new Intl.DateTimeFormat('fr-FR', { year: 'numeric', timeZone: 'Europe/Paris' }).format(d))
 
-export const PREFIXES: Record<DocumentType, string> = { devis: 'D', facture: 'F' }
+export const PREFIXES: Record<CounterType, string> = { devis: 'D', facture: 'F', commande: 'C' }
 
 /** devis, 2026, 1 → « D-2026-0001 » */
-export const formatNumber = (type: DocumentType, annee: number, n: number) => `${PREFIXES[type]}-${annee}-${String(n).padStart(4, '0')}`
+export const formatNumber = (type: CounterType, annee: number, n: number) => `${PREFIXES[type]}-${annee}-${String(n).padStart(4, '0')}`
 
 /** Dernier numéro attribué cette année pour ce type (0 si aucun). */
-export async function lastNumber(type: DocumentType, annee: number, tx: Tx | typeof db = db) {
+export async function lastNumber(type: CounterType, annee: number, tx: Tx | typeof db = db) {
   const [row] = await tx
     .select({ dernier: documentCounters.dernier })
     .from(documentCounters)
@@ -54,7 +54,7 @@ export async function lastNumber(type: DocumentType, annee: number, tx: Tx | typ
  * la ligne du compteur reste verrouillée jusqu'à la fin, et si la transaction est annulée,
  * le numéro n'est pas consommé. Les numéros se suivent donc sans trou ni doublon.
  */
-export async function allocateNumber(tx: Tx, type: DocumentType, at = new Date()) {
+export async function allocateNumber(tx: Tx, type: CounterType, at = new Date()) {
   const annee = yearOf(at)
   const [row] = await tx
     .insert(documentCounters)

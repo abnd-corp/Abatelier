@@ -3,10 +3,11 @@ import type { Role } from '../db/schema.js'
 // Droits par rôle. Pour restreindre un accès plus tard, on ajoute une permission
 // ici et on la vérifie sur la route avec requirePerm().
 const PERMISSIONS = {
-  direction: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage', 'documents.manage', 'clients.manage', 'clients.read'],
+  direction: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage', 'documents.manage', 'clients.manage', 'clients.read', 'orders.manage', 'orders.production'],
   // La RH gère les fiches salariés, mais pas les comptes de connexion ; elle consulte les clients
   rh: ['employees.manage', 'audit.read', 'clients.read'],
-  atelier: [],
+  // L'atelier voit les commandes à fabriquer, sans les clients ni les prix
+  atelier: ['orders.production'],
 } as const satisfies Record<Role, readonly string[]>
 
 export type Permission = (typeof PERMISSIONS)['direction'][number]

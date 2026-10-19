@@ -2,8 +2,9 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { and, asc, count, desc, eq, ilike, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { auditLog, clients, clientSites, CLIENT_TYPES, users, type Client } from '../db/schema.js'
+import { auditLog, clients, clientSites, CLIENT_TYPES, orders, users, type Client } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
+import { can } from '../auth/permissions.js'
 import { audit, describeDevice } from '../audit.js'
 import { digits, formatSiret, invalid, isUniqueViolation, luhn } from '../validation.js'
 
@@ -219,7 +220,18 @@ export async function clientRoutes(app: FastifyInstance) {
       .orderBy(desc(auditLog.id))
       .limit(15)
     const activity = rows.map(({ userAgent, ...r }) => ({ ...r, device: describeDevice(userAgent), targetName: clientName(c) }))
-    return { client: c, sites: sites.map(({ clientId: _c, ...s }) => s), activity }
+    // Commandes et total dépensé : pour qui gère les commandes (pas la RH)
+    let commandes = null
+    if (can(req.user!.role, 'orders.manage')) {
+      const list = await db
+        .select({ id: orders.id, numero: orders.numero, statut: orders.statut, ttc: orders.ttc, createdAt: orders.createdAt })
+        .from(orders)
+        .where(eq(orders.clientId, c.id))
+        .orderBy(desc(orders.createdAt))
+      const totalTtc = Math.round(list.filter((o) => o.statut !== 'annulee').reduce((s, o) => s + o.ttc, 0) * 100) / 100
+      commandes = { list, totalTtc }
+    }
+    return { client: c, sites: sites.map(({ clientId: _c, ...s }) => s), activity, commandes }
   })
 
   app.patch('/:id', manage, async (req, reply) => {

@@ -18,6 +18,9 @@ const PAGES = [
   { path: '/modeles-documents?onglet=modele', heading: 'Modèles de documents' },
   { path: '/modeles-documents?onglet=numerotation', heading: 'Modèles de documents' },
   { path: '/clients', heading: 'Clients' },
+  { path: '/commandes', heading: 'Commandes' },
+  { path: '/commandes/nouvelle', heading: 'Nouvelle commande' },
+  { path: '/fabrication', heading: 'Fabrication' },
   { path: '/clients/nouveau', heading: 'Nouveau client' },
   { path: '/mon-compte', heading: 'Mon compte' },
 ]
@@ -55,6 +58,24 @@ test.describe('Responsive @responsive', () => {
     await adminPage.goto(`/clients/${id}`)
     await expect(adminPage.getByRole('heading', { level: 1 })).toBeInViewport()
     await expect(adminPage.getByText('Maison Rivière', { exact: true })).toBeVisible()
+    expect(await noHorizontalScroll(adminPage)).toBe(true)
+  })
+
+  test('commande : saisie, fiche et fabrication lisibles, pas de défilement horizontal', async ({ adminPage, baseURL, uid }) => {
+    const headers = { Origin: baseURL! }
+    const client = await (await adminPage.request.post('/api/clients', { data: { type: 'particulier', nom: `Resp${uid.slice(-4)}` }, headers })).json()
+    await adminPage.goto(`/commandes/nouvelle?client=${client.id}`)
+    await expect(adminPage.getByRole('region', { name: 'Pièce 1' })).toBeVisible()
+    await expect(adminPage.getByRole('button', { name: 'Enregistrer la commande' })).toBeEnabled()
+    expect(await noHorizontalScroll(adminPage)).toBe(true)
+    await adminPage.getByRole('button', { name: 'Enregistrer la commande' }).click()
+    await expect(adminPage).toHaveURL(/\/commandes\/[0-9a-f-]{36}$/)
+    await expect(adminPage.getByRole('heading', { level: 1 })).toBeInViewport()
+    expect(await noHorizontalScroll(adminPage)).toBe(true)
+    const id = adminPage.url().split('/').pop()!
+    await adminPage.request.post(`/api/orders/${id}/status`, { data: { statut: 'validee' }, headers })
+    await adminPage.goto(`/fabrication/${id}`)
+    await expect(adminPage.getByRole('heading', { level: 1 })).toBeInViewport()
     expect(await noHorizontalScroll(adminPage)).toBe(true)
   })
 

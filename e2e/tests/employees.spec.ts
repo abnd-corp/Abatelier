@@ -48,7 +48,7 @@ test.describe('Salariés', () => {
     await lea.getByRole('button', { name: 'Changer le mot de passe' }).click()
     await expect(lea).toHaveURL('/')
     await expect(lea.getByRole('heading', { name: `Bonjour ${prenom}` })).toBeVisible()
-    await expect(lea.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link')).toHaveText(['Tableau de bord'])
+    await expect(lea.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication'])
     await lea.goto('/salaries')
     await expect(lea).toHaveURL('/')
     await lea.context().close()

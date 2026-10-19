@@ -37,7 +37,7 @@ test.describe('Arrivée et départ d’un employé', () => {
 
     // 4. Rôle atelier : pas d'accès à la gestion des comptes ni au journal
     const nav = employee.getByRole('navigation', { name: 'Navigation principale' })
-    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord'])
+    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication'])
     await employee.goto('/utilisateurs')
     await expect(employee).toHaveURL('/')
 

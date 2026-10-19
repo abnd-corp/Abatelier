@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { db } from './db/index.js'
 import { deliverySettings, type DeliverySettings, type DeliveryZone } from './db/schema.js'
+import { geo } from './geo.js'
 
 // Valeurs de départ (identiques à la migration 0007). Utilisées si la ligne de réglages a disparu.
 export const DEFAULT_DELIVERY: Omit<DeliverySettings, 'id' | 'updatedAt'> = {
@@ -57,4 +58,34 @@ export function deliveryQuote(
   const offerte = zone.franco !== null && montant !== undefined && montant >= zone.franco
   const supplement = s.longueurSeuil !== null && longueurMax !== undefined && longueurMax > s.longueurSeuil ? s.longueurPrix : 0
   return { zone, offerte, supplement, total: cents((offerte ? 0 : zone.prix) + supplement) }
+}
+
+/** Coordonnées de l'atelier : localisées une fois, puis gardées en base. */
+export async function atelier(s: DeliverySettings) {
+  if (s.atelierLat !== null && s.atelierLon !== null) return { lat: s.atelierLat, lon: s.atelierLon }
+  const place = await geo.geocode(s.atelierAdresse)
+  if (!place) return null
+  await db.update(deliverySettings).set({ atelierLabel: place.label, atelierLat: place.lat, atelierLon: place.lon }).where(eq(deliverySettings.id, 1))
+  return place
+}
+
+// Distances déjà calculées : le chiffrage en direct redemande souvent la même adresse
+const distances = new Map<string, { km: number; label: string }>()
+
+/**
+ * Distance par la route entre l'atelier et une adresse, arrondie à 0,1 km.
+ * null si l'adresse (ou celle de l'atelier) est introuvable ; GeoUnavailable si le service ne répond pas.
+ */
+export async function distanceFromAtelier(s: DeliverySettings, adresse: string) {
+  const key = `${s.atelierLat},${s.atelierLon}|${adresse.toLowerCase().replace(/\s+/g, ' ').trim()}`
+  const known = distances.get(key)
+  if (known) return known
+  const from = await atelier(s)
+  const to = from && (await geo.geocode(adresse))
+  if (!from || !to) return null
+  const d = await geo.roadKm(from, to)
+  const result = { km: Math.round(d.km * 10) / 10, label: to.label }
+  if (distances.size > 500) distances.clear()
+  distances.set(key, result)
+  return result
 }
