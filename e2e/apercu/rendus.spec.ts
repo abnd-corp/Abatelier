@@ -14,6 +14,8 @@ const PAGES = [
   { name: '7-journal', path: '/journal' },
   { name: '8-mon-compte', path: '/mon-compte' },
   { name: '9-menu-ouvert', path: '/salaries', openMenu: true },
+  { name: '10-catalogue-matieres', path: '/catalogue' },
+  { name: '11-catalogue-coloris', path: '/catalogue?onglet=coloris' },
 ]
 
 test('captures', async ({ page, baseURL }, info) => {

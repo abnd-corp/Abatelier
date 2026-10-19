@@ -29,8 +29,8 @@ beforeEach(() => {
 describe('Menu latéral', () => {
   it('montre toutes les sections à la direction', async () => {
     const { links, sections } = await setup(ADMIN)
-    expect(links()).toEqual(['Tableau de bord', 'Salariés', 'Comptes', 'Journal d’activité'])
-    expect(sections()).toEqual(['Équipe', 'Administration'])
+    expect(links()).toEqual(['Tableau de bord', 'Tarifs et catalogue', 'Salariés', 'Comptes', 'Journal d’activité'])
+    expect(sections()).toEqual(['Direction', 'Équipe', 'Administration'])
   })
 
   it('montre les salariés et le journal à la RH, sans les comptes', async () => {

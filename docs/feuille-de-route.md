@@ -27,7 +27,7 @@ On développe un rôle jusqu'au bout avant de passer au suivant, en commençant 
 
 ### Espace Direction, dans l'ordre
 
-1. **Tarifs et catalogue** : matières, épaisseurs, coloris, prix au m², prix par pli, accessoires, remises, livraison. C'est la base des devis, de la vitrine et du configurateur.
+1. **Tarifs et catalogue** : ✅ matières et coloris. Restent : façonnage et conditions (prix par pli, mise en route, remises), accessoires, livraison. C'est la base des devis, de la vitrine et du configurateur.
 2. **Modèles de devis et de factures** : logo, en-tête, mentions légales, conditions, pied de page, aperçu PDF.
 3. **Site vitrine** intégré à l'application, à la place du WordPress : pages publiques dont la direction édite les textes et les photos.
 4. **Clients** : fiches, historique, fidélité.

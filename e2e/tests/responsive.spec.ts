@@ -9,6 +9,8 @@ const PAGES = [
   { path: '/salaries/nouveau', heading: 'Nouveau salarié' },
   { path: '/utilisateurs', heading: 'Comptes' },
   { path: '/journal', heading: 'Journal d’activité' },
+  { path: '/catalogue', heading: 'Tarifs et catalogue' },
+  { path: '/catalogue?onglet=coloris', heading: 'Tarifs et catalogue' },
   { path: '/mon-compte', heading: 'Mon compte' },
 ]
 

@@ -1,4 +1,4 @@
-import { bigint, boolean, date, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, date, index, integer, jsonb, numeric, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 
 const ts = (name: string) => timestamp(name, { withTimezone: true })
 
@@ -97,5 +97,46 @@ export const employees = pgTable(
   (t) => [index('employees_nom_idx').on(t.nom, t.prenom)],
 )
 
+// --- Catalogue (direction) ---
+// On ne supprime jamais une matière ou un coloris : on le désactive, pour garder les devis passés lisibles.
+
+export const materials = pgTable(
+  'materials',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    nom: text('nom').notNull(),
+    // Épaisseur de la tôle en millimètres (ex. 1.50)
+    epaisseur: numeric('epaisseur', { precision: 5, scale: 2, mode: 'number' }).notNull(),
+    // Prix de vente HT au m² de développé
+    prixM2: numeric('prix_m2', { precision: 10, scale: 2, mode: 'number' }).notNull(),
+    // Plus petit retour que la plieuse sait faire dans cette épaisseur, en mm
+    retourMin: integer('retour_min').notNull(),
+    actif: boolean('actif').notNull().default(true),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [unique('materials_nom_epaisseur_unique').on(t.nom, t.epaisseur)],
+)
+
+export const colors = pgTable('colors', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nom: text('nom').notNull(),
+  // Référence fournisseur, unique (ex. « RAL 7016 », « 2100 Sablé », « Aspect bois »)
+  reference: text('reference').notNull().unique(),
+  // Teinte d'affichage, #rrggbb
+  hex: text('hex').notNull(),
+  // Majoration en % du prix matière (négative pour un brut moins cher)
+  majoration: numeric('majoration', { precision: 5, scale: 2, mode: 'number' }).notNull().default(0),
+  // Jours ouvrés ajoutés au délai standard
+  delaiSup: integer('delai_sup').notNull().default(0),
+  actif: boolean('actif').notNull().default(true),
+  position: integer('position').notNull().default(0),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+})
+
 export type User = typeof users.$inferSelect
 export type Employee = typeof employees.$inferSelect
+export type Material = typeof materials.$inferSelect
+export type Color = typeof colors.$inferSelect

@@ -5,8 +5,8 @@ import { api, ApiError } from '@/api'
 import { dateTime } from '@/lib/format'
 import { describe, type AuditEntry } from '@/lib/audit-labels'
 
-type Filter = 'all' | 'login' | 'failures' | 'accounts'
-const FILTERS: Record<Filter, string> = { all: 'Tout', login: 'Connexions', failures: 'Échecs', accounts: 'Comptes et équipe' }
+type Filter = 'all' | 'login' | 'failures' | 'accounts' | 'catalog'
+const FILTERS: Record<Filter, string> = { all: 'Tout', login: 'Connexions', failures: 'Échecs', accounts: 'Comptes et équipe', catalog: 'Catalogue et prix' }
 
 const route = useRoute()
 const router = useRouter()

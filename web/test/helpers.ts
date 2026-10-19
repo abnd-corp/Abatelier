@@ -44,6 +44,7 @@ export function makeRouter() {
       { path: '/mon-compte', name: 'account', component: page('account') },
       { path: '/utilisateurs', name: 'users', component: page('users'), meta: { section: 'Équipe', title: 'Comptes' } },
       { path: '/journal', name: 'audit', component: page('audit') },
+      { path: '/catalogue', name: 'catalog', component: page('catalog'), meta: { section: 'Direction', title: 'Tarifs et catalogue' } },
       { path: '/salaries', name: 'employees', component: page('employees'), meta: { section: 'Équipe', title: 'Salariés' } },
       { path: '/salaries/nouveau', name: 'employee-new', component: page('employee-new'), meta: { menu: 'employees' } },
       {
@@ -68,7 +69,7 @@ export const ADMIN: User = {
   nom: 'Le Chef',
   role: 'direction',
   mustChangePassword: false,
-  permissions: ['users.manage', 'employees.manage', 'audit.read'],
+  permissions: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage'],
 }
 
 export const ATELIER: User = {

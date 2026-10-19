@@ -17,6 +17,29 @@ export type Tone = 'neutral' | 'bad' | 'accent'
 
 const ROLE: Record<string, string> = { direction: 'direction', admin: 'direction', rh: 'RH', atelier: 'atelier' }
 
+const eur = (n: unknown) => (typeof n === 'number' ? n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : String(n))
+
+// Libellés et unités des champs du catalogue, pour décrire un changement de prix lisiblement
+const CATALOG_FIELDS: Record<string, { label: string; fmt: (v: unknown) => string }> = {
+  prixM2: { label: 'prix au m²', fmt: eur },
+  epaisseur: { label: 'épaisseur', fmt: (v) => `${String(v).replace('.', ',')} mm` },
+  retourMin: { label: 'retour minimum', fmt: (v) => `${v} mm` },
+  majoration: { label: 'majoration', fmt: (v) => `${String(v).replace('.', ',')} %` },
+  delaiSup: { label: 'délai supplémentaire', fmt: (v) => `${v} j` },
+  actif: { label: 'statut', fmt: (v) => (v ? 'actif' : 'désactivé') },
+  nom: { label: 'nom', fmt: (v) => `« ${v} »` },
+  reference: { label: 'référence', fmt: (v) => `« ${v} »` },
+  hex: { label: 'teinte', fmt: (v) => String(v) },
+}
+function changes(c: Record<string, { avant: unknown; apres: unknown }> | undefined) {
+  return Object.entries(c ?? {})
+    .map(([k, { avant, apres }]) => {
+      const f = CATALOG_FIELDS[k] ?? { label: k, fmt: String }
+      return `${f.label} ${f.fmt(avant)} → ${f.fmt(apres)}`
+    })
+    .join(', ')
+}
+
 /** Phrase lisible et couleur pour une ligne du journal. Les futures actions métier s'ajoutent ici. */
 export function describe(e: AuditEntry): { text: string; tone: Tone } {
   const d = (e.details ?? {}) as Record<string, any>
@@ -55,6 +78,14 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A ajouté ${d.nom} à l’équipe${d.compte ? ' avec un compte de connexion' : ''}`, tone: 'accent' }
     case 'employee.updated':
       return { text: `A modifié la fiche de ${d.nom ?? cible} (${(d.champs ?? []).join(', ')})`, tone: 'neutral' }
+    case 'catalog.material_created':
+      return { text: `A ajouté la matière ${d.nom} (${eur(d.prixM2)}/m²)`, tone: 'accent' }
+    case 'catalog.material_updated':
+      return { text: `A modifié la matière ${d.nom} : ${changes(d.changements)}`, tone: 'accent' }
+    case 'catalog.color_created':
+      return { text: `A ajouté le coloris ${d.nom}`, tone: 'accent' }
+    case 'catalog.color_updated':
+      return { text: `A modifié le coloris ${d.nom} : ${changes(d.changements)}`, tone: 'accent' }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

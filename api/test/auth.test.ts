@@ -21,7 +21,7 @@ describe('POST /api/auth/login', () => {
     expect(res.statusCode).toBe(200)
     const body = res.json()
     expect(body.user).toMatchObject({ id: u.id, identifiant: 'paul', role: 'direction', mustChangePassword: false })
-    expect(body.user.permissions).toEqual(['users.manage', 'employees.manage', 'audit.read'])
+    expect(body.user.permissions).toEqual(['users.manage', 'employees.manage', 'audit.read', 'catalog.manage'])
     expect(body.user.role).toBe('direction')
     expect(res.body).not.toContain('argon2')
     expect(res.body).not.toContain('passwordHash')
