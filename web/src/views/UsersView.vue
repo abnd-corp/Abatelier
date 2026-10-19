@@ -95,7 +95,7 @@ async function changeRole(u: UserRow, role: Role) {
 
 const CONFIRM: Record<Kind, string> = {
   disable: 'Désactiver ce compte ? La personne sera déconnectée partout.',
-  enable: 'Réactiver ce compte ?',
+  enable: 'Activer ce compte ?',
   reset: 'Générer un nouveau mot de passe temporaire ? La personne sera déconnectée partout.',
 }
 </script>
@@ -202,7 +202,7 @@ const CONFIRM: Record<Kind, string> = {
                 <template v-if="u.id !== auth.user?.id">
                   <button v-if="!u.disabledAt" class="btn small" type="button" @click="pending = { id: u.id, kind: 'reset' }">Nouveau mot de passe</button>
                   <button v-if="!u.disabledAt" class="btn small danger" type="button" @click="pending = { id: u.id, kind: 'disable' }">Désactiver</button>
-                  <button v-else class="btn small" type="button" @click="pending = { id: u.id, kind: 'enable' }">Réactiver</button>
+                  <button v-else class="btn small" type="button" @click="pending = { id: u.id, kind: 'enable' }">Activer</button>
                 </template>
               </template>
             </td>

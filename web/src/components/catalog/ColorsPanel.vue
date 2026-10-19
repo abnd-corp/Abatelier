@@ -155,7 +155,7 @@ const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
             </td>
             <td class="n actions-cell">
               <button class="btn small" type="button" :aria-label="`Modifier ${c.reference}`" @click="openEdit(c)"><AppIcon name="pencil" :size="14" /><span class="hide-sm">Modifier</span></button>
-              <button class="btn small" type="button" @click="toggle(c)">{{ c.actif ? 'Désactiver' : 'Réactiver' }}</button>
+              <button class="btn small" type="button" @click="toggle(c)">{{ c.actif ? 'Désactiver' : 'Activer' }}</button>
             </td>
           </tr>
           <tr v-if="!visible.length && !loadError">

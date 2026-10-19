@@ -135,7 +135,7 @@ const pending = ref<Kind | null>(null)
 const busy = ref(false)
 const CONFIRM: Record<Kind, string> = {
   disable: 'Désactiver ce compte ? La personne sera déconnectée partout.',
-  enable: 'Réactiver ce compte ?',
+  enable: 'Activer ce compte ?',
   reset: 'Générer un nouveau mot de passe temporaire ? La personne sera déconnectée partout.',
 }
 
@@ -287,7 +287,7 @@ async function changeRole(role: Role) {
                 <button class="btn small" type="button" @click="pending = 'reset'">Nouveau mot de passe</button>
                 <button class="btn small danger" type="button" @click="pending = 'disable'">Désactiver le compte</button>
               </template>
-              <button v-else class="btn small" type="button" @click="pending = 'enable'">Réactiver le compte</button>
+              <button v-else class="btn small" type="button" @click="pending = 'enable'">Activer le compte</button>
             </div>
           </template>
 
