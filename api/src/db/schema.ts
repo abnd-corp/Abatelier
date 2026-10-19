@@ -1,4 +1,4 @@
-import { bigint, boolean, check, date, index, integer, jsonb, numeric, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, check, customType, date, index, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 const ts = (name: string) => timestamp(name, { withTimezone: true })
@@ -225,6 +225,78 @@ export const deliverySettings = pgTable(
   (t) => [check('delivery_settings_single_row', sql`${t.id} = 1`)],
 )
 
+// --- Modèles de devis et de factures (direction) ---
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' })
+const txt = (name: string) => text(name).notNull().default('')
+
+// Identité de l'entreprise, imprimée sur les devis et les factures : une seule ligne (id = 1)
+export const companySettings = pgTable(
+  'company_settings',
+  {
+    id: integer('id').primaryKey().default(1),
+    raisonSociale: text('raison_sociale').notNull(),
+    formeJuridique: txt('forme_juridique'),
+    capital: txt('capital'),
+    // Adresse sur plusieurs lignes
+    adresse: txt('adresse'),
+    telephone: txt('telephone'),
+    email: txt('email'),
+    siteWeb: txt('site_web'),
+    siret: txt('siret'),
+    rcs: txt('rcs'),
+    tvaIntra: txt('tva_intra'),
+    iban: txt('iban'),
+    bic: txt('bic'),
+    // Logo envoyé par la direction (PNG ou JPEG). Sans logo : celui de l'appli.
+    logo: bytea('logo'),
+    logoType: text('logo_type', { enum: ['image/png', 'image/jpeg'] }),
+    logoUpdatedAt: ts('logo_updated_at'),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [check('company_settings_single_row', sql`${t.id} = 1`)],
+)
+
+// Modèle commun aux devis et aux factures : une seule ligne (id = 1)
+export const documentTemplate = pgTable(
+  'document_template',
+  {
+    id: integer('id').primaryKey().default(1),
+    // Couleur des titres et de l'en-tête du tableau, #rrggbb
+    couleur: text('couleur').notNull().default('#5b34c4'),
+    // Texte d'introduction, sous les coordonnées du client
+    entete: txt('entete'),
+    conditionsPaiement: txt('conditions_paiement'),
+    // Durée de validité d'un devis et délai de paiement d'une facture, en jours
+    validiteDevis: integer('validite_devis').notNull().default(30),
+    echeanceFacture: integer('echeance_facture').notNull().default(30),
+    noteDevis: txt('note_devis'),
+    noteFacture: txt('note_facture'),
+    mentionsLegales: txt('mentions_legales'),
+    piedDePage: txt('pied_de_page'),
+    prefixeDevis: text('prefixe_devis').notNull().default('D'),
+    prefixeFacture: text('prefixe_facture').notNull().default('F'),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [check('document_template_single_row', sql`${t.id} = 1`)],
+)
+
+export const DOCUMENT_TYPES = ['devis', 'facture'] as const
+export type DocumentType = (typeof DOCUMENT_TYPES)[number]
+
+// Dernier numéro attribué, par type et par année. La ligne est verrouillée pendant l'attribution :
+// deux devis créés en même temps ne peuvent pas recevoir le même numéro, et une création annulée
+// (transaction annulée) ne laisse pas de trou.
+export const documentCounters = pgTable(
+  'document_counters',
+  {
+    type: text('type', { enum: DOCUMENT_TYPES }).notNull(),
+    annee: integer('annee').notNull(),
+    dernier: integer('dernier').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.type, t.annee] })],
+)
+
 export type User = typeof users.$inferSelect
 export type Employee = typeof employees.$inferSelect
 export type Material = typeof materials.$inferSelect
@@ -232,3 +304,5 @@ export type Color = typeof colors.$inferSelect
 export type PricingSettings = typeof pricingSettings.$inferSelect
 export type Accessory = typeof accessories.$inferSelect
 export type DeliverySettings = typeof deliverySettings.$inferSelect
+export type CompanySettings = typeof companySettings.$inferSelect
+export type DocumentTemplate = typeof documentTemplate.$inferSelect

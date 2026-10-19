@@ -349,3 +349,22 @@ button {
     width: 100%;
   }
 }
+
+/* Titre d'une carte de formulaire (<fieldset class="card"><legend>) : à l'intérieur du cadre, en tête,
+   et non à cheval sur la bordure comme le veut le navigateur. Le « float » sort la légende de sa place spéciale. */
+fieldset.card > legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  font-family: var(--f-display);
+  font-stretch: 78%;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 1rem;
+}
+fieldset.card > legend + * {
+  clear: both;
+}
+

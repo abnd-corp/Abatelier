@@ -14,6 +14,9 @@ const PAGES = [
   { path: '/catalogue?onglet=accessoires', heading: 'Tarifs et catalogue' },
   { path: '/catalogue?onglet=livraison', heading: 'Tarifs et catalogue' },
   { path: '/catalogue?onglet=faconnage', heading: 'Tarifs et catalogue' },
+  { path: '/modeles-documents', heading: 'Modèles de documents' },
+  { path: '/modeles-documents?onglet=modele', heading: 'Modèles de documents' },
+  { path: '/modeles-documents?onglet=numerotation', heading: 'Modèles de documents' },
   { path: '/mon-compte', heading: 'Mon compte' },
 ]
 

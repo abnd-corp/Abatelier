@@ -19,6 +19,9 @@ const PAGES = [
   { name: '12-catalogue-faconnage', path: '/catalogue?onglet=faconnage' },
   { name: '13-catalogue-accessoires', path: '/catalogue?onglet=accessoires' },
   { name: '14-catalogue-livraison', path: '/catalogue?onglet=livraison' },
+  { name: '15-documents-entreprise', path: '/modeles-documents' },
+  { name: '16-documents-modele', path: '/modeles-documents?onglet=modele' },
+  { name: '17-documents-numerotation', path: '/modeles-documents?onglet=numerotation' },
 ]
 
 test('captures', async ({ page, baseURL }, info) => {
@@ -50,6 +53,8 @@ test('captures', async ({ page, baseURL }, info) => {
       await page.waitForTimeout(300)
     }
     await expect(page.locator('h1').first()).toBeVisible()
+    // L'aperçu PDF se dessine après le chargement : on attend sa première page
+    if (p.path.startsWith('/modeles-documents')) await page.getByRole('img', { name: /Aperçu du devis, page 1/ }).waitFor()
     await page.screenshot({ path: `${dir}/${p.name}.png`, fullPage: !p.openMenu })
   }
 })

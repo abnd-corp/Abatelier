@@ -22,7 +22,10 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
   { items: [{ to: { name: 'dashboard' }, name: 'dashboard', label: 'Tableau de bord', icon: 'home' }] },
   {
     title: 'Direction',
-    items: [{ to: { name: 'catalog' }, name: 'catalog', label: 'Tarifs et catalogue', icon: 'tag', perm: 'catalog.manage' }],
+    items: [
+      { to: { name: 'catalog' }, name: 'catalog', label: 'Tarifs et catalogue', icon: 'tag', perm: 'catalog.manage' },
+      { to: { name: 'documents' }, name: 'documents', label: 'Modèles de documents', icon: 'file', perm: 'documents.manage' },
+    ],
   },
   {
     title: 'Équipe',

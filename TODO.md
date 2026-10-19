@@ -19,10 +19,11 @@
 - [ ] Simulateur de prix (facultatif) : une pièce type dont le prix se recalcule quand on change un tarif
 
 ### Modèles de devis et de factures
-- [ ] Informations de l'entreprise : raison sociale, adresse, SIRET, TVA intracommunautaire, IBAN, logo
-- [ ] Éditeur de modèle : en-tête, mentions légales, conditions de paiement, validité du devis, pied de page
-- [ ] Aperçu PDF en direct, puis génération PDF côté serveur
-- [ ] Numérotation automatique (D-2026-0001, F-2026-0001) sans trou, conforme à la loi pour les factures
+- [x] Informations de l'entreprise : raison sociale, forme, capital, adresse, SIRET (clé vérifiée), RCS, TVA intracom, IBAN (clé vérifiée), BIC, logo PNG/JPEG
+- [x] Éditeur de modèle commun : couleur, introduction, conditions de paiement, validité du devis, délai de paiement, notes, mentions légales, pied de page
+- [x] PDF côté serveur (pdfkit) et aperçu en direct dans la page (pdf.js)
+- [x] Numérotation D-2026-0001 / F-2026-0001 sans trou (compteur verrouillé), reprise d'une numérotation existante
+- [ ] Mentions légales types à faire valider par leur comptable (pénalités, indemnité de 40 €, escompte)
 
 ### Site vitrine (remplace le WordPress actuel)
 - [ ] Pages publiques : accueil, produits (couvertines, bavettes, bandeaux), réalisations, contact

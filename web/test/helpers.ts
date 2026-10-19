@@ -21,7 +21,8 @@ export function mockApi(routes: Record<string, Handler>) {
     vi.fn(async (input: string, init: RequestInit = {}) => {
       const method = init.method ?? 'GET'
       const path = String(input).replace(/^\/api/, '')
-      const body = init.body ? JSON.parse(init.body as string) : undefined
+      // Corps JSON lu en objet ; un fichier envoyé tel quel (logo) est gardé comme il est
+      const body = typeof init.body === 'string' ? JSON.parse(init.body) : init.body
       calls.push({ method, path, body })
       const handler = routes[`${method} ${path}`] ?? routes[`${method} ${path.split('?')[0]}`]
       if (!handler) return new Response(JSON.stringify({ error: `Appel non simulé : ${method} ${path}` }), { status: 500 })
@@ -45,6 +46,7 @@ export function makeRouter() {
       { path: '/utilisateurs', name: 'users', component: page('users'), meta: { section: 'Équipe', title: 'Comptes' } },
       { path: '/journal', name: 'audit', component: page('audit') },
       { path: '/catalogue', name: 'catalog', component: page('catalog'), meta: { section: 'Direction', title: 'Tarifs et catalogue' } },
+      { path: '/modeles-documents', name: 'documents', component: page('documents'), meta: { section: 'Direction', title: 'Modèles de documents' } },
       { path: '/salaries', name: 'employees', component: page('employees'), meta: { section: 'Équipe', title: 'Salariés' } },
       { path: '/salaries/nouveau', name: 'employee-new', component: page('employee-new'), meta: { menu: 'employees' } },
       {
@@ -69,7 +71,7 @@ export const ADMIN: User = {
   nom: 'Le Chef',
   role: 'direction',
   mustChangePassword: false,
-  permissions: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage'],
+  permissions: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage', 'documents.manage'],
 }
 
 export const ATELIER: User = {

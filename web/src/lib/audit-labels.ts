@@ -19,6 +19,12 @@ const ROLE: Record<string, string> = { direction: 'direction', admin: 'direction
 
 const eur = (n: unknown) => (typeof n === 'number' ? n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : String(n))
 
+/** Texte cité, raccourci s'il est long (mentions légales…) ; « vide » s'il n'y a rien. */
+const quote = (v: unknown) => {
+  const s = String(v ?? '').replace(/\s+/g, ' ').trim()
+  return s ? `« ${s.length > 60 ? s.slice(0, 57) + '…' : s} »` : 'vide'
+}
+
 const QTY: Record<string, string> = { aucune: 'aucune', fixe: 'nombre fixe', par_piece: 'une par pièce', jonctions: 'une par jonction' }
 
 // Libellés et unités des champs du catalogue, pour décrire un changement de prix lisiblement
@@ -59,6 +65,30 @@ const CATALOG_FIELDS: Record<string, { label: string; fmt: (v: unknown) => strin
         ? v.map((z: { distanceMax: number; prix: number; franco: number | null }) => `${z.distanceMax} km : ${eur(z.prix)}${z.franco !== null ? ` (offerte dès ${eur(z.franco)})` : ''}`).join(', ')
         : 'aucune',
   },
+  // Modèles de documents
+  raisonSociale: { label: 'raison sociale', fmt: (v) => quote(v) },
+  formeJuridique: { label: 'forme juridique', fmt: (v) => quote(v) },
+  capital: { label: 'capital', fmt: (v) => quote(v) },
+  adresse: { label: 'adresse', fmt: (v) => quote(v) },
+  telephone: { label: 'téléphone', fmt: (v) => quote(v) },
+  email: { label: 'e-mail', fmt: (v) => quote(v) },
+  siteWeb: { label: 'site web', fmt: (v) => quote(v) },
+  siret: { label: 'SIRET', fmt: (v) => quote(v) },
+  rcs: { label: 'RCS', fmt: (v) => quote(v) },
+  tvaIntra: { label: 'TVA intracommunautaire', fmt: (v) => quote(v) },
+  iban: { label: 'IBAN', fmt: (v) => quote(v) },
+  bic: { label: 'BIC', fmt: (v) => quote(v) },
+  couleur: { label: 'couleur', fmt: (v) => String(v) },
+  entete: { label: 'introduction', fmt: (v) => quote(v) },
+  conditionsPaiement: { label: 'conditions de paiement', fmt: (v) => quote(v) },
+  validiteDevis: { label: 'validité du devis', fmt: (v) => `${v} j` },
+  echeanceFacture: { label: 'délai de paiement', fmt: (v) => `${v} j` },
+  noteDevis: { label: 'note du devis', fmt: (v) => quote(v) },
+  noteFacture: { label: 'note de la facture', fmt: (v) => quote(v) },
+  mentionsLegales: { label: 'mentions légales', fmt: (v) => quote(v) },
+  piedDePage: { label: 'pied de page', fmt: (v) => quote(v) },
+  prefixeDevis: { label: 'préfixe des devis', fmt: (v) => quote(v) },
+  prefixeFacture: { label: 'préfixe des factures', fmt: (v) => quote(v) },
   remisesQuantite: {
     label: 'remises quantité',
     fmt: (v) =>
@@ -130,6 +160,16 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A modifié l’accessoire ${d.nom} : ${changes(d.changements)}`, tone: 'accent' }
     case 'catalog.delivery_updated':
       return { text: `A modifié la livraison : ${changes(d.changements)}`, tone: 'accent' }
+    case 'documents.company_updated':
+      return { text: `A modifié l’identité de l’entreprise : ${changes(d.changements)}`, tone: 'accent' }
+    case 'documents.template_updated':
+      return { text: `A modifié le modèle des devis et factures : ${changes(d.changements)}`, tone: 'accent' }
+    case 'documents.numbering_updated':
+      return { text: `A fixé le prochain numéro ${d.type === 'facture' ? 'de facture' : 'de devis'} ${d.annee} : ${d.avant} → ${d.apres}`, tone: 'accent' }
+    case 'documents.logo_updated':
+      return { text: `A envoyé un nouveau logo (${d.type === 'image/png' ? 'PNG' : 'JPEG'}, ${d.largeur} × ${d.hauteur} px)`, tone: 'accent' }
+    case 'documents.logo_removed':
+      return { text: 'A remis le logo de l’appli sur les documents', tone: 'accent' }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

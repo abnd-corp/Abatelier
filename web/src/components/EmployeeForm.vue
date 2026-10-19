@@ -107,16 +107,6 @@ const errorFor = (field: string, error?: { field?: string; msg: string } | null)
   gap: 14px;
   min-width: 0;
 }
-legend {
-  font-family: var(--f-display);
-  font-stretch: 78%;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  font-size: 1rem;
-  padding: 0 6px;
-  margin-left: -6px;
-}
 .row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

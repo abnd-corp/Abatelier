@@ -35,6 +35,9 @@ const PATHS = {
   box: 'M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z M3 7.5l9 4.5 9-4.5 M12 12v9',
   truck: 'M2 6h12v10H2z M14 9h4l4 4v3h-8z M6.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z M17.5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z',
   'map-pin': 'M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z M12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z',
+  file: 'M6 3h8l4 4v14H6z M14 3v4h4 M9 12h6 M9 16h6',
+  upload: 'M12 16V4 M7 9l5-5 5 5 M4 20h16',
+  download: 'M12 4v12 M7 11l5 5 5-5 M4 20h16',
 } as const
 
 defineProps<{ name: keyof typeof PATHS; size?: number }>()

@@ -53,6 +53,12 @@ export const router = createRouter({
           meta: { perm: 'catalog.manage', section: 'Direction', title: 'Tarifs et catalogue' },
         },
         {
+          path: 'modeles-documents',
+          name: 'documents',
+          component: () => import('@/views/DocumentsView.vue'),
+          meta: { perm: 'documents.manage', section: 'Direction', title: 'Modèles de documents' },
+        },
+        {
           path: 'utilisateurs',
           name: 'users',
           component: () => import('@/views/UsersView.vue'),

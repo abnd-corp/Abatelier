@@ -9,6 +9,7 @@ import { auditRoutes } from './routes/audit.js'
 import { employeeRoutes } from './routes/employees.js'
 import { catalogRoutes } from './routes/catalog.js'
 import { deliveryRoutes } from './routes/delivery.js'
+import { documentRoutes } from './routes/documents.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -45,6 +46,8 @@ export async function buildApp() {
     const status = err.statusCode ?? 500
     if (status === 429) return reply.code(429).send(err)
     if (status >= 500) req.log.error(err)
+    if (status === 413) return reply.code(413).send({ error: 'Envoi trop lourd.' })
+    if (status === 415) return reply.code(415).send({ error: 'Format de fichier non pris en charge.' })
     return reply.code(status).send({ error: status >= 500 ? 'Le serveur a rencontré un problème. Réessayez.' : 'Requête invalide.' })
   })
 
@@ -77,6 +80,7 @@ export async function buildApp() {
   await app.register(employeeRoutes, { prefix: '/api/employees' })
   await app.register(catalogRoutes, { prefix: '/api/catalog' })
   await app.register(deliveryRoutes, { prefix: '/api/catalog' })
+  await app.register(documentRoutes, { prefix: '/api/documents' })
 
   return app
 }
