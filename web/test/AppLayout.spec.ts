@@ -1,35 +1,104 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import AppLayout from '@/components/AppLayout.vue'
 import { useAuthStore, type User } from '@/stores/auth'
+import { useUiStore } from '@/stores/ui'
 import { ADMIN, ATELIER, freshPinia, makeRouter, mockApi } from './helpers'
 
-async function setup(user: User) {
+async function setup(user: User, path = '/') {
   const pinia = freshPinia()
   useAuthStore().user = user
   const router = makeRouter()
-  await router.push('/')
+  await router.push(path)
   await router.isReady()
   const wrapper = mount(AppLayout, { global: { plugins: [pinia, router] } })
-  const links = () => wrapper.findAll('nav a').map((a) => a.text())
-  return { wrapper, router, links }
+  const nav = () => wrapper.get('nav[aria-label="Navigation principale"]')
+  const links = () => nav().findAll('a').map((a) => a.text())
+  const sections = () => nav().findAll('.section-title').map((t) => t.text())
+  return { wrapper, router, links, sections, nav }
 }
 
-describe('En-tête de l’application', () => {
+beforeEach(() => {
+  try {
+    localStorage.clear()
+  } catch {
+    // jsdom sans stockage
+  }
+})
+
+describe('Menu latéral', () => {
   it('montre toutes les sections à un administrateur', async () => {
-    const { links, wrapper } = await setup(ADMIN)
-    expect(links()).toEqual(['Tableau de bord', 'Utilisateurs', 'Journal'])
-    expect(wrapper.text()).toContain('Le Chef')
+    const { links, sections } = await setup(ADMIN)
+    expect(links()).toEqual(['Tableau de bord', 'Salariés', 'Comptes', 'Journal d’activité'])
+    expect(sections()).toEqual(['Équipe', 'Administration'])
   })
 
-  it('cache la gestion des comptes et le journal au rôle atelier', async () => {
-    const { links } = await setup(ATELIER)
+  it('cache les sections sans droits au rôle atelier', async () => {
+    const { links, sections } = await setup(ATELIER)
     expect(links()).toEqual(['Tableau de bord'])
+    expect(sections()).toEqual([])
   })
 
   it('cache toute la navigation tant que le mot de passe est temporaire', async () => {
     const { links } = await setup({ ...ADMIN, mustChangePassword: true })
     expect(links()).toEqual([])
+  })
+
+  it('met en avant « Salariés » sur une fiche salarié', async () => {
+    const { nav } = await setup(ADMIN, '/salaries/abc')
+    const active = nav().get('[aria-current="page"]')
+    expect(active.text()).toBe('Salariés')
+  })
+
+  it('se réduit en icônes et retient ce choix', async () => {
+    const { wrapper } = await setup(ADMIN)
+    const toggle = wrapper.get('button[aria-controls="menu"].collapse-btn')
+    expect(toggle.attributes('aria-expanded')).toBe('true')
+    await toggle.trigger('click')
+    expect(wrapper.get('.shell').classes()).toContain('collapsed')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    // Les libellés restent lisibles par les lecteurs d'écran et en infobulle
+    expect(wrapper.get('nav a[title="Salariés"]').text()).toBe('Salariés')
+    // Une nouvelle visite retrouve le menu réduit
+    const again = await setup(ADMIN)
+    expect(again.wrapper.get('.shell').classes()).toContain('collapsed')
+  })
+
+  it('le bouton menu ouvre et ferme le tiroir (mobile)', async () => {
+    const { wrapper, router } = await setup(ADMIN)
+    const burger = wrapper.get('button[aria-label="Ouvrir le menu"]')
+    await burger.trigger('click')
+    expect(wrapper.get('.shell').classes()).toContain('drawer-open')
+    expect(burger.attributes('aria-expanded')).toBe('true')
+    // Choisir une page referme le tiroir
+    await router.push('/salaries')
+    await flushPromises()
+    expect(wrapper.get('.shell').classes()).not.toContain('drawer-open')
+  })
+})
+
+describe('Fil d’Ariane', () => {
+  const crumbs = (w: Awaited<ReturnType<typeof setup>>['wrapper']) => w.findAll('nav[aria-label="Fil d’Ariane"] li').map((li) => li.text())
+
+  it('affiche la section et la page', async () => {
+    const { wrapper } = await setup(ADMIN, '/utilisateurs')
+    expect(crumbs(wrapper)).toEqual(['Équipe', 'Comptes'])
+  })
+
+  it('affiche le nom du salarié donné par la page, avec un lien vers la liste', async () => {
+    const { wrapper } = await setup(ADMIN, '/salaries/abc')
+    expect(crumbs(wrapper)).toEqual(['Équipe', 'Salariés', 'Fiche salarié'])
+    useUiStore().crumb = { for: '/salaries/abc', label: 'Paul Martin' }
+    await flushPromises()
+    expect(crumbs(wrapper)).toEqual(['Équipe', 'Salariés', 'Paul Martin'])
+    expect(wrapper.get('nav[aria-label="Fil d’Ariane"] a').attributes('href')).toBe('/salaries')
+  })
+})
+
+describe('Compte et déconnexion', () => {
+  it('montre le nom de la personne connectée', async () => {
+    const { wrapper } = await setup(ADMIN)
+    expect(wrapper.get('a[aria-label="Mon compte : Le Chef"]').text()).toContain('Le Chef')
   })
 
   it('déconnecte et renvoie à la page de connexion', async () => {

@@ -25,9 +25,9 @@ Le premier compte, administrateur, s'appelle `ADMIN_IDENTIFIANT` (par défaut `a
 ## Tests
 
 ```bash
-make test-api   # 76 tests des routes API, sur la base patalu_test (la base de dev doit tourner)
-make test-web   # 46 tests des composants Vue
-make e2e        # 16 parcours Playwright × 2 navigateurs, sur une stack de production jetable
+make test-api   # 104 tests des routes API, sur la base patalu_test (la base de dev doit tourner)
+make test-web   # 73 tests des composants Vue
+make e2e        # 22 parcours Playwright × 2 navigateurs, sur une stack de production jetable
 ```
 
 Chaque élément du site doit être couvert par des tests et des contrôles de sécurité avant d'être mergé. Le fonctionnement des branches est décrit dans [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -65,8 +65,18 @@ La CI vérifie à chaque PR qu'une sauvegarde se restaure vraiment après une pe
 | Compte | Rôle | Usage |
 |---|---|---|
 | `admin` | Administrateur | Uniquement pour gérer les comptes et lire le journal. Créé au premier démarrage. |
-| Un compte par personne | Atelier | Usage quotidien. Chaque action est tracée au nom de la personne. |
+| Un compte par salarié | Atelier | Usage quotidien. Il est créé depuis la fiche salarié, et chaque action est tracée au nom de la personne. |
 | `atelier` (facultatif) | Atelier | Compte commun, par exemple pour le poste de l'atelier. |
+
+## Salariés
+
+Menu **Équipe → Salariés** (administrateurs) :
+- fiche avec poste, contrat, dates d'entrée et de sortie, coordonnées et notes internes ;
+- compte de connexion facultatif, créé en même temps que la fiche ou plus tard.
+
+Le jour de la date de sortie, le compte est **désactivé automatiquement** et la personne est déconnectée partout. Son historique reste dans le journal.
+
+Les comptes sans fiche (`admin`, poste partagé) se gèrent dans **Équipe → Comptes**.
 
 ## Modifier la base
 

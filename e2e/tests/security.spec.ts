@@ -20,9 +20,9 @@ test.describe('Sécurité dans le navigateur', () => {
     page.on('request', (r) => !r.url().startsWith(baseURL!) && !r.url().startsWith('data:') && external.push(r.url()))
 
     await uiLogin(page, ADMIN.identifiant, ADMIN.password)
-    await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible()
-    for (const link of ['Utilisateurs', 'Journal']) {
-      await page.getByRole('link', { name: link }).click()
+    await expect(page.getByRole('heading', { name: /^Bonjour/ })).toBeVisible()
+    for (const link of ['Salariés', 'Comptes', 'Journal d’activité']) {
+      await page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: link }).click()
       await expect(page.getByRole('table')).toBeVisible()
     }
     expect(errors).toEqual([])

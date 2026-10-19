@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { api } from '@/api'
 
 export type Role = 'admin' | 'atelier'
-export type Permission = 'users.manage' | 'audit.read'
+export type Permission = 'users.manage' | 'employees.manage' | 'audit.read'
 
 export interface User {
   id: string

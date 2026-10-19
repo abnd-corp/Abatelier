@@ -5,9 +5,18 @@ declare module 'vue-router' {
   interface RouteMeta {
     public?: boolean
     perm?: Permission
+    // Titre de la page (onglet et dernier élément du fil d'Ariane)
     title?: string
+    // Section du menu, affichée en tête du fil d'Ariane
+    section?: string
+    // Page parente dans le fil d'Ariane
+    parent?: { label: string; to: { name: string } }
+    // Lien du menu à mettre en surbrillance (pour les sous-pages)
+    menu?: string
   }
 }
+
+const employeesParent = { label: 'Salariés', to: { name: 'employees' } }
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -20,12 +29,35 @@ export const router = createRouter({
         { path: '', name: 'dashboard', component: () => import('@/views/DashboardView.vue'), meta: { title: 'Tableau de bord' } },
         { path: 'mon-compte', name: 'account', component: () => import('@/views/AccountView.vue'), meta: { title: 'Mon compte' } },
         {
+          path: 'salaries',
+          name: 'employees',
+          component: () => import('@/views/EmployeesView.vue'),
+          meta: { perm: 'employees.manage', section: 'Équipe', title: 'Salariés' },
+        },
+        {
+          path: 'salaries/nouveau',
+          name: 'employee-new',
+          component: () => import('@/views/EmployeeNewView.vue'),
+          meta: { perm: 'employees.manage', section: 'Équipe', parent: employeesParent, title: 'Nouveau salarié', menu: 'employees' },
+        },
+        {
+          path: 'salaries/:id',
+          name: 'employee',
+          component: () => import('@/views/EmployeeView.vue'),
+          meta: { perm: 'employees.manage', section: 'Équipe', parent: employeesParent, title: 'Fiche salarié', menu: 'employees' },
+        },
+        {
           path: 'utilisateurs',
           name: 'users',
           component: () => import('@/views/UsersView.vue'),
-          meta: { perm: 'users.manage', title: 'Utilisateurs' },
+          meta: { perm: 'users.manage', section: 'Équipe', title: 'Comptes' },
         },
-        { path: 'journal', name: 'audit', component: () => import('@/views/AuditView.vue'), meta: { perm: 'audit.read', title: 'Journal' } },
+        {
+          path: 'journal',
+          name: 'audit',
+          component: () => import('@/views/AuditView.vue'),
+          meta: { perm: 'audit.read', section: 'Administration', title: 'Journal d’activité' },
+        },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },

@@ -17,7 +17,12 @@ const TYPE_FILTERS: Record<string, SQL | undefined> = {
   all: undefined,
   login: or(like(auditLog.action, 'login.%'), eq(auditLog.action, 'logout')),
   failures: inArray(auditLog.action, ['login.failed', 'login.locked', 'login.disabled', 'password.change_failed']),
-  accounts: or(like(auditLog.action, 'user.%'), like(auditLog.action, 'password.%'), like(auditLog.action, 'session.%')),
+  accounts: or(
+    like(auditLog.action, 'user.%'),
+    like(auditLog.action, 'employee.%'),
+    like(auditLog.action, 'password.%'),
+    like(auditLog.action, 'session.%'),
+  ),
 }
 
 export async function auditRoutes(app: FastifyInstance) {

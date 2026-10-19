@@ -41,10 +41,10 @@ test.describe('Page de connexion', () => {
   test('connecte, garde la session au rechargement, puis déconnecte', async ({ page }) => {
     await uiLogin(page, ADMIN.identifiant, ADMIN.password)
     await expect(page).toHaveURL('/')
-    await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^Bonjour/ })).toBeVisible()
 
     await page.reload()
-    await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^Bonjour/ })).toBeVisible()
 
     await page.getByRole('button', { name: 'Se déconnecter' }).click()
     await expect(page).toHaveURL('/connexion')

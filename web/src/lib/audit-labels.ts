@@ -49,7 +49,12 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A modifié le compte de ${cible} : ${parts.join(', ')}`, tone: 'accent' }
     }
     case 'user.disabled':
+      if (d.raison === 'date de sortie') return { text: `Compte de ${cible} désactivé automatiquement : date de sortie atteinte`, tone: 'bad' }
       return { text: `A désactivé le compte de ${cible}`, tone: 'bad' }
+    case 'employee.created':
+      return { text: `A ajouté ${d.nom} à l’équipe${d.compte ? ' avec un compte de connexion' : ''}`, tone: 'accent' }
+    case 'employee.updated':
+      return { text: `A modifié la fiche de ${d.nom ?? cible} (${(d.champs ?? []).join(', ')})`, tone: 'neutral' }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

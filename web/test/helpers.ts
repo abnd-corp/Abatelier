@@ -42,8 +42,16 @@ export function makeRouter() {
       { path: '/connexion', name: 'login', component: page('login'), meta: { public: true } },
       { path: '/', name: 'dashboard', component: page('dashboard') },
       { path: '/mon-compte', name: 'account', component: page('account') },
-      { path: '/utilisateurs', name: 'users', component: page('users') },
+      { path: '/utilisateurs', name: 'users', component: page('users'), meta: { section: 'Équipe', title: 'Comptes' } },
       { path: '/journal', name: 'audit', component: page('audit') },
+      { path: '/salaries', name: 'employees', component: page('employees'), meta: { section: 'Équipe', title: 'Salariés' } },
+      { path: '/salaries/nouveau', name: 'employee-new', component: page('employee-new'), meta: { menu: 'employees' } },
+      {
+        path: '/salaries/:id',
+        name: 'employee',
+        component: page('employee'),
+        meta: { section: 'Équipe', parent: { label: 'Salariés', to: { name: 'employees' } }, title: 'Fiche salarié', menu: 'employees' },
+      },
     ],
   })
 }
@@ -60,7 +68,7 @@ export const ADMIN: User = {
   nom: 'Le Chef',
   role: 'admin',
   mustChangePassword: false,
-  permissions: ['users.manage', 'audit.read'],
+  permissions: ['users.manage', 'employees.manage', 'audit.read'],
 }
 
 export const ATELIER: User = {

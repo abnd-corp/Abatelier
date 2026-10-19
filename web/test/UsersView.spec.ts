@@ -26,7 +26,7 @@ async function setup(extra: Parameters<typeof mockApi>[0] = {}) {
   return { wrapper, calls, row }
 }
 
-describe('Gestion des utilisateurs', () => {
+describe('Gestion des comptes', () => {
   it('affiche le statut de chaque compte', async () => {
     const { row } = await setup()
     expect(row('Le Chef').text()).toContain('(vous)')
@@ -45,7 +45,7 @@ describe('Gestion des utilisateurs', () => {
 
   it('crée un compte et affiche le mot de passe temporaire une seule fois', async () => {
     const { wrapper, calls } = await setup({ 'POST /users': [201, { id: 'n1', tempPassword: 'aaaa-bbbb-cccc-dddd' }] })
-    await wrapper.findAll('button').find((b) => b.text().includes('Ajouter un utilisateur'))!.trigger('click')
+    await wrapper.findAll('button').find((b) => b.text().includes('Ajouter un compte'))!.trigger('click')
     await wrapper.get('#new-nom').setValue('Jean Dupont')
     await wrapper.get('#new-identifiant').setValue('jean')
     await wrapper.get('#new-role').setValue('admin')

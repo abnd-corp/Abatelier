@@ -34,6 +34,11 @@ export async function audit(req: FastifyRequest, action: string, opts: AuditOpti
   }
 }
 
+/** Action faite automatiquement par l'application (pas d'utilisateur ni d'IP), par exemple une sortie de salarié. */
+export async function auditSystem(action: string, opts: Pick<AuditOptions, 'targetType' | 'targetId' | 'details'> = {}) {
+  await db.insert(auditLog).values({ action, targetType: opts.targetType, targetId: opts.targetId, details: opts.details })
+}
+
 /** Durée de conservation du journal (RGPD : données de connexion). */
 const RETENTION_DAYS = 365
 

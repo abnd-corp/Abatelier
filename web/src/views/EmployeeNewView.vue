@@ -1,0 +1,155 @@
+<script setup lang="ts">
+import { reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { api, ApiError } from '@/api'
+import { emptyFields, fullName, suggestIdentifiant } from '@/lib/employees'
+import { ROLE_LABELS, type Role } from '@/stores/auth'
+import { useUiStore } from '@/stores/ui'
+import EmployeeForm from '@/components/EmployeeForm.vue'
+
+const router = useRouter()
+const ui = useUiStore()
+
+const fields = reactive(emptyFields())
+const withAccount = ref(true)
+const account = reactive({ identifiant: '', role: 'atelier' as Role })
+const error = ref<{ field?: string; msg: string } | null>(null)
+const saving = ref(false)
+
+// L'identifiant suit le prénom tant que l'admin ne l'a pas modifié lui-même
+const identifiantTouched = ref(false)
+watch(
+  () => [fields.prenom, fields.nom],
+  () => {
+    if (!identifiantTouched.value) account.identifiant = suggestIdentifiant(fields.prenom, fields.nom)
+  },
+)
+
+async function save() {
+  error.value = null
+  saving.value = true
+  try {
+    const body = { ...fields, compte: withAccount.value ? { ...account } : null }
+    const res = await api<{ id: string; tempPassword: string | null }>('/employees', { method: 'POST', body })
+    const to = router.resolve({ name: 'employee', params: { id: res.id } })
+    if (res.tempPassword) {
+      ui.tempPassword = { for: to.fullPath, nom: fullName(fields), identifiant: account.identifiant.trim().toLowerCase(), password: res.tempPassword }
+    }
+    await router.push(to)
+  } catch (e) {
+    error.value = e instanceof ApiError ? { msg: e.message, field: e.field } : { msg: 'L’enregistrement a échoué. Réessayez.' }
+  } finally {
+    saving.value = false
+  }
+}
+</script>
+
+<template>
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">Équipe</span>
+      <h1>Nouveau salarié</h1>
+    </div>
+  </div>
+
+  <form class="layout" novalidate @submit.prevent="save">
+    <p v-if="error" class="alert bad" role="alert">{{ error.msg }}</p>
+
+    <EmployeeForm v-model="fields" :error="error">
+      <fieldset class="card group">
+        <legend>Compte de connexion</legend>
+        <label class="check">
+          <input id="f-with-account" v-model="withAccount" type="checkbox" />
+          <span>
+            Créer un compte pour accéder à l’application
+            <small class="muted">Un mot de passe temporaire sera affiché après l’enregistrement.</small>
+          </span>
+        </label>
+        <div v-if="withAccount" class="row">
+          <div class="field">
+            <label for="f-identifiant">Identifiant de connexion</label>
+            <input
+              id="f-identifiant"
+              v-model="account.identifiant"
+              class="input mono"
+              autocomplete="off"
+              autocapitalize="none"
+              spellcheck="false"
+              :aria-invalid="error?.field === 'identifiant' || undefined"
+              @input="identifiantTouched = true"
+            />
+            <span v-if="error?.field === 'identifiant'" class="field-error">{{ error.msg }}</span>
+          </div>
+          <div class="field">
+            <label for="f-role">Rôle</label>
+            <select id="f-role" v-model="account.role" class="input">
+              <option value="atelier">{{ ROLE_LABELS.atelier }} : accès standard</option>
+              <option value="admin">{{ ROLE_LABELS.admin }} : gère l’équipe, les comptes et le journal</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+    </EmployeeForm>
+
+    <div class="actions">
+      <button class="btn primary" type="submit" :disabled="saving || !fields.prenom || !fields.nom">
+        {{ saving ? 'Enregistrement…' : 'Enregistrer le salarié' }}
+      </button>
+      <RouterLink class="btn" :to="{ name: 'employees' }">Annuler</RouterLink>
+    </div>
+  </form>
+</template>
+
+<style scoped>
+.layout {
+  display: grid;
+  gap: 16px;
+  max-width: 860px;
+}
+.group {
+  margin: 0;
+  padding: 18px 20px 20px;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+legend {
+  font-family: var(--f-display);
+  font-stretch: 78%;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 1rem;
+  padding: 0 6px;
+  margin-left: -6px;
+}
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.check input {
+  margin-top: 4px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.check small {
+  display: block;
+  font-size: 0.8rem;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  position: sticky;
+  bottom: 0;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, var(--bg) 30%);
+}
+</style>

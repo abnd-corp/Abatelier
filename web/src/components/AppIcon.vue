@@ -14,6 +14,19 @@ const PATHS = {
   plus: 'M12 5v14 M5 12h14',
   device: 'M4 5h16v11H4z M2 19h20 M9 16v3 M15 16v3',
   shield: 'M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6l-8-3Z M9 12l2 2 4-4',
+  menu: 'M4 6h16 M4 12h16 M4 18h16',
+  id: 'M3 5h18v14H3z M8 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z M5 16a3 3 0 0 1 6 0 M14 9h4 M14 13h4',
+  key: 'M7.5 16.5a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M11.5 12.5H21 M18 12.5v3 M15 12.5v2',
+  'chevrons-left': 'M11 17l-5-5 5-5 M18 17l-5-5 5-5',
+  'chevrons-right': 'M13 17l5-5-5-5 M6 17l5-5-5-5',
+  phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2',
+  mail: 'M3 6h18v12H3z M3 7l9 6 9-6',
+  'arrow-left': 'M19 12H5 M11 18l-6-6 6-6',
+  pencil: 'M4 20h4L19 9l-4-4L4 16v4Z M14 6l4 4',
+  x: 'M6 6l12 12 M18 6 6 18',
+  'user-plus': 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M2 21a7 7 0 0 1 14 0 M19 8v6 M16 11h6',
+  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z M20 20l-4-4',
+  calendar: 'M4 5h16v15H4z M4 10h16 M8 3v4 M16 3v4',
 } as const
 
 defineProps<{ name: keyof typeof PATHS; size?: number }>()

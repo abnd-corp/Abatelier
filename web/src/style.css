@@ -302,3 +302,19 @@ button {
   font-size: 0.76rem;
   color: var(--muted);
 }
+
+/* Texte réservé aux lecteurs d'écran */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.pill.neutral {
+  background: var(--surface-2);
+}
+.btn svg {
+  flex: none;
+}

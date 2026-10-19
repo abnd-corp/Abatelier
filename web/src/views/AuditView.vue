@@ -6,7 +6,7 @@ import { dateTime } from '@/lib/format'
 import { describe, type AuditEntry } from '@/lib/audit-labels'
 
 type Filter = 'all' | 'login' | 'failures' | 'accounts'
-const FILTERS: Record<Filter, string> = { all: 'Tout', login: 'Connexions', failures: 'Échecs', accounts: 'Comptes' }
+const FILTERS: Record<Filter, string> = { all: 'Tout', login: 'Connexions', failures: 'Échecs', accounts: 'Comptes et équipe' }
 
 const route = useRoute()
 const router = useRouter()
@@ -81,6 +81,7 @@ onMounted(async () => {
             <td class="mono date">{{ dateTime(e.at) }}</td>
             <td>
               <b v-if="e.nom">{{ e.nom }}</b>
+              <span v-else-if="!e.identifiant" class="muted">Automatique</span>
               <span v-else class="muted">Inconnu</span>
               <span v-if="e.identifiant" class="sub mono">{{ e.identifiant }}</span>
             </td>

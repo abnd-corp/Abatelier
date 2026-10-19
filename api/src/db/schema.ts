@@ -1,4 +1,4 @@
-import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, date, index, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 const ts = (name: string) => timestamp(name, { withTimezone: true })
 
@@ -67,4 +67,34 @@ export const auditLog = pgTable(
   (t) => [index('audit_log_at_idx').on(t.at), index('audit_log_user_idx').on(t.userId), index('audit_log_action_idx').on(t.action)],
 )
 
+export const CONTRATS = ['cdi', 'cdd', 'apprentissage', 'interim', 'stage'] as const
+export type Contrat = (typeof CONTRATS)[number]
+
+// Salariés de l'entreprise. Un salarié peut avoir un compte de connexion (user_id), ou pas.
+// Les comptes techniques (admin, poste partagé) n'ont pas de fiche salarié.
+export const employees = pgTable(
+  'employees',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    prenom: text('prenom').notNull(),
+    nom: text('nom').notNull(),
+    poste: text('poste'),
+    contrat: text('contrat', { enum: CONTRATS }),
+    dateEntree: date('date_entree', { mode: 'string' }),
+    // Une fois cette date atteinte, le compte lié est désactivé automatiquement
+    dateSortie: date('date_sortie', { mode: 'string' }),
+    telephone: text('telephone'),
+    email: text('email'),
+    // Visibles uniquement par les administrateurs
+    notes: text('notes'),
+    userId: uuid('user_id')
+      .unique()
+      .references(() => users.id, { onDelete: 'set null' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [index('employees_nom_idx').on(t.nom, t.prenom)],
+)
+
 export type User = typeof users.$inferSelect
+export type Employee = typeof employees.$inferSelect

@@ -4,6 +4,7 @@ import { api, ApiError } from '@/api'
 import { ROLE_LABELS, useAuthStore, type Role } from '@/stores/auth'
 import { relative, dateTime } from '@/lib/format'
 import AppIcon from '@/components/AppIcon.vue'
+import TempPasswordPanel from '@/components/TempPasswordPanel.vue'
 
 interface UserRow {
   id: string
@@ -15,6 +16,7 @@ interface UserRow {
   createdAt: string
   lastLoginAt: string | null
   activeSessions: number
+  employeeId: string | null
 }
 
 const auth = useAuthStore()
@@ -38,7 +40,6 @@ const formError = ref('')
 const creating = ref(false)
 // Mot de passe temporaire affiché une seule fois
 const temp = ref<{ nom: string; identifiant: string; password: string } | null>(null)
-const copied = ref(false)
 
 async function create() {
   formError.value = ''
@@ -46,7 +47,6 @@ async function create() {
   try {
     const res = await api<{ tempPassword: string }>('/users', { method: 'POST', body: { ...form } })
     temp.value = { nom: form.nom, identifiant: form.identifiant.trim().toLowerCase(), password: res.tempPassword }
-    copied.value = false
     Object.assign(form, { identifiant: '', nom: '', role: 'atelier' })
     showForm.value = false
     await load()
@@ -54,16 +54,6 @@ async function create() {
     formError.value = e instanceof ApiError ? e.message : 'Création impossible.'
   } finally {
     creating.value = false
-  }
-}
-
-async function copyTemp() {
-  if (!temp.value) return
-  try {
-    await navigator.clipboard.writeText(temp.value.password)
-    copied.value = true
-  } catch {
-    copied.value = false
   }
 }
 
@@ -79,7 +69,6 @@ async function run(u: UserRow, kind: Kind) {
     if (kind === 'reset') {
       const res = await api<{ tempPassword: string }>(`/users/${u.id}/reset-password`, { method: 'POST' })
       temp.value = { nom: u.nom, identifiant: u.identifiant, password: res.tempPassword }
-      copied.value = false
     } else {
       await api(`/users/${u.id}/${kind}`, { method: 'POST' })
       notice.value = kind === 'disable' ? `Le compte de ${u.nom} est désactivé et ses appareils ont été déconnectés.` : `Le compte de ${u.nom} est réactivé.`
@@ -114,31 +103,24 @@ const CONFIRM: Record<Kind, string> = {
 <template>
   <div class="page-head">
     <div>
-      <span class="eyebrow">Arrivées, départs et droits</span>
-      <h1>Utilisateurs</h1>
+      <span class="eyebrow">Équipe</span>
+      <h1>Comptes</h1>
     </div>
     <button class="btn primary with-icon" type="button" @click="showForm = !showForm">
-      <AppIcon name="plus" />Ajouter un utilisateur
+      <AppIcon name="plus" />Ajouter un compte
     </button>
   </div>
 
-  <section v-if="temp" class="card temp" role="status">
-    <div>
-      <h2>Mot de passe temporaire de {{ temp.nom }}</h2>
-      <p class="muted">
-        Transmettez-le à la personne avec son identifiant <b class="mono">{{ temp.identifiant }}</b>. Elle devra le changer à sa première
-        connexion. Il ne sera plus affiché ensuite.
-      </p>
-    </div>
-    <div class="temp-pw">
-      <code class="mono">{{ temp.password }}</code>
-      <button class="btn with-icon" type="button" @click="copyTemp"><AppIcon :name="copied ? 'check' : 'copy'" />{{ copied ? 'Copié' : 'Copier' }}</button>
-      <button class="btn" type="button" @click="temp = null">J’ai noté</button>
-    </div>
-  </section>
+  <p class="muted intro">
+    Les comptes servent à se connecter. Pour un membre de l’équipe, passez plutôt par
+    <RouterLink :to="{ name: 'employees' }">Salariés</RouterLink> : la fiche et le compte sont créés ensemble. Ici, on gère aussi les comptes
+    techniques (administration, poste partagé de l’atelier).
+  </p>
+
+  <TempPasswordPanel v-if="temp" :nom="temp.nom" :identifiant="temp.identifiant" :password="temp.password" @done="temp = null" />
 
   <form v-if="showForm" class="card new" novalidate @submit.prevent="create">
-    <h2>Nouveau compte</h2>
+    <h2>Nouveau compte technique</h2>
     <p v-if="formError" class="alert bad" role="alert">{{ formError }}</p>
     <div class="new-grid">
       <div class="field">
@@ -171,7 +153,8 @@ const CONFIRM: Record<Kind, string> = {
       <table class="table">
         <thead>
           <tr>
-            <th>Personne</th>
+            <th>Compte</th>
+            <th>Salarié</th>
             <th>Rôle</th>
             <th>Statut</th>
             <th>Dernière connexion</th>
@@ -184,6 +167,10 @@ const CONFIRM: Record<Kind, string> = {
             <td>
               <b>{{ u.nom }}</b><span v-if="u.id === auth.user?.id" class="muted"> (vous)</span>
               <span class="sub mono">{{ u.identifiant }}</span>
+            </td>
+            <td>
+              <RouterLink v-if="u.employeeId" :to="{ name: 'employee', params: { id: u.employeeId } }">Voir la fiche</RouterLink>
+              <span v-else class="muted">Compte technique</span>
             </td>
             <td>
               <select
@@ -233,28 +220,6 @@ const CONFIRM: Record<Kind, string> = {
 </template>
 
 <style scoped>
-.temp {
-  padding: 20px;
-  display: grid;
-  gap: 12px;
-  border-color: var(--accent);
-}
-.temp-pw {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.temp-pw code {
-  font-size: 1.25rem;
-  font-weight: 600;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  padding: 8px 14px;
-  border-radius: 8px;
-  letter-spacing: 0.04em;
-  user-select: all;
-}
 .new {
   padding: 20px;
   display: grid;
@@ -286,6 +251,10 @@ tr.off td {
   text-align: right;
   vertical-align: middle;
   margin-right: 4px;
+}
+.intro {
+  font-size: 0.88rem;
+  max-width: 75ch;
 }
 .foot {
   font-size: 0.84rem;

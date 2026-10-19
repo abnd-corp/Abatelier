@@ -6,6 +6,7 @@ import { authPlugin } from './auth/plugin.js'
 import { authRoutes } from './routes/auth.js'
 import { userRoutes } from './routes/users.js'
 import { auditRoutes } from './routes/audit.js'
+import { employeeRoutes } from './routes/employees.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -71,6 +72,7 @@ export async function buildApp() {
   await app.register(authRoutes, { prefix: '/api/auth' })
   await app.register(userRoutes, { prefix: '/api/users' })
   await app.register(auditRoutes, { prefix: '/api/audit' })
+  await app.register(employeeRoutes, { prefix: '/api/employees' })
 
   return app
 }
