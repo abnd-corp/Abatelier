@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [dev, staging, main]
+
+jobs:
+  api:
+    name: API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - name: Vérification des types
+        run: npm run typecheck
+      - name: Compilation
+        run: npm run build
+      - name: Migrations à jour avec le schéma
+        run: |
+          npx drizzle-kit generate --name verification
+          if [ -n "$(git status --porcelain drizzle)" ]; then
+            echo "::error::api/src/db/schema.ts a changé sans migration. Lancez « cd api && npm run db:generate » et commitez le fichier SQL."
+            exit 1
+          fi
+
+  web:
+    name: Front
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Types et build
+        run: npm run build
+
+  docker:
+    name: Images Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --target prod -t patalu-api ./api
+      - run: docker build --target prod -t patalu-web ./web

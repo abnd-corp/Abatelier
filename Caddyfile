@@ -1,0 +1,13 @@
+# Certificat HTTPS obtenu et renouvelé automatiquement pour {$DOMAIN}.
+# Les requêtes HTTP sont redirigées vers HTTPS.
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		# Le navigateur refusera ensuite toute connexion non chiffrée pendant un an
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	reverse_proxy web:8080
+}

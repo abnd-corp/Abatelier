@@ -1,0 +1,22 @@
+#!/bin/sh
+# Refuse les push vers une branche protégée, et les noms de branche hors convention.
+# Le même contrôle existe côté GitHub (règles de branche) : ce hook évite juste d'attendre le refus.
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  branch=${remote_ref#refs/heads/}
+  case "$branch" in
+    main | staging | dev)
+      echo "✗ Push refusé vers « $branch » : cette branche ne change que par Pull Request."
+      echo "  feature/** → dev → staging → main (voir CONTRIBUTING.md)"
+      exit 1
+      ;;
+    feature/*) ;;
+    *)
+      # Suppression de branche distante ou tag : on laisse passer
+      case "$remote_ref" in refs/heads/*) ;; *) continue ;; esac
+      echo "✗ Nom de branche refusé : « $branch »."
+      echo "  Les branches de travail s'appellent feature/<nom>, par exemple feature/commandes."
+      exit 1
+      ;;
+  esac
+done

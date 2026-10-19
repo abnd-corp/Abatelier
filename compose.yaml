@@ -1,0 +1,78 @@
+# Base commune, durcie pour la production.
+#   Développement : docker compose up               (ajoute compose.override.yaml automatiquement)
+#   Production    : docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+name: patalu
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  db:
+    <<: *hardening
+    image: postgres:17-alpine
+    # Le script de démarrage de Postgres a besoin de ces droits pour préparer son dossier
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    environment:
+      POSTGRES_DB: patalu
+      POSTGRES_USER: patalu
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    tmpfs: [/var/run/postgresql, /tmp]
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patalu -d patalu"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    <<: *hardening
+    build: { context: ./api, target: prod }
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      ADMIN_PASSWORD_FILE: /run/secrets/admin_password
+      ADMIN_IDENTIFIANT: ${ADMIN_IDENTIFIANT:-atelier}
+      ADMIN_NOM: ${ADMIN_NOM:-Atelier}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
+      IDLE_TIMEOUT_HOURS: ${IDLE_TIMEOUT_HOURS:-12}
+    secrets: [db_password, admin_password]
+    tmpfs: [/tmp]
+    networks: [backend, frontend]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  web:
+    <<: *hardening
+    build: { context: ./web, target: prod }
+    depends_on:
+      api: { condition: service_healthy }
+    tmpfs: [/tmp, /var/cache/nginx]
+    networks: [frontend]
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  admin_password:
+    file: ./secrets/admin_password.txt
+
+networks:
+  # La base n'est joignable que par l'API, et n'a pas accès à Internet
+  backend:
+    internal: true
+  frontend: {}
+
+volumes:
+  pgdata:

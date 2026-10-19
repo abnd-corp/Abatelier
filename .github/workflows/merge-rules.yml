@@ -1,0 +1,49 @@
+name: Règles de merge
+
+# Chemin imposé : feature/** → dev → staging → main.
+# Ce contrôle est obligatoire pour merger (règles de branche GitHub).
+on:
+  pull_request:
+    branches: [dev, staging, main]
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  source:
+    name: Branche source autorisée
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier la branche source
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          case "$BASE" in
+            dev)     allowed='feature/*'; ok=false; case "$HEAD" in feature/*) ok=true ;; esac ;;
+            staging) allowed='dev';       ok=false; [ "$HEAD" = dev ] && ok=true ;;
+            main)    allowed='staging';   ok=false; [ "$HEAD" = staging ] && ok=true ;;
+          esac
+          if [ "$ok" != true ]; then
+            echo "::error::« $HEAD » ne peut pas être mergée dans « $BASE ». Seule « $allowed » est acceptée (feature/** → dev → staging → main)."
+            exit 1
+          fi
+          echo "✓ $HEAD → $BASE autorisé"
+
+      # Une promotion ne doit rien apporter qui ne soit pas déjà passé par l'étape précédente
+      - name: Vérifier que la promotion est à jour
+        if: github.base_ref != 'dev'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Comparer avec la branche cible
+        if: github.base_ref != 'dev'
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          if ! git merge-base --is-ancestor "origin/$BASE" "origin/$HEAD" && \
+             [ -n "$(git log --no-merges --format=%H "origin/$HEAD..origin/$BASE")" ]; then
+            echo "::error::« $BASE » contient des commits absents de « $HEAD ». Quelqu'un a modifié « $BASE » sans passer par « $HEAD » : il faut d'abord les ramener dans dev."
+            git log --no-merges --oneline "origin/$HEAD..origin/$BASE"
+            exit 1
+          fi
+          echo "✓ $HEAD contient tout le travail de $BASE"

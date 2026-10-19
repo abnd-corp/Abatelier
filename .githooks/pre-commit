@@ -1,0 +1,14 @@
+#!/bin/sh
+# Refuse les commits directement sur une branche protégée.
+# Installé par « make setup » (git config core.hooksPath .githooks).
+
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+case "$branch" in
+  main | staging | dev)
+    echo "✗ Commit refusé : la branche « $branch » est protégée."
+    echo "  Travaillez sur une branche de fonctionnalité :"
+    echo "    make feature nom=ma-fonction"
+    exit 1
+    ;;
+esac

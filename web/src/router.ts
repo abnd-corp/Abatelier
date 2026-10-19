@@ -1,0 +1,49 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore, type Permission } from '@/stores/auth'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    public?: boolean
+    perm?: Permission
+    title?: string
+  }
+}
+
+export const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: '/connexion', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { public: true, title: 'Connexion' } },
+    {
+      path: '/',
+      component: () => import('@/components/AppLayout.vue'),
+      children: [
+        { path: '', name: 'dashboard', component: () => import('@/views/DashboardView.vue'), meta: { title: 'Tableau de bord' } },
+        { path: 'mon-compte', name: 'account', component: () => import('@/views/AccountView.vue'), meta: { title: 'Mon compte' } },
+        {
+          path: 'utilisateurs',
+          name: 'users',
+          component: () => import('@/views/UsersView.vue'),
+          meta: { perm: 'users.manage', title: 'Utilisateurs' },
+        },
+        { path: 'journal', name: 'audit', component: () => import('@/views/AuditView.vue'), meta: { perm: 'audit.read', title: 'Journal' } },
+      ],
+    },
+    { path: '/:pathMatch(.*)*', redirect: '/' },
+  ],
+})
+
+router.beforeEach(async (to) => {
+  const auth = useAuthStore()
+  await auth.ensureLoaded()
+  if (!to.meta.public && !auth.isLoggedIn) {
+    return { name: 'login', query: to.fullPath !== '/' ? { redirect: to.fullPath } : {} }
+  }
+  if (to.name === 'login' && auth.isLoggedIn) return { name: 'dashboard' }
+  // Mot de passe temporaire : seule la page « Mon compte » est accessible
+  if (auth.user?.mustChangePassword && to.name !== 'account' && !to.meta.public) return { name: 'account' }
+  if (to.meta.perm && !auth.can(to.meta.perm)) return { name: 'dashboard' }
+})
+
+router.afterEach((to) => {
+  document.title = `${to.meta.title ? to.meta.title + ' · ' : ''}Atelier · Pliage sur mesure`
+})

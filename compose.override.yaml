@@ -1,0 +1,33 @@
+# Environnement de développement, chargé automatiquement par « docker compose up ».
+# Le code est monté depuis la machine : l'API et le front se rechargent à chaque modification.
+services:
+  db:
+    networks: [backend, devdb]
+    # Base accessible depuis la machine (DBeaver, psql…), jamais depuis le réseau
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+
+  api:
+    build: { target: dev }
+    read_only: false
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./api/src:/app/src:ro
+      - ./api/drizzle:/app/drizzle:ro
+
+  web:
+    build: { target: dev }
+    read_only: false
+    environment:
+      VITE_API_TARGET: http://api:3000
+    volumes:
+      - ./web/src:/app/src:ro
+      - ./web/public:/app/public:ro
+      - ./web/index.html:/app/index.html:ro
+      - ./web/vite.config.ts:/app/vite.config.ts:ro
+    ports:
+      - "127.0.0.1:${WEB_PORT:-5173}:5173"
+
+networks:
+  devdb: {}
