@@ -48,12 +48,16 @@ const activeName = computed(() => (route.meta.menu as string | undefined) ?? (ro
 
 // Menu réduit (icônes seules) : mémorisé dans le navigateur
 const KEY = 'aps-menu-reduit'
+// Sans choix enregistré, le menu démarre réduit sur les petits écrans d'ordinateur et les tablettes en paysage
 const read = () => {
+  let saved: string | null = null
   try {
-    return localStorage.getItem(KEY) === '1'
+    saved = localStorage.getItem(KEY)
   } catch {
-    return false
+    // stockage indisponible : on se base sur la largeur
   }
+  if (saved !== null) return saved === '1'
+  return typeof window !== 'undefined' && window.matchMedia?.('(max-width: 1200px)').matches === true
 }
 const collapsed = ref(read())
 watch(collapsed, (v) => {
@@ -427,6 +431,16 @@ async function logout() {
 @media (prefers-reduced-motion: reduce) {
   .sidebar {
     transition: none;
+  }
+}
+/* Écrans tactiles : cibles d'au moins 44 px */
+@media (pointer: coarse) {
+  .item {
+    min-height: 44px;
+  }
+  .burger {
+    width: 44px;
+    height: 44px;
   }
 }
 </style>

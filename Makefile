@@ -4,7 +4,7 @@ E2E = docker compose -p patalu-e2e -f compose.yaml -f compose.e2e.yaml
 BASE = docker compose -f compose.yaml
 BK = $(BASE) exec -T backup /bin/sh /opt/backup/backup.sh
 
-.PHONY: help setup secrets dev dev-d down logs prod prod-down check test test-api test-web e2e e2e-up e2e-down backup backups backup-verify restore backup-export feature pr promote-staging promote-main
+.PHONY: help setup secrets dev dev-d down logs prod prod-down check test test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
 
 help: ## Liste les commandes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -54,6 +54,12 @@ test-web: ## Tests des composants Vue
 e2e: ## Tests Playwright Chromium + Firefox sur une stack de prod jetable
 	$(E2E) up -d --build --wait
 	cd e2e && npx playwright test; status=$$?; cd .. && $(E2E) down -v; exit $$status
+
+apercu: ## Captures de toutes les pages (téléphone, tablette, ordinateur, clair et sombre) : apercus/index.html
+	rm -rf apercus
+	$(E2E) up -d --build --wait
+	cd e2e && npx playwright test -c apercu.config.ts; status=$$?; cd .. && $(E2E) down -v; exit $$status
+	@echo "Ouvrir : $$(pwd)/apercus/index.html"
 
 e2e-up: ## Démarre seulement la stack e2e (pour « cd e2e && npm run test:ui »)
 	$(E2E) up -d --build --wait

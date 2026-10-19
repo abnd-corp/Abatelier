@@ -318,3 +318,34 @@ button {
 .btn svg {
   flex: none;
 }
+
+/* Écrans tactiles : boutons plus grands, et champs en 16 px pour éviter le zoom automatique d'iOS */
+@media (pointer: coarse) {
+  .btn {
+    min-height: 44px;
+  }
+  .btn.small {
+    min-height: 36px;
+  }
+  .input,
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+  .chip {
+    min-height: 36px;
+  }
+}
+/* Sur téléphone, les colonnes secondaires des tableaux sont masquées */
+@media (max-width: 640px) {
+  .table .hide-sm {
+    display: none;
+  }
+  .table.fits-sm {
+    min-width: 0;
+  }
+  .page-head .btn {
+    width: 100%;
+  }
+}

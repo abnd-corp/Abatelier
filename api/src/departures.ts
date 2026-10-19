@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull, lte } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, isNull, lte } from 'drizzle-orm'
 import { db } from './db/index.js'
 import { employees, users } from './db/schema.js'
 import { deleteUserSessions } from './auth/session.js'
@@ -13,19 +13,33 @@ export const todayParis = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Eu
  */
 export async function applyDepartures() {
   const due = await db
-    .select({ userId: users.id, identifiant: users.identifiant, nom: users.nom, dateSortie: employees.dateSortie })
+    .select({ userId: users.id, dateSortie: employees.dateSortie })
     .from(employees)
     .innerJoin(users, eq(users.id, employees.userId))
     .where(and(isNotNull(employees.dateSortie), lte(employees.dateSortie, todayParis()), isNull(users.disabledAt)))
+  if (!due.length) return 0
 
-  for (const u of due) {
-    await db.update(users).set({ disabledAt: new Date() }).where(eq(users.id, u.userId))
-    const closed = await deleteUserSessions(u.userId)
+  // Mise à jour conditionnelle : si deux appels tournent en même temps, un seul désactive chaque compte
+  // et l'écrit au journal (le second ne trouve plus de compte actif).
+  const disabled = await db
+    .update(users)
+    .set({ disabledAt: new Date() })
+    .where(and(inArray(users.id, due.map((d) => d.userId)), isNull(users.disabledAt)))
+    .returning({ id: users.id, identifiant: users.identifiant, nom: users.nom })
+
+  for (const u of disabled) {
+    const closed = await deleteUserSessions(u.id)
     await auditSystem('user.disabled', {
       targetType: 'user',
-      targetId: u.userId,
-      details: { identifiant: u.identifiant, nom: u.nom, raison: 'date de sortie', dateSortie: u.dateSortie, sessionsFermees: closed },
+      targetId: u.id,
+      details: {
+        identifiant: u.identifiant,
+        nom: u.nom,
+        raison: 'date de sortie',
+        dateSortie: due.find((d) => d.userId === u.id)?.dateSortie,
+        sessionsFermees: closed,
+      },
     })
   }
-  return due.length
+  return disabled.length
 }

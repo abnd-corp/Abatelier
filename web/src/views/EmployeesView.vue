@@ -95,7 +95,7 @@ const FILTERS: { value: Statut; label: string; count: () => number | null }[] = 
     </div>
 
     <div v-else class="table-wrap">
-      <table class="table" :aria-busy="loading">
+      <table class="table fits-sm" :aria-busy="loading">
         <thead>
           <tr>
             <th>Salarié</th>
@@ -207,12 +207,6 @@ tr.click:hover td {
 }
 /* Sur téléphone : nom et compte seulement, le reste est sur la fiche */
 @media (max-width: 640px) {
-  .hide-sm {
-    display: none;
-  }
-  .table {
-    min-width: 0;
-  }
   .acc {
     display: block;
     margin: 0 0 4px;

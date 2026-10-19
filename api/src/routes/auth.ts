@@ -102,7 +102,7 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.post(
     '/password',
-    { preHandler: requireAuth, config: { allowWhilePasswordChange: true, rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    { preHandler: requireAuth, config: { allowWhilePasswordChange: true, rateLimit: { max: env.LOGIN_RATE_LIMIT, timeWindow: '1 minute' } } },
     async (req, reply) => {
       const parsed = passwordBody.safeParse(req.body)
       if (!parsed.success) return reply.code(400).send({ error: 'Mot de passe actuel et nouveau mot de passe requis.' })

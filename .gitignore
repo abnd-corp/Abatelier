@@ -3,6 +3,7 @@ dist
 .env
 secrets/
 backups/
+apercus/
 *.tsbuildinfo
 .DS_Store
 

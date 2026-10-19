@@ -223,6 +223,15 @@ describe('Date de sortie', () => {
     expect((await client(app).post('/api/auth/login', { identifiant: 'paul', password: tempPassword })).statusCode).toBe(403)
   })
 
+  it('deux applications simultanées ne désactivent et ne notent le compte qu’une fois', async () => {
+    const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })).json()
+    await db.update(employees).set({ dateSortie: shift(0) }).where(eq(employees.id, id))
+    const counts = await Promise.all([applyDepartures(), applyDepartures(), applyDepartures()])
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(1)
+    const entries = await db.select().from(auditLog).where(eq(auditLog.action, 'user.disabled'))
+    expect(entries).toHaveLength(1)
+  })
+
   it('ne touche pas aux comptes sans fiche salarié', async () => {
     await createUser({ identifiant: 'poste-atelier' })
     expect(await applyDepartures()).toBe(0)

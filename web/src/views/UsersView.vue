@@ -150,15 +150,15 @@ const CONFIRM: Record<Kind, string> = {
 
   <section class="card">
     <div class="table-wrap">
-      <table class="table">
+      <table class="table fits-sm">
         <thead>
           <tr>
             <th>Compte</th>
-            <th>Salarié</th>
-            <th>Rôle</th>
+            <th class="hide-sm">Salarié</th>
+            <th class="hide-sm">Rôle</th>
             <th>Statut</th>
-            <th>Dernière connexion</th>
-            <th class="n">Appareils</th>
+            <th class="hide-sm">Dernière connexion</th>
+            <th class="n hide-sm">Appareils</th>
             <th class="n">Actions</th>
           </tr>
         </thead>
@@ -168,11 +168,11 @@ const CONFIRM: Record<Kind, string> = {
               <b>{{ u.nom }}</b><span v-if="u.id === auth.user?.id" class="muted"> (vous)</span>
               <span class="sub mono">{{ u.identifiant }}</span>
             </td>
-            <td>
+            <td class="hide-sm">
               <RouterLink v-if="u.employeeId" :to="{ name: 'employee', params: { id: u.employeeId } }">Voir la fiche</RouterLink>
               <span v-else class="muted">Compte technique</span>
             </td>
-            <td>
+            <td class="hide-sm">
               <select
                 class="input compact"
                 :value="u.role"
@@ -189,8 +189,8 @@ const CONFIRM: Record<Kind, string> = {
               <span v-else-if="u.mustChangePassword" class="pill warn">Mot de passe à changer</span>
               <span v-else class="pill ok">Actif</span>
             </td>
-            <td :title="u.lastLoginAt ? dateTime(u.lastLoginAt) : ''">{{ relative(u.lastLoginAt) }}</td>
-            <td class="n mono">{{ u.activeSessions }}</td>
+            <td class="hide-sm" :title="u.lastLoginAt ? dateTime(u.lastLoginAt) : ''">{{ relative(u.lastLoginAt) }}</td>
+            <td class="n mono hide-sm">{{ u.activeSessions }}</td>
             <td class="n actions">
               <template v-if="pending?.id === u.id">
                 <span class="confirm">{{ CONFIRM[pending.kind] }}</span>
@@ -239,6 +239,14 @@ tr.off td {
 }
 .actions {
   white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .actions {
+    white-space: normal;
+  }
+  .actions .btn {
+    margin: 2px 0 2px 4px;
+  }
 }
 .actions .btn {
   margin-left: 4px;

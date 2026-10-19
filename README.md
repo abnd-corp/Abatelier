@@ -27,10 +27,11 @@ Le premier compte, administrateur, s'appelle `ADMIN_IDENTIFIANT` (par défaut `a
 ```bash
 make test-api   # 104 tests des routes API, sur la base patalu_test (la base de dev doit tourner)
 make test-web   # 73 tests des composants Vue
-make e2e        # 22 parcours Playwright × 2 navigateurs, sur une stack de production jetable
+make e2e        # Playwright sur une stack de prod jetable : Chromium et Firefox, plus téléphone et tablette pour le responsive
+make apercu     # captures de toutes les pages (téléphone, tablette, ordinateur, clair et sombre) : apercus/index.html
 ```
 
-Chaque élément du site doit être couvert par des tests et des contrôles de sécurité avant d'être mergé. Les règles, les branches et les conventions sont dans [CONTRIBUTING.md](CONTRIBUTING.md).
+Chaque élément du site doit être couvert par des tests et des contrôles de sécurité avant d'être mergé. Les règles, les branches et les conventions sont dans [CONTRIBUTING.md](CONTRIBUTING.md). La suite du projet est dans la [feuille de route](docs/feuille-de-route.md).
 
 ## Production et staging
 

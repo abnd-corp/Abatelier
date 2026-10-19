@@ -67,13 +67,13 @@ onMounted(async () => {
     </div>
     <p v-if="error" class="alert bad" role="alert">{{ error }}</p>
     <div class="table-wrap">
-      <table class="table">
+      <table class="table fits-sm">
         <thead>
           <tr>
             <th>Date</th>
             <th>Qui</th>
             <th>Action</th>
-            <th>Appareil</th>
+            <th class="hide-sm">Appareil</th>
           </tr>
         </thead>
         <tbody>
@@ -88,7 +88,7 @@ onMounted(async () => {
             <td>
               <span class="tone" :data-tone="describe(e).tone">{{ describe(e).text }}</span>
             </td>
-            <td>
+            <td class="hide-sm">
               {{ e.device }}<span class="sub mono">{{ e.ip }}</span>
             </td>
           </tr>
