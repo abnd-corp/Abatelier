@@ -41,6 +41,7 @@
 - [x] Suivi : devis émis / envoyé / accepté / refusé / expiré ; facture à envoyer / envoyée / en retard / payée (date et mode) / annulée
 - [x] Page « Devis et factures » (onglets, chiffres clés, filtres, recherche), fiche d'un document, section sur la fiche commande ; réservé à la direction (`billing.manage`), invisible pour la RH (journal compris)
 - [ ] Avoir partiel (une ligne, un montant)
+- [ ] **Facturation électronique obligatoire** (réforme française) : les PDF actuels ne suffisent pas. À faire : PDF au format Factur-X (données structurées intégrées), connexion à une plateforme agréée (PDP) pour transmettre les factures, retour des statuts (déposée, rejetée, encaissée), e-reporting des ventes aux particuliers, mentions obligatoires (SIREN du client, adresse de livraison, nature de l'opération). Réception pour tous depuis le 1er septembre 2026 ; émission au 1er septembre 2027 pour une PME ou micro-entreprise. Dates et choix de la plateforme à valider avec leur comptable.
 - [ ] Remise exceptionnelle sur une commande, relances des factures en retard (avec l'envoi d'e-mails)
 - [ ] Mentions légales types à faire valider par leur comptable
 
