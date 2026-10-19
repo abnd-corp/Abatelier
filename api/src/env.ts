@@ -42,7 +42,7 @@ const schema = z.object({
   // Premier compte, créé au démarrage si la table des utilisateurs est vide
   ADMIN_IDENTIFIANT: z.string().min(3).optional(),
   ADMIN_PASSWORD: z.string().min(12).optional(),
-  ADMIN_NOM: z.string().default('Atelier'),
+  ADMIN_NOM: z.string().default('Administrateur'),
 })
 
 const parsed = schema.safeParse({ ...process.env, DB_PASSWORD: secret('DB_PASSWORD'), ADMIN_PASSWORD: secret('ADMIN_PASSWORD') })

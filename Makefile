@@ -1,7 +1,10 @@
 PROD = docker compose -f compose.yaml -f compose.prod.yaml
 E2E = docker compose -p patalu-e2e -f compose.yaml -f compose.e2e.yaml
+# Même projet « patalu » en dev et en prod : ces commandes marchent sur les deux
+BASE = docker compose -f compose.yaml
+BK = $(BASE) exec -T backup /bin/sh /opt/backup/backup.sh
 
-.PHONY: help setup secrets dev dev-d down logs prod prod-down check test test-api test-web e2e e2e-up e2e-down feature pr promote-staging promote-main
+.PHONY: help setup secrets dev dev-d down logs prod prod-down check test test-api test-web e2e e2e-up e2e-down backup backups backup-verify restore backup-export feature pr promote-staging promote-main
 
 help: ## Liste les commandes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -57,6 +60,26 @@ e2e-up: ## Démarre seulement la stack e2e (pour « cd e2e && npm run test:ui »
 
 e2e-down: ## Supprime la stack e2e
 	$(E2E) down -v
+
+backup: ## Sauvegarde la base tout de suite
+	$(BK) now manuel
+
+backups: ## Liste les sauvegardes
+	$(BK) list
+
+backup-verify: ## Restaure la dernière sauvegarde dans une base temporaire et vérifie
+	$(BK) verify
+
+restore: ## Restaure une sauvegarde : make restore fichier=patalu-AAAA-MM-JJ_HHMMSS-manuel.dump
+	@test -n "$(fichier)" || { echo "Usage : make restore fichier=… (voir « make backups »)"; exit 1; }
+	$(BK) check "$(fichier)"
+	$(BASE) stop api
+	$(BK) restore "$(fichier)"; status=$$?; $(BASE) start api; exit $$status
+
+backup-export: ## Copie toutes les sauvegardes dans ./backups (pour les mettre ailleurs)
+	mkdir -p backups
+	$(BASE) cp backup:/backups/. ./backups/
+	@echo "Copiées dans ./backups : à mettre sur un autre support (disque, NAS, cloud)."
 
 feature: ## Crée une branche de travail depuis dev : make feature nom=commandes
 	@test -n "$(nom)" || { echo "Usage : make feature nom=ma-fonction"; exit 1; }

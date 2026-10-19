@@ -4,7 +4,7 @@ import { test as base, expect, type APIRequestContext, type Page } from '@playwr
 export { expect }
 
 export const ADMIN = {
-  identifiant: process.env.E2E_ADMIN_IDENTIFIANT ?? 'atelier',
+  identifiant: process.env.E2E_ADMIN_IDENTIFIANT ?? 'admin',
   password: process.env.E2E_ADMIN_PASSWORD ?? readFileSync(new URL('../../secrets/admin_password.txt', import.meta.url), 'utf8').trim(),
 }
 

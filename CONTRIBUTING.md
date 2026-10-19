@@ -9,7 +9,7 @@ feature/xxx ──PR──▶ dev ──PR──▶ staging ──PR──▶ ma
 
 | Branche cible | Seule source acceptée | Méthode de merge |
 |---|---|---|
-| `dev` | `feature/**` | Squash : un commit propre par fonctionnalité |
+| `dev` | `feature/**` (et `dependabot/**`) | Squash : un commit propre par fonctionnalité |
 | `staging` | `dev` | Merge commit |
 | `main` | `staging` | Merge commit |
 
@@ -24,6 +24,7 @@ feature/xxx ──PR──▶ dev ──PR──▶ staging ──PR──▶ ma
 | Front | Types et build |
 | Tests front | Composants Vue |
 | E2E (Chromium + Firefox) | Parcours complets sur une stack de production jetable |
+| Sauvegardes | Sauvegarde, vérification, puis restauration réelle après perte de données |
 | Sécurité | Failles dans les dépendances, secrets dans l'historique Git |
 | Branche source autorisée | Respect du chemin feature → dev → staging → main |
 
@@ -61,3 +62,12 @@ Après `make setup`, les hooks de `.githooks/` font deux choses :
 - ils refusent un push vers ces branches, ou vers une branche qui ne s'appelle pas `feature/…`.
 
 Les mêmes règles sont appliquées par GitHub. Les hooks évitent seulement d'attendre le refus du serveur.
+
+## Mises à jour des dépendances (Dependabot)
+
+Chaque lundi matin, Dependabot ouvre des PR vers `dev` :
+- une PR groupée par partie (api, web, e2e) pour les mises à jour mineures ;
+- une PR par mise à jour majeure, à lire avec attention ;
+- les images Docker et les GitHub Actions sont aussi suivies.
+
+Les failles de sécurité déclenchent une PR immédiate, sans attendre le lundi. Ces PR passent par la même CI : si tout est vert, on peut les merger (squash) dans `dev`, puis elles suivent le chemin habituel jusqu'en production.

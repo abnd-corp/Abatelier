@@ -132,6 +132,48 @@ jobs:
           path: e2e/playwright-report
           retention-days: 7
 
+  backup:
+    name: Sauvegardes
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE: docker compose -p patalu-ci -f compose.yaml
+    steps:
+      - uses: actions/checkout@v4
+      - name: Secrets jetables
+        run: ./scripts/init-secrets.sh
+      - name: Base, API et container de sauvegarde
+        run: $COMPOSE up -d --build --wait db api backup
+      - name: Sauvegarder, vérifier, perdre les données, restaurer
+        run: |
+          BK="$COMPOSE exec -T backup /bin/sh /opt/backup/backup.sh"
+          Q="$COMPOSE exec -T db psql -U patalu -d patalu -Atc"
+
+          $BK now ci
+          $COMPOSE exec -T -e BACKUP_VERIFY_STRICT=1 backup /bin/sh /opt/backup/backup.sh verify
+
+          avant=$($Q "select count(*) from users")
+          $Q "delete from users"
+          f=$($BK list | grep -o 'patalu-[^ ]*-ci.dump' | head -1)
+          $BK check "$f"
+          $BK restore "$f"
+          apres=$($Q "select count(*) from users")
+          if [ "$avant" != "$apres" ] || [ "$apres" -lt 1 ]; then
+            echo "::error::Restauration incomplète : $avant utilisateur(s) avant, $apres après."
+            exit 1
+          fi
+          echo "✓ $apres utilisateur(s) retrouvé(s) après restauration"
+
+          # Un fichier abîmé doit être refusé avant toute restauration
+          $COMPOSE exec -T backup sh -c "echo abime >> /backups/daily/$f"
+          if $BK check "$f"; then
+            echo "::error::Un fichier de sauvegarde abîmé a été accepté."
+            exit 1
+          fi
+          echo "✓ Fichier abîmé refusé"
+      - name: Logs des containers
+        if: failure()
+        run: $COMPOSE logs --no-color
+
   security:
     name: Sécurité
     runs-on: ubuntu-latest

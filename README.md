@@ -18,7 +18,7 @@ make setup     # hooks Git, .env, secrets/ et dépendances
 make dev       # http://localhost:5173 : l'API et le front se rechargent à chaque modification
 ```
 
-Le premier compte s'appelle `ADMIN_IDENTIFIANT` (par défaut `atelier`). Son mot de passe est dans `secrets/admin_password.txt`. Le compte est créé au premier démarrage, si la base est vide.
+Le premier compte, administrateur, s'appelle `ADMIN_IDENTIFIANT` (par défaut `admin`). Son mot de passe est dans `secrets/admin_password.txt`. Le compte est créé au premier démarrage, si la base est vide.
 
 `make help` liste toutes les commandes. En dev, l'API et le front se rechargent tout seuls à chaque modification. Il faut relancer `make dev` seulement après l'ajout d'un paquet npm, ou après une modification d'un Dockerfile ou d'un compose.
 
@@ -40,6 +40,33 @@ Sur le serveur :
 3. Lancer `make prod`.
 
 Caddy obtient le certificat HTTPS tout seul, et le cookie de session passe en `Secure` (`__Host-`). Le staging se déploie de la même façon, sur une autre machine ou un autre domaine.
+
+## Sauvegardes
+
+Le container `backup` sauvegarde la base **chaque nuit à 2h30** (heure de Paris), en dev comme en prod :
+- chaque fichier est vérifié et accompagné d'une empreinte SHA-256 ;
+- on garde les 14 dernières quotidiennes et les 8 dernières hebdomadaires (celles du dimanche) ;
+- au démarrage, si la dernière sauvegarde a plus de 24 h, une sauvegarde est faite tout de suite.
+
+```bash
+make backup                                  # sauvegarde immédiate
+make backups                                 # liste
+make backup-verify                           # restaure la dernière dans une base temporaire et compare
+make restore fichier=patalu-…-manuel.dump    # vérifie le fichier, sauvegarde l'état actuel, puis restaure
+make backup-export                           # copie tout dans ./backups
+```
+
+⚠️ **Les sauvegardes sont sur la même machine que la base.** Si le serveur est perdu, elles le sont aussi. En production, il faut copier régulièrement `./backups` ailleurs : un autre disque, un NAS ou un stockage en ligne.
+
+La CI vérifie à chaque PR qu'une sauvegarde se restaure vraiment après une perte de données, et qu'un fichier abîmé est refusé.
+
+## Comptes
+
+| Compte | Rôle | Usage |
+|---|---|---|
+| `admin` | Administrateur | Uniquement pour gérer les comptes et lire le journal. Créé au premier démarrage. |
+| Un compte par personne | Atelier | Usage quotidien. Chaque action est tracée au nom de la personne. |
+| `atelier` (facultatif) | Atelier | Compte commun, par exemple pour le poste de l'atelier. |
 
 ## Modifier la base
 
