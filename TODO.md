@@ -43,7 +43,10 @@ Les clients arriveront surtout par le panier du site (coordonnées saisies à la
 
 ### Stock et découpe (ensuite)
 Le pliage commence par de la découpe : chaque pièce est une bande de « développé × longueur » prise dans une feuille.
-- [ ] Feuilles en stock par matière, épaisseur, coloris et **format** (ex. 1250 × 3000 mm) ; accessoires
+- [ ] **Formats de feuilles paramétrables** par la direction (par matière : largeur × longueur, ex. 1250 × 3000 mm), plus les réglages de découpe (taille mini d'une chute gardée, perte par coupe, sens de laquage), avec des valeurs par défaut modifiables
+- [ ] Feuilles en stock par matière, épaisseur, coloris et format ; chutes avec leurs dimensions ; accessoires
+- [ ] **Achats de matière première** : fournisseurs, bons de commande (feuilles, accessoires), réception qui fait entrer le stock (quantité, prix d'achat), suivi « commandé / reçu » : on sait ce qu'on a et ce qui arrive
+- [ ] Vue « Matières premières » : stock disponible, réservé par les commandes validées, en commande chez les fournisseurs
 - [ ] **Plan de découpe calculé** (pas estimé) : placer les bandes de chaque commande dans les feuilles (découpe à la cisaille, en guillotine), nombre de feuilles nécessaires, schéma par feuille
 - [ ] **Chutes** : chaque chute a ses dimensions. Au-dessus d'une taille minimum, elle est remise en stock et réutilisée en priorité par les plans suivants ; en dessous, elle est perdue. Taux de chute par commande et par mois.
 - [ ] Décompte automatique quand une commande passe « en fabrication » (feuilles entamées, chutes créées), mouvements tracés, alertes de stock bas
