@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api, ApiError } from '@/api'
+import { api } from '@/api'
 
 export type Role = 'admin' | 'atelier'
 export type Permission = 'users.manage' | 'audit.read'
@@ -26,9 +26,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function ensureLoaded() {
     if (loaded.value) return
     try {
-      user.value = (await api<{ user: User }>('/auth/me')).user
+      user.value = (await api<{ user: User | null }>('/auth/session')).user
     } catch (e) {
-      if (!(e instanceof ApiError && e.status === 401)) console.error(e)
+      console.error(e)
       user.value = null
     }
     loaded.value = true

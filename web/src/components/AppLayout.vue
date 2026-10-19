@@ -28,7 +28,7 @@ async function logout() {
     <div class="wrap bar">
       <RouterLink :to="{ name: 'dashboard' }" class="brand">
         <BrandMark class="mark" />
-        <b>Pliage sur mesure</b>
+        <b>Alu Pliage Service</b>
       </RouterLink>
       <nav class="nav" aria-label="Navigation principale">
         <RouterLink v-for="l in links" :key="l.label" :to="l.to" class="nav-link" exact-active-class="active">
@@ -37,7 +37,13 @@ async function logout() {
         </RouterLink>
       </nav>
       <div class="me">
-        <RouterLink :to="{ name: 'account' }" class="nav-link" exact-active-class="active" title="Mon compte">
+        <RouterLink
+          :to="{ name: 'account' }"
+          class="nav-link"
+          exact-active-class="active"
+          :aria-label="`Mon compte : ${auth.user?.nom}`"
+          title="Mon compte"
+        >
           <AppIcon name="user" />
           <span class="me-name">{{ auth.user?.nom }}</span>
         </RouterLink>

@@ -19,6 +19,7 @@ import {
 } from '../auth/session.js'
 import { clearFailures, failureDelayMs, getLock, lockedMessage, MAX_FAILURES, recordFailure } from '../auth/throttle.js'
 import { audit, describeDevice, userAgentOf } from '../audit.js'
+import { env } from '../env.js'
 
 export const publicUser = (u: SessionUser) => ({
   id: u.id,
@@ -44,7 +45,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.post(
     '/login',
     // Limite par adresse IP, en plus du blocage par identifiant
-    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    { config: { rateLimit: { max: env.LOGIN_RATE_LIMIT, timeWindow: '1 minute' } } },
     async (req, reply) => {
       const parsed = loginBody.safeParse(req.body)
       if (!parsed.success) return reply.code(400).send({ error: 'Identifiant et mot de passe requis.' })
@@ -94,6 +95,10 @@ export async function authRoutes(app: FastifyInstance) {
   app.get('/me', { preHandler: requireAuth, config: { allowWhilePasswordChange: true } }, async (req) => ({
     user: publicUser(req.user!),
   }))
+
+  // Utilisée par le front au chargement : répond toujours 200, avec user à null sans session,
+  // pour ne pas afficher d'erreur 401 dans la console à chaque visite de la page de connexion.
+  app.get('/session', async (req) => ({ user: req.user ? publicUser(req.user) : null }))
 
   app.post(
     '/password',

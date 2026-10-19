@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/api'
 import BrandMark from '@/components/BrandMark.vue'
 import PasswordInput from '@/components/PasswordInput.vue'
+import { safeRedirect } from '@/lib/redirect'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -22,8 +23,7 @@ async function submit() {
   loading.value = true
   try {
     await auth.login(identifiant.value, password.value, remember.value)
-    const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') ? route.query.redirect : '/'
-    await router.replace(auth.user?.mustChangePassword ? { name: 'account' } : redirect)
+    await router.replace(auth.user?.mustChangePassword ? { name: 'account' } : safeRedirect(route.query.redirect))
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : 'Impossible de joindre le serveur. Vérifiez votre connexion.'
     password.value = ''
@@ -39,7 +39,7 @@ async function submit() {
       <div class="brand">
         <BrandMark class="mark" />
         <div>
-          <b>Pliage sur mesure</b>
+          <b>Alu Pliage Service</b>
           <span class="muted">Espace atelier</span>
         </div>
       </div>

@@ -4,3 +4,6 @@ dist
 secrets/
 *.tsbuildinfo
 .DS_Store
+
+# Informations privées sur l’entreprise (jamais commitées : le dépôt est public)
+entreprise/

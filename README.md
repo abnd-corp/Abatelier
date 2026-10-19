@@ -7,6 +7,9 @@
 | `compose.yaml` | Base commune (Postgres 17, API, front), durcie |
 | `compose.override.yaml` | Ajouts pour le dev, chargés automatiquement |
 | `compose.prod.yaml` | Ajouts pour la prod et le staging : Caddy et HTTPS |
+| `compose.e2e.yaml` | Stack de production jetable pour les tests Playwright |
+| `e2e/` | Tests Playwright (Chromium + Firefox) |
+| `entreprise/` | Infos privées sur l'entreprise. **Jamais commité.** |
 
 ## Démarrer
 
@@ -17,7 +20,17 @@ make dev       # http://localhost:5173 : l'API et le front se rechargent à chaq
 
 Le premier compte s'appelle `ADMIN_IDENTIFIANT` (par défaut `atelier`). Son mot de passe est dans `secrets/admin_password.txt`. Le compte est créé au premier démarrage, si la base est vide.
 
-`make help` liste toutes les commandes. Le fonctionnement des branches est décrit dans [CONTRIBUTING.md](CONTRIBUTING.md).
+`make help` liste toutes les commandes. En dev, l'API et le front se rechargent tout seuls à chaque modification. Il faut relancer `make dev` seulement après l'ajout d'un paquet npm, ou après une modification d'un Dockerfile ou d'un compose.
+
+## Tests
+
+```bash
+make test-api   # 76 tests des routes API, sur la base patalu_test (la base de dev doit tourner)
+make test-web   # 46 tests des composants Vue
+make e2e        # 16 parcours Playwright × 2 navigateurs, sur une stack de production jetable
+```
+
+Chaque élément du site doit être couvert par des tests et des contrôles de sécurité avant d'être mergé. Le fonctionnement des branches est décrit dans [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Production et staging
 

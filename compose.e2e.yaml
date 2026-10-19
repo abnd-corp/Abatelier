@@ -1,0 +1,11 @@
+# Stack jetable pour les tests Playwright : images de production, base vierge à chaque lancement.
+#   make e2e
+services:
+  api:
+    environment:
+      # Les tests se connectent beaucoup depuis la même IP : on relève la limite et on raccourcit les délais
+      LOGIN_RATE_LIMIT: "1000"
+      LOGIN_DELAY_BASE_MS: "50"
+  web:
+    ports:
+      - "127.0.0.1:${E2E_PORT:-8090}:8080"

@@ -37,7 +37,7 @@ export async function api<T>(path: string, options: { method?: string; body?: un
     const message =
       data?.error ?? (res.status === 429 ? 'Trop de tentatives. Réessayez dans une minute.' : 'Le serveur a rencontré un problème. Réessayez.')
     const err = new ApiError(res.status, message, data?.code, data?.field)
-    if (res.status === 401 && path !== '/auth/login' && path !== '/auth/me') apiEvents.onUnauthorized()
+    if (res.status === 401 && path !== '/auth/login') apiEvents.onUnauthorized()
     if (res.status === 403 && err.code === 'PASSWORD_CHANGE_REQUIRED') apiEvents.onPasswordChangeRequired()
     throw err
   }

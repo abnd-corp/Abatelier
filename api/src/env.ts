@@ -33,6 +33,10 @@ const schema = z.object({
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(30),
   // Session normale : coupée après ce délai sans activité
   IDLE_TIMEOUT_HOURS: z.coerce.number().positive().default(12),
+  // Essais de connexion par minute et par IP (relevé pour les tests de bout en bout)
+  LOGIN_RATE_LIMIT: z.coerce.number().int().positive().default(10),
+  // Délai après le premier échec, doublé à chaque échec (abaissé pour les tests)
+  LOGIN_DELAY_BASE_MS: z.coerce.number().int().min(0).default(1000),
   // À mettre à true dès que le site est servi en HTTPS
   COOKIE_SECURE: bool,
   // Premier compte, créé au démarrage si la table des utilisateurs est vide

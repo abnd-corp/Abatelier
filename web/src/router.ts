@@ -45,5 +45,5 @@ router.beforeEach(async (to) => {
 })
 
 router.afterEach((to) => {
-  document.title = `${to.meta.title ? to.meta.title + ' · ' : ''}Atelier · Pliage sur mesure`
+  document.title = `${to.meta.title ? to.meta.title + ' · ' : ''}Atelier · Alu Pliage Service`
 })

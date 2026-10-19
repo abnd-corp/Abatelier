@@ -15,7 +15,19 @@ feature/xxx ──PR──▶ dev ──PR──▶ staging ──PR──▶ ma
 
 - **Personne ne pousse directement sur `dev`, `staging` ou `main`**, administrateurs compris. Tout passe par une Pull Request.
 - Pas de force push et pas de suppression sur ces trois branches.
-- Une PR ne peut être mergée que si la CI est verte : types, build, migrations à jour et images Docker.
+- Une PR ne peut être mergée que si **toute la CI est verte** :
+
+| Contrôle | Ce qu'il vérifie |
+|---|---|
+| API | Types, compilation, migrations à jour |
+| Tests API | Toutes les routes, sur une vraie base Postgres |
+| Front | Types et build |
+| Tests front | Composants Vue |
+| E2E (Chromium + Firefox) | Parcours complets sur une stack de production jetable |
+| Sécurité | Failles dans les dépendances, secrets dans l'historique Git |
+| Branche source autorisée | Respect du chemin feature → dev → staging → main |
+
+- Chaque élément terminé doit être couvert par des tests et passer la checklist de sécurité du modèle de PR (`.github/pull_request_template.md`).
 - Le contrôle « Branche source autorisée » refuse toute PR qui saute une étape, par exemple `dev → main` ou `feature/x → staging`.
 - Une promotion vers `staging` ou `main` est refusée si la branche cible contient un commit absent de la source. Cela signale qu'une correction a été faite en aval sans repasser par `dev`.
 
@@ -29,6 +41,9 @@ Un squash de `dev` vers `staging` crée un nouveau commit qui n'existe pas dans 
 make setup                      # une fois : hooks Git, .env, secrets, dépendances
 make feature nom=commandes      # crée feature/commandes depuis dev à jour
 # … commits …
+make check                      # types et builds
+make test-api test-web          # tests rapides (lancer « make dev-d » avant, pour la base)
+make e2e                        # Playwright, Chromium + Firefox
 make pr                         # pousse la branche et ouvre la PR vers dev
 ```
 
