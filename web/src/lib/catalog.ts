@@ -53,3 +53,61 @@ export interface PricingSettings {
   longueurMax: number
   plisMax: number
 }
+
+export type Modele = 'couvertine' | 'bavette' | 'bandeau'
+export type Unite = 'piece' | 'paire'
+export type QuantiteAuto = 'aucune' | 'fixe' | 'par_piece' | 'jonctions'
+
+export interface Accessory {
+  id: string
+  nom: string
+  prix: number
+  unite: Unite
+  modeles: Modele[]
+  quantiteAuto: QuantiteAuto
+  quantiteFixe: number
+  actif: boolean
+  position: number
+}
+
+export const MODELES: { id: Modele; label: string }[] = [
+  { id: 'couvertine', label: 'Couvertine' },
+  { id: 'bavette', label: 'Bavette' },
+  { id: 'bandeau', label: 'Bandeau' },
+]
+export const UNITES: Record<Unite, string> = { piece: 'la pièce', paire: 'la paire' }
+export const QUANTITES: Record<QuantiteAuto, string> = {
+  aucune: 'Aucune (saisie libre)',
+  fixe: 'Nombre fixe par ligne',
+  par_piece: 'Une par pièce',
+  jonctions: 'Une par jonction (pièces − 1)',
+}
+
+/** Quantité proposée pour une ligne de `pieces` pièces identiques. */
+export function suggestedQty(a: Pick<Accessory, 'quantiteAuto' | 'quantiteFixe'>, pieces: number) {
+  if (pieces <= 0) return 0
+  switch (a.quantiteAuto) {
+    case 'fixe':
+      return a.quantiteFixe
+    case 'par_piece':
+      return pieces
+    case 'jonctions':
+      return pieces - 1
+    default:
+      return 0
+  }
+}
+
+/** Règle en quelques mots, pour le tableau : « 2 par ligne », « 1 par pièce »… */
+export function qtyRule(a: Pick<Accessory, 'quantiteAuto' | 'quantiteFixe'>) {
+  switch (a.quantiteAuto) {
+    case 'fixe':
+      return `${a.quantiteFixe} par ligne`
+    case 'par_piece':
+      return '1 par pièce'
+    case 'jonctions':
+      return '1 par jonction'
+    default:
+      return '—'
+  }
+}

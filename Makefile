@@ -3,8 +3,11 @@ E2E = docker compose -p patalu-e2e -f compose.yaml -f compose.e2e.yaml
 # Même projet « patalu » en dev et en prod : ces commandes marchent sur les deux
 BASE = docker compose -f compose.yaml
 BK = $(BASE) exec -T backup /bin/sh /opt/backup/backup.sh
+# Filtres de « make e2e » : PAGE=catalogue (cherché dans le nom du fichier et le titre des tests),
+# ECRAN=chromium | firefox | telephone | tablette
+PW_ARGS = $(if $(PAGE),--grep "$(PAGE)") $(if $(ECRAN),--project=$(ECRAN))
 
-.PHONY: help setup secrets dev dev-d down logs prod prod-down check test test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
+.PHONY: help setup secrets dev dev-d down logs prod prod-down check test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
 
 help: ## Liste les commandes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -45,15 +48,18 @@ check: ## Vérifie les types et compile l'API, le front et les tests e2e
 
 test: test-api test-web e2e ## Lance tous les tests (API, composants, Playwright)
 
+test-vite: ## Rejoue seulement les tests touchés par les fichiers modifiés (DEPUIS=dev pour comparer à une branche)
+	$(if $(DEPUIS),DEPUIS=$(DEPUIS)) ./scripts/test-vite.sh
+
 test-api: ## Tests des routes API (base patalu_test, lancer « make dev-d » avant)
 	cd api && npm test
 
 test-web: ## Tests des composants Vue
 	cd web && npm test
 
-e2e: ## Tests Playwright Chromium + Firefox sur une stack de prod jetable
+e2e: ## Tests Playwright sur une stack de prod jetable (filtres : PAGE=catalogue ECRAN=firefox)
 	$(E2E) up -d --build --wait
-	cd e2e && npx playwright test; status=$$?; cd .. && $(E2E) down -v; exit $$status
+	cd e2e && npx playwright test $(PW_ARGS); status=$$?; cd .. && $(E2E) down -v; exit $$status
 
 apercu: ## Captures de toutes les pages (téléphone, tablette, ordinateur, clair et sombre) : apercus/index.html
 	rm -rf apercus

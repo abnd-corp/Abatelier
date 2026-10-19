@@ -137,6 +137,31 @@ export const colors = pgTable('colors', {
   updatedAt: ts('updated_at').notNull().defaultNow(),
 })
 
+// Modèles de pièces du configurateur, auxquels un accessoire peut s'appliquer
+export const MODELES = ['couvertine', 'bavette', 'bandeau'] as const
+export type Modele = (typeof MODELES)[number]
+
+export const UNITES = ['piece', 'paire'] as const
+// Quantité proposée pour une ligne de N pièces : aucune (saisie libre), un nombre fixe,
+// une par pièce, ou une par jonction entre deux longueurs posées bout à bout (N − 1)
+export const QUANTITES_AUTO = ['aucune', 'fixe', 'par_piece', 'jonctions'] as const
+
+export const accessories = pgTable('accessories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nom: text('nom').notNull().unique(),
+  // Prix de vente HT, par unité (la pièce ou la paire)
+  prix: numeric('prix', { precision: 10, scale: 2, mode: 'number' }).notNull(),
+  unite: text('unite', { enum: UNITES }).notNull().default('piece'),
+  modeles: text('modeles', { enum: MODELES }).array().notNull(),
+  quantiteAuto: text('quantite_auto', { enum: QUANTITES_AUTO }).notNull().default('aucune'),
+  // Utilisé seulement quand quantiteAuto = 'fixe'
+  quantiteFixe: integer('quantite_fixe').notNull().default(0),
+  actif: boolean('actif').notNull().default(true),
+  position: integer('position').notNull().default(0),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+})
+
 export interface QuantityDiscount {
   // À partir de ce nombre de pièces (sur une même ligne de devis)…
   seuil: number
@@ -173,3 +198,4 @@ export type Employee = typeof employees.$inferSelect
 export type Material = typeof materials.$inferSelect
 export type Color = typeof colors.$inferSelect
 export type PricingSettings = typeof pricingSettings.$inferSelect
+export type Accessory = typeof accessories.$inferSelect

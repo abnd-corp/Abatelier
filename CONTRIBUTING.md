@@ -43,8 +43,10 @@ make setup                      # une fois : hooks Git, .env, secrets, dépendan
 make feature nom=commandes      # crée feature/commandes depuis dev à jour
 # … commits …
 make check                      # types et builds
-make test-api test-web          # tests rapides (lancer « make dev-d » avant, pour la base)
-make e2e                        # Playwright, Chromium + Firefox
+make test-vite                  # pendant le dev : seulement les tests touchés par les fichiers modifiés
+make e2e PAGE=catalogue         # un seul parcours (ajouter ECRAN=firefox pour un seul écran)
+make test-api test-web          # avant la PR : tous les tests d'API et de composants (« make dev-d » avant)
+make e2e                        # avant la PR : tout Playwright, Chromium, Firefox, téléphone et tablette
 make pr                         # pousse la branche et ouvre la PR vers dev
 ```
 

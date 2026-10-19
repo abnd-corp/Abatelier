@@ -64,6 +64,48 @@ test.describe('Tarifs et catalogue', () => {
     await expect(coloris.getByText('Cette référence de coloris existe déjà.')).toBeVisible()
   })
 
+  test('la direction ajoute un accessoire pour les bandeaux, change sa règle de quantité et le retrouve au journal', async ({ adminPage, uid }) => {
+    const nom = `Patte ${uid.slice(-6)}`
+    await adminPage.goto('/catalogue')
+    await adminPage.getByRole('tab', { name: /Accessoires/ }).click()
+    await expect(adminPage).toHaveURL(/onglet=accessoires/)
+    const panel = adminPage.getByRole('tabpanel', { name: 'Accessoires' })
+    // Catalogue de départ
+    await expect(panel.getByRole('row', { name: /Éclisse de jonction/ })).toContainText(/7,80\s€/)
+    await expect(panel.getByRole('row', { name: /Embouts de bavette/ })).toContainText('la paire')
+
+    await panel.getByRole('button', { name: 'Ajouter un accessoire' }).click()
+    await panel.getByLabel('Accessoire', { exact: true }).fill(nom)
+    await panel.getByLabel('Prix (HT)').fill('3,20')
+    // Aucun modèle coché : refusé
+    await panel.getByRole('button', { name: 'Enregistrer' }).click()
+    await expect(panel.getByText('Choisissez au moins un modèle.')).toBeVisible()
+    await panel.getByRole('checkbox', { name: 'Bandeau' }).check()
+    await panel.getByLabel('Quantité proposée').selectOption('fixe')
+    await panel.getByLabel('Nombre par ligne').fill('4')
+    await expect(panel.getByText('Pour une ligne de 4 pièces, 4 proposés')).toBeVisible()
+    await panel.getByRole('button', { name: 'Enregistrer' }).click()
+    const row = panel.getByRole('row', { name: new RegExp(nom) })
+    await expect(row).toContainText(/3,20\s€/)
+    await expect(row).toContainText('Bandeau')
+
+    // Nouvelle règle : une par pièce
+    await row.getByRole('button', { name: `Modifier ${nom}` }).click()
+    await expect(panel.getByLabel('Prix (HT)')).toHaveValue('3,20')
+    await panel.getByLabel('Quantité proposée').selectOption('par_piece')
+    await expect(panel.getByLabel('Nombre par ligne')).toHaveCount(0)
+    await panel.getByRole('button', { name: 'Enregistrer' }).click()
+    await expect(panel.getByRole('status')).toContainText(`${nom} enregistré`)
+
+    // Désactivé, puis au journal
+    await row.getByRole('button', { name: 'Désactiver' }).click()
+    await expect(row).toHaveCount(0)
+    await adminPage.goto('/journal')
+    await adminPage.getByRole('button', { name: 'Catalogue et prix' }).click()
+    await expect(adminPage.getByRole('cell', { name: `A modifié l’accessoire ${nom} : quantité proposée nombre fixe → une par pièce, quantité fixe 4 → 0` })).toBeVisible()
+    await expect(adminPage.getByRole('cell', { name: new RegExp(`A ajouté l’accessoire ${nom} \\(3,20\\s€ la pièce\\)`) })).toBeVisible()
+  })
+
   test('la direction règle le façonnage et les remises quantité', async ({ adminPage }) => {
     // Réglages partagés par tous les tests : on remet les valeurs de départ à la fin
     await adminPage.goto('/catalogue')
@@ -115,6 +157,7 @@ test.describe('Tarifs et catalogue', () => {
       await expect(page).toHaveURL('/')
       await expect(page.getByRole('link', { name: 'Tarifs et catalogue' })).toHaveCount(0)
       expect((await page.request.get('/api/catalog/materials')).status()).toBe(403)
+      expect((await page.request.get('/api/catalog/accessories')).status()).toBe(403)
       await page.context().close()
     }
   })

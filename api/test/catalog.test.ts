@@ -17,6 +17,7 @@ beforeEach(async () => {
 })
 
 const ALU15 = { nom: 'Aluminium', epaisseur: 1.5, prixM2: 62, retourMin: 10 }
+const BOUCHON = { nom: 'Bouchon de couvertine', prix: 6.9, unite: 'piece', modeles: ['couvertine'], quantiteAuto: 'fixe', quantiteFixe: 2 }
 const RAL7016 = { nom: 'Gris anthracite', reference: 'RAL 7016', hex: '#383E42', majoration: 0, delaiSup: 0 }
 
 describe('Accès', () => {
@@ -30,6 +31,8 @@ describe('Accès', () => {
         c.post('/api/catalog/materials', ALU15),
         c.get('/api/catalog/colors'),
         c.post('/api/catalog/colors', RAL7016),
+        c.get('/api/catalog/accessories'),
+        c.post('/api/catalog/accessories', BOUCHON),
       ]))
         expect(res.statusCode, who).toBe(403)
     }
@@ -152,5 +155,82 @@ describe('Coloris', () => {
     await direction.patch(`/api/catalog/colors/${color.id}`, { majoration: 8 })
     const [entry] = await db.select().from(auditLog).where(eq(auditLog.action, 'catalog.color_updated'))
     expect(entry!.details).toEqual({ nom: 'RAL 7016 Gris anthracite', changements: { majoration: { avant: 0, apres: 8 } } })
+  })
+})
+
+describe('Accessoires', () => {
+  it('ajoute un accessoire avec son unité, ses modèles et sa règle de quantité', async () => {
+    const res = await direction.post('/api/catalog/accessories', BOUCHON)
+    expect(res.statusCode).toBe(201)
+    expect(res.json().accessory).toMatchObject({ ...BOUCHON, actif: true })
+    expect(typeof res.json().accessory.prix).toBe('number')
+    const [entry] = await db.select().from(auditLog).where(eq(auditLog.action, 'catalog.accessory_created'))
+    expect(entry!.details).toEqual({ nom: 'Bouchon de couvertine', prix: 6.9, unite: 'piece' })
+  })
+
+  it('range les modèles dans l’ordre du configurateur et retire les doublons', async () => {
+    const res = await direction.post('/api/catalog/accessories', { ...BOUCHON, nom: 'Vis inox', modeles: ['bandeau', 'couvertine', 'bandeau'], quantiteAuto: 'aucune' })
+    expect(res.json().accessory.modeles).toEqual(['couvertine', 'bandeau'])
+  })
+
+  it('accepte un prix à la française et une quantité fixe absente si la règle ne l’utilise pas', async () => {
+    const res = await direction.post('/api/catalog/accessories', { nom: 'Embouts de bavette', prix: '9,60', unite: 'paire', modeles: ['bavette'], quantiteAuto: 'par_piece' })
+    expect(res.statusCode).toBe(201)
+    expect(res.json().accessory).toMatchObject({ prix: 9.6, unite: 'paire', quantiteFixe: 0 })
+  })
+
+  it('refuse un nom en double', async () => {
+    await direction.post('/api/catalog/accessories', BOUCHON)
+    const res = await direction.post('/api/catalog/accessories', { ...BOUCHON, prix: 8 })
+    expect(res.statusCode).toBe(409)
+    expect(res.json().field).toBe('nom')
+  })
+
+  it.each([
+    [{ nom: ' ' }, 'nom', /nom/],
+    [{ prix: -1 }, 'prix', /0 € minimum/],
+    [{ prix: 'cher' }, 'prix', /nombre attendu/],
+    [{ unite: 'metre' }, 'unite', /pièce ou à la paire/],
+    [{ modeles: [] }, 'modeles', /au moins un modèle/],
+    [{ modeles: ['gouttiere'] }, 'modeles', /Modèle inconnu/],
+    [{ quantiteAuto: 'beaucoup' }, 'quantiteAuto', /invalide/],
+    [{ quantiteFixe: 0 }, 'quantiteFixe', /1 au minimum/],
+    [{ quantiteFixe: 1.5 }, 'quantiteFixe', /entier/],
+  ])('refuse %o et désigne le champ', async (override, field, msg) => {
+    const res = await direction.post('/api/catalog/accessories', { ...BOUCHON, ...override })
+    expect(res.statusCode).toBe(400)
+    expect(res.json().field).toBe(field)
+    expect(res.json().error).toMatch(msg)
+  })
+
+  it('modifie le prix et les modèles, et note l’avant / après au journal', async () => {
+    const { accessory } = (await direction.post('/api/catalog/accessories', BOUCHON)).json()
+    const res = await direction.patch(`/api/catalog/accessories/${accessory.id}`, { prix: '7,20', modeles: ['couvertine', 'bandeau'] })
+    expect(res.json().accessory).toMatchObject({ prix: 7.2, modeles: ['couvertine', 'bandeau'] })
+    const [entry] = await db.select().from(auditLog).where(eq(auditLog.action, 'catalog.accessory_updated'))
+    expect(entry!.details).toEqual({
+      nom: 'Bouchon de couvertine',
+      changements: { prix: { avant: 6.9, apres: 7.2 }, modeles: { avant: ['couvertine'], apres: ['couvertine', 'bandeau'] } },
+    })
+  })
+
+  it('remet la quantité fixe à zéro quand la règle change', async () => {
+    const { accessory } = (await direction.post('/api/catalog/accessories', BOUCHON)).json()
+    const res = await direction.patch(`/api/catalog/accessories/${accessory.id}`, { quantiteAuto: 'jonctions' })
+    expect(res.json().accessory).toMatchObject({ quantiteAuto: 'jonctions', quantiteFixe: 0 })
+    // Revenir à « fixe » sans donner de nombre est refusé
+    const back = await direction.patch(`/api/catalog/accessories/${accessory.id}`, { quantiteAuto: 'fixe' })
+    expect(back.statusCode).toBe(400)
+    expect(back.json().field).toBe('quantiteFixe')
+  })
+
+  it('ne note rien si rien ne change (même liste de modèles), désactive, et répond 404 si inconnu', async () => {
+    const { accessory } = (await direction.post('/api/catalog/accessories', BOUCHON)).json()
+    await direction.patch(`/api/catalog/accessories/${accessory.id}`, { prix: 6.9, modeles: ['couvertine'] })
+    expect(await db.select().from(auditLog).where(eq(auditLog.action, 'catalog.accessory_updated'))).toHaveLength(0)
+    await direction.patch(`/api/catalog/accessories/${accessory.id}`, { actif: false })
+    expect((await direction.get('/api/catalog/accessories')).json().accessories[0].actif).toBe(false)
+    expect((await direction.patch('/api/catalog/accessories/00000000-0000-4000-8000-000000000000', { prix: 1 })).statusCode).toBe(404)
+    expect((await direction.patch('/api/catalog/accessories/abc', { prix: 1 })).statusCode).toBe(404)
   })
 })

@@ -43,6 +43,13 @@
       "when": 1792420492306,
       "tag": "0005_faconnage_conditions",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792427372204,
+      "tag": "0006_accessoires",
+      "breakpoints": true
     }
   ]
 }

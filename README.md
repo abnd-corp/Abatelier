@@ -25,8 +25,10 @@ Le premier compte, avec le rôle Direction, s'appelle `ADMIN_IDENTIFIANT` (par d
 ## Tests
 
 ```bash
-make test-api   # 147 tests des routes API, sur la base patalu_test (la base de dev doit tourner)
-make test-web   # 94 tests des composants Vue
+make test-vite  # rapide : seulement les tests touchés par les fichiers modifiés (DEPUIS=dev pour toute la branche)
+make test-api   # tests des routes API, sur la base patalu_test (la base de dev doit tourner)
+make test-web   # tests des composants Vue
+make e2e PAGE=catalogue ECRAN=firefox   # un parcours, un écran (chromium, firefox, telephone, tablette)
 make e2e        # Playwright sur une stack de prod jetable : Chromium et Firefox, plus téléphone et tablette pour le responsive
 make apercu     # captures de toutes les pages (téléphone, tablette, ordinateur, clair et sombre) : apercus/index.html
 ```

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import CatalogView from '@/views/CatalogView.vue'
-import { eur, mm, pct, toField, type Color, type Material, type PricingSettings } from '@/lib/catalog'
+import { eur, mm, pct, qtyRule, suggestedQty, toField, type Accessory, type Color, type Material, type PricingSettings } from '@/lib/catalog'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 import { useAuthStore } from '@/stores/auth'
 import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
@@ -18,6 +18,13 @@ const COLS: Color[] = [
   { id: 'c1', nom: 'Gris anthracite', reference: 'RAL 7016', hex: '#383e42', majoration: 0, delaiSup: 0, actif: true, position: 1 },
   { id: 'c2', nom: 'Chêne doré', reference: 'Aspect bois', hex: '#a9733f', majoration: 35, delaiSup: 5, actif: true, position: 2 },
   { id: 'c3', nom: 'Brut', reference: 'Non laqué', hex: '#cdd1d4', majoration: -15, delaiSup: 0, actif: true, position: 3 },
+]
+
+const ACCS: Accessory[] = [
+  { id: 'a1', nom: 'Bouchon de couvertine', prix: 6.9, unite: 'piece', modeles: ['couvertine'], quantiteAuto: 'fixe', quantiteFixe: 2, actif: true, position: 1 },
+  { id: 'a2', nom: 'Éclisse de jonction', prix: 7.8, unite: 'piece', modeles: ['couvertine'], quantiteAuto: 'jonctions', quantiteFixe: 0, actif: true, position: 2 },
+  { id: 'a3', nom: 'Embouts de bavette', prix: 9.6, unite: 'paire', modeles: ['bavette'], quantiteAuto: 'par_piece', quantiteFixe: 0, actif: true, position: 3 },
+  { id: 'a4', nom: 'Vis inox', prix: 0.4, unite: 'piece', modeles: ['couvertine', 'bandeau'], quantiteAuto: 'aucune', quantiteFixe: 0, actif: false, position: 4 },
 ]
 
 const SETTINGS: PricingSettings = {
@@ -42,6 +49,7 @@ async function setup(path = '/catalogue', extra: Parameters<typeof mockApi>[0] =
     'GET /catalog/materials': [200, { materials: MATS }],
     'GET /catalog/colors': [200, { colors: COLS }],
     'GET /catalog/settings': [200, { settings: SETTINGS }],
+    'GET /catalog/accessories': [200, { accessories: ACCS }],
     ...extra,
   })
   const pinia = freshPinia()
@@ -228,5 +236,102 @@ describe('Façonnage et conditions', () => {
       details: { changements: { remisesQuantite: { avant: [{ seuil: 20, remise: 5 }], apres: [] }, tva: { avant: 20, apres: 5.5 } } },
     } as unknown as AuditEntry
     expect(describeEntry(e).text).toBe('A modifié le façonnage et les conditions : remises quantité −5 % dès 20 → aucune, TVA 20 % → 5,5 %')
+  })
+})
+
+describe('Accessoires', () => {
+  const open = async (extra: Parameters<typeof mockApi>[0] = {}) => {
+    const r = await setup('/catalogue?onglet=accessoires', extra)
+    return { ...r, p: r.panel('accessoires') }
+  }
+  const add = (p: ReturnType<Awaited<ReturnType<typeof setup>>['panel']>) => p.findAll('button').find((b) => b.text().includes('Ajouter un accessoire'))!
+
+  it('calcule la quantité proposée selon la règle', () => {
+    expect(suggestedQty(ACCS[0]!, 4)).toBe(2)
+    expect(suggestedQty(ACCS[1]!, 4)).toBe(3)
+    expect(suggestedQty(ACCS[1]!, 1)).toBe(0)
+    expect(suggestedQty(ACCS[2]!, 4)).toBe(4)
+    expect(suggestedQty(ACCS[3]!, 4)).toBe(0)
+    expect(suggestedQty(ACCS[0]!, 0)).toBe(0)
+    expect(qtyRule(ACCS[0]!)).toBe('2 par ligne')
+    expect(qtyRule(ACCS[3]!)).toBe('—')
+  })
+
+  it('liste les accessoires actifs avec prix, unité, modèles et règle', async () => {
+    const { p, wrapper } = await open()
+    expect(wrapper.get('#tab-accessoires').text()).toContain('3')
+    const rows = p.findAll('tbody tr')
+    expect(rows).toHaveLength(3)
+    expect(n(rows[0]!.text())).toContain('6,90 €')
+    expect(rows[0]!.text()).toContain('la pièce')
+    expect(rows[0]!.text()).toContain('Couvertine')
+    expect(rows[0]!.text()).toContain('2 par ligne')
+    expect(rows[2]!.text()).toContain('la paire')
+    expect(rows[2]!.text()).toContain('1 par pièce')
+    await p.get('#accessories-inactive').setValue(true)
+    expect(p.findAll('tbody tr')[3]!.text()).toContain('Couvertine, Bandeau')
+  })
+
+  it('ajoute un accessoire : modèles cochés, nombre fixe seulement si la règle le demande', async () => {
+    const { p, calls } = await open({ 'POST /catalog/accessories': [201, { accessory: { ...ACCS[0], id: 'a9', nom: 'Angle de bandeau' } }] })
+    await add(p).trigger('click')
+    expect(p.find('#a-fixe').exists()).toBe(false)
+    await p.get('#a-nom').setValue('Angle de bandeau')
+    await p.get('#a-prix').setValue('14,50')
+    const box = p.findAll('.chip input').find((i) => (i.element as HTMLInputElement).value === 'bandeau')!
+    await box.setValue(true)
+    await p.get('#a-quantite').setValue('fixe')
+    await p.get('#a-fixe').setValue('2')
+    expect(p.text()).toContain('Pour une ligne de 4 pièces, 2 proposés')
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({
+      nom: 'Angle de bandeau',
+      prix: '14,50',
+      unite: 'piece',
+      modeles: ['bandeau'],
+      quantiteAuto: 'fixe',
+      quantiteFixe: '2',
+    })
+    expect(p.text()).toContain('Angle de bandeau ajouté')
+  })
+
+  it('envoie une quantité fixe à zéro pour une autre règle', async () => {
+    const { p, calls } = await open({ 'PATCH /catalog/accessories/a1': [200, { accessory: { ...ACCS[0], quantiteAuto: 'par_piece' } }] })
+    await p.get('button[aria-label="Modifier Bouchon de couvertine"]').trigger('click')
+    expect((p.get('#a-prix').element as HTMLInputElement).value).toBe('6,90')
+    expect((p.get('#a-fixe').element as HTMLInputElement).value).toBe('2')
+    await p.get('#a-quantite').setValue('par_piece')
+    expect(p.text()).toContain('4 proposés')
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toMatchObject({ quantiteAuto: 'par_piece', quantiteFixe: 0, modeles: ['couvertine'] })
+  })
+
+  it('affiche l’erreur des modèles sous les cases', async () => {
+    const { p } = await open({ 'POST /catalog/accessories': [400, { error: 'Choisissez au moins un modèle.', field: 'modeles' }] })
+    await add(p).trigger('click')
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(p.get('fieldset').classes()).toContain('invalid')
+    expect(p.get('#a-modeles-error').text()).toBe('Choisissez au moins un modèle.')
+  })
+
+  it('désactive un accessoire', async () => {
+    const { p, calls } = await open({ 'PATCH /catalog/accessories/a2': [200, { accessory: { ...ACCS[1], actif: false } }] })
+    await p.findAll('tbody tr')[1]!.findAll('button').find((b) => b.text() === 'Désactiver')!.trigger('click')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ actif: false })
+    expect(p.text()).toContain('Éclisse de jonction désactivé')
+  })
+
+  it('décrit les changements d’accessoire dans le journal', () => {
+    const e = {
+      action: 'catalog.accessory_updated',
+      details: { nom: 'Bouchon de couvertine', changements: { prix: { avant: 6.9, apres: 7.2 }, quantiteAuto: { avant: 'fixe', apres: 'par_piece' } } },
+    } as unknown as AuditEntry
+    expect(n(describeEntry(e).text)).toBe('A modifié l’accessoire Bouchon de couvertine : prix 6,90 € → 7,20 €, quantité proposée nombre fixe → une par pièce')
+    const c = { action: 'catalog.accessory_created', details: { nom: 'Embouts de bavette', prix: 9.6, unite: 'paire' } } as unknown as AuditEntry
+    expect(n(describeEntry(c).text)).toBe('A ajouté l’accessoire Embouts de bavette (9,60 € la paire)')
   })
 })

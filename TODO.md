@@ -14,7 +14,7 @@
 - [x] Matières (épaisseur, prix au m², retour minimum)
 - [x] Coloris (référence, teinte, majoration, délai)
 - [x] Façonnage et conditions (pli, mise en route, minimum, remise pro, TVA, délai, remises quantité, limites machines)
-- [ ] **Accessoires** : bouchons, éclisses, angles, embouts, avec prix unitaire et unité (pièce, paire), et les modèles auxquels chacun s'applique (couvertine, bavette, bandeau)
+- [x] Accessoires (prix HT à la pièce ou à la paire, modèles concernés, quantité proposée : fixe, par pièce ou par jonction)
 - [ ] **Livraison** : retrait à l'atelier (gratuit), zones de livraison (distance maximum, prix)
 - [ ] Simulateur de prix (facultatif) : une pièce type dont le prix se recalcule quand on change un tarif
 

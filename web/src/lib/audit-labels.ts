@@ -19,6 +19,8 @@ const ROLE: Record<string, string> = { direction: 'direction', admin: 'direction
 
 const eur = (n: unknown) => (typeof n === 'number' ? n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : String(n))
 
+const QTY: Record<string, string> = { aucune: 'aucune', fixe: 'nombre fixe', par_piece: 'une par pièce', jonctions: 'une par jonction' }
+
 // Libellés et unités des champs du catalogue, pour décrire un changement de prix lisiblement
 const CATALOG_FIELDS: Record<string, { label: string; fmt: (v: unknown) => string }> = {
   prixM2: { label: 'prix au m²', fmt: eur },
@@ -40,6 +42,11 @@ const CATALOG_FIELDS: Record<string, { label: string; fmt: (v: unknown) => strin
   longueurMin: { label: 'longueur minimum', fmt: (v) => `${v} mm` },
   longueurMax: { label: 'longueur maximum', fmt: (v) => `${v} mm` },
   plisMax: { label: 'plis maximum', fmt: (v) => String(v) },
+  prix: { label: 'prix', fmt: eur },
+  unite: { label: 'unité', fmt: (v) => (v === 'paire' ? 'à la paire' : 'à la pièce') },
+  modeles: { label: 'modèles', fmt: (v) => (Array.isArray(v) ? v.join(', ') : String(v)) },
+  quantiteAuto: { label: 'quantité proposée', fmt: (v) => QTY[String(v)] ?? String(v) },
+  quantiteFixe: { label: 'quantité fixe', fmt: (v) => String(v) },
   remisesQuantite: {
     label: 'remises quantité',
     fmt: (v) =>
@@ -105,6 +112,10 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A modifié le façonnage et les conditions : ${changes(d.changements)}`, tone: 'accent' }
     case 'catalog.color_updated':
       return { text: `A modifié le coloris ${d.nom} : ${changes(d.changements)}`, tone: 'accent' }
+    case 'catalog.accessory_created':
+      return { text: `A ajouté l’accessoire ${d.nom} (${eur(d.prix)} ${d.unite === 'paire' ? 'la paire' : 'la pièce'})`, tone: 'accent' }
+    case 'catalog.accessory_updated':
+      return { text: `A modifié l’accessoire ${d.nom} : ${changes(d.changements)}`, tone: 'accent' }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

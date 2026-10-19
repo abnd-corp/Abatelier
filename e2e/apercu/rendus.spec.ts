@@ -17,6 +17,7 @@ const PAGES = [
   { name: '10-catalogue-matieres', path: '/catalogue' },
   { name: '11-catalogue-coloris', path: '/catalogue?onglet=coloris' },
   { name: '12-catalogue-faconnage', path: '/catalogue?onglet=faconnage' },
+  { name: '13-catalogue-accessoires', path: '/catalogue?onglet=accessoires' },
 ]
 
 test('captures', async ({ page, baseURL }, info) => {

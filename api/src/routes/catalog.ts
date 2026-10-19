@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { asc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { colors, materials, pricingSettings } from '../db/schema.js'
+import { accessories, colors, materials, MODELES, pricingSettings, QUANTITES_AUTO, UNITES } from '../db/schema.js'
 import { getPricingSettings } from '../pricing.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
@@ -46,6 +46,19 @@ const colorFields = {
   delaiSup: integer(0, 60, 'Délai supplémentaire', 'jours'),
   actif: z.boolean().optional(),
 }
+const accessoryFields = {
+  nom: z.string().trim().min(1, 'Le nom de l’accessoire est requis.').max(60),
+  prix: decimal(0, 10000, 'Prix', '€'),
+  unite: z.enum(UNITES, { error: 'Unité invalide : à la pièce ou à la paire.' }),
+  // Rangés dans l'ordre du configurateur, sans doublon
+  modeles: z
+    .array(z.enum(MODELES, { error: 'Modèle inconnu.' }), { error: 'Choisissez au moins un modèle.' })
+    .min(1, 'Choisissez au moins un modèle.')
+    .transform((l) => MODELES.filter((m) => l.includes(m))),
+  quantiteAuto: z.enum(QUANTITES_AUTO, { error: 'Quantité proposée invalide.' }),
+  quantiteFixe: integer(0, 100, 'Quantité fixe', 'unités'),
+  actif: z.boolean().optional(),
+}
 
 function invalid(reply: FastifyReply, e: z.ZodError) {
   const issue = e.issues[0]
@@ -57,10 +70,10 @@ const isUniqueViolation = (e: unknown) => {
   return err?.code === '23505' || err?.cause?.code === '23505'
 }
 
-/** Différences avant / après, pour le journal (utile pour suivre l'historique des prix). */
+/** Différences avant / après, pour le journal (utile pour suivre l'historique des prix). Les tableaux sont comparés par leur contenu. */
 function diff<T extends Record<string, unknown>>(before: T, changes: Partial<T>) {
   const out: Record<string, { avant: unknown; apres: unknown }> = {}
-  for (const [k, v] of Object.entries(changes)) if (v !== undefined && v !== before[k]) out[k] = { avant: before[k], apres: v }
+  for (const [k, v] of Object.entries(changes)) if (v !== undefined && JSON.stringify(v) !== JSON.stringify(before[k])) out[k] = { avant: before[k], apres: v }
   return out
 }
 
@@ -148,8 +161,6 @@ export async function catalogRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'La longueur minimum doit être plus petite que la longueur maximum.', field: 'longueurMin' })
     }
     const changes = diff(before as Record<string, unknown>, parsed.data as Record<string, unknown>)
-    // Les paliers sont des tableaux : on compare leur contenu
-    if (changes.remisesQuantite && JSON.stringify(before.remisesQuantite) === JSON.stringify(parsed.data.remisesQuantite)) delete changes.remisesQuantite
     if (!Object.keys(changes).length) return { settings: before }
     const [settings] = await db
       .update(pricingSettings)
@@ -202,4 +213,61 @@ export async function catalogRoutes(app: FastifyInstance) {
       throw e
     }
   })
+
+  // --- Accessoires ---
+  app.get('/accessories', async () => ({
+    accessories: await db.select().from(accessories).orderBy(asc(accessories.position), asc(accessories.nom)),
+  }))
+
+  app.post('/accessories', async (req, reply) => {
+    const parsed = z.object(accessoryFields).partial({ quantiteFixe: true }).safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const data = { ...parsed.data, quantiteFixe: parsed.data.quantiteFixe ?? 0 }
+    const rule = checkFixed(data)
+    if (rule) return reply.code(400).send(rule)
+    try {
+      const [a] = await db
+        .insert(accessories)
+        .values({ ...data, position: sql`(select coalesce(max(position), 0) + 1 from accessories)` })
+        .returning()
+      await audit(req, 'catalog.accessory_created', { targetType: 'accessory', targetId: a!.id, details: { nom: a!.nom, prix: a!.prix, unite: a!.unite } })
+      return reply.code(201).send({ accessory: a })
+    } catch (e) {
+      if (isUniqueViolation(e)) return reply.code(409).send({ error: 'Un accessoire porte déjà ce nom.', field: 'nom' })
+      throw e
+    }
+  })
+
+  app.patch('/accessories/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const [before] = validId(id) ? await db.select().from(accessories).where(eq(accessories.id, id)) : []
+    if (!before) return reply.code(404).send({ error: 'Accessoire introuvable.' })
+    const parsed = z.object(accessoryFields).partial().safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const data = { ...parsed.data }
+    const merged = { ...before, ...data }
+    const rule = checkFixed(merged)
+    if (rule) return reply.code(400).send(rule)
+    // La quantité fixe n'a de sens qu'avec la règle « fixe »
+    if (merged.quantiteAuto !== 'fixe') data.quantiteFixe = 0
+    const changes = diff(before, data)
+    if (!Object.keys(changes).length) return { accessory: before }
+    try {
+      const [a] = await db
+        .update(accessories)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(accessories.id, id))
+        .returning()
+      await audit(req, 'catalog.accessory_updated', { targetType: 'accessory', targetId: id, details: { nom: a!.nom, changements: changes } })
+      return { accessory: a }
+    } catch (e) {
+      if (isUniqueViolation(e)) return reply.code(409).send({ error: 'Un accessoire porte déjà ce nom.', field: 'nom' })
+      throw e
+    }
+  })
+}
+
+/** Avec la règle « nombre fixe », il faut au moins un accessoire par ligne. */
+function checkFixed(a: { quantiteAuto: string; quantiteFixe: number }) {
+  return a.quantiteAuto === 'fixe' && a.quantiteFixe < 1 ? { error: 'Quantité fixe : 1 au minimum.', field: 'quantiteFixe' } : null
 }

@@ -1,26 +1,35 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MaterialsPanel from '@/components/catalog/MaterialsPanel.vue'
 import ColorsPanel from '@/components/catalog/ColorsPanel.vue'
+import AccessoriesPanel from '@/components/catalog/AccessoriesPanel.vue'
 import SettingsPanel from '@/components/catalog/SettingsPanel.vue'
 import AppIcon from '@/components/AppIcon.vue'
 
-type Tab = 'matieres' | 'coloris' | 'faconnage'
+type Tab = 'matieres' | 'coloris' | 'accessoires' | 'faconnage'
 const route = useRoute()
 const router = useRouter()
 
 // L'onglet ouvert est gardé dans l'adresse (?onglet=coloris) pour pouvoir le partager ou y revenir
-const TAB_IDS: Tab[] = ['matieres', 'coloris', 'faconnage']
+const TAB_IDS: Tab[] = ['matieres', 'coloris', 'accessoires', 'faconnage']
 const tab = ref<Tab>(TAB_IDS.find((t) => t === route.query.onglet) ?? 'matieres')
-watch(tab, (t) => router.replace({ query: t === 'matieres' ? {} : { onglet: t } }))
+watch(tab, (t) => {
+  router.replace({ query: t === 'matieres' ? {} : { onglet: t } })
+  nextTick(showTab)
+})
 
-const counts = ref<Record<Tab, number | null>>({ matieres: null, coloris: null, faconnage: null })
+// Sur téléphone, la barre d'onglets défile : on garde l'onglet ouvert visible
+const showTab = () => document.getElementById(`tab-${tab.value}`)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+onMounted(showTab)
+
+const counts = ref<Record<Tab, number | null>>({ matieres: null, coloris: null, accessoires: null, faconnage: null })
 
 // « more » : fin du libellé masquée sur téléphone pour que les onglets tiennent sur une ligne
-const TABS: { id: Tab; label: string; more?: string; icon: 'layers' | 'palette' | 'sliders' }[] = [
+const TABS: { id: Tab; label: string; more?: string; icon: 'layers' | 'palette' | 'box' | 'sliders' }[] = [
   { id: 'matieres', label: 'Matières', icon: 'layers' },
   { id: 'coloris', label: 'Coloris', icon: 'palette' },
+  { id: 'accessoires', label: 'Accessoires', icon: 'box' },
   { id: 'faconnage', label: 'Façonnage', more: ' et conditions', icon: 'sliders' },
 ]
 
@@ -65,6 +74,9 @@ function onKey(e: KeyboardEvent) {
   </section>
   <section v-show="tab === 'coloris'" id="panel-coloris" role="tabpanel" aria-labelledby="tab-coloris">
     <ColorsPanel @count="counts.coloris = $event" />
+  </section>
+  <section v-show="tab === 'accessoires'" id="panel-accessoires" role="tabpanel" aria-labelledby="tab-accessoires">
+    <AccessoriesPanel @count="counts.accessoires = $event" />
   </section>
   <section v-show="tab === 'faconnage'" id="panel-faconnage" role="tabpanel" aria-labelledby="tab-faconnage">
     <SettingsPanel />
@@ -124,8 +136,16 @@ function onKey(e: KeyboardEvent) {
   .more {
     display: none;
   }
+  /* Les quatre onglets tiennent sur la largeur d'un téléphone : sans icônes ni compteurs */
+  .tabs {
+    gap: 0;
+  }
   .tab {
-    padding-inline: 10px;
+    padding-inline: 9px;
+  }
+  .tab > .icon,
+  .count {
+    display: none;
   }
 }
 </style>

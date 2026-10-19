@@ -32,6 +32,7 @@ const PATHS = {
   trash: 'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6',
   layers: 'M12 3 2 8l10 5 10-5-10-5Z M2 13l10 5 10-5 M2 17.5l10 5 10-5',
   palette: 'M12 21a9 9 0 1 1 9-9c0 2-1.6 3-3.5 3H16a2 2 0 0 0-1.6 3.2A1.7 1.7 0 0 1 12 21Z M7.5 11h.01 M10 7h.01 M14.5 7h.01 M17 11h.01',
+  box: 'M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z M3 7.5l9 4.5 9-4.5 M12 12v9',
 } as const
 
 defineProps<{ name: keyof typeof PATHS; size?: number }>()
