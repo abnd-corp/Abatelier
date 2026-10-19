@@ -35,8 +35,10 @@ export function publicCompany(c: CompanySettings) {
 /** Année du document, à l'heure de Paris (un devis du 31 décembre à 23 h 30 reste sur l'année en cours). */
 export const yearOf = (d: Date) => Number(new Intl.DateTimeFormat('fr-FR', { year: 'numeric', timeZone: 'Europe/Paris' }).format(d))
 
-/** D, 2026, 1 → « D-2026-0001 » */
-export const formatNumber = (prefixe: string, annee: number, n: number) => `${prefixe}-${annee}-${String(n).padStart(4, '0')}`
+export const PREFIXES: Record<DocumentType, string> = { devis: 'D', facture: 'F' }
+
+/** devis, 2026, 1 → « D-2026-0001 » */
+export const formatNumber = (type: DocumentType, annee: number, n: number) => `${PREFIXES[type]}-${annee}-${String(n).padStart(4, '0')}`
 
 /** Dernier numéro attribué cette année pour ce type (0 si aucun). */
 export async function lastNumber(type: DocumentType, annee: number, tx: Tx | typeof db = db) {
@@ -56,40 +58,47 @@ export async function allocateNumber(tx: Tx, type: DocumentType, at = new Date()
   const annee = yearOf(at)
   const [row] = await tx
     .insert(documentCounters)
-    .values({ type, annee, dernier: 1 })
-    .onConflictDoUpdate({ target: [documentCounters.type, documentCounters.annee], set: { dernier: sql`${documentCounters.dernier} + 1` } })
+    .values({ type, annee, dernier: 1, utilise: true })
+    .onConflictDoUpdate({ target: [documentCounters.type, documentCounters.annee], set: { dernier: sql`${documentCounters.dernier} + 1`, utilise: true } })
     .returning({ dernier: documentCounters.dernier })
-  const template = (await tx.select().from(documentTemplate).where(eq(documentTemplate.id, 1)))[0]
-  const prefixe = (type === 'devis' ? template?.prefixeDevis : template?.prefixeFacture) ?? (type === 'devis' ? 'D' : 'F')
-  return { annee, numero: row!.dernier, label: formatNumber(prefixe, annee, row!.dernier) }
+  return { annee, numero: row!.dernier, label: formatNumber(type, annee, row!.dernier) }
+}
+
+/** Un devis (ou une facture) a déjà été créé, toutes années confondues. */
+export async function isLocked(type: DocumentType, tx: Tx | typeof db = db) {
+  const [row] = await tx
+    .select({ type: documentCounters.type })
+    .from(documentCounters)
+    .where(and(eq(documentCounters.type, type), eq(documentCounters.utilise, true)))
+    .limit(1)
+  return !!row
 }
 
 /**
- * Fixe le prochain numéro de l'année (reprise d'une numérotation existante).
- * On ne peut qu'avancer : revenir en arrière créerait des doublons.
+ * Fixe le prochain numéro de l'année, pour reprendre la suite de l'ancien logiciel.
+ * Possible seulement tant qu'aucun document de ce type n'a été créé.
  */
 export async function setNextNumber(type: DocumentType, next: number, at = new Date()) {
   const annee = yearOf(at)
   return db.transaction(async (tx) => {
-    // Verrouille le compteur pendant la vérification
-    await tx.execute(sql`select 1 from ${documentCounters} where ${documentCounters.type} = ${type} and ${documentCounters.annee} = ${annee} for update`)
-    const last = await lastNumber(type, annee, tx)
-    if (next <= last) return { ok: false as const, last }
+    // Verrouille les compteurs du type pendant la vérification
+    await tx.execute(sql`select 1 from ${documentCounters} where ${documentCounters.type} = ${type} for update`)
+    if (await isLocked(type, tx)) return false
     await tx
       .insert(documentCounters)
       .values({ type, annee, dernier: next - 1 })
       .onConflictDoUpdate({ target: [documentCounters.type, documentCounters.annee], set: { dernier: next - 1 } })
-    return { ok: true as const, last }
+    return true
   })
 }
 
 /** Prochains numéros de l'année, pour l'affichage (rien n'est attribué). */
-export async function nextNumbers(template: Pick<DocumentTemplate, 'prefixeDevis' | 'prefixeFacture'>, at = new Date()) {
+export async function nextNumbers(at = new Date()) {
   const annee = yearOf(at)
-  const [devis, facture] = await Promise.all([lastNumber('devis', annee), lastNumber('facture', annee)])
-  return {
-    annee,
-    devis: { numero: devis + 1, label: formatNumber(template.prefixeDevis, annee, devis + 1) },
-    facture: { numero: facture + 1, label: formatNumber(template.prefixeFacture, annee, facture + 1) },
+  const next = async (type: DocumentType) => {
+    const [last, verrouille] = await Promise.all([lastNumber(type, annee), isLocked(type)])
+    return { numero: last + 1, label: formatNumber(type, annee, last + 1), verrouille }
   }
+  const [devis, facture] = await Promise.all([next('devis'), next('facture')])
+  return { annee, devis, facture }
 }

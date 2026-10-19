@@ -22,9 +22,8 @@
 - [x] Informations de l'entreprise : raison sociale, forme, capital, adresse, SIRET (clé vérifiée), RCS, TVA intracom, IBAN (clé vérifiée), BIC, logo PNG/JPEG
 - [x] Éditeur de modèle commun : couleur, introduction, conditions de paiement, validité du devis, délai de paiement, notes, mentions légales, pied de page
 - [x] PDF côté serveur (pdfkit) et aperçu en direct dans la page (pdf.js)
-- [x] Numérotation D-2026-0001 / F-2026-0001 sans trou (compteur verrouillé), reprise d'une numérotation existante
+- [x] Numérotation D-2026-0001 / F-2026-0001 sans trou (compteur verrouillé), préfixes fixes, reprise de l'ancien logiciel possible jusqu'au premier document créé
 - [ ] Mentions légales types à faire valider par leur comptable (pénalités, indemnité de 40 €, escompte)
-- [ ] Numérotation : préfixes D / F à fixer dans le code, et « prochain numéro » à verrouiller dès le premier document créé (il ne sert qu'à reprendre la suite de l'ancien logiciel)
 
 ### Clients et commandes (prochaine étape)
 Les clients arriveront surtout par le panier du site (coordonnées saisies à la fin de la commande, puis espace client : suivi, dépenses, factures). En attendant, l'équipe peut créer une fiche à la main.

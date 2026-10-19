@@ -274,8 +274,6 @@ export const documentTemplate = pgTable(
     noteFacture: txt('note_facture'),
     mentionsLegales: txt('mentions_legales'),
     piedDePage: txt('pied_de_page'),
-    prefixeDevis: text('prefixe_devis').notNull().default('D'),
-    prefixeFacture: text('prefixe_facture').notNull().default('F'),
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },
   (t) => [check('document_template_single_row', sql`${t.id} = 1`)],
@@ -286,13 +284,15 @@ export type DocumentType = (typeof DOCUMENT_TYPES)[number]
 
 // Dernier numéro attribué, par type et par année. La ligne est verrouillée pendant l'attribution :
 // deux devis créés en même temps ne peuvent pas recevoir le même numéro, et une création annulée
-// (transaction annulée) ne laisse pas de trou.
+// (transaction annulée) ne laisse pas de trou. « utilise » passe à vrai au premier document créé :
+// le prochain numéro ne peut alors plus être modifié à la main.
 export const documentCounters = pgTable(
   'document_counters',
   {
     type: text('type', { enum: DOCUMENT_TYPES }).notNull(),
     annee: integer('annee').notNull(),
     dernier: integer('dernier').notNull().default(0),
+    utilise: boolean('utilise').notNull().default(false),
   },
   (t) => [primaryKey({ columns: [t.type, t.annee] })],
 )

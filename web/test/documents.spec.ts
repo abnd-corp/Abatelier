@@ -41,10 +41,8 @@ const SETTINGS: DocumentSettings = {
     noteFacture: '',
     mentionsLegales: '',
     piedDePage: '',
-    prefixeDevis: 'D',
-    prefixeFacture: 'F',
   },
-  numbering: { annee: 2026, devis: { numero: 1, label: 'D-2026-0001' }, facture: { numero: 1, label: 'F-2026-0001' } },
+  numbering: { annee: 2026, devis: { numero: 1, label: 'D-2026-0001', verrouille: false }, facture: { numero: 1, label: 'F-2026-0001', verrouille: false } },
 }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -71,7 +69,7 @@ async function setup(path = '/modeles-documents', extra: Parameters<typeof mockA
 
 describe('Modèles de documents', () => {
   it('formate les numéros comme l’API', () => {
-    expect(formatNumber('D', 2026, 7)).toBe('D-2026-0007')
+    expect(formatNumber('devis', 2026, 7)).toBe('D-2026-0007')
   })
 
   it('affiche l’identité, le logo de l’appli et un premier aperçu du devis', async () => {
@@ -147,18 +145,27 @@ describe('Modèles de documents', () => {
     expect(wrapper.text()).toContain('SIRET : 14 chiffres attendus.')
   })
 
-  it('montre les prochains numéros avec les préfixes en cours de saisie, et n’envoie que le numéro changé', async () => {
+  it('montre le prochain numéro en cours de saisie, et n’envoie que le numéro changé', async () => {
     const { wrapper, calls } = await setup('/modeles-documents?onglet=numerotation', {
-      'PATCH /documents/numbering': [200, { numbering: { ...SETTINGS.numbering, facture: { numero: 128, label: 'F-2026-0128' } } }],
+      'PATCH /documents/numbering': [200, { numbering: { ...SETTINGS.numbering, facture: { numero: 128, label: 'F-2026-0128', verrouille: false } } }],
     })
-    await wrapper.get('#n-prefixe-devis').setValue('dv')
-    expect(wrapper.text()).toContain('Prochain devis : DV-2026-0001')
-    await wrapper.get('#n-prefixe-devis').setValue('D')
+    expect(wrapper.find('#n-prefixe-devis').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Prochain devis : D-2026-0001')
     await wrapper.get('#n-facture').setValue('128')
     expect(wrapper.text()).toContain('Prochaine facture : F-2026-0128')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(calls.filter((c) => c.method === 'PATCH').map((c) => [c.path, c.body])).toEqual([['/documents/numbering', { facture: '128' }]])
+  })
+
+  it('grise le prochain numéro une fois le premier document créé', async () => {
+    const { wrapper } = await setup('/modeles-documents?onglet=numerotation', {
+      'GET /documents/settings': [200, { ...SETTINGS, numbering: { ...SETTINGS.numbering, devis: { numero: 8, label: 'D-2026-0008', verrouille: true } } }],
+    })
+    expect(wrapper.get('#n-devis').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('#n-devis').attributes('aria-describedby')).toBe('n-devis-lock')
+    expect(wrapper.get('#n-devis-lock').text()).toBe('Verrouillé : un devis a déjà été créé.')
+    expect(wrapper.get('#n-facture').attributes('disabled')).toBeUndefined()
   })
 
   it('envoie un logo PNG tout de suite, et refuse un autre format sans appeler l’API', async () => {

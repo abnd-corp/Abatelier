@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import { companySettings, DOCUMENT_TYPES, documentTemplate } from '../db/schema.js'
-import { getCompany, getTemplate, nextNumbers, publicCompany, setNextNumber, formatNumber, yearOf } from '../documents.js'
+import { getCompany, getTemplate, nextNumbers, publicCompany, setNextNumber, yearOf } from '../documents.js'
 import { inspectImage, renderDocument, sampleDocument } from '../pdf.js'
 import { getPricingSettings } from '../pricing.js'
 import { requirePerm } from '../auth/plugin.js'
@@ -72,12 +72,6 @@ const companyFields = {
     .pipe(orEmpty(z.string().regex(/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, 'BIC invalide : 8 ou 11 caractères.'))),
 }
 
-const prefixe = (label: string) =>
-  z
-    .string()
-    .trim()
-    .toUpperCase()
-    .regex(/^[A-Z]{1,4}$/, `${label} : 1 à 4 lettres.`)
 const templateFields = {
   couleur: z
     .string()
@@ -93,10 +87,7 @@ const templateFields = {
   noteFacture: block(1000, 'Note de la facture'),
   mentionsLegales: block(2000, 'Mentions légales'),
   piedDePage: block(300, 'Pied de page'),
-  prefixeDevis: prefixe('Préfixe des devis'),
-  prefixeFacture: prefixe('Préfixe des factures'),
 }
-const samePrefix = (t: { prefixeDevis: string; prefixeFacture: string }) => t.prefixeDevis === t.prefixeFacture
 
 const nextNumber = (label: string) =>
   z.preprocess(
@@ -122,7 +113,7 @@ export async function documentRoutes(app: FastifyInstance) {
 
   app.get('/settings', async () => {
     const [company, template] = await Promise.all([getCompany(), getTemplate()])
-    return { company: publicCompany(company), template, numbering: await nextNumbers(template) }
+    return { company: publicCompany(company), template, numbering: await nextNumbers() }
   })
 
   app.patch('/company', async (req, reply) => {
@@ -144,42 +135,36 @@ export async function documentRoutes(app: FastifyInstance) {
     const parsed = z.object(templateFields).partial().safeParse(req.body)
     if (!parsed.success) return invalid(reply, parsed.error)
     const before = await getTemplate()
-    if (samePrefix({ ...before, ...parsed.data })) {
-      return reply.code(400).send({ error: 'Les devis et les factures doivent avoir des préfixes différents.', field: 'prefixeFacture' })
-    }
     const changes = diff(before as Record<string, unknown>, parsed.data as Record<string, unknown>)
-    if (!Object.keys(changes).length) return { template: before, numbering: await nextNumbers(before) }
+    if (!Object.keys(changes).length) return { template: before }
     const [template] = await db
       .update(documentTemplate)
       .set({ ...parsed.data, updatedAt: new Date() })
       .where(eq(documentTemplate.id, 1))
       .returning()
     await audit(req, 'documents.template_updated', { targetType: 'template', details: { changements: changes } })
-    return { template, numbering: await nextNumbers(template!) }
+    return { template }
   })
 
-  // Reprise d'une numérotation existante : prochain numéro de l'année, seulement vers l'avant
+  // Reprise de la numérotation de l'ancien logiciel, avant le premier document créé
   app.patch('/numbering', async (req, reply) => {
     const parsed = numberingBody.safeParse(req.body)
     if (!parsed.success) return invalid(reply, parsed.error)
-    const template = await getTemplate()
     const annee = yearOf(new Date())
     for (const type of DOCUMENT_TYPES) {
       const next = parsed.data[type]
       if (next === undefined) continue
-      const current = (await nextNumbers(template))[type].numero
+      const current = (await nextNumbers())[type].numero
       if (next === current) continue
-      const res = await setNextNumber(type, next)
-      if (!res.ok) {
-        const p = type === 'devis' ? template.prefixeDevis : template.prefixeFacture
-        return reply.code(400).send({
-          error: `Le numéro ${formatNumber(p, annee, res.last)} est déjà attribué : le prochain ne peut pas être inférieur à ${res.last + 1}.`,
+      if (!(await setNextNumber(type, next))) {
+        return reply.code(409).send({
+          error: type === 'devis' ? 'Un devis a déjà été créé : la numérotation des devis ne se modifie plus.' : 'Une facture a déjà été créée : la numérotation des factures ne se modifie plus.',
           field: type,
         })
       }
       await audit(req, 'documents.numbering_updated', { targetType: 'numbering', details: { type, annee, avant: current, apres: next } })
     }
-    return { numbering: await nextNumbers(template) }
+    return { numbering: await nextNumbers() }
   })
 
   // Aperçu du modèle avec des données d'exemple, y compris les réglages pas encore enregistrés
@@ -193,7 +178,7 @@ export async function documentRoutes(app: FastifyInstance) {
     }
     const [company, template, pricing] = await Promise.all([getCompany(), getTemplate(), getPricingSettings()])
     const t = { ...template, ...parsed.data.template }
-    const numbering = await nextNumbers(t)
+    const numbering = await nextNumbers()
     const pdf = await renderDocument({ ...company, ...parsed.data.company }, t, company.logo, sampleDocument(parsed.data.type, numbering[parsed.data.type].label, pricing.tva))
     return reply.header('Content-Type', 'application/pdf').header('Content-Disposition', `inline; filename="apercu-${parsed.data.type}.pdf"`).send(pdf)
   })

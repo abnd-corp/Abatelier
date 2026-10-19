@@ -121,17 +121,15 @@ describe('Entreprise', () => {
 })
 
 describe('Modèle', () => {
-  it('enregistre couleur, textes et délais, et met les préfixes en majuscules', async () => {
+  it('enregistre couleur, textes et délais', async () => {
     const res = await direction.patch('/api/documents/template', {
       couleur: '#7B2FA3',
       conditionsPaiement: '30 % à la commande.\nSolde à la livraison.',
       validiteDevis: '45',
       echeanceFacture: 30,
-      prefixeDevis: 'dv',
     })
     expect(res.statusCode).toBe(200)
-    expect(res.json().template).toMatchObject({ couleur: '#7b2fa3', validiteDevis: 45, prefixeDevis: 'DV' })
-    expect(res.json().numbering.devis.label).toBe(`DV-${YEAR}-0001`)
+    expect(res.json().template).toMatchObject({ couleur: '#7b2fa3', validiteDevis: 45 })
     expect(await entries('documents.template_updated')).toHaveLength(1)
   })
 
@@ -139,8 +137,6 @@ describe('Modèle', () => {
     [{ couleur: 'violet' }, 'couleur', /#rrggbb/],
     [{ echeanceFacture: 90 }, 'echeanceFacture', /60 jours maximum/],
     [{ validiteDevis: 0 }, 'validiteDevis', /1 jours minimum/],
-    [{ prefixeDevis: 'D-1' }, 'prefixeDevis', /1 à 4 lettres/],
-    [{ prefixeFacture: 'D' }, 'prefixeFacture', /préfixes différents/],
     [{ mentionsLegales: 'x'.repeat(2001) }, 'mentionsLegales', /2000 caractères/],
   ])('refuse %o et désigne le champ', async (body, field, msg) => {
     const res = await direction.patch('/api/documents/template', body)
@@ -152,8 +148,8 @@ describe('Modèle', () => {
 
 describe('Numérotation', () => {
   it('formate les numéros sur 4 chiffres', () => {
-    expect(formatNumber('D', 2026, 1)).toBe('D-2026-0001')
-    expect(formatNumber('F', 2026, 12345)).toBe('F-2026-12345')
+    expect(formatNumber('devis', 2026, 1)).toBe('D-2026-0001')
+    expect(formatNumber('facture', 2026, 12345)).toBe('F-2026-12345')
   })
 
   it('compte l’année à l’heure de Paris', () => {
@@ -186,17 +182,25 @@ describe('Numérotation', () => {
     expect((await db.transaction((tx) => allocateNumber(tx, 'devis', new Date('2026-01-02T12:00:00Z')))).label).toBe('D-2026-0001')
   })
 
-  it('reprend une numérotation existante, sans jamais revenir en arrière', async () => {
+  it('reprend une numérotation existante, puis la verrouille au premier document créé', async () => {
     const res = await direction.patch('/api/documents/numbering', { facture: '128' })
-    expect(res.json().numbering.facture.label).toBe(`F-${YEAR}-0128`)
+    expect(res.json().numbering.facture).toEqual({ numero: 128, label: `F-${YEAR}-0128`, verrouille: false })
     const [entry] = await entries('documents.numbering_updated')
     expect(entry!.details).toEqual({ type: 'facture', annee: YEAR, avant: 1, apres: 128 })
-    expect((await db.transaction((tx) => allocateNumber(tx, 'facture'))).numero).toBe(128)
-    const back = await direction.patch('/api/documents/numbering', { facture: 100 })
-    expect(back.statusCode).toBe(400)
-    expect(back.json()).toMatchObject({ field: 'facture', error: expect.stringMatching(`F-${YEAR}-0128 est déjà attribué`) })
-    // Avancer reste possible
-    expect((await direction.patch('/api/documents/numbering', { facture: 200 })).json().numbering.facture.numero).toBe(200)
+    // Tant qu'aucune facture n'existe, on peut corriger dans les deux sens
+    expect((await direction.patch('/api/documents/numbering', { facture: 120 })).json().numbering.facture.numero).toBe(120)
+    expect((await db.transaction((tx) => allocateNumber(tx, 'facture'))).numero).toBe(120)
+    expect((await settings()).numbering.facture).toMatchObject({ numero: 121, verrouille: true })
+    const locked = await direction.patch('/api/documents/numbering', { facture: 200 })
+    expect(locked.statusCode).toBe(409)
+    expect(locked.json()).toMatchObject({ field: 'facture', error: expect.stringMatching(/ne se modifie plus/) })
+    // Les devis gardent leur propre verrou
+    expect((await direction.patch('/api/documents/numbering', { devis: 40 })).json().numbering.devis).toMatchObject({ numero: 40, verrouille: false })
+  })
+
+  it('reste verrouillée l’année suivante', async () => {
+    await db.transaction((tx) => allocateNumber(tx, 'devis', new Date('2025-06-01T12:00:00Z')))
+    expect((await direction.patch('/api/documents/numbering', { devis: 10 })).statusCode).toBe(409)
   })
 
   it('refuse un numéro invalide et ne note rien si le numéro ne change pas', async () => {
@@ -211,7 +215,7 @@ describe('Numérotation', () => {
 
 describe('Aperçu PDF', () => {
   it('renvoie un PDF d’exemple, y compris avec des réglages pas encore enregistrés', async () => {
-    const res = await direction.post('/api/documents/preview', { type: 'facture', template: { couleur: '#123456', prefixeFacture: 'FA' }, company: { iban: 'FR7630006000011234567890189' } })
+    const res = await direction.post('/api/documents/preview', { type: 'facture', template: { couleur: '#123456' }, company: { iban: 'FR7630006000011234567890189' } })
     expect(res.statusCode).toBe(200)
     expect(res.headers['content-type']).toBe('application/pdf')
     expect(isPdf(res.rawPayload)).toBe(true)
@@ -229,7 +233,7 @@ describe('Aperçu PDF', () => {
   it('passe à la page suivante quand il y a beaucoup de lignes, et calcule les totaux au centime', async () => {
     const data = sampleDocument('devis', 'D-2026-0001', 20)
     data.lignes = Array.from({ length: 40 }, (_, i) => ({ designation: `Pièce ${i + 1}`, detail: 'RAL 7016', quantite: 3, prixUnitaire: 10.335 }))
-    const tpl = { couleur: '#5b34c4', entete: '', conditionsPaiement: '', validiteDevis: 30, echeanceFacture: 30, noteDevis: '', noteFacture: '', mentionsLegales: '', piedDePage: '', prefixeDevis: 'D', prefixeFacture: 'F' }
+    const tpl = { couleur: '#5b34c4', entete: '', conditionsPaiement: '', validiteDevis: 30, echeanceFacture: 30, noteDevis: '', noteFacture: '', mentionsLegales: '', piedDePage: '' }
     const company = { raisonSociale: 'Alu Pliage Service', formeJuridique: '', capital: '', adresse: '', telephone: '', email: '', siteWeb: '', siret: '', rcs: '', tvaIntra: '', iban: '', bic: '' }
     const pdf = await renderDocument(company, tpl, null, data)
     expect(isPdf(pdf)).toBe(true)

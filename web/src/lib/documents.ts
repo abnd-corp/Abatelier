@@ -28,14 +28,19 @@ export interface Template {
   noteFacture: string
   mentionsLegales: string
   piedDePage: string
-  prefixeDevis: string
-  prefixeFacture: string
+}
+
+export interface NextNumber {
+  numero: number
+  label: string
+  // Un document de ce type a déjà été créé : le prochain numéro ne se modifie plus
+  verrouille: boolean
 }
 
 export interface Numbering {
   annee: number
-  devis: { numero: number; label: string }
-  facture: { numero: number; label: string }
+  devis: NextNumber
+  facture: NextNumber
 }
 
 export interface DocumentSettings {
@@ -55,11 +60,12 @@ export const TEMPLATE_FIELDS = [
   'noteFacture',
   'mentionsLegales',
   'piedDePage',
-  'prefixeDevis',
-  'prefixeFacture',
 ] as const
 
-/** D, 2026, 1 → « D-2026-0001 » (même format que l'API) */
-export const formatNumber = (prefixe: string, annee: number, n: number) => `${prefixe}-${annee}-${String(n).padStart(4, '0')}`
+// Préfixes fixes, comme dans l'API
+export const PREFIXES: Record<DocumentType, string> = { devis: 'D', facture: 'F' }
+
+/** devis, 2026, 1 → « D-2026-0001 » (même format que l'API) */
+export const formatNumber = (type: DocumentType, annee: number, n: number) => `${PREFIXES[type]}-${annee}-${String(n).padStart(4, '0')}`
 
 export const LOGO_MAX = 1024 * 1024

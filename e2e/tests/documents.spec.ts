@@ -70,7 +70,7 @@ test.describe('Modèles de documents', () => {
     await expect(adminPage.getByRole('cell', { name: /A modifié le modèle des devis et factures : .*mentions légales/ }).first()).toBeVisible()
   })
 
-  test('la direction reprend une numérotation, sans pouvoir revenir en arrière', async ({ adminPage }) => {
+  test('la direction reprend la numérotation de son ancien logiciel', async ({ adminPage }) => {
     await adminPage.goto('/modeles-documents?onglet=numerotation')
     const form = adminPage.getByRole('form', { name: 'Modèles de documents' })
     const year = new Date().getFullYear()
@@ -80,9 +80,9 @@ test.describe('Modèles de documents', () => {
     await expect(form.getByText(`Prochaine facture : F-${year}-${String(next).padStart(4, '0')}`)).toBeVisible()
     await form.getByRole('button', { name: 'Enregistrer', exact: true }).click()
     await expect(form.getByText('Modèles enregistrés')).toBeVisible()
-    await form.getByLabel('Prochain numéro').nth(1).fill('12')
-    await form.getByRole('button', { name: 'Enregistrer', exact: true }).click()
-    await expect(form.getByRole('alert').or(form.locator('.field-error'))).toContainText('est déjà attribué')
+    // Préfixes fixes : seul le numéro se saisit
+    await expect(form.getByLabel('Préfixe')).toHaveCount(0)
+    await expect(form.getByLabel('Prochain numéro').nth(1)).toBeEnabled()
   })
 
   test('la direction envoie son logo (plus de 200 Ko), le voit, puis revient au logo de l’appli', async ({ adminPage }) => {

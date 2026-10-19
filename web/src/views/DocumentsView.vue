@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
-import { COMPANY_FIELDS, formatNumber, LOGO_MAX, TEMPLATE_FIELDS, type Company, type DocumentSettings, type Numbering, type Template } from '@/lib/documents'
+import { COMPANY_FIELDS, formatNumber, LOGO_MAX, TEMPLATE_FIELDS, type Company, type DocumentSettings, type DocumentType, type Numbering, type Template } from '@/lib/documents'
 import AppIcon from '@/components/AppIcon.vue'
 import BrandMark from '@/components/BrandMark.vue'
 import PdfPreview from '@/components/documents/PdfPreview.vue'
@@ -77,7 +77,7 @@ const tabOf = (field?: string): Tab | null =>
     ? null
     : (COMPANY_FIELDS as readonly string[]).includes(field)
       ? 'entreprise'
-      : field === 'prefixeDevis' || field === 'prefixeFacture' || field === 'devis' || field === 'facture'
+      : field === 'devis' || field === 'facture'
         ? 'numerotation'
         : (TEMPLATE_FIELDS as readonly string[]).includes(field)
           ? 'modele'
@@ -92,8 +92,7 @@ async function save() {
     const s = { ...original.value }
     if (dirtyCompany.value) s.company = (await api<{ company: Company }>('/documents/company', { method: 'PATCH', body: { ...company } })).company
     if (dirtyTemplate.value) {
-      const r = await api<{ template: Template; numbering: Numbering }>('/documents/template', { method: 'PATCH', body: { ...template } })
-      Object.assign(s, { template: r.template, numbering: r.numbering })
+      s.template = (await api<{ template: Template }>('/documents/template', { method: 'PATCH', body: { ...template } })).template
     }
     if (dirtyNumbering.value) {
       const body = Object.fromEntries((['devis', 'facture'] as const).filter((k) => numbering[k] !== String(s.numbering[k].numero)).map((k) => [k, numbering[k]]))
@@ -118,8 +117,13 @@ function reset() {
 const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
 const KNOWN = [...COMPANY_FIELDS, ...TEMPLATE_FIELDS, 'devis', 'facture', 'logo'] as string[]
 
-// Numéros tels qu'ils apparaîtront, avec les préfixes en cours de saisie
-const label = (p: string, n: string) => (original.value ? formatNumber(p.trim().toUpperCase() || '?', original.value.numbering.annee, Number(n) || 0) : '')
+// Numéro tel qu'il apparaîtra, d'après la saisie
+const label = (type: DocumentType, n: string) => (original.value ? formatNumber(type, original.value.numbering.annee, Number(n) || 0) : '')
+const locked = (type: DocumentType) => !!original.value?.numbering[type].verrouille
+const NUMBERED: { type: DocumentType; legend: string; next: string; lock: string }[] = [
+  { type: 'devis', legend: 'Devis', next: 'Prochain devis :', lock: 'Verrouillé : un devis a déjà été créé.' },
+  { type: 'facture', legend: 'Factures', next: 'Prochaine facture :', lock: 'Verrouillé : une facture a déjà été créée.' },
+]
 
 // --- Logo : envoyé ou retiré tout de suite, hors du bouton « Enregistrer » ---
 const logoVersion = ref(0)
@@ -382,43 +386,20 @@ async function removeLogo() {
 
       <!-- Numérotation -->
       <section v-show="tab === 'numerotation'" id="panel-numerotation" role="tabpanel" aria-labelledby="tab-numerotation" class="groups">
-        <fieldset class="card group">
-          <legend>Devis</legend>
-          <div class="row">
-            <div class="field">
-              <label for="n-prefixe-devis">Préfixe</label>
-              <input id="n-prefixe-devis" v-model="template.prefixeDevis" class="input mono" maxlength="4" :aria-invalid="!!err('prefixeDevis') || undefined" />
-              <span v-if="err('prefixeDevis')" class="field-error">{{ err('prefixeDevis') }}</span>
-            </div>
-            <div class="field">
-              <label for="n-devis">Prochain numéro</label>
-              <input id="n-devis" v-model="numbering.devis" class="input mono" inputmode="numeric" :aria-invalid="!!err('devis') || undefined" />
-              <span v-if="err('devis')" class="field-error">{{ err('devis') }}</span>
-            </div>
+        <fieldset v-for="t in NUMBERED" :key="t.type" class="card group">
+          <legend>{{ t.legend }}</legend>
+          <div class="field">
+            <label :for="`n-${t.type}`">Prochain numéro</label>
+            <input :id="`n-${t.type}`" v-model="numbering[t.type]" class="input mono" inputmode="numeric" :disabled="locked(t.type)" :aria-invalid="!!err(t.type) || undefined" :aria-describedby="locked(t.type) ? `n-${t.type}-lock` : undefined" />
+            <span v-if="err(t.type)" class="field-error">{{ err(t.type) }}</span>
+            <span v-else-if="locked(t.type)" :id="`n-${t.type}-lock`" class="muted hint">{{ t.lock }}</span>
           </div>
-          <p class="next">Prochain devis : <b class="mono">{{ label(template.prefixeDevis, numbering.devis) }}</b></p>
-        </fieldset>
-
-        <fieldset class="card group">
-          <legend>Factures</legend>
-          <div class="row">
-            <div class="field">
-              <label for="n-prefixe-facture">Préfixe</label>
-              <input id="n-prefixe-facture" v-model="template.prefixeFacture" class="input mono" maxlength="4" :aria-invalid="!!err('prefixeFacture') || undefined" />
-              <span v-if="err('prefixeFacture')" class="field-error">{{ err('prefixeFacture') }}</span>
-            </div>
-            <div class="field">
-              <label for="n-facture">Prochain numéro</label>
-              <input id="n-facture" v-model="numbering.facture" class="input mono" inputmode="numeric" :aria-invalid="!!err('facture') || undefined" />
-              <span v-if="err('facture')" class="field-error">{{ err('facture') }}</span>
-            </div>
-          </div>
-          <p class="next">Prochaine facture : <b class="mono">{{ label(template.prefixeFacture, numbering.facture) }}</b></p>
+          <p class="next">{{ t.next }} <b class="mono">{{ label(t.type, numbering[t.type]) }}</b></p>
         </fieldset>
 
         <div class="card group explain">
           <p>Les numéros sont attribués à la création de chaque devis et facture, à la suite, sans trou ni doublon. Ils repartent à 1 chaque 1<sup>er</sup> janvier.</p>
-          <p class="muted">Pour continuer la numérotation de votre ancien logiciel, indiquez le prochain numéro. On ne peut pas revenir en arrière : un numéro déjà attribué ne peut pas être réutilisé.</p>
+          <p class="muted">Pour continuer la numérotation de votre ancien logiciel, indiquez le prochain numéro avant de créer le premier document.</p>
         </div>
       </section>
 
