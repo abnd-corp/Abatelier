@@ -64,6 +64,46 @@ test.describe('Tarifs et catalogue', () => {
     await expect(coloris.getByText('Cette référence de coloris existe déjà.')).toBeVisible()
   })
 
+  test('la direction règle le façonnage et les remises quantité', async ({ adminPage }) => {
+    // Réglages partagés par tous les tests : on remet les valeurs de départ à la fin
+    await adminPage.goto('/catalogue')
+    await adminPage.getByRole('tab', { name: /Façonnage et conditions/ }).click()
+    const panel = adminPage.getByRole('tabpanel', { name: /Façonnage et conditions/ })
+    const save = panel.getByRole('button', { name: 'Enregistrer', exact: true })
+    await expect(save).toBeDisabled()
+
+    await panel.getByLabel('Prix par pli et par mètre').fill('1,05')
+    await expect(panel.getByText(/Une couvertine de 3 m à 4 plis : 12,60\s€/)).toBeVisible()
+    await panel.getByRole('button', { name: 'Ajouter un palier' }).click()
+    await panel.getByLabel('Palier 3 : nombre de pièces').fill('200')
+    await panel.getByLabel('Palier 3 : remise').fill('15')
+    await save.click()
+    await expect(panel.getByText('Réglages enregistrés')).toBeVisible()
+
+    // Conservé après rechargement
+    await adminPage.reload()
+    await expect(panel.getByLabel('Prix par pli et par mètre')).toHaveValue('1,05')
+    await expect(panel.getByLabel('Palier 3 : remise')).toHaveValue('15')
+
+    // Paliers dans le désordre : refusé, avec une explication
+    await panel.getByLabel('Palier 3 : nombre de pièces').fill('30')
+    await save.click()
+    await expect(panel.getByRole('alert')).toContainText('du plus petit au plus grand')
+
+    // Le journal garde l'ancien et le nouveau prix
+    await panel.getByRole('button', { name: 'Annuler les modifications' }).click()
+    await adminPage.goto('/journal')
+    await adminPage.getByRole('button', { name: 'Catalogue et prix' }).click()
+    await expect(adminPage.getByRole('cell', { name: /prix par pli et par mètre 0,90\s€ → 1,05\s€/ }).first()).toBeVisible()
+
+    // Retour aux valeurs de départ pour les autres tests
+    const res = await adminPage.request.patch('/api/catalog/settings', {
+      data: { prixPliMl: 0.9, remisesQuantite: [{ seuil: 20, remise: 5 }, { seuil: 50, remise: 10 }] },
+      headers: { Origin: new URL(adminPage.url()).origin },
+    })
+    expect(res.status()).toBe(200)
+  })
+
   test('la RH et l’atelier n’ont pas accès au catalogue', async ({ adminPage, browser, baseURL, uid }) => {
     for (const role of ['rh', 'atelier'] as const) {
       const id = `${uid}-${role}`

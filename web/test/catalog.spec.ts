@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import CatalogView from '@/views/CatalogView.vue'
-import { eur, mm, pct, toField, type Color, type Material } from '@/lib/catalog'
+import { eur, mm, pct, toField, type Color, type Material, type PricingSettings } from '@/lib/catalog'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 import { useAuthStore } from '@/stores/auth'
 import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
@@ -20,8 +20,30 @@ const COLS: Color[] = [
   { id: 'c3', nom: 'Brut', reference: 'Non laqué', hex: '#cdd1d4', majoration: -15, delaiSup: 0, actif: true, position: 3 },
 ]
 
+const SETTINGS: PricingSettings = {
+  prixPliMl: 0.9,
+  miseEnRoute: 18,
+  minimumCommande: 45,
+  remisePro: 10,
+  tva: 20,
+  delaiStandard: 5,
+  remisesQuantite: [
+    { seuil: 20, remise: 5 },
+    { seuil: 50, remise: 10 },
+  ],
+  largeurTole: 1250,
+  longueurMin: 200,
+  longueurMax: 3000,
+  plisMax: 8,
+}
+
 async function setup(path = '/catalogue', extra: Parameters<typeof mockApi>[0] = {}) {
-  const calls = mockApi({ 'GET /catalog/materials': [200, { materials: MATS }], 'GET /catalog/colors': [200, { colors: COLS }], ...extra })
+  const calls = mockApi({
+    'GET /catalog/materials': [200, { materials: MATS }],
+    'GET /catalog/colors': [200, { colors: COLS }],
+    'GET /catalog/settings': [200, { settings: SETTINGS }],
+    ...extra,
+  })
   const pinia = freshPinia()
   useAuthStore().user = ADMIN
   const router = makeRouter()
@@ -140,5 +162,71 @@ describe('Page Tarifs et catalogue', () => {
     await p.get('form').trigger('submit')
     await flushPromises()
     expect(calls.find((c) => c.method === 'POST')!.body).toMatchObject({ reference: 'RAL 3004', nom: 'Rouge pourpre', hex: '#6d1a2a', majoration: '0' })
+  })
+})
+
+describe('Façonnage et conditions', () => {
+  const open = async (extra: Parameters<typeof mockApi>[0] = {}) => {
+    const r = await setup('/catalogue?onglet=faconnage', extra)
+    return { ...r, p: r.panel('faconnage') }
+  }
+  const save = (p: ReturnType<Awaited<ReturnType<typeof setup>>['panel']>) => p.findAll('button').find((b) => b.text() === 'Enregistrer')!
+
+  it('affiche les réglages à la française et un exemple de calcul', async () => {
+    const { p } = await open()
+    expect((p.get('#s-pli').element as HTMLInputElement).value).toBe('0,90')
+    expect((p.get('#s-tva').element as HTMLInputElement).value).toBe('20')
+    expect(n(p.text())).toContain('Une couvertine de 3 m à 4 plis : 10,80 € de façonnage')
+    expect(p.findAll('.tiers li')).toHaveLength(2)
+  })
+
+  it('n’active l’enregistrement qu’après une modification, et sait annuler', async () => {
+    const { p } = await open()
+    expect(save(p).attributes('disabled')).toBeDefined()
+    await p.get('#s-pli').setValue('1,10')
+    expect(save(p).attributes('disabled')).toBeUndefined()
+    expect(p.text()).toContain('Modifications non enregistrées')
+    await p.findAll('button').find((b) => b.text() === 'Annuler les modifications')!.trigger('click')
+    expect((p.get('#s-pli').element as HTMLInputElement).value).toBe('0,90')
+    expect(save(p).attributes('disabled')).toBeDefined()
+  })
+
+  it('ajoute et supprime des paliers de remise, puis envoie tout', async () => {
+    const { p, calls } = await open({ 'PATCH /catalog/settings': [200, { settings: { ...SETTINGS, remisesQuantite: [{ seuil: 20, remise: 5 }] } }] })
+    await p.findAll('button').find((b) => b.text().includes('Ajouter un palier'))!.trigger('click')
+    expect(p.findAll('.tiers li')).toHaveLength(3)
+    expect((p.get('#s-seuil-2').element as HTMLInputElement).value).toBe('100')
+    await p.get('button[aria-label="Supprimer le palier 2"]').trigger('click')
+    await p.get('button[aria-label="Supprimer le palier 2"]').trigger('click')
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PATCH')!.body.remisesQuantite).toEqual([{ seuil: '20', remise: '5' }])
+    expect(p.text()).toContain('Réglages enregistrés')
+    expect(save(p).attributes('disabled')).toBeDefined()
+  })
+
+  it('n’autorise pas plus de 6 paliers', async () => {
+    const { p } = await open()
+    const add = () => p.findAll('button').find((b) => b.text().includes('Ajouter un palier'))!
+    for (let i = 0; i < 4; i++) await add().trigger('click')
+    expect(p.findAll('.tiers li')).toHaveLength(6)
+    expect(add().attributes('disabled')).toBeDefined()
+  })
+
+  it('affiche l’erreur du serveur sous le bon champ', async () => {
+    const { p } = await open({ 'PATCH /catalog/settings': [400, { error: 'TVA : 50 % maximum.', field: 'tva' }] })
+    await p.get('#s-tva').setValue('80')
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(p.get('#s-tva').attributes('aria-invalid')).toBe('true')
+    expect(p.text()).toContain('TVA : 50 % maximum.')
+  })
+
+  it('décrit le changement des remises dans le journal', () => {
+    const e = {
+      action: 'catalog.settings_updated',
+      details: { changements: { remisesQuantite: { avant: [{ seuil: 20, remise: 5 }], apres: [] }, tva: { avant: 20, apres: 5.5 } } },
+    } as unknown as AuditEntry
+    expect(describeEntry(e).text).toBe('A modifié le façonnage et les conditions : remises quantité −5 % dès 20 → aucune, TVA 20 % → 5,5 %')
   })
 })

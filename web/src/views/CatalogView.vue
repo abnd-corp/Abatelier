@@ -3,21 +3,25 @@ import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MaterialsPanel from '@/components/catalog/MaterialsPanel.vue'
 import ColorsPanel from '@/components/catalog/ColorsPanel.vue'
+import SettingsPanel from '@/components/catalog/SettingsPanel.vue'
 import AppIcon from '@/components/AppIcon.vue'
 
-type Tab = 'matieres' | 'coloris'
+type Tab = 'matieres' | 'coloris' | 'faconnage'
 const route = useRoute()
 const router = useRouter()
 
 // L'onglet ouvert est gardé dans l'adresse (?onglet=coloris) pour pouvoir le partager ou y revenir
-const tab = ref<Tab>(route.query.onglet === 'coloris' ? 'coloris' : 'matieres')
+const TAB_IDS: Tab[] = ['matieres', 'coloris', 'faconnage']
+const tab = ref<Tab>(TAB_IDS.find((t) => t === route.query.onglet) ?? 'matieres')
 watch(tab, (t) => router.replace({ query: t === 'matieres' ? {} : { onglet: t } }))
 
-const counts = ref<Record<Tab, number | null>>({ matieres: null, coloris: null })
+const counts = ref<Record<Tab, number | null>>({ matieres: null, coloris: null, faconnage: null })
 
-const TABS: { id: Tab; label: string; icon: 'layers' | 'palette' }[] = [
+// « more » : fin du libellé masquée sur téléphone pour que les onglets tiennent sur une ligne
+const TABS: { id: Tab; label: string; more?: string; icon: 'layers' | 'palette' | 'sliders' }[] = [
   { id: 'matieres', label: 'Matières', icon: 'layers' },
   { id: 'coloris', label: 'Coloris', icon: 'palette' },
+  { id: 'faconnage', label: 'Façonnage', more: ' et conditions', icon: 'sliders' },
 ]
 
 // Navigation au clavier entre les onglets (flèches gauche et droite)
@@ -52,7 +56,7 @@ function onKey(e: KeyboardEvent) {
       :tabindex="tab === t.id ? 0 : -1"
       @click="tab = t.id"
     >
-      <AppIcon :name="t.icon" :size="17" />{{ t.label }}<span v-if="counts[t.id] !== null" class="count">{{ counts[t.id] }}</span>
+      <AppIcon :name="t.icon" :size="17" />{{ t.label }}<span v-if="t.more" class="more">{{ t.more }}</span><span v-if="counts[t.id] !== null" class="count">{{ counts[t.id] }}</span>
     </button>
   </div>
 
@@ -61,6 +65,9 @@ function onKey(e: KeyboardEvent) {
   </section>
   <section v-show="tab === 'coloris'" id="panel-coloris" role="tabpanel" aria-labelledby="tab-coloris">
     <ColorsPanel @count="counts.coloris = $event" />
+  </section>
+  <section v-show="tab === 'faconnage'" id="panel-faconnage" role="tabpanel" aria-labelledby="tab-faconnage">
+    <SettingsPanel />
   </section>
 </template>
 
@@ -73,8 +80,12 @@ function onKey(e: KeyboardEvent) {
   display: flex;
   gap: 4px;
   border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 .tab {
+  white-space: nowrap;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -104,6 +115,17 @@ function onKey(e: KeyboardEvent) {
 @media (pointer: coarse) {
   .tab {
     min-height: 44px;
+  }
+}
+.more {
+  margin-left: -4px;
+}
+@media (max-width: 640px) {
+  .more {
+    display: none;
+  }
+  .tab {
+    padding-inline: 10px;
   }
 }
 </style>

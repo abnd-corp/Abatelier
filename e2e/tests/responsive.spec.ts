@@ -11,6 +11,7 @@ const PAGES = [
   { path: '/journal', heading: 'Journal d’activité' },
   { path: '/catalogue', heading: 'Tarifs et catalogue' },
   { path: '/catalogue?onglet=coloris', heading: 'Tarifs et catalogue' },
+  { path: '/catalogue?onglet=faconnage', heading: 'Tarifs et catalogue' },
   { path: '/mon-compte', heading: 'Mon compte' },
 ]
 

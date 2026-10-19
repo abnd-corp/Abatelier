@@ -2,7 +2,8 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { asc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { colors, materials } from '../db/schema.js'
+import { colors, materials, pricingSettings } from '../db/schema.js'
+import { getPricingSettings } from '../pricing.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
 
@@ -66,6 +67,29 @@ function diff<T extends Record<string, unknown>>(before: T, changes: Partial<T>)
 const validId = (id: string) => z.uuid().safeParse(id).success
 const materialLabel = (m: { nom: string; epaisseur: number }) => `${m.nom} ${m.epaisseur.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} mm`
 
+const settingsFields = {
+  prixPliMl: decimal(0, 100, 'Prix par pli et par mètre', '€'),
+  miseEnRoute: decimal(0, 1000, 'Mise en route', '€'),
+  minimumCommande: decimal(0, 10000, 'Minimum de commande', '€'),
+  remisePro: decimal(0, 90, 'Remise pro', '%'),
+  tva: decimal(0, 50, 'TVA', '%'),
+  delaiStandard: integer(1, 60, 'Délai standard', 'jours'),
+  remisesQuantite: z
+    .array(
+      z.object({
+        seuil: integer(2, 100000, 'Seuil de remise', 'pièces'),
+        remise: decimal(0.01, 90, 'Remise quantité', '%'),
+      }),
+    )
+    .max(6, '6 paliers de remise maximum.')
+    .refine((t) => t.every((p, i) => i === 0 || p.seuil > t[i - 1]!.seuil), 'Les paliers doivent aller du plus petit au plus grand nombre de pièces, sans doublon.')
+    .refine((t) => t.every((p, i) => i === 0 || p.remise > t[i - 1]!.remise), 'Chaque palier doit donner une remise plus forte que le précédent.'),
+  largeurTole: integer(100, 3000, 'Largeur de tôle', 'mm'),
+  longueurMin: integer(10, 10000, 'Longueur minimum', 'mm'),
+  longueurMax: integer(100, 10000, 'Longueur maximum', 'mm'),
+  plisMax: integer(1, 30, 'Nombre de plis maximum', 'plis'),
+}
+
 export async function catalogRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requirePerm('catalog.manage'))
 
@@ -110,6 +134,30 @@ export async function catalogRoutes(app: FastifyInstance) {
       if (isUniqueViolation(e)) return reply.code(409).send({ error: 'Cette matière existe déjà dans cette épaisseur.', field: 'epaisseur' })
       throw e
     }
+  })
+
+  // --- Façonnage et conditions (réglages uniques) ---
+  app.get('/settings', async () => ({ settings: await getPricingSettings() }))
+
+  app.patch('/settings', async (req, reply) => {
+    const parsed = z.object(settingsFields).partial().safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const before = await getPricingSettings()
+    const merged = { ...before, ...parsed.data }
+    if (merged.longueurMin >= merged.longueurMax) {
+      return reply.code(400).send({ error: 'La longueur minimum doit être plus petite que la longueur maximum.', field: 'longueurMin' })
+    }
+    const changes = diff(before as Record<string, unknown>, parsed.data as Record<string, unknown>)
+    // Les paliers sont des tableaux : on compare leur contenu
+    if (changes.remisesQuantite && JSON.stringify(before.remisesQuantite) === JSON.stringify(parsed.data.remisesQuantite)) delete changes.remisesQuantite
+    if (!Object.keys(changes).length) return { settings: before }
+    const [settings] = await db
+      .update(pricingSettings)
+      .set({ ...parsed.data, updatedAt: new Date() })
+      .where(eq(pricingSettings.id, 1))
+      .returning()
+    await audit(req, 'catalog.settings_updated', { targetType: 'pricing', details: { changements: changes } })
+    return { settings }
   })
 
   // --- Coloris ---

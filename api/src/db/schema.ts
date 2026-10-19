@@ -1,4 +1,5 @@
-import { bigint, boolean, date, index, integer, jsonb, numeric, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, check, date, index, integer, jsonb, numeric, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 const ts = (name: string) => timestamp(name, { withTimezone: true })
 
@@ -136,7 +137,39 @@ export const colors = pgTable('colors', {
   updatedAt: ts('updated_at').notNull().defaultNow(),
 })
 
+export interface QuantityDiscount {
+  // À partir de ce nombre de pièces (sur une même ligne de devis)…
+  seuil: number
+  // …remise en % sur le prix des pièces
+  remise: number
+}
+
+// Réglages de chiffrage : une seule ligne (id = 1), modifiée par la direction
+export const pricingSettings = pgTable(
+  'pricing_settings',
+  {
+    id: integer('id').primaryKey().default(1),
+    // Façonnage
+    prixPliMl: numeric('prix_pli_ml', { precision: 8, scale: 2, mode: 'number' }).notNull(),
+    miseEnRoute: numeric('mise_en_route', { precision: 8, scale: 2, mode: 'number' }).notNull(),
+    // Conditions commerciales
+    minimumCommande: numeric('minimum_commande', { precision: 10, scale: 2, mode: 'number' }).notNull(),
+    remisePro: numeric('remise_pro', { precision: 5, scale: 2, mode: 'number' }).notNull(),
+    tva: numeric('tva', { precision: 5, scale: 2, mode: 'number' }).notNull(),
+    delaiStandard: integer('delai_standard').notNull(),
+    remisesQuantite: jsonb('remises_quantite').$type<QuantityDiscount[]>().notNull(),
+    // Limites des machines
+    largeurTole: integer('largeur_tole').notNull(),
+    longueurMin: integer('longueur_min').notNull(),
+    longueurMax: integer('longueur_max').notNull(),
+    plisMax: integer('plis_max').notNull(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [check('pricing_settings_single_row', sql`${t.id} = 1`)],
+)
+
 export type User = typeof users.$inferSelect
 export type Employee = typeof employees.$inferSelect
 export type Material = typeof materials.$inferSelect
 export type Color = typeof colors.$inferSelect
+export type PricingSettings = typeof pricingSettings.$inferSelect

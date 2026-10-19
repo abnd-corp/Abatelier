@@ -28,5 +28,28 @@ export const mm = (n: number) => `${n.toLocaleString('fr-FR', { minimumFractionD
 /** 12 → « +12 % », -15 → « −15 % », 0 → « — » */
 export const pct = (n: number) => (n === 0 ? '—' : `${n > 0 ? '+' : '−'}${Math.abs(n).toLocaleString('fr-FR')} %`)
 
+/** Montant affiché dans un champ de saisie : 0.9 → « 0,90 » */
+export const toMoneyField = (n: number | null | undefined) =>
+  n === null || n === undefined ? '' : n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })
+
 /** Nombre affiché dans un champ de saisie : 62.5 → « 62,5 » */
 export const toField = (n: number | null | undefined) => (n === null || n === undefined ? '' : String(n).replace('.', ','))
+
+export interface QuantityDiscount {
+  seuil: number
+  remise: number
+}
+
+export interface PricingSettings {
+  prixPliMl: number
+  miseEnRoute: number
+  minimumCommande: number
+  remisePro: number
+  tva: number
+  delaiStandard: number
+  remisesQuantite: QuantityDiscount[]
+  largeurTole: number
+  longueurMin: number
+  longueurMax: number
+  plisMax: number
+}

@@ -25,8 +25,8 @@ Le premier compte, avec le rôle Direction, s'appelle `ADMIN_IDENTIFIANT` (par d
 ## Tests
 
 ```bash
-make test-api   # 132 tests des routes API, sur la base patalu_test (la base de dev doit tourner)
-make test-web   # 88 tests des composants Vue
+make test-api   # 147 tests des routes API, sur la base patalu_test (la base de dev doit tourner)
+make test-web   # 94 tests des composants Vue
 make e2e        # Playwright sur une stack de prod jetable : Chromium et Firefox, plus téléphone et tablette pour le responsive
 make apercu     # captures de toutes les pages (téléphone, tablette, ordinateur, clair et sombre) : apercus/index.html
 ```
@@ -73,7 +73,8 @@ La CI vérifie à chaque PR qu'une sauvegarde se restaure vraiment après une pe
 
 Menu **Direction → Tarifs et catalogue** :
 - **Matières** : nom, épaisseur, prix HT au m² de développé, retour minimum ;
-- **Coloris** : référence, nom, teinte, majoration en %, délai supplémentaire.
+- **Coloris** : référence, nom, teinte, majoration en %, délai supplémentaire ;
+- **Façonnage et conditions** : prix par pli et par mètre, mise en route, minimum de commande, remise pro, TVA, délai standard, paliers de remise quantité, limites des machines (largeur de tôle, longueurs, plis maximum).
 
 Rien n'est supprimé : on désactive, pour que les anciens devis restent lisibles. Chaque changement de prix est noté au journal avec l'ancienne et la nouvelle valeur (filtre « Catalogue et prix »). Le catalogue de départ reprend les valeurs de la maquette.
 

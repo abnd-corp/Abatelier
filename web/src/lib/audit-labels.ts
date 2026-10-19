@@ -30,6 +30,23 @@ const CATALOG_FIELDS: Record<string, { label: string; fmt: (v: unknown) => strin
   nom: { label: 'nom', fmt: (v) => `« ${v} »` },
   reference: { label: 'référence', fmt: (v) => `« ${v} »` },
   hex: { label: 'teinte', fmt: (v) => String(v) },
+  prixPliMl: { label: 'prix par pli et par mètre', fmt: eur },
+  miseEnRoute: { label: 'mise en route', fmt: eur },
+  minimumCommande: { label: 'minimum de commande', fmt: eur },
+  remisePro: { label: 'remise pro', fmt: (v) => `${String(v).replace('.', ',')} %` },
+  tva: { label: 'TVA', fmt: (v) => `${String(v).replace('.', ',')} %` },
+  delaiStandard: { label: 'délai standard', fmt: (v) => `${v} j` },
+  largeurTole: { label: 'largeur de tôle', fmt: (v) => `${v} mm` },
+  longueurMin: { label: 'longueur minimum', fmt: (v) => `${v} mm` },
+  longueurMax: { label: 'longueur maximum', fmt: (v) => `${v} mm` },
+  plisMax: { label: 'plis maximum', fmt: (v) => String(v) },
+  remisesQuantite: {
+    label: 'remises quantité',
+    fmt: (v) =>
+      Array.isArray(v) && v.length
+        ? v.map((p: { seuil: number; remise: number }) => `−${String(p.remise).replace('.', ',')} % dès ${p.seuil}`).join(', ')
+        : 'aucune',
+  },
 }
 function changes(c: Record<string, { avant: unknown; apres: unknown }> | undefined) {
   return Object.entries(c ?? {})
@@ -84,6 +101,8 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A modifié la matière ${d.nom} : ${changes(d.changements)}`, tone: 'accent' }
     case 'catalog.color_created':
       return { text: `A ajouté le coloris ${d.nom}`, tone: 'accent' }
+    case 'catalog.settings_updated':
+      return { text: `A modifié le façonnage et les conditions : ${changes(d.changements)}`, tone: 'accent' }
     case 'catalog.color_updated':
       return { text: `A modifié le coloris ${d.nom} : ${changes(d.changements)}`, tone: 'accent' }
     case 'user.enabled':

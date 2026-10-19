@@ -28,6 +28,8 @@ const PATHS = {
   search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z M20 20l-4-4',
   calendar: 'M4 5h16v15H4z M4 10h16 M8 3v4 M16 3v4',
   tag: 'M3 12V4h8l10 10-8 8L3 12Z M7.5 8.5h.01',
+  sliders: 'M4 6h10 M18 6h2 M4 12h4 M12 12h8 M4 18h12 M20 18h0 M16 4v4 M10 10v4 M18 16v4',
+  trash: 'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6',
   layers: 'M12 3 2 8l10 5 10-5-10-5Z M2 13l10 5 10-5 M2 17.5l10 5 10-5',
   palette: 'M12 21a9 9 0 1 1 9-9c0 2-1.6 3-3.5 3H16a2 2 0 0 0-1.6 3.2A1.7 1.7 0 0 1 12 21Z M7.5 11h.01 M10 7h.01 M14.5 7h.01 M17 11h.01',
 } as const
