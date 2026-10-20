@@ -24,10 +24,6 @@ const SITE: SiteData = {
     'accueil.titre': 'Pliage d’aluminium sur mesure',
     'accueil.accroche': 'Fabriqué à vos dimensions.',
     'accueil.presentation': 'Nous fabriquons vos pièces.',
-    'accueil.etape1': 'Envoyez votre plan.',
-    'accueil.etape2': 'Nous vérifions.',
-    'accueil.etape3': 'Vous recevez un devis.',
-    'accueil.etape4': 'Retrait ou livraison.',
     'accueil.pourquoi': 'Rapidité\nDevis sur mesure',
     'pliage.intro': 'Pliage sur mesure.',
     'produit.couvertine': 'Texte couvertine.',
@@ -92,7 +88,15 @@ describe('Accueil', () => {
   it('affiche le titre, les étapes, les réalisations et un appel au devis, sans connexion', async () => {
     const { wrapper, calls } = await mountAt(HomeView, '/')
     expect(wrapper.get('h1').text()).toBe('Pliage d’aluminium sur mesure')
-    expect(wrapper.findAll('.step').map((s) => s.text().replace(/^\d/, ''))).toEqual(['Envoyez votre plan.', 'Nous vérifions.', 'Vous recevez un devis.', 'Retrait ou livraison.'])
+    // « Comment ça marche » présente les trois parcours, chacun avec ses étapes et son bouton, puis le suivi commun
+    const parcours = wrapper.findAll('.parcours-card')
+    expect(parcours.map((p) => p.get('h3').text())).toEqual(['Sur mesure', 'Boutique'])
+    expect(parcours.map((p) => p.findAll('.p-steps li').length)).toEqual([4, 4])
+    expect(parcours.map((p) => p.get('a').attributes('href'))).toEqual(['/configurateur', '/boutique'])
+    expect(wrapper.findAll('.suivi-steps li').map((l) => l.get('b').text())).toEqual(['Reçue', 'Validée', 'En fabrication', 'Prête', 'Livrée'])
+    expect(wrapper.get('.steps-band').text()).not.toContain('faisabilité')
+    // L'envoi d'un plan n'est plus mis en avant : tout passe par le configurateur ou la boutique
+    expect(wrapper.text()).not.toMatch(/Envoyer mon plan|Envoyez-nous votre plan/)
     expect(wrapper.find('img[src="/api/public/photos/p2"]').attributes('alt')).toBe('Chantier Firminy')
     expect(wrapper.find('.hero-photo img').attributes('src')).toBe('/api/public/photos/p1')
     expect(wrapper.text()).toContain('Rapidité')

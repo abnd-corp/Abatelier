@@ -42,17 +42,17 @@ watch(
       <div class="texte">
         <h2>{{ p.nom }}</h2>
         <p>{{ c[p.cle] }}</p>
-        <p><RouterLink :to="{ name: 'site-contact' }" class="s-btn primary">Demander un devis</RouterLink></p>
+        <p><RouterLink :to="{ name: 'site-configurateur' }" class="s-btn primary">Configurer cette pièce</RouterLink></p>
       </div>
     </article>
 
     <section class="card autres" aria-labelledby="formes">
-      <h2 id="formes">Et aussi, sur plan</h2>
+      <h2 id="formes">Et aussi</h2>
       <ul>
         <li v-for="l in formes" :key="l"><AppIcon name="check" :size="18" />{{ l }}</li>
       </ul>
-      <p class="muted">Une couleur, une dimension ou un pliage particulier ? Envoyez-nous votre plan, même un croquis à la main : nous vérifions la faisabilité et vous rappelons.</p>
-      <p><RouterLink :to="{ name: 'site-contact' }" class="s-btn primary">Envoyer mon plan</RouterLink></p>
+      <p class="muted">Une dimension ou un pliage particulier ? Dessinez votre pièce dans le configurateur : le prix s’affiche en direct et votre devis est créé en quelques clics.</p>
+      <p><RouterLink :to="{ name: 'site-configurateur' }" class="s-btn primary">Configurer ma pièce</RouterLink></p>
     </section>
   </div>
   <div v-else class="s-wrap" aria-busy="true" style="padding: 80px 0">Chargement…</div>

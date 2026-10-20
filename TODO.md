@@ -48,6 +48,7 @@
 ### P1 : dans le mois qui suit
 | Tâche | Temps agent | Dépend de |
 |---|---|---|
+| **Configurateur : deux issues à la fin** (décision du 20 octobre 2026) : « Demander un devis » (comme aujourd'hui) ou **« Commander »**, qui paie la pièce en ligne (Stripe) et envoie la commande validée à l'atelier, comme la boutique. Aucun bouton « Demander un devis » ne renvoie plus vers le formulaire de contact : tout passe par le configurateur ou la boutique, pour un seul modèle de travail et aucun échange hors flux | L | P0 n°6 (Stripe), réponse A6b ; décider si le paiement est total ou un acompte |
 | Photos réelles du site actuel importées par l'onglet Photos | S | - |
 | Demande de contact : « Créer la fiche client », pastille « à traiter », purge automatique à 12 mois | M | - |
 | Double authentification (TOTP) pour la direction | L | - |
@@ -68,7 +69,6 @@
 |---|---|---|
 | Configurateur : joindre un plan à la demande | M | - |
 | Configurateur : enregistrer sa configuration (avec le compte) et prix pro | L | - |
-| Configurateur : commander sans passer par le devis | L | P0 n°6, réponse A6b |
 | Devis modifiable par le client avant acceptation | L | - |
 | Avoir partiel (une ligne, un montant) | M | - |
 | Remise exceptionnelle sur une commande ; remises de fidélité | M | - |
@@ -210,13 +210,14 @@ Le pliage commence par de la découpe : chaque pièce est une bande de « dével
 - [x] **Comptes clients séparés de ceux de l'équipe** : tables `client_accounts` et `client_sessions`, cookie `aps_client` (jamais celui de l'atelier), API `/api/espace/*`. Création du compte avec le consentement, connexion avec blocage après 5 échecs, session « rester connecté », déconnexion
 - [x] **Espace client** (`/espace`, privé et non indexé) : liste des commandes avec étape et état du devis, fiche de commande avec **suivi des étapes** (reçue, validée, en fabrication, prête, livrée), pièces, montants, devis et factures en PDF, **accepter ou refuser le devis en ligne** (l'atelier est prévenu par e-mail et valide ensuite la commande). Ne montre ni notes internes, ni noms de salariés, ni les données d'un autre client
 - [ ] Espace client, la suite : **mot de passe oublié par e-mail** (et changement de mot de passe), **confirmation de l'adresse e-mail** (sans elle, quelqu'un peut ouvrir un espace avec l'adresse d'un autre), **activer l'espace d'un client déjà connu de l'atelier** (invitation par e-mail depuis sa fiche : pour l'instant l'inscription est refusée si la fiche existe), clients professionnels (raison sociale, remise pro après vérification du SIRET), notifications au client à chaque étape, ses adresses de chantier, recommander à l'identique, **fermeture du compte à la demande** (la politique de confidentialité le promet : aujourd'hui la direction archive la fiche, ce qui coupe l'accès, mais il n'y a pas encore de bouton qui efface les données personnelles)
+- [x] **Un seul flux, automatique** (décision du 20 octobre 2026) : sur mesure et tailles standard passent par le configurateur (commande « Reçue » + devis dès la demande), la boutique crée sa commande **déjà « Validée »** au paiement (visible tout de suite dans Fabrication, « Refuser et rembourser » reste possible). L'envoi d'un plan n'est plus mis en avant sur l'accueil ni sur la page Pliage aluminium : le formulaire de contact reste pour les questions, sans le promouvoir, pour que chaque client passe par le même modèle de travail
 - [ ] Nettoyer l'ancien parcours « demande de devis anonyme » : la route publique est supprimée, mais la direction garde l'écran des demandes déjà reçues avec « Créer la commande » ; à retirer quand il n'y en a plus
 - [ ] Configurateur : plusieurs pièces et livraison sont déjà gérées ; à ajouter : joindre un plan à la demande de devis, enregistrer sa configuration pour la reprendre plus tard (avec le compte client), prix pro quand le client est connecté, limites réelles de la plieuse (questions B1)
 - [ ] Livraison dans le configurateur : le calcul de distance appelle un service extérieur (IGN) à chaque chiffrage avec une adresse ; limité à 60 chiffrages par minute et par adresse, à surveiller
 
 - [x] **Boutique en ligne** : produits avec fiche (nom, catégorie, description, photo, « Insérez une photo » tant qu'il n'y en a pas), déclinaisons avec prix TTC, mise en ligne / retrait du site (un produit sans déclinaison active ne se met pas en ligne), page `/boutique`, fiche produit, panier gardé dans le navigateur (sans cookie), compte client demandé au paiement, paiement par carte (**Stripe Checkout**, ou faux paiement en développement et en test), la commande naît au paiement confirmé (le contrat se forme là), facture directement réglée, et **refus avec remboursement intégral** si l'atelier ne peut pas réaliser (avoir si déjà facturé, e-mail au client avec le motif). Gestion dans Direction → Boutique
 - [ ] Boutique, la suite : **brancher le vrai Stripe** (compte, clés dans `secrets/stripe_secret_key.txt` et `stripe_webhook_secret.txt`, adresse `/api/paiement/stripe` à déclarer chez Stripe, `PAYMENT_PROVIDER=stripe`) et l'essayer en mode test avant d'ouvrir ; reprendre les 52 produits de leur boutique actuelle (import depuis `entreprise/sources/boutique/`) ; droit de rétractation de 14 jours sur les articles standard (leurs CGV actuelles disent « ni repris ni échangés » : à faire valider) ; frais et délais de livraison par transporteur ; stock ; remboursement partiel ; moyens de paiement (Apple Pay, virement)
-- [ ] Commander directement depuis le configurateur sans passer par le devis (paiement en ligne, selon la réponse de la direction à la question A6b)
+- [ ] **Commander directement depuis le configurateur** en plus du devis (paiement en ligne de la pièce sur mesure, commande validée envoyée à l'atelier) : voir le plan priorisé, P1
 - [ ] Devis modifiable par le client avant acceptation (aujourd'hui : il refuse, puis refait une configuration)
 
 ## 4. Technique et administration

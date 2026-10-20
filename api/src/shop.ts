@@ -7,7 +7,8 @@ import { GeoUnavailable } from './geo.js'
 import { auditSystem } from './audit.js'
 import { loadCatalog } from './orders.js'
 import { alertRecipients, sendMail, withTimeout } from './mail.js'
-import { cents } from './quote.js'
+import { addWorkingDays, cents } from './quote.js'
+import { todayParis } from './departures.js'
 import { clientName } from './routes/clients.js'
 
 // Boutique : prix, panier et création de la commande une fois le paiement confirmé.
@@ -118,7 +119,9 @@ export async function priceCart(items: CartItem[], livraison: CartDelivery): Pro
 }
 
 /**
- * Le paiement est confirmé par le prestataire : la commande est créée (étape « Reçue »), au prix payé, et le paiement y est rattaché.
+ * Le paiement est confirmé par le prestataire : la commande est créée, au prix payé, et le paiement y est rattaché.
+ * Elle passe seule à « Validée » (le contrat se forme au paiement) : l'atelier la voit tout de suite dans Fabrication.
+ * La direction garde « Refuser et rembourser » si la pièce n'est finalement pas réalisable.
  * Peut être appelée plusieurs fois pour le même paiement (les notifications sont renvoyées) : seule la première crée la commande.
  */
 export async function confirmPayment(paymentId: string, providerPayment: string | null): Promise<{ created: boolean; payment: Payment; order: { id: string; numero: string } | null }> {
@@ -134,6 +137,7 @@ export async function confirmPayment(paymentId: string, providerPayment: string 
       .values({
         numero: label,
         kind: 'boutique',
+        statut: 'validee',
         clientId: p.clientId,
         livraisonMode: livraison.mode,
         livraisonAdresse: livraison.mode === 'livraison' ? livraison.adresse : null,
@@ -149,6 +153,7 @@ export async function confirmPayment(paymentId: string, providerPayment: string 
         tva: c.totals.tva,
         ttc: c.totals.ttc,
         delaiJours: c.totals.delaiJours,
+        datePrevue: addWorkingDays(todayParis(), c.totals.delaiJours),
         createdBy: null,
       })
       .returning()
@@ -179,7 +184,10 @@ export async function confirmPayment(paymentId: string, providerPayment: string 
         }
       }),
     )
-    await tx.insert(orderEvents).values({ orderId: o!.id, statut: 'recue', userId: null, note: 'Commande payée en ligne' })
+    await tx.insert(orderEvents).values([
+      { orderId: o!.id, statut: 'recue', userId: null, note: 'Commande payée en ligne' },
+      { orderId: o!.id, statut: 'validee', userId: null, note: 'Validée automatiquement au paiement' },
+    ])
     const [paid] = await tx
       .update(payments)
       .set({ statut: 'paye', paidAt: new Date(), orderId: o!.id, providerPayment: providerPayment ?? p.providerPayment })
@@ -214,7 +222,7 @@ async function afterPayment(p: Payment, order: { id: string; numero: string }) {
           kind: 'contact',
           to,
           subject: `Commande boutique payée : ${order.numero} (${euros(p.montantTtc)})`,
-          text: `${nom} <${c.email}> vient de payer sa commande ${order.numero} sur la boutique, ${euros(p.montantTtc)} TTC.\n\n${articles}\n\nLa commande vaut contrat : vérifiez qu’elle est réalisable. Sinon, vous pouvez la refuser, ce qui rembourse le client.\n${origin}/commandes/${order.id}`,
+          text: `${nom} <${c.email}> vient de payer sa commande ${order.numero} sur la boutique, ${euros(p.montantTtc)} TTC.\n\n${articles}\n\nLa commande vaut contrat : elle est déjà validée et visible dans Fabrication. Si elle n’est finalement pas réalisable, vous pouvez la refuser, ce qui rembourse le client.\n${origin}/commandes/${order.id}`,
           replyTo: c.email ?? undefined,
           targetType: 'order',
           targetId: order.id,

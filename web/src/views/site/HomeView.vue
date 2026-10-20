@@ -11,13 +11,53 @@ const c = computed(() => site.value?.contenu ?? {})
 const e = computed(() => site.value?.entreprise)
 const hero = computed(() => photosOf(site.value, 'accueil')[0])
 const gallery = computed(() => photosOf(site.value, 'realisation'))
-const etapes = computed(() => [1, 2, 3, 4].map((n) => c.value[`accueil.etape${n}`]).filter(Boolean))
 const pourquoi = computed(() => lines(c.value['accueil.pourquoi']))
 
 const PRODUITS: { id: Emplacement; nom: string; accroche: string }[] = [
   { id: 'couvertine', nom: 'Couvertines', accroche: 'Protègent le dessus des murs et des acrotères' },
   { id: 'bavette', nom: 'Bavettes d’appui', accroche: 'Évacuent l’eau sous vos fenêtres' },
   { id: 'bandeau', nom: 'Bandeaux', accroche: 'Habillent les rives et les débords de toiture' },
+]
+// Les trois façons de commander. Texte fixe : il décrit le fonctionnement de l'application, pas un contenu éditorial.
+const PARCOURS: { id: string; icon: InstanceType<typeof AppIcon>['$props']['name']; pour: string; titre: string; route: string; cta: string; principal?: boolean; etapes: { titre: string; texte: string }[] }[] = [
+  {
+    id: 'mesure',
+    icon: 'sliders',
+    pour: 'Pièce à vos cotes',
+    titre: 'Sur mesure',
+    route: 'site-configurateur',
+    cta: 'Ouvrir le configurateur',
+    principal: true,
+    etapes: [
+      { titre: 'Dessinez', texte: 'Partez d’une taille standard ou réglez vos cotes. Le profil et la 3D se mettent à jour en direct.' },
+      { titre: 'Voyez le prix', texte: 'Il s’affiche tout de suite, sans compte et sans engagement.' },
+      { titre: 'Recevez le devis', texte: 'Créez votre espace client : le devis numéroté vous attend en PDF.' },
+      { titre: 'Acceptez en ligne', texte: 'D’un clic depuis votre espace : la commande arrive à l’atelier et part en fabrication.' },
+    ],
+  },
+  {
+    id: 'standard',
+    icon: 'box',
+    pour: 'Tailles courantes',
+    titre: 'Boutique',
+    route: 'site-boutique',
+    cta: 'Voir la boutique',
+    etapes: [
+      { titre: 'Choisissez', texte: 'Couvertine, bavette, bandeau ou accessoire, dans la taille et le coloris voulus.' },
+      { titre: 'Remplissez le panier', texte: 'Le prix TTC est affiché. Retrait à l’atelier ou livraison à votre adresse.' },
+      { titre: 'Payez par carte', texte: 'Sur la page sécurisée de notre prestataire de paiement, sans saisir votre carte chez nous.' },
+      { titre: 'On fabrique', texte: 'La commande arrive directement à l’atelier. La facture, déjà réglée, reste dans votre espace client.' },
+    ],
+  },
+]
+
+// Ce qui se passe ensuite, quel que soit le parcours : les étapes visibles dans l'espace client
+const SUIVI = [
+  { titre: 'Reçue', texte: 'Votre commande est enregistrée' },
+  { titre: 'Validée', texte: 'L’atelier la confirme' },
+  { titre: 'En fabrication', texte: 'Vos pièces sont pliées' },
+  { titre: 'Prête', texte: 'À retirer ou à livrer' },
+  { titre: 'Livrée', texte: 'C’est dans vos mains' },
 ]
 watch(() => c.value['site.description'], (d) => d && setDescription(d), { immediate: true })
 const cover = (id: Emplacement) => photosOf(site.value, id)[0]
@@ -33,7 +73,6 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
           <p class="lead">{{ c['accueil.accroche'] }}</p>
           <p class="cta">
             <RouterLink :to="{ name: 'site-configurateur' }" class="s-btn primary">Configurer ma pièce</RouterLink>
-            <RouterLink :to="{ name: 'site-contact' }" class="s-btn">Demander un devis</RouterLink>
             <a v-if="e?.telephone" class="s-btn" :href="`tel:${telHref(e.telephone)}`"><AppIcon name="phone" :size="17" />{{ e.telephone }}</a>
           </p>
           <ul class="facts" aria-label="En bref">
@@ -63,7 +102,6 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
           </ol>
           <p class="cfg-cta">
             <RouterLink :to="{ name: 'site-configurateur' }" class="s-btn primary big">Ouvrir le configurateur</RouterLink>
-            <span class="muted">Une pièce très particulière ? <RouterLink :to="{ name: 'site-contact' }">Envoyez-nous votre plan</RouterLink>.</span>
           </p>
         </div>
         <!-- Doublon décoratif du bouton : masqué aux lecteurs d'écran et au clavier -->
@@ -99,14 +137,40 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
 
     <section class="steps-band">
       <div class="s-wrap">
-        <h2 id="etapes">Comment ça marche ?</h2>
-        <ol class="steps" aria-labelledby="etapes">
-          <li v-for="(t, i) in etapes" :key="i" class="card step">
-            <span class="num" aria-hidden="true">{{ i + 1 }}</span>
-            <p>{{ t }}</p>
+        <div class="sec-head">
+          <h2 id="etapes">Comment ça marche ?</h2>
+          <p class="muted">Deux façons de commander, un même suivi jusqu’à la livraison.</p>
+        </div>
+        <ul class="parcours">
+          <li v-for="p in PARCOURS" :key="p.id" class="card parcours-card">
+            <div class="p-head">
+              <span class="p-icon" aria-hidden="true"><AppIcon :name="p.icon" :size="22" /></span>
+              <div>
+                <span class="p-pour">{{ p.pour }}</span>
+                <h3>{{ p.titre }}</h3>
+              </div>
+            </div>
+            <ol class="p-steps">
+              <li v-for="e in p.etapes" :key="e.titre">
+                <b>{{ e.titre }}</b>
+                <span>{{ e.texte }}</span>
+              </li>
+            </ol>
+            <RouterLink :to="{ name: p.route }" class="s-btn" :class="{ primary: p.principal }">{{ p.cta }}</RouterLink>
           </li>
-        </ol>
-        <p class="after"><RouterLink :to="{ name: 'site-contact' }" class="s-btn primary">Envoyer mon plan</RouterLink></p>
+        </ul>
+        <div class="card suivi">
+          <div class="suivi-text">
+            <h3>Ensuite, tout se suit en ligne</h3>
+            <p class="muted">Dans votre espace client : l’étape de chaque commande, la date prévue, vos devis et vos factures en PDF.</p>
+          </div>
+          <ol class="suivi-steps" aria-label="Étapes d’une commande">
+            <li v-for="e in SUIVI" :key="e.titre">
+              <b>{{ e.titre }}</b>
+              <span>{{ e.texte }}</span>
+            </li>
+          </ol>
+        </div>
       </div>
     </section>
 
@@ -124,7 +188,7 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
       <ul>
         <li v-for="l in pourquoi" :key="l"><AppIcon name="check" :size="18" />{{ l }}</li>
       </ul>
-      <p><RouterLink :to="{ name: 'site-contact' }" class="s-btn primary">Demandez votre devis</RouterLink></p>
+      <p><RouterLink :to="{ name: 'site-configurateur' }" class="s-btn primary">Configurer ma pièce</RouterLink></p>
     </section>
   </div>
   <div v-else class="s-wrap loading" aria-busy="true">Chargement…</div>
@@ -320,24 +384,77 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
   background: var(--surface);
   border-block: 1px solid var(--line);
 }
-.steps {
+.sec-head {
+  margin-bottom: 22px;
+}
+.sec-head h2 {
+  margin-bottom: 4px;
+}
+.parcours {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
-.step {
-  padding: 18px;
-  display: grid;
-  gap: 10px;
-  align-content: start;
+.parcours-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
   background: var(--bg);
 }
-.num {
-  width: 34px;
-  height: 34px;
+.p-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.p-icon {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.p-pour {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.parcours-card h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  text-transform: none;
+}
+.p-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+  flex: 1;
+  counter-reset: etape;
+}
+.p-steps li {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding-left: 44px;
+  counter-increment: etape;
+}
+.p-steps li::before {
+  content: counter(etape);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -345,9 +462,64 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
   color: var(--on-accent);
   font-family: var(--f-display);
   font-weight: 800;
+  font-size: 0.9rem;
 }
-.after {
-  margin-top: 22px;
+/* Trait qui relie les pastilles d'une étape à la suivante */
+.p-steps li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 34px;
+  bottom: -14px;
+  width: 2px;
+  background: var(--line);
+}
+.p-steps b {
+  line-height: 30px;
+}
+.p-steps span {
+  color: var(--muted);
+  font-size: 0.93rem;
+}
+.parcours-card .s-btn {
+  justify-content: center;
+}
+.suivi {
+  margin-top: 16px;
+  padding: 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 22px;
+  align-items: center;
+  background: var(--bg);
+}
+.suivi h3 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+  text-transform: none;
+}
+.suivi-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.suivi-steps li {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  font-size: 0.86rem;
+}
+.suivi-steps b {
+  color: var(--accent);
+}
+.suivi-steps span {
+  color: var(--muted);
 }
 .gallery {
   list-style: none;
@@ -397,7 +569,9 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
     grid-template-columns: minmax(0, 1fr);
   }
   .products,
-  .steps {
+  .parcours,
+  .suivi,
+  .suivi-steps {
     grid-template-columns: minmax(0, 1fr);
   }
   .cta .s-btn {
@@ -405,8 +579,8 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
   }
 }
 @media (min-width: 861px) and (max-width: 1100px) {
-  .steps {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .suivi {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

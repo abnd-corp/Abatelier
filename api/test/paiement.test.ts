@@ -2,7 +2,7 @@ import { createHmac } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { auditLog, billingDocuments, orderLines, orders, payments, productVariants, products } from '../src/db/schema.js'
+import { auditLog, billingDocuments, orderEvents, orderLines, orders, payments, productVariants, products } from '../src/db/schema.js'
 import { env } from '../src/env.js'
 import { setTransport, type Transport } from '../src/mail.js'
 import { pdfText, buildApp, client, createUser, loginAs, makePng, resetDb, type App, type Client } from './helpers.js'
@@ -161,13 +161,15 @@ describe('Payer son panier', () => {
     expect(await db.select().from(payments)).toHaveLength(0)
   })
 
-  it('crée la commande « Reçue » au prix payé quand le paiement est confirmé, et prévient la direction et le client', async () => {
+  it('crée la commande au prix payé, déjà « Validée » pour l’atelier, quand le paiement est confirmé, et prévient la direction et le client', async () => {
     mailOn()
     const c = await member()
     const { paymentId, order } = await pay(c)
     expect(order.numero).toMatch(/^C-\d{4}-\d{4}$/)
     const [o] = await db.select().from(orders)
-    expect(o).toMatchObject({ id: order.id, kind: 'boutique', statut: 'recue', ht: 105, tva: 21, ttc: 126, createdBy: null, livraisonMode: 'retrait' })
+    expect(o).toMatchObject({ id: order.id, kind: 'boutique', statut: 'validee', ht: 105, tva: 21, ttc: 126, createdBy: null, livraisonMode: 'retrait' })
+    expect(o!.datePrevue).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect((await db.select().from(orderEvents)).map((e) => [e.statut, e.userId])).toEqual([['recue', null], ['validee', null]])
     const lines = await db.select().from(orderLines)
     expect(lines.map((l) => [l.modeleLabel, l.materialLabel, l.quantite, l.total, l.cotes.length, l.variantId])).toEqual(
       expect.arrayContaining([['Couvertine blanche', '270 mm · 1 m', 2, 35, 0, ids.v1], ['Couvertine blanche', '320 mm · 3 m', 1, 70, 0, ids.v2]]),
@@ -178,11 +180,11 @@ describe('Payer son panier', () => {
     const to = (m: (typeof mailSent)[number]) => m.to.join()
     expect(mailSent.map(to).sort()).toEqual(['direction@aps.test', 'jean@example.com'])
     expect(mailSent.find((m) => to(m) === 'jean@example.com')!.subject).toContain(order.numero)
-    expect(mailSent.find((m) => to(m) === 'direction@aps.test')!.text).toMatch(/Sinon, vous pouvez la refuser/)
+    expect(mailSent.find((m) => to(m) === 'direction@aps.test')!.text).toMatch(/déjà validée.*vous pouvez la refuser/s)
     expect((await entries('boutique.payment_confirmed'))[0]).toMatchObject({ targetId: order.id, userId: null })
     // Le client la voit dans son espace, avec son paiement
     const detail = (await c.get(`/api/espace/commandes/${order.id}`)).json()
-    expect(detail.commande).toMatchObject({ kind: 'boutique', statut: 'recue', numero: order.numero })
+    expect(detail.commande).toMatchObject({ kind: 'boutique', statut: 'validee', numero: order.numero })
     expect(detail.paiement).toMatchObject({ statut: 'paye', montantTtc: 126 })
     expect(JSON.stringify(detail)).not.toMatch(/providerRef|sim_|provider/)
     expect(detail.lignes[0]).toMatchObject({ cotes: [], modeleLabel: 'Couvertine blanche' })
@@ -244,7 +246,7 @@ describe('Côté atelier', () => {
     const detail = (await direction.get(`/api/orders/${order.id}`)).json()
     expect(detail.paiement).toMatchObject({ statut: 'paye', montantTtc: 126, prestataire: 'simulation' })
     expect(JSON.stringify(detail)).not.toMatch(/providerRef|providerPayment|provider_/)
-    expect((await direction.post(`/api/orders/${order.id}/status`, { statut: 'validee' })).statusCode).toBe(200)
+    // Déjà validée au paiement : l'atelier la voit sans que la direction n'ait rien à faire
     await createUser({ identifiant: 'paul', role: 'atelier' })
     const atelier = await loginAs(app, 'paul')
     const prod = (await atelier.get('/api/production')).json().orders
@@ -262,7 +264,6 @@ describe('Côté atelier', () => {
     const c = await member()
     const { order } = await pay(c)
     expect((await direction.post(`/api/billing/orders/${order.id}/devis`)).json().error).toMatch(/payée en ligne/)
-    await direction.post(`/api/orders/${order.id}/status`, { statut: 'validee' })
     const f = await direction.post(`/api/billing/orders/${order.id}/facture`)
     expect(f.statusCode, f.body).toBe(201)
     const [doc] = await db.select().from(billingDocuments)
@@ -307,7 +308,6 @@ describe('Refuser et rembourser', () => {
   it('annule d’abord la facture par un avoir quand elle est déjà émise', async () => {
     const c = await member()
     const { order } = await pay(c)
-    await direction.post(`/api/orders/${order.id}/status`, { statut: 'validee' })
     const f = (await direction.post(`/api/billing/orders/${order.id}/facture`)).json()
     const res = await direction.post(`/api/orders/${order.id}/refus`, { motif: 'Matière en rupture chez le fournisseur.' })
     expect(res.statusCode, res.body).toBe(200)
@@ -326,7 +326,7 @@ describe('Refuser et rembourser', () => {
     const cancel = await direction.post(`/api/orders/${order.id}/status`, { statut: 'annulee', note: 'test' })
     expect(cancel.statusCode).toBe(409)
     expect(cancel.json().error).toMatch(/Refuser et rembourser/)
-    for (const s of ['validee', 'fabrication', 'prete', 'livree']) await direction.post(`/api/orders/${order.id}/status`, { statut: s })
+    for (const s of ['fabrication', 'prete', 'livree']) await direction.post(`/api/orders/${order.id}/status`, { statut: s })
     const late = await direction.post(`/api/orders/${order.id}/refus`, { motif: 'Trop tard' })
     expect(late.statusCode).toBe(409)
     expect(late.json().error).toMatch(/Livrée/)
@@ -427,7 +427,7 @@ describe('Stripe', () => {
     expect(refused.statusCode).toBe(502)
     expect(refused.json().error).toMatch(/remboursement a été refusé/)
     expect((await db.select().from(payments))[0]!.statut).toBe('paye')
-    expect((await db.select().from(orders))[0]!.statut).toBe('recue')
+    expect((await db.select().from(orders))[0]!.statut).toBe('validee')
 
     stubStripe()
     const ok = await direction.post(`/api/orders/${orderId}/refus`, { motif: 'Impossible' })
