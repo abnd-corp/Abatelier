@@ -3,7 +3,7 @@ import { reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
 import { emptyFields, fullName, suggestIdentifiant } from '@/lib/employees'
-import { ROLE_OPTIONS, useAuthStore, type Role } from '@/stores/auth'
+import { roleOptions, useAuthStore, type Role } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import EmployeeForm from '@/components/EmployeeForm.vue'
 
@@ -86,7 +86,7 @@ async function save() {
           <div class="field">
             <label for="f-role">Rôle</label>
             <select id="f-role" v-model="account.role" class="input">
-              <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }} : {{ r.description }}</option>
+              <option v-for="r in roleOptions()" :key="r.value" :value="r.value">{{ r.label }} : {{ r.description }}</option>
             </select>
           </div>
         </div>

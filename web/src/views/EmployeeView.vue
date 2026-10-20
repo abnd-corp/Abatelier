@@ -14,7 +14,7 @@ import {
 } from '@/lib/employees'
 import { describe, type AuditEntry } from '@/lib/audit-labels'
 import { dateTime, relative } from '@/lib/format'
-import { ROLE_LABELS, ROLE_OPTIONS, useAuthStore, type Role } from '@/stores/auth'
+import { ROLE_LABELS, roleOptions, useAuthStore, type Role } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import AppIcon from '@/components/AppIcon.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
@@ -266,7 +266,7 @@ async function changeRole(role: Role) {
                   :disabled="isMe || !!employee.account.disabledAt"
                   @change="changeRole(($event.target as HTMLSelectElement).value as Role)"
                 >
-                  <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }}</option>
+                  <option v-for="r in roleOptions(employee.account.role)" :key="r.value" :value="r.value">{{ r.label }}</option>
                 </select>
               </dd>
               <dt>Dernière connexion</dt>
@@ -304,7 +304,7 @@ async function changeRole(role: Role) {
               <div class="field">
                 <label for="new-role">Rôle</label>
                 <select id="new-role" v-model="newAccount.role" class="input">
-                  <option v-for="r in ROLE_OPTIONS" :key="r.value" :value="r.value">{{ r.label }} : {{ r.description }}</option>
+                  <option v-for="r in roleOptions()" :key="r.value" :value="r.value">{{ r.label }} : {{ r.description }}</option>
                 </select>
               </div>
               <div class="account-actions">

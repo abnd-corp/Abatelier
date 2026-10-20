@@ -7,6 +7,8 @@ test.describe('Arrivée et départ d’un employé', () => {
     // 1. L'admin crée le compte depuis l'interface
     await adminPage.goto('/utilisateurs')
     await adminPage.getByRole('button', { name: 'Ajouter un compte' }).click()
+    // Le rôle RH n'est plus proposé (gardé dans le code pour une V2)
+    await expect(adminPage.locator('#new-role option')).toHaveText([/^Atelier/, /^Direction/])
     await adminPage.getByLabel('Nom affiché').fill(nom)
     await adminPage.getByLabel('Identifiant de connexion').fill(uid)
     await adminPage.getByRole('button', { name: 'Créer le compte' }).click()

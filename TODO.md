@@ -162,4 +162,4 @@ Le pliage commence par de la découpe : chaque pièce est une bande de « dével
 ### Rôles et accès
 - [x] La **direction a déjà tous les droits de la RH** (salariés, journal, clients) : un seul compte « gestion » suffit
 - [ ] Usage prévu pour l'instant : deux comptes, **direction** (gestion) et **atelier**. Le rôle **RH** reste dans le code (`api/src/auth/permissions.ts`) pour une V2 qui séparera les rôles et les responsabilités ; ne pas le supprimer
-- [ ] Décision à prendre : le masquer de la liste des rôles proposés à la création d'un compte
+- [x] Le rôle RH n'est plus proposé à la création ni au changement de rôle (un compte RH existant le garde) ; les routes et les permissions RH restent

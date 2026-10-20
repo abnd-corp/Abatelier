@@ -35,6 +35,15 @@ describe('Gestion des comptes', () => {
     expect(row('Marie').text()).toContain('Désactivé')
   })
 
+  it('ne propose que Direction et Atelier, mais garde le rôle RH d’un compte qui l’a déjà', async () => {
+    const withRh = { users: [...USERS.users, { id: 'r1', identifiant: 'claire', nom: 'Claire RH', role: 'rh', mustChangePassword: false, disabledAt: null, createdAt: now, lastLoginAt: now, activeSessions: 0 }] }
+    const { wrapper, row } = await setup({ 'GET /users': [200, withRh] })
+    await wrapper.findAll('button').find((b) => b.text().includes('Ajouter un compte'))!.trigger('click')
+    expect(wrapper.get('#new-role').findAll('option').map((o) => o.attributes('value'))).toEqual(['atelier', 'direction'])
+    expect(row('Paul Martin').get('select').findAll('option').map((o) => o.attributes('value'))).toEqual(['atelier', 'direction'])
+    expect(row('Claire RH').get('select').findAll('option').map((o) => o.attributes('value'))).toEqual(['atelier', 'rh', 'direction'])
+  })
+
   it('n’affiche ni désactivation ni réinitialisation sur son propre compte', async () => {
     const { row } = await setup()
     const buttons = row('Le Chef').findAll('button').map((b) => b.text())

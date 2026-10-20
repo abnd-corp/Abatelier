@@ -23,6 +23,12 @@ export const ROLE_OPTIONS: { value: Role; label: string; description: string }[]
   { value: 'direction', label: 'Direction', description: 'tout, dont les comptes, tarifs, clients et commandes' },
 ]
 
+/**
+ * Rôles proposés à la création d'un compte. Pour l'instant : un compte « gestion » (direction, qui a aussi les droits de la RH)
+ * et un compte atelier. Le rôle RH reste dans le code et l'API pour une V2 : on ne le propose plus, sauf pour un compte qui l'a déjà.
+ */
+export const roleOptions = (current?: Role) => ROLE_OPTIONS.filter((r) => r.value !== 'rh' || r.value === current)
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const loaded = ref(false)
