@@ -1,8 +1,10 @@
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import { and, count, desc, eq, ilike, or, sql, sum, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
+import { alias } from 'drizzle-orm/pg-core'
 import { db } from '../db/index.js'
-import { BILLING_TYPES, billingDocuments, DEVIS_REPONSES, orders, PAIEMENT_MODES, users } from '../db/schema.js'
+import { BILLING_TYPES, billingDocuments, clients, DEVIS_REPONSES, orders, PAIEMENT_MODES, users } from '../db/schema.js'
+import { csvAmount, csvDate, csvDay, csvText, PAIEMENT_LABELS, STATUT_LABELS_CSV, toCsv } from '../accounting.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
 import { avoirAlias, BillingConflict, DEVIS_STATUTS, FACTURE_STATUTS, issueCreditNote, issueFromOrder, statutSql } from '../billing.js'
@@ -26,6 +28,16 @@ const listQuery = z.object({
   orderId: z.uuid().optional(),
   clientId: z.uuid().optional(),
 })
+
+// Export comptable : factures et avoirs émis sur la période, ou paiements encaissés sur la période
+const exportQuery = z
+  .object({
+    type: z.enum(['ventes', 'encaissements'], { error: 'Choisissez le type d’export.' }),
+    du: z.iso.date('Date de début invalide.'),
+    au: z.iso.date('Date de fin invalide.'),
+  })
+  .refine((q) => q.du <= q.au, { message: 'La date de fin doit être après la date de début.', path: ['au'] })
+  .refine((q) => Date.parse(q.au) - Date.parse(q.du) <= 5 * 366 * 86400000, { message: 'Période trop longue : 5 ans au maximum.', path: ['au'] })
 
 const reponseBody = z.object({ reponse: z.enum(DEVIS_REPONSES, { error: 'Indiquez si le devis est accepté ou refusé.' }) })
 
@@ -118,6 +130,48 @@ export async function billingRoutes(app: FastifyInstance) {
       .groupBy(sql`1`)
     const totals = Object.fromEntries(counts.map((c) => [c.statut, { n: Number(c.n), ttc: c.ttc ?? 0 }]))
     return { documents: rows, totals }
+  })
+
+  app.get('/export', async (req, reply) => {
+    const parsed = exportQuery.safeParse(req.query)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const { type, du, au } = parsed.data
+    const d = billingDocuments
+    const avoir = avoirAlias()
+    const facture = alias(billingDocuments, 'facture_liee')
+    const statutExpr = statutSql(avoir)
+    const base = { client: d.clientNom, siret: clients.siret, tvaClient: clients.tvaIntra, commande: orders.numero }
+
+    let header: string[]
+    let rows: string[][]
+    if (type === 'ventes') {
+      const found = await db
+        .select({ numero: d.numero, type: d.type, emisLe: d.emisLe, echeance: d.echeance, ht: d.ht, taux: d.tauxTva, tva: d.tva, ttc: d.ttc, payeLe: d.payeLe, mode: d.modePaiement, statut: statutExpr, annule: facture.numero, ...base })
+        .from(d)
+        .innerJoin(orders, eq(orders.id, d.orderId))
+        .innerJoin(clients, eq(clients.id, d.clientId))
+        .leftJoin(avoir, eq(avoir.factureId, d.id))
+        .leftJoin(facture, eq(facture.id, d.factureId))
+        .where(and(sql`${d.type} in ('facture', 'avoir')`, sql`(${d.emisLe} at time zone 'Europe/Paris')::date between ${du} and ${au}`))
+        .orderBy(d.emisLe, d.numero)
+      header = ['Date', 'Type', 'Numéro', 'Facture annulée', 'Commande', 'Client', 'SIRET', 'TVA intracommunautaire', 'Total HT', 'Taux de TVA (%)', 'TVA', 'Total TTC', 'Échéance', 'Statut', 'Payée le', 'Mode de paiement']
+      rows = found.map((r) => [csvDate(r.emisLe), r.type === 'avoir' ? 'Avoir' : 'Facture', r.numero, csvText(r.annule), r.commande, csvText(r.client), csvText(r.siret), csvText(r.tvaClient), csvAmount(r.ht), csvAmount(r.taux), csvAmount(r.tva), csvAmount(r.ttc), csvDay(r.echeance), STATUT_LABELS_CSV[r.statut] ?? r.statut, csvDay(r.payeLe), r.mode ? (PAIEMENT_LABELS[r.mode] ?? r.mode) : ''])
+    } else {
+      const found = await db
+        .select({ numero: d.numero, ht: d.ht, tva: d.tva, ttc: d.ttc, payeLe: d.payeLe, mode: d.modePaiement, ...base })
+        .from(d)
+        .innerJoin(orders, eq(orders.id, d.orderId))
+        .innerJoin(clients, eq(clients.id, d.clientId))
+        .where(and(eq(d.type, 'facture'), sql`${d.payeLe} between ${du} and ${au}`))
+        .orderBy(d.payeLe, d.numero)
+      header = ['Date de paiement', 'Mode de paiement', 'Facture', 'Commande', 'Client', 'SIRET', 'Total HT', 'TVA', 'Montant encaissé TTC']
+      rows = found.map((r) => [csvDay(r.payeLe), r.mode ? (PAIEMENT_LABELS[r.mode] ?? r.mode) : '', r.numero, r.commande, csvText(r.client), csvText(r.siret), csvAmount(r.ht), csvAmount(r.tva), csvAmount(r.ttc)])
+    }
+    await audit(req, 'billing.exported', { targetType: 'billing', details: { type, du, au, lignes: rows.length } })
+    return reply
+      .header('Content-Type', 'text/csv; charset=utf-8')
+      .header('Content-Disposition', `attachment; filename="${type}-${du}_${au}.csv"`)
+      .send(toCsv(header, rows))
   })
 
   // Émettre un devis depuis une commande (autant de versions que nécessaire)

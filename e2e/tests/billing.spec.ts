@@ -93,6 +93,53 @@ test.describe('Devis et factures', () => {
     await expect(page.getByRole('cell', { name: new RegExp(`A émis l’avoir ${avoir} qui annule la facture ${facture}`) })).toBeVisible()
   })
 
+  test('la direction exporte les ventes et les encaissements en CSV pour son comptable', async ({ adminPage: page, baseURL, uid }) => {
+    const headers = { Origin: baseURL! }
+    const nom = `Export${uid.slice(-6)}`
+    const client = await (await page.request.post('/api/clients', { data: { type: 'particulier', prenom: 'Léa', nom, adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' }, headers })).json()
+    const cat = await (await page.request.get('/api/orders/catalog')).json()
+    const m = cat.models[0]
+    const ligne = { modelId: m.id, materialId: cat.materials[0].id, colorId: cat.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: 2000, quantite: 3, accessoires: [] }
+    const order = await (await page.request.post('/api/orders', { data: { clientId: client.id, lignes: [ligne], livraison: { mode: 'retrait' } }, headers })).json()
+    await page.request.post(`/api/orders/${order.id}/status`, { data: { statut: 'validee' }, headers })
+    const facture = await (await page.request.post(`/api/billing/orders/${order.id}/facture`, { headers })).json()
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date())
+    await page.request.post(`/api/billing/${facture.id}/paiement`, { data: { date: today, mode: 'virement' }, headers })
+
+    await page.goto('/factures')
+    await page.getByText('Exporter pour le comptable').click()
+    await page.getByLabel('Du', { exact: true }).fill(today)
+    await page.getByLabel('Au', { exact: true }).fill(today)
+
+    const download = async () => {
+      const [file] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Télécharger le CSV' }).click()])
+      const path = await file.path()
+      const { readFileSync } = await import('node:fs')
+      return { name: file.suggestedFilename(), text: readFileSync(path, 'utf8') }
+    }
+    const ventes = await download()
+    expect(ventes.name).toBe(`ventes-${today}_${today}.csv`)
+    expect(ventes.text.charCodeAt(0)).toBe(0xfeff)
+    expect(ventes.text).toContain(`${facture.numero};`)
+    expect(ventes.text).toContain(nom)
+    expect(ventes.text.split('\r\n')[0]).toContain('Total HT;Taux de TVA (%);TVA;Total TTC')
+
+    await page.getByLabel('Contenu').selectOption('encaissements')
+    const enc = await download()
+    expect(enc.name).toBe(`encaissements-${today}_${today}.csv`)
+    expect(enc.text).toContain(`Virement;${facture.numero};`)
+
+    // Période incohérente : message clair, pas de fichier
+    await page.getByLabel('Du', { exact: true }).fill('2030-01-01')
+    await page.getByRole('button', { name: 'Télécharger le CSV' }).click()
+    await expect(page.getByRole('alert').filter({ hasText: 'après la date de début' })).toBeVisible()
+
+    // Tracé dans le journal
+    await page.goto('/journal')
+    await page.getByRole('button', { name: 'Devis et factures', exact: true }).click()
+    await expect(page.getByRole('cell', { name: /A exporté les encaissements du .* pour le comptable/ }).first()).toBeVisible()
+  })
+
   test('la RH ne voit ni les devis, ni les factures', async ({ adminPage, browser, baseURL, uid }) => {
     const identifiant = `${uid}-rh`
     const temp = await createUser(adminPage.request, baseURL!, { identifiant, nom: 'Claire RH', role: 'rh' })

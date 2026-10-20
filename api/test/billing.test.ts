@@ -291,3 +291,91 @@ describe('Liste', () => {
     expect((await direction.get('/api/billing?type=bon')).statusCode).toBe(400)
   })
 })
+
+describe('Export comptable', () => {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
+  const exportCsv = (query: string, c = direction) => c.get(`/api/billing/export?${query}`)
+  // Sépare un CSV en lignes de cellules (sans BOM)
+  const parse = (body: string) => body.replace(/^﻿/, '').trimEnd().split('\r\n').map((l) => l.split(';'))
+
+  it('exporte les factures et avoirs de la période, en CSV lisible par Excel', async () => {
+    const o1 = await order({ clientId: ids.toitures }, 'validee')
+    const f1 = await created(await facture(o1.id))
+    await direction.post(`/api/billing/${f1.id}/paiement`, { date: today, mode: 'virement' })
+    const o2 = await order({}, 'validee')
+    const f2 = await created(await facture(o2.id))
+    const a2 = await created(await direction.post(`/api/billing/${f2.id}/avoir`, { motif: 'Erreur de coloris' }))
+    await devis((await order()).id) // un devis n'est pas une pièce comptable
+
+    const res = await exportCsv(`type=ventes&du=${YEAR}-01-01&au=${YEAR}-12-31`)
+    expect(res.statusCode).toBe(200)
+    expect(res.headers['content-type']).toBe('text/csv; charset=utf-8')
+    expect(res.headers['content-disposition']).toBe(`attachment; filename="ventes-${YEAR}-01-01_${YEAR}-12-31.csv"`)
+    expect(res.body.startsWith('﻿')).toBe(true)
+    const [header, ...rows] = parse(res.body)
+    expect(header).toEqual(['Date', 'Type', 'Numéro', 'Facture annulée', 'Commande', 'Client', 'SIRET', 'TVA intracommunautaire', 'Total HT', 'Taux de TVA (%)', 'TVA', 'Total TTC', 'Échéance', 'Statut', 'Payée le', 'Mode de paiement'])
+    expect(rows.map((r) => r[2])).toEqual([f1.numero, f2.numero, a2.numero])
+
+    const d1 = await detail(f1.id)
+    const [r1, r2, r3] = rows as [string[], string[], string[]]
+    expect(r1).toMatchObject({ 1: 'Facture', 4: o1.numero, 5: 'Toitures du Forez', 6: '732 829 320 00074', 13: 'Payée', 15: 'Virement' })
+    expect(r1[8]).toBe(String(d1.document.ht.toFixed(2)).replace('.', ','))
+    expect(r1[14]).toBe(today.split('-').reverse().join('/'))
+    // Facture annulée, puis l'avoir qui l'annule avec des montants négatifs et sa référence
+    expect(r2[13]).toBe('Annulée par un avoir')
+    expect(r3[1]).toBe('Avoir')
+    expect(r3[3]).toBe(f2.numero)
+    expect(r3[11]).toMatch(/^-\d+,\d{2}$/)
+    expect(r2[11]).toBe(r3[11]!.slice(1))
+    expect(res.body).not.toContain('D-')
+    expect((await entries('billing.exported'))[0]!.details).toEqual({ type: 'ventes', du: `${YEAR}-01-01`, au: `${YEAR}-12-31`, lignes: 3 })
+  })
+
+  it('filtre les ventes par date d’émission', async () => {
+    await facture((await order({}, 'validee')).id)
+    const next = `${YEAR + 1}-01-01`
+    const none = parse((await exportCsv(`type=ventes&du=${next}&au=${YEAR + 1}-12-31`)).body)
+    expect(none).toHaveLength(1)
+    expect(parse((await exportCsv(`type=ventes&du=${today}&au=${today}`)).body)).toHaveLength(2)
+  })
+
+  it('exporte les encaissements par date de paiement, sans les factures non payées', async () => {
+    const paid = await created(await facture((await order({ clientId: ids.toitures }, 'validee')).id))
+    await created(await facture((await order({}, 'validee')).id))
+    await direction.post(`/api/billing/${paid.id}/paiement`, { date: today, mode: 'cheque' })
+    const [header, ...rows] = parse((await exportCsv(`type=encaissements&du=${today}&au=${today}`)).body)
+    expect(header).toEqual(['Date de paiement', 'Mode de paiement', 'Facture', 'Commande', 'Client', 'SIRET', 'Total HT', 'TVA', 'Montant encaissé TTC'])
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ 1: 'Chèque', 2: paid.numero, 4: 'Toitures du Forez' })
+    expect(parse((await exportCsv(`type=encaissements&du=${YEAR + 1}-01-01&au=${YEAR + 1}-12-31`)).body)).toHaveLength(1)
+  })
+
+  it('neutralise les formules et protège les « ; » et guillemets des noms de clients', async () => {
+    const piege = (await direction.post('/api/clients', { type: 'professionnel', raisonSociale: '=HYPERLINK("http://pirate.example";"x")', adresse: '1 rue', codePostal: '42000', ville: 'Saint-Étienne' })).json().id
+    await facture((await order({ clientId: piege }, 'validee')).id)
+    const res = await exportCsv(`type=ventes&du=${today}&au=${today}`)
+    expect(res.body).toContain('"\'=HYPERLINK(""http://pirate.example"";""x"")"')
+    expect(res.body.split('\r\n')[1]!.split(';').length).toBeGreaterThan(16) // le « ; » du nom est protégé par les guillemets
+  })
+
+  it('refuse une période ou un type invalide', async () => {
+    for (const [q, field, msg] of [
+      ['type=autre&du=2026-01-01&au=2026-12-31', 'type', /type/],
+      ['type=ventes&du=hier&au=2026-12-31', 'du', /début/],
+      ['type=ventes&du=2026-12-31&au=2026-01-01', 'au', /après/],
+      ['type=ventes&du=2000-01-01&au=2026-12-31', 'au', /5 ans/],
+      ['type=ventes', 'du', /début/],
+    ] as const) {
+      const res = await exportCsv(q)
+      expect(res.statusCode, q).toBe(400)
+      expect(res.json(), q).toMatchObject({ field, error: expect.stringMatching(msg) })
+    }
+    expect(await entries('billing.exported')).toHaveLength(0)
+  })
+
+  it('est réservé à la direction', async () => {
+    const q = `type=ventes&du=${today}&au=${today}`
+    expect((await app.inject({ method: 'GET', url: `/api/billing/export?${q}` })).statusCode).toBe(401)
+    for (const role of ['rh', 'atelier'] as const) expect((await exportCsv(q, await login(role))).statusCode, role).toBe(403)
+  })
+})

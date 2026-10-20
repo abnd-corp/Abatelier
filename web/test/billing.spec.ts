@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import BillingView from '@/views/BillingView.vue'
 import BillingDocView from '@/views/BillingDocView.vue'
@@ -264,11 +264,65 @@ describe('Journal', () => {
     expect(norm(describeEntry(entry('billing.paid', { numero: 'F-2026-0001', ttc: 480, mode: 'cheque', date: '2026-10-20' })).text)).toBe(
       'A enregistré le paiement de la facture F-2026-0001 (480,00 €, chèque, le 20/10/2026)',
     )
+    expect(describeEntry(entry('billing.exported', { type: 'ventes', du: '2026-01-01', au: '2026-10-20', lignes: 12 })).text).toBe('A exporté les ventes (factures et avoirs) du 01/01/2026 au 20/10/2026 pour le comptable (12 lignes)')
+    expect(describeEntry(entry('billing.exported', { type: 'encaissements', du: '2026-10-01', au: '2026-10-31', lignes: 1 })).text).toBe('A exporté les encaissements du 01/10/2026 au 31/10/2026 pour le comptable (1 ligne)')
     expect(describeEntry(entry('billing.avoir_created', { numero: 'A-2026-0001', facture: 'F-2026-0001', client: 'Jean Dupont', motif: 'Erreur' }))).toEqual({
       text: 'A émis l’avoir A-2026-0001 qui annule la facture F-2026-0001 de Jean Dupont : Erreur',
       tone: 'bad',
     })
     expect(describeEntry(entry('billing.sent', { numero: 'D-2026-0001', client: 'Jean Dupont' })).text).toBe('A marqué le devis D-2026-0001 comme envoyé à Jean Dupont')
     expect(describeEntry(entry('billing.devis_answered', { numero: 'D-2026-0001', client: 'Jean Dupont', reponse: 'refuse' })).text).toBe('A noté le devis D-2026-0001 comme refusé par Jean Dupont')
+  })
+})
+
+describe('Export pour le comptable', () => {
+  const open = async (routes: Parameters<typeof mockApi>[0] = {}) => {
+    const created = vi.fn(() => 'blob:csv')
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: created, revokeObjectURL: vi.fn() }))
+    const clicks: string[] = []
+    const realClick = HTMLAnchorElement.prototype.click
+    HTMLAnchorElement.prototype.click = function () {
+      clicks.push(this.download)
+    }
+    const res = await mountAt(BillingView, '/factures', { 'GET /billing?type=facture': [200, LIST], ...routes })
+    return { ...res, clicks, restore: () => (HTMLAnchorElement.prototype.click = realClick) }
+  }
+
+  it('télécharge le CSV des ventes de la période choisie', async () => {
+    const { wrapper, calls, clicks, restore } = await open({ 'GET /billing/export?type=ventes&du=2026-01-01&au=2026-03-31': [200, 'Date;Type'] })
+    await wrapper.get('#exp-du').setValue('2026-01-01')
+    await wrapper.get('#exp-au').setValue('2026-03-31')
+    await wrapper.get('.export form').trigger('submit')
+    await flushPromises()
+    restore()
+    expect(calls.some((c) => c.path === '/billing/export?type=ventes&du=2026-01-01&au=2026-03-31')).toBe(true)
+    expect(clicks).toEqual(['ventes-2026-01-01_2026-03-31.csv'])
+    expect(wrapper.text()).toContain('Fichier téléchargé')
+  })
+
+  it('exporte les encaissements, et propose des périodes rapides', async () => {
+    const { wrapper, calls, restore } = await open({ 'GET /billing/export?type=encaissements&du=2026-10-01&au=2026-10-31': [200, 'x'] })
+    await wrapper.get('#exp-type').setValue('encaissements')
+    await wrapper.get('#exp-du').setValue('2026-10-01')
+    await wrapper.get('#exp-au').setValue('2026-10-31')
+    await wrapper.get('.export form').trigger('submit')
+    await flushPromises()
+    restore()
+    expect(calls.some((c) => c.path.startsWith('/billing/export?type=encaissements'))).toBe(true)
+    const before = (wrapper.get('#exp-du').element as HTMLInputElement).value
+    await wrapper.findAll('.presets .chip').find((b) => b.text() === 'Mois précédent')!.trigger('click')
+    expect((wrapper.get('#exp-du').element as HTMLInputElement).value).not.toBe(before)
+    expect((wrapper.get('#exp-du').element as HTMLInputElement).value).toMatch(/-01$/)
+  })
+
+  it('affiche l’erreur du serveur sans télécharger', async () => {
+    const { wrapper, clicks, restore } = await open({ 'GET /billing/export?type=ventes&du=2026-12-31&au=2026-01-01': [400, { error: 'La date de fin doit être après la date de début.', field: 'au' }] })
+    await wrapper.get('#exp-du').setValue('2026-12-31')
+    await wrapper.get('#exp-au').setValue('2026-01-01')
+    await wrapper.get('.export form').trigger('submit')
+    await flushPromises()
+    restore()
+    expect(wrapper.get('[role="alert"]').text()).toContain('après la date de début')
+    expect(clicks).toEqual([])
   })
 })

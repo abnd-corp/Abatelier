@@ -227,6 +227,8 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A noté le devis ${d.numero} comme ${d.reponse === 'accepte' ? 'accepté' : 'refusé'} par ${d.client}`, tone: d.reponse === 'accepte' ? 'accent' : 'neutral' }
     case 'billing.paid':
       return { text: `A enregistré le paiement de la facture ${d.numero} (${eur(d.ttc)}, ${MODES[d.mode] ?? d.mode}, le ${day(d.date)})`, tone: 'accent' }
+    case 'billing.exported':
+      return { text: `A exporté les ${d.type === 'ventes' ? 'ventes (factures et avoirs)' : 'encaissements'} du ${day(d.du)} au ${day(d.au)} pour le comptable (${d.lignes} ligne${Number(d.lignes) > 1 ? 's' : ''})`, tone: 'neutral' }
     case 'billing.payment_cancelled':
       return { text: `A annulé le paiement enregistré sur la facture ${d.numero}`, tone: 'bad' }
     case 'site.content_updated':

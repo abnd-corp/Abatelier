@@ -136,7 +136,8 @@ Le pliage commence par de la découpe : chaque pièce est une bande de « dével
 - [ ] **Envoi d'e-mails** (déjà noté) : choisir le service, une adresse sur leur domaine, SPF / DKIM / DMARC. Sert à : alerte à la direction à chaque demande de contact, devis, relances de factures, mot de passe oublié, espace client
 - [ ] **Sauvegardes hors de la machine** et test de restauration sur une autre machine ; pour le Pi : disque fiable (SSD plutôt que carte SD), onduleur
 - [ ] **Supervision** : alerte si le site tombe (sonde extérieure), si la sauvegarde échoue, si le disque se remplit ; journaux et erreurs de l'application consultables
-- [ ] **Export pour le comptable** : factures, avoirs et encaissements en CSV (idéalement au format FEC), par mois ou par année
+- [x] **Export pour le comptable** (page Devis et factures, `billing.manage`) : CSV des factures et avoirs émis, ou des paiements encaissés, sur une période ; ouvert directement par Excel, formules neutralisées, noté au journal
+- [ ] Export au format **FEC** (écritures comptables) : à faire avec leur comptable, qui donne le plan de comptes (clients 411, ventes 706, TVA 4457…)
 - [ ] **Facturation électronique** (voir section 1) : aujourd'hui les factures sont des PDF, **pas** des factures électroniques au sens de la réforme
 - [ ] Pages légales à compléter et à faire relire (voir « Site vitrine »)
 

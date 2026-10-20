@@ -6,6 +6,7 @@ import { eur } from '@/lib/catalog'
 import { formatDay } from '@/lib/employees'
 import { STATUTS, statutOf, TYPES, type BillingStatut, type BillingSummary, type BillingType } from '@/lib/billing'
 import AppIcon from '@/components/AppIcon.vue'
+import AccountingExport from '@/components/billing/AccountingExport.vue'
 
 type Totals = Partial<Record<BillingStatut, { n: number; ttc: number }>>
 
@@ -93,6 +94,8 @@ const docWord = computed(() => ({ devis: ['devis', 'devis'], facture: ['facture'
       <h1>Devis et factures</h1>
     </div>
   </div>
+
+  <AccountingExport />
 
   <div class="tabs" role="tablist" aria-label="Type de document" @keydown="onKey">
     <button
