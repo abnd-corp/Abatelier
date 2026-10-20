@@ -8,6 +8,8 @@
 - page ajoutée à `e2e/tests/responsive.spec.ts` et à `e2e/apercu/rendus.spec.ts` ;
 - `make apercu` lancé et **captures regardées** sur téléphone, tablette (portrait et paysage) et ordinateur, en clair et en sombre.
 
+**Questions à poser à l'entreprise** (direction, atelier, comptable, domaine et e-mails, Google) : toutes dans `entreprise/questions-a-poser.md`, chacune avec son contexte et ce que la réponse change. À mettre à jour quand une nouvelle question apparaît.
+
 ## 1. Espace Direction (en cours)
 
 ### Tarifs et catalogue
