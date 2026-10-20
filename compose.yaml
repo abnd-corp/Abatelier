@@ -51,12 +51,16 @@ services:
       MAIL_ALERT_TO: ${MAIL_ALERT_TO:-}
       SMTP_PASSWORD_FILE: /run/secrets/smtp_password
       GOOGLE_PLACES_API_KEY_FILE: /run/secrets/google_places_api_key
+      # Paiement en ligne de la boutique : none (fermé) ou stripe (clés dans secrets/stripe_secret_key.txt et stripe_webhook_secret.txt)
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-none}
+      STRIPE_SECRET_KEY_FILE: /run/secrets/stripe_secret_key
+      STRIPE_WEBHOOK_SECRET_FILE: /run/secrets/stripe_webhook_secret
       ADMIN_IDENTIFIANT: ${ADMIN_IDENTIFIANT:-admin}
       ADMIN_NOM: ${ADMIN_NOM:-Administrateur}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
       IDLE_TIMEOUT_HOURS: ${IDLE_TIMEOUT_HOURS:-12}
-    secrets: [db_password, admin_password, google_places_api_key, smtp_password]
+    secrets: [db_password, admin_password, google_places_api_key, smtp_password, stripe_secret_key, stripe_webhook_secret]
     tmpfs: [/tmp]
     networks: [backend, frontend]
     healthcheck:
@@ -108,6 +112,10 @@ secrets:
     file: ./secrets/google_places_api_key.txt
   smtp_password:
     file: ./secrets/smtp_password.txt
+  stripe_secret_key:
+    file: ./secrets/stripe_secret_key.txt
+  stripe_webhook_secret:
+    file: ./secrets/stripe_webhook_secret.txt
 
 networks:
   # La base n'est joignable que par l'API, et n'a pas accès à Internet

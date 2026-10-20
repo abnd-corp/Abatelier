@@ -45,6 +45,17 @@ export function makeRouter() {
         const [path, name] = s.split(':') as [string, string]
         return { path: `/${path}`, name, component: page(name), meta: { public: true } }
       }),
+      { path: '/espace', name: 'espace', component: page('espace'), meta: { public: true, site: true, espace: 'connecte' } },
+      { path: '/espace/connexion', name: 'espace-connexion', component: page('espace-connexion'), meta: { public: true, site: true, espace: 'invite' } },
+      { path: '/espace/inscription', name: 'espace-inscription', component: page('espace-inscription'), meta: { public: true, site: true, espace: 'invite' } },
+      { path: '/espace/commandes/:id', name: 'espace-commande', component: page('espace-commande'), meta: { public: true, site: true, espace: 'connecte' } },
+      { path: '/produits', name: 'products', component: page('products'), meta: { section: 'Direction', title: 'Boutique' } },
+      { path: '/produits/:id', name: 'product', component: page('product'), meta: { menu: 'products' } },
+      { path: '/boutique', name: 'site-boutique', component: page('site-boutique'), meta: { public: true, site: true } },
+      { path: '/boutique/:id', name: 'site-produit', component: page('site-produit'), meta: { public: true, site: true } },
+      { path: '/boutique/commande/:id', name: 'site-paiement-retour', component: page('site-paiement-retour'), meta: { public: true, site: true } },
+      { path: '/paiement-simulation/:id', name: 'site-paiement-simulation', component: page('site-paiement-simulation'), meta: { public: true, site: true } },
+      { path: '/panier', name: 'site-panier', component: page('site-panier'), meta: { public: true, site: true } },
       { path: '/site-vitrine', name: 'site-admin', component: page('site-admin'), meta: { section: 'Direction', title: 'Site vitrine' } },
       { path: '/connexion', name: 'login', component: page('login'), meta: { public: true } },
       { path: '/tableau-de-bord', name: 'dashboard', component: page('dashboard') },
@@ -97,7 +108,7 @@ export const ADMIN: User = {
   nom: 'Le Chef',
   role: 'direction',
   mustChangePassword: false,
-  permissions: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage', 'documents.manage', 'clients.manage', 'clients.read', 'orders.manage', 'orders.production', 'billing.manage', 'site.manage'],
+  permissions: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage', 'documents.manage', 'clients.manage', 'clients.read', 'orders.manage', 'orders.production', 'billing.manage', 'site.manage', 'products.manage'],
 }
 
 export const ATELIER: User = {

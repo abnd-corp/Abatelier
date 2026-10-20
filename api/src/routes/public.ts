@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { contactRequests, sitePhotos } from '../db/schema.js'
+import { contactRequests, productVariants, products, sitePhotos } from '../db/schema.js'
 import { getCompany } from '../documents.js'
 import { fillCompany, getContent } from '../site.js'
 import { getReviews } from '../google-reviews.js'
@@ -12,6 +12,9 @@ import { alertRecipients, sendMail, withTimeout } from '../mail.js'
 import { contactAlert } from '../mail-texts.js'
 import { invalid } from '../validation.js'
 import { line, livraison, orderCatalog, priceBody } from './orders.js'
+import { getPricingSettings } from '../pricing.js'
+import { LIGNES_MAX, priceCart, QUANTITE_MAX, ttcOf } from '../shop.js'
+import { paymentProvider } from '../payments.js'
 
 // Routes ouvertes à tous les visiteurs du site vitrine : aucune donnée privée, jamais de session.
 
@@ -46,15 +49,6 @@ const consentement = z.literal(true, { error: 'Cochez la case pour accepter l’
 
 // Pièces et livraison du configurateur : mêmes règles que la saisie de l'atelier, avec moins de pièces
 const configBody = z.object({ lignes: z.array(line).min(1, 'Ajoutez au moins une pièce.').max(20, '20 pièces maximum : pour plus, contactez-nous.'), livraison })
-const devisBody = z.object({
-  ...contactFields,
-  message: opt(5000, 'Message'),
-  consentement,
-  // Champ caché que seuls les robots remplissent
-  site: z.string().optional(),
-  ...configBody.shape,
-})
-
 const contactBody = z.object({
   ...contactFields,
   objet: z.string().trim().min(1, 'Indiquez l’objet de votre demande.').max(150, 'Objet : 150 caractères maximum.'),
@@ -69,6 +63,15 @@ const contactBody = z.object({
       contenu: z.string().max(Math.ceil((ATTACHMENT_MAX * 4) / 3) + 64 * 1024),
     })
     .nullish(),
+})
+
+// Panier de la boutique : des déclinaisons et des quantités (le prix n'est jamais envoyé par le navigateur)
+export const cartBody = z.object({
+  lignes: z
+    .array(z.object({ variantId: z.uuid('Article inconnu.'), quantite: z.preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number({ error: 'Quantité : nombre attendu.' }).int('Quantité : nombre entier attendu.').min(1, 'Quantité : 1 minimum.').max(QUANTITE_MAX, `Quantité : ${QUANTITE_MAX} maximum.`)) }))
+    .min(1, 'Votre panier est vide.')
+    .max(LIGNES_MAX, `${LIGNES_MAX} articles différents maximum : contactez-nous pour une grosse commande.`),
+  livraison,
 })
 
 // Pages du site, pour le plan du site
@@ -118,7 +121,7 @@ export async function publicRoutes(app: FastifyInstance) {
   const origin = (req: { headers: Record<string, string | string[] | undefined>; protocol: string }) => `${req.headers['x-forwarded-proto'] ?? req.protocol}://${req.headers.host}`
   app.get('/robots.txt', async (req, reply) => {
     // L'atelier (pages privées) et l'API ne doivent pas apparaître dans Google
-    const privatePaths = ['/api/', '/connexion', '/tableau-de-bord', '/mon-compte', '/salaries', '/clients', '/commandes', '/factures', '/fabrication', '/catalogue', '/modeles-documents', '/site-vitrine', '/utilisateurs', '/journal']
+    const privatePaths = ['/api/', '/connexion', '/tableau-de-bord', '/mon-compte', '/salaries', '/clients', '/commandes', '/factures', '/fabrication', '/catalogue', '/modeles-documents', '/site-vitrine', '/utilisateurs', '/journal', '/espace']
     return reply
       .header('Content-Type', 'text/plain; charset=utf-8')
       .header('Cache-Control', 'public, max-age=3600')
@@ -151,31 +154,57 @@ export async function publicRoutes(app: FastifyInstance) {
     return { lignes: p.lines, totals: p.totals, distanceKm: p.distanceKm }
   })
 
-  // Demande de devis : le visiteur laisse ses coordonnées avec ses pièces. Le prix est recalculé ici, jamais repris du navigateur.
-  app.post('/devis', { config: { rateLimit: { max: env.CONTACT_RATE_LIMIT, timeWindow: '1 hour' } } }, async (req, reply) => {
-    const parsed = devisBody.safeParse(req.body)
-    if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'Données invalides.', field: pathField(parsed.error) })
-    const { site, consentement: _c, lignes, livraison: liv, message, ...contact } = parsed.data
-    if (site) return reply.code(201).send({ ok: true })
-    const p = await priceBody({ lignes, livraison: liv }, false)
-    if ('error' in p) return reply.code(p.status).send({ error: p.error, field: p.field })
-    const pieces = p.lines.reduce((s, l) => s + l.quantite, 0)
-    const euros = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }).replace(/[  ]/g, ' ')
-    const resume = p.lines.map((l) => `${l.quantite} × ${l.modeleLabel}${l.repere ? ` (${l.repere})` : ''} · ${l.materialLabel} · ${l.colorLabel} · longueur ${l.longueur.toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, ' ')} mm`)
-    const configuration = { lignes, livraison: liv, resume, ht: p.totals.ht, ttc: p.totals.ttc }
-    const objet = `Demande de devis : ${pieces} pièce${pieces > 1 ? 's' : ''}, ${euros(p.totals.ttc)} TTC`
-    const [row] = await db
-      .insert(contactRequests)
-      .values({ ...contact, objet, message: message ?? '', configuration })
-      .returning({ id: contactRequests.id })
-    const to = await alertRecipients()
-    if (to.length) {
-      const proto = req.headers['x-forwarded-proto'] ?? req.protocol
-      const mail = contactAlert({ ...contact, objet, message: message ?? '', fichierNom: null, configuration }, `${proto}://${req.headers.host}/site-vitrine`)
-      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: contact.email, targetType: 'contact', targetId: row!.id }), 6000, { ok: false, notConfigured: false, error: 'délai dépassé' })
+  // --- Boutique : produits en ligne, et chiffrage du panier, sans compte ---
+
+  // Un produit est en ligne s'il est actif et a au moins une déclinaison active
+  app.get('/boutique', async (_req, reply) => {
+    reply.header('Cache-Control', 'no-cache')
+    const taux = (await getPricingSettings()).tva
+    const rows = await db
+      .select({
+        id: products.id,
+        nom: products.nom,
+        categorie: products.categorie,
+        description: products.description,
+        imageAlt: products.imageAlt,
+        hasImage: sql<boolean>`${products.image} is not null`,
+        version: sql<number>`(extract(epoch from ${products.updatedAt}) * 1000)::bigint`.mapWith(Number),
+      })
+      .from(products)
+      .where(eq(products.actif, true))
+      .orderBy(asc(products.position), asc(products.nom))
+    const variantes = await db
+      .select({ id: productVariants.id, productId: productVariants.productId, libelle: productVariants.libelle, reference: productVariants.reference, prixHt: productVariants.prixHt })
+      .from(productVariants)
+      .innerJoin(products, eq(products.id, productVariants.productId))
+      .where(and(eq(productVariants.actif, true), eq(products.actif, true)))
+      .orderBy(asc(productVariants.position), asc(productVariants.libelle))
+    return {
+      paiement: paymentProvider() !== null,
+      produits: rows
+        .map(({ hasImage, version, imageAlt, ...p }) => ({
+          ...p,
+          image: hasImage ? { url: `/api/public/boutique/images/${p.id}?v=${version}`, alt: imageAlt } : null,
+          variantes: variantes.filter((v) => v.productId === p.id).map((v) => ({ id: v.id, libelle: v.libelle, reference: v.reference, prixTtc: ttcOf(v.prixHt, taux) })),
+        }))
+        .filter((p) => p.variantes.length),
     }
-    await audit(req, 'contact.received', { actor: null, targetType: 'contact', targetId: row!.id, details: { objet, fichier: false, configurateur: true } })
-    return reply.code(201).send({ ok: true })
+  })
+
+  app.get('/boutique/images/:id', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const [row] = z.uuid().safeParse(id).success ? await db.select({ image: products.image, type: products.imageType }).from(products).where(and(eq(products.id, id), eq(products.actif, true))) : []
+    if (!row?.image || !row.type) return reply.code(404).send({ error: 'Photo introuvable.' })
+    // L'adresse change (?v=) à chaque nouvelle photo : le navigateur peut la garder longtemps
+    return reply.header('Content-Type', row.type).header('Cache-Control', 'public, max-age=31536000, immutable').header('X-Content-Type-Options', 'nosniff').send(row.image)
+  })
+
+  app.post('/boutique/panier', { config: { rateLimit: { max: env.QUOTE_RATE_LIMIT, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const parsed = cartBody.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'Données invalides.', field: pathField(parsed.error) })
+    const p = await priceCart(parsed.data.lignes, parsed.data.livraison)
+    if ('error' in p) return reply.code(p.status).send({ error: p.error, field: p.field })
+    return { lignes: p.lignes, indisponibles: p.indisponibles, totals: p.cart.totals, distanceKm: p.cart.distanceKm, paiement: paymentProvider() !== null }
   })
 
   app.get('/avis', async (_req, reply) => {

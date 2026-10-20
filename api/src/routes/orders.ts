@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { clients, ORDER_STATUTS, orderEvents, orderLines, orders, type Client } from '../db/schema.js'
+import { billingDocuments, clients, ORDER_STATUTS, orderEvents, orderLines, orders, payments, type Client } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
 import { allocateNumber } from '../documents.js'
@@ -11,7 +11,9 @@ import { GeoUnavailable } from '../geo.js'
 import { colorLabel, isError, materialLabel, priceLine, priceOrder, type PricedLine, type Totals } from '../quote.js'
 import { changeStatus, eventsOf, loadCatalog, NEXT, STATUT_LABELS } from '../orders.js'
 import { clientName } from './clients.js'
-import { activeInvoice } from '../billing.js'
+import { activeInvoice, issueCreditNote } from '../billing.js'
+import { PaymentError, providerOf } from '../payments.js'
+import { sendMail, withTimeout } from '../mail.js'
 import { getCompany } from '../documents.js'
 import { facturxMissingFor } from '../facturx.js'
 
@@ -68,6 +70,14 @@ const statusBody = z.object({
     .max(500, 'Note : 500 caractères maximum.')
     .nullish()
     .transform((v) => v || null),
+})
+
+const refusBody = z.object({
+  motif: z
+    .string()
+    .trim()
+    .min(1, 'Indiquez le motif du refus : il est transmis au client.')
+    .max(500, 'Motif : 500 caractères maximum.'),
 })
 
 const FILTRES = ['en_cours', 'toutes', ...ORDER_STATUTS] as const
@@ -175,23 +185,29 @@ export async function orderCatalog() {
 }
 
 /** Enregistre une commande déjà validée par zod : chiffrage, numéro, lignes, première étape et journal. */
-export async function placeOrder(req: FastifyRequest, body: Body): Promise<Failure | { id: string; numero: string }> {
+export async function placeOrder(
+  req: FastifyRequest,
+  body: Body,
+  // Par défaut l'utilisateur connecté ; pour un client du site, aucun utilisateur de l'atelier (userId null) et l'origine est notée au journal
+  by: { userId: string | null; origine?: string } = { userId: req.user?.id ?? null },
+): Promise<Failure | { id: string; numero: string }> {
   const p = await quote(body)
   if (!isPriced(p)) return p
   const order = await db.transaction(async (tx) => {
     const { label } = await allocateNumber(tx, 'commande')
     const [o] = await tx
       .insert(orders)
-      .values({ ...orderValues(body, p), numero: label, createdBy: req.user!.id })
+      .values({ ...orderValues(body, p), numero: label, createdBy: by.userId })
       .returning()
     await tx.insert(orderLines).values(lineValues(o!.id, p.lines))
-    await tx.insert(orderEvents).values({ orderId: o!.id, statut: 'recue', userId: req.user!.id })
+    await tx.insert(orderEvents).values({ orderId: o!.id, statut: 'recue', userId: by.userId, note: by.origine ? 'Demandée depuis l’espace client' : null })
     return o!
   })
   await audit(req, 'order.created', {
+    ...(by.origine ? { actor: null, identifiant: `espace:${p.client.id}` } : {}),
     targetType: 'order',
     targetId: order.id,
-    details: { numero: order.numero, client: clientName(p.client), clientId: p.client.id, ht: order.ht, pieces: p.lines.reduce((s, l) => s + l.quantite, 0) },
+    details: { numero: order.numero, client: clientName(p.client), clientId: p.client.id, ht: order.ht, pieces: p.lines.reduce((s, l) => s + l.quantite, 0), ...(by.origine ? { origine: by.origine } : {}) },
   })
   return { id: order.id, numero: order.numero }
 }
@@ -221,6 +237,7 @@ export async function orderRoutes(app: FastifyInstance) {
         id: orders.id,
         numero: orders.numero,
         statut: orders.statut,
+        kind: orders.kind,
         clientId: orders.clientId,
         ...clientColumns,
         livraisonMode: orders.livraisonMode,
@@ -272,13 +289,16 @@ export async function orderRoutes(app: FastifyInstance) {
   app.get('/:id', async (req, reply) => {
     const o = await findOrder((req.params as { id: string }).id, reply)
     if (!o) return
-    const [[client], lignes, events, company] = await Promise.all([
+    const [[client], lignes, events, company, [pay]] = await Promise.all([
       db.select().from(clients).where(eq(clients.id, o.clientId)),
       db.select().from(orderLines).where(eq(orderLines.orderId, o.id)).orderBy(asc(orderLines.position)),
       eventsOf(o.id),
       getCompany(),
+      db.select().from(payments).where(eq(payments.orderId, o.id)),
     ])
     return {
+      // Paiement en ligne (boutique) : montant, date, et remboursement éventuel. Jamais d'identifiant du prestataire.
+      paiement: pay ? { statut: pay.statut, montantTtc: pay.montantTtc, paidAt: pay.paidAt, refundedAt: pay.refundedAt, refundMotif: pay.refundMotif, prestataire: pay.provider } : null,
       order: { ...o, statutLabel: STATUT_LABELS[o.statut], next: NEXT[o.statut] },
       client: { id: client!.id, nom: clientName(client!), type: client!.type, telephone: client!.telephone, email: client!.email },
       lignes: lignes.map(({ orderId: _o, ...l }) => l),
@@ -292,6 +312,7 @@ export async function orderRoutes(app: FastifyInstance) {
   app.patch('/:id', async (req, reply) => {
     const o = await findOrder((req.params as { id: string }).id, reply)
     if (!o) return
+    if (o.kind === 'boutique') return reply.code(409).send({ error: 'Les articles d’une commande de la boutique ne se modifient pas : elle a été payée telle quelle.' })
     if (o.statut !== 'recue') return reply.code(409).send({ error: 'La commande est validée : ses pièces ne se modifient plus.' })
     const parsed = orderBody.safeParse({ clientId: o.clientId, ...(req.body as object) })
     if (!parsed.success) return invalidPath(reply, parsed.error)
@@ -320,6 +341,7 @@ export async function orderRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: `Une commande « ${STATUT_LABELS[o.statut]} » ne peut pas passer à « ${STATUT_LABELS[statut]} ».`, field: 'statut' })
     }
     if (statut === 'annulee' && !note) return reply.code(400).send({ error: 'Indiquez la raison de l’annulation.', field: 'note' })
+    if (statut === 'annulee' && (await paidOnline(o.id))) return reply.code(409).send({ error: 'Cette commande a été payée en ligne : pour l’annuler, utilisez « Refuser et rembourser », qui rembourse le client.', field: 'statut' })
     if (statut === 'annulee') {
       const facture = await activeInvoice(o.id)
       if (facture) return reply.code(409).send({ error: `La commande est facturée (${facture.numero}) : faites d’abord un avoir pour annuler la facture.`, field: 'statut' })
@@ -327,4 +349,64 @@ export async function orderRoutes(app: FastifyInstance) {
     const datePrevue = await changeStatus(req, o, statut, note)
     return { statut, datePrevue }
   })
+
+  // Commande payée en ligne que l'atelier ne peut pas réaliser : elle est refusée et le client est remboursé en totalité.
+  // Le contrat se formait au paiement ; ce refus le défait, avec le motif donné au client.
+  app.post('/:id/refus', async (req, reply) => {
+    const o = await findOrder((req.params as { id: string }).id, reply)
+    if (!o) return
+    const parsed = refusBody.safeParse(req.body)
+    if (!parsed.success) return invalidPath(reply, parsed.error)
+    const pay = await paidOnline(o.id)
+    if (!pay) return reply.code(409).send({ error: 'Seule une commande payée en ligne se refuse et se rembourse. Pour une autre commande, utilisez l’annulation.' })
+    if (o.statut === 'livree' || o.statut === 'annulee') return reply.code(409).send({ error: `Une commande « ${STATUT_LABELS[o.statut]} » ne peut plus être refusée.` })
+    const provider = providerOf(pay.provider)
+    if (!provider || !pay.providerRef) return reply.code(409).send({ error: 'Ce paiement ne peut pas être remboursé automatiquement : remboursez-le chez le prestataire de paiement.' })
+    const motif = parsed.data.motif
+    let refundRef: string
+    try {
+      // Le remboursement d'abord : s'il échoue, rien n'a changé et la commande reste à traiter
+      refundRef = (await provider.refund({ paymentId: pay.id, ref: pay.providerRef, providerPayment: pay.providerPayment, montantCents: Math.round(pay.montantTtc * 100) })).ref
+    } catch (e) {
+      if (e instanceof PaymentError) return reply.code(502).send({ error: e.message })
+      throw e
+    }
+    await db.update(payments).set({ statut: 'rembourse', refundedAt: new Date(), refundRef, refundMotif: motif }).where(eq(payments.id, pay.id))
+    // Une facture déjà émise est annulée par un avoir, comme toujours
+    const facture = await activeInvoice(o.id)
+    let avoir: string | null = null
+    if (facture) {
+      const [doc] = await db.select().from(billingDocuments).where(eq(billingDocuments.id, facture.id))
+      const credit = await issueCreditNote(doc!, `Commande refusée et remboursée : ${motif}`, req.user!.id)
+      avoir = credit.numero
+      await audit(req, 'billing.avoir_created', { targetType: 'billing', targetId: credit.id, details: { numero: credit.numero, facture: facture.numero, client: doc!.clientNom, ttc: -doc!.ttc, motif } })
+    }
+    await changeStatus(req, o, 'annulee', `Refusée par l’atelier, client remboursé : ${motif}`)
+    await audit(req, 'order.refused', { targetType: 'order', targetId: o.id, details: { numero: o.numero, montant: pay.montantTtc, motif, ...(avoir ? { avoir } : {}) } })
+    // Le client est prévenu, avec le motif ; un échec d'envoi n'annule rien
+    const [c] = await db.select().from(clients).where(eq(clients.id, o.clientId))
+    if (c?.email) {
+      const euros = pay.montantTtc.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }).replace(/[\u202f\u00a0]/g, ' ')
+      await withTimeout(
+        sendMail({
+          kind: 'contact',
+          to: [c.email],
+          subject: `Votre commande ${o.numero} ne peut pas être réalisée : remboursement`,
+          text: `Bonjour ${clientName(c)},\n\nAprès vérification, nous ne pouvons pas réaliser votre commande ${o.numero}.\nMotif : ${motif}\n\nNous vous remboursons la totalité, soit ${euros}, sur le moyen de paiement utilisé. Le délai d’arrivée dépend de votre banque (quelques jours).\n\nNous restons à votre disposition pour trouver une solution.\n\nAlu Pliage Service`,
+          targetType: 'order',
+          targetId: o.id,
+          userId: req.user!.id,
+        }),
+        6000,
+        { ok: false, notConfigured: false, error: 'délai dépassé' },
+      )
+    }
+    return { statut: 'annulee', rembourse: pay.montantTtc, avoir }
+  })
+}
+
+/** Paiement en ligne encaissé de la commande (sinon null). */
+async function paidOnline(orderId: string) {
+  const [p] = await db.select().from(payments).where(and(eq(payments.orderId, orderId), eq(payments.statut, 'paye')))
+  return p ?? null
 }

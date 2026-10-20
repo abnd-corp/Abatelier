@@ -37,6 +37,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
     items: [
       { to: { name: 'catalog' }, name: 'catalog', label: 'Tarifs et catalogue', icon: 'tag', perm: 'catalog.manage' },
       { to: { name: 'documents' }, name: 'documents', label: 'Modèles de documents', icon: 'file', perm: 'documents.manage' },
+      { to: { name: 'products' }, name: 'products', label: 'Boutique', icon: 'inbox', perm: 'products.manage' },
       { to: { name: 'site-admin' }, name: 'site-admin', label: 'Site vitrine', icon: 'globe', perm: 'site.manage' },
     ],
   },

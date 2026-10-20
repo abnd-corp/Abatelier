@@ -2,6 +2,7 @@
 import { computed, defineAsyncComponent, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { api, ApiError } from '@/api'
 import { eur } from '@/lib/catalog'
+import { metres, standardsOf } from '@/lib/standards'
 import { accessoriesFor, developpe, isPince, letter, modelOf, PINCE, newLine, suggestedQuantity, type LineForm, type OrderCatalog, type OrderForm, type PricedLine, type Totals } from '@/lib/orders'
 import AppIcon from '@/components/AppIcon.vue'
 import ProfileSketch from './ProfileSketch.vue'
@@ -70,6 +71,7 @@ function setModele(l: LineForm, modelId: string) {
 }
 // Orientation du dessin et noms des cotes du modèle (un modèle désactivé depuis : dessin à plat, cotes sans nom)
 const capOf = (l: LineForm) => modelOf(props.catalog, l.modelId)?.cap ?? 0
+const standardOf = (l: LineForm) => standardsOf(modelOf(props.catalog, l.modelId)?.nom)
 const coteName = (l: LineForm, j: number) => modelOf(props.catalog, l.modelId)?.noms[j] ?? ''
 function setQuantite(l: LineForm, value: string) {
   const before = l.quantite
@@ -151,6 +153,22 @@ defineExpose({ refresh })
           <div class="field">
             <label :for="`l${i}-repere`">Repère</label>
             <input :id="`l${i}-repere`" v-model="l.repere" class="input" maxlength="60" placeholder="Mur sud, fenêtre cuisine…" autocomplete="off" />
+          </div>
+        </div>
+        <div v-if="standardOf(l)" class="row">
+          <div class="field">
+            <label :for="`l${i}-std-largeur`">{{ standardOf(l)!.label }} (taille standard)</label>
+            <select :id="`l${i}-std-largeur`" class="input" :value="standardOf(l)!.largeurs.includes(l.cotes[standardOf(l)!.cote]!) ? l.cotes[standardOf(l)!.cote] : ''" @change="l.cotes[standardOf(l)!.cote] = Number(($event.target as HTMLSelectElement).value)">
+              <option value="" disabled>Sur mesure ({{ l.cotes[standardOf(l)!.cote] }} mm)</option>
+              <option v-for="w in standardOf(l)!.largeurs" :key="w" :value="w">{{ w }} mm</option>
+            </select>
+          </div>
+          <div class="field">
+            <label :for="`l${i}-std-longueur`">Longueur (taille standard)</label>
+            <select :id="`l${i}-std-longueur`" class="input" :value="standardOf(l)!.longueurs.includes(l.longueur) ? l.longueur : ''" @change="l.longueur = Number(($event.target as HTMLSelectElement).value)">
+              <option value="" disabled>Sur mesure ({{ l.longueur }} mm)</option>
+              <option v-for="v in standardOf(l)!.longueurs" :key="v" :value="v">{{ metres(v) }}</option>
+            </select>
           </div>
         </div>
         <div class="row">
@@ -558,7 +576,10 @@ textarea.input {
 }
 .summary {
   position: sticky;
-  top: 16px;
+  /* Sur le site public, l'en-tête reste collé en haut : le montant se range juste dessous */
+  top: var(--sticky-top, 16px);
+  max-height: calc(100vh - var(--sticky-top, 16px) - 16px);
+  overflow-y: auto;
   padding: 18px 20px;
   display: grid;
   gap: 12px;

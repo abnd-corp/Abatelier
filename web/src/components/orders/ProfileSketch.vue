@@ -12,6 +12,39 @@ const props = withDefaults(defineProps<{ cotes: number[]; angles: number[]; cap?
 
 const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })
 
+/** Écarte les textes qui se chevauchent (cotes courtes, plis proches), en les repoussant vers l'extérieur du dessin. */
+function spread(items: { x: number; y: number; v: string }[], fs: number, cx: number, cy: number) {
+  const box = (t: { v: string }) => ({ w: (t.v.length + 2) * fs * 0.62, h: fs * 1.15 })
+  for (let pass = 0; pass < 40; pass++) {
+    let moved = false
+    for (let i = 0; i < items.length; i++) {
+      for (let j = i + 1; j < items.length; j++) {
+        const a = items[i]!
+        const b = items[j]!
+        const ba = box(a)
+        const bb = box(b)
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        const ox = (ba.w + bb.w) / 2 - Math.abs(dx)
+        const oy = (ba.h + bb.h) / 2 - Math.abs(dy)
+        if (ox <= 0 || oy <= 0) continue
+        moved = true
+        // Séparation selon l'axe où le recouvrement est le plus faible ; à égalité parfaite, vers l'extérieur
+        if (oy <= ox) {
+          const s = dy === 0 ? (b.y >= cy ? 1 : -1) : Math.sign(dy)
+          a.y -= (s * (oy + 0.5)) / 2
+          b.y += (s * (oy + 0.5)) / 2
+        } else {
+          const s = dx === 0 ? (b.x >= cx ? 1 : -1) : Math.sign(dx)
+          a.x -= (s * (ox + 0.5)) / 2
+          b.x += (s * (ox + 0.5)) / 2
+        }
+      }
+    }
+    if (!moved) break
+  }
+}
+
 const drawing = computed(() => {
   const { pts, heads } = profilePoints(props.cotes, props.angles, props.cap)
   const xs = pts.map((p) => p[0])
@@ -72,6 +105,7 @@ const drawing = computed(() => {
       },
     ]
   })
+  spread([...cotes, ...angles], fs, cx, cy)
   return { viewBox, d, cotes, angles, fs, sw: 4 * k, start: pts[0]!, r: 3.2 * k }
 })
 

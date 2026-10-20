@@ -5,9 +5,11 @@ import BrandMark from '@/components/BrandMark.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import { lines, loadSite, site, siteError, splitAddress, telHref } from '@/lib/site'
 import { applyJsonLd } from '@/lib/seo'
+import { usePanierStore } from '@/stores/panier'
 
 // Enveloppe de toutes les pages publiques : en-tête, menu, pied de page. Aucun cookie, aucun script tiers.
 const route = useRoute()
+const panier = usePanierStore()
 const open = ref(false)
 const e = computed(() => site.value?.entreprise)
 const horaires = computed(() => lines(site.value?.contenu['site.horaires']))
@@ -17,7 +19,9 @@ const NAV = [
   { name: 'site-home', label: 'Accueil' },
   { name: 'site-pliage', label: 'Pliage aluminium' },
   { name: 'site-configurateur', label: 'Configurateur' },
+  { name: 'site-boutique', label: 'Boutique' },
   { name: 'site-contact', label: 'Contact' },
+  { name: 'espace', label: 'Mon espace' },
 ] as const
 const LEGAL = [
   { name: 'site-mentions', label: 'Mentions légales' },
@@ -48,7 +52,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <a v-if="e?.telephone" class="s-link s-tel-m" :href="`tel:${telHref(e.telephone)}`"><AppIcon name="phone" :size="16" />{{ e.telephone }}</a>
         </nav>
         <a v-if="e?.telephone" class="s-tel" :href="`tel:${telHref(e.telephone)}`"><AppIcon name="phone" :size="16" />{{ e.telephone }}</a>
-        <RouterLink :to="{ name: 'site-contact' }" class="s-btn primary s-quote">Demander un devis</RouterLink>
+        <RouterLink :to="{ name: 'site-panier' }" class="s-cart" :aria-label="panier.count ? `Mon panier, ${panier.count} article${panier.count > 1 ? 's' : ''}` : 'Mon panier, vide'">
+          <AppIcon name="box" :size="22" />
+          <span v-if="panier.count" class="s-cart-n" aria-hidden="true">{{ panier.count }}</span>
+        </RouterLink>
         <button class="s-burger" type="button" :aria-expanded="open" aria-controls="s-menu" :aria-label="open ? 'Fermer le menu' : 'Ouvrir le menu'" @click="open = !open">
           <AppIcon :name="open ? 'x' : 'menu'" :size="22" />
         </button>
@@ -127,6 +134,36 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 }
 
 /* En-tête */
+.site .s-cart {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.site .s-cart:hover {
+  background: var(--surface-2);
+}
+.site .s-cart-n {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 0.7rem/18px var(--f-mono);
+  text-align: center;
+}
+.site {
+  /* Hauteur de l'en-tête collé : les éléments collants des pages se rangent dessous */
+  --sticky-top: 82px;
+}
 .site .s-head {
   position: sticky;
   top: 0;
@@ -296,8 +333,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 }
 
 @media (max-width: 860px) {
-  .site .s-tel,
-  .site .s-quote {
+  .site .s-tel {
     display: none;
   }
   .site .s-burger {

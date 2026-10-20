@@ -10,7 +10,7 @@ import OrderLineCard from '@/components/orders/OrderLineCard.vue'
 
 // Fiche de fabrication : les pièces à plier, sans rien sur le client ni sur les prix
 interface Detail {
-  order: { id: string; numero: string; statut: OrderStatut; statutLabel: string; livraisonMode: 'retrait' | 'livraison'; datePrevue: string | null; next: OrderStatut | null }
+  order: { id: string; numero: string; kind: 'sur_mesure' | 'boutique'; statut: OrderStatut; statutLabel: string; livraisonMode: 'retrait' | 'livraison'; datePrevue: string | null; next: OrderStatut | null }
   lignes: {
     id: string
     repere: string | null
@@ -75,6 +75,7 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
     <div class="identity">
       <h1 class="mono">{{ detail.order.numero }}</h1>
       <span class="pill" :class="statutOf(detail.order.statut).tone">{{ detail.order.statutLabel }}</span>
+      <span v-if="detail.order.kind === 'boutique'" class="pill accent">Boutique</span>
     </div>
     <p class="meta">
       <span><AppIcon name="calendar" :size="16" /> Prévue le <b>{{ shortDay(detail.order.datePrevue) }}</b></span>

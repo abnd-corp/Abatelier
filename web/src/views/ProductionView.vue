@@ -9,6 +9,7 @@ import AppIcon from '@/components/AppIcon.vue'
 interface Row {
   id: string
   numero: string
+  kind: 'sur_mesure' | 'boutique'
   statut: OrderStatut
   livraisonMode: 'retrait' | 'livraison'
   datePrevue: string | null
@@ -80,9 +81,10 @@ const groups = computed(() => GROUPS.map((g) => ({ ...g, orders: orders.value.fi
       <article v-for="o in g.orders" :key="o.id" class="card order" :class="{ late: late(o) }">
         <RouterLink :to="{ name: 'production-order', params: { id: o.id } }" class="numero mono">{{ o.numero }}</RouterLink>
         <span class="pill" :class="statutOf(o.statut).tone">{{ statutOf(o.statut).label }}</span>
+        <span v-if="o.kind === 'boutique'" class="pill accent">Boutique</span>
         <p class="meta">
           <span><AppIcon name="calendar" :size="15" /> {{ shortDay(o.datePrevue) }}<b v-if="late(o)" class="late-label"> en retard</b></span>
-          <span><AppIcon name="layers" :size="15" /> {{ o.pieces }} pièce{{ o.pieces > 1 ? 's' : '' }} ({{ o.lignes }} réf.)</span>
+          <span><AppIcon name="layers" :size="15" /> {{ o.pieces }} {{ o.kind === 'boutique' ? 'article' : 'pièce' }}{{ o.pieces > 1 ? 's' : '' }} ({{ o.lignes }} réf.)</span>
           <span><AppIcon :name="o.livraisonMode === 'retrait' ? 'home' : 'truck'" :size="15" /> {{ o.livraisonMode === 'retrait' ? 'Retrait' : 'Livraison' }}</span>
         </p>
         <div class="row-actions">

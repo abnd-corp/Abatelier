@@ -286,6 +286,7 @@ describe('Référencement', () => {
     expect(robots.headers['content-type']).toMatch(/text\/plain/)
     expect(robots.body).toContain('Disallow: /api/')
     expect(robots.body).toContain('Disallow: /clients')
+    expect(robots.body).toContain('Disallow: /espace')
     expect(robots.body).toContain('Sitemap: https://atelier.test/sitemap.xml')
     const map = await visitor.get('/api/public/sitemap.xml', { 'x-forwarded-proto': 'https' })
     expect(map.headers['content-type']).toMatch(/application\/xml/)
@@ -329,6 +330,16 @@ describe('Configurateur public', () => {
     env.MAIL_FROM = undefined
     env.MAIL_ALERT_TO = undefined
     mailSent.length = 0
+  })
+
+  it('les textes légaux par défaut couvrent l’espace client : données, cookie de session, fermeture du compte', async () => {
+    const c = (await visitor.get('/api/public/site')).json().contenu as Record<string, string>
+    expect(c['legal.confidentialite']).toMatch(/espace client/)
+    expect(c['legal.confidentialite']).toMatch(/chiffrée/)
+    expect(c['legal.confidentialite']).toMatch(/fermeture de votre espace client/)
+    expect(c['legal.cookies']).toMatch(/espace client/)
+    expect(c['legal.cookies']).toMatch(/strictement nécessaire/)
+    expect(c['legal.cookies']).not.toMatch(/Seule l’équipe/)
   })
 
   it('donne le catalogue sans connexion, sans prix de matière ni donnée interne', async () => {
@@ -380,40 +391,26 @@ describe('Configurateur public', () => {
     }
   })
 
-  it('enregistre une demande de devis avec les pièces et le prix recalculé par le serveur, et prévient la direction', async () => {
-    mailOn()
-    const expected = (await visitor.post('/api/public/configurateur/chiffrage', config())).json().totals
-    // Le visiteur ne peut pas imposer son prix : un montant envoyé est ignoré
-    const res = await visitor.post('/api/public/devis', devis({ ttc: 1, ht: 1, totals: { ttc: 1 } }))
-    expect(res.statusCode, res.body).toBe(201)
-    const [row] = await db.select().from(contactRequests)
-    expect(row).toMatchObject({ nom: 'Jean Dupont', email: 'jean@example.com', message: 'Pour un muret.' })
-    expect(row!.objet).toMatch(/^Demande de devis : 4 pièces, /)
-    expect(row!.configuration).toMatchObject({ ht: expected.ht, ttc: expected.ttc, livraison: { mode: 'retrait' } })
-    expect(row!.configuration!.resume).toEqual(['4 × Couvertine (Mur sud) · Aluminium 1,5 mm · Gris anthracite (RAL 7016) · longueur 3 000 mm'])
-    expect(mailSent).toHaveLength(1)
-    expect(mailSent[0]!.replyTo).toBe('jean@example.com')
-    expect(mailSent[0]!.text).toContain('Pièces choisies dans le configurateur')
-    expect(mailSent[0]!.text).toContain('4 × Couvertine (Mur sud)')
-    expect(mailSent[0]!.text).toMatch(/Prix affiché au visiteur : .* HT, .* TTC/)
-    const [e] = await entries('contact.received')
-    expect(e!.details).toMatchObject({ configurateur: true })
-  })
-
-  it('valide les coordonnées et les pièces, exige le consentement, ignore les robots', async () => {
-    const post = (b: object) => visitor.post('/api/public/devis', b)
-    expect((await post(devis({ email: 'pas-un-mail' }))).json()).toMatchObject({ field: 'email' })
-    expect((await post(devis({ nom: '' }))).json()).toMatchObject({ field: 'nom' })
-    expect((await post(devis({ consentement: false }))).json()).toMatchObject({ field: 'consentement' })
-    expect((await post(devis({ lignes: [piece({ longueur: 99999 })] }))).json()).toMatchObject({ field: expect.stringMatching(/^lignes\.0\.longueur/) })
-    expect(await db.select().from(contactRequests)).toHaveLength(0)
-    expect((await post(devis({ site: 'http://spam.example' }))).statusCode).toBe(201)
+  it('n’accepte plus de demande de devis anonyme : le devis passe par l’espace client', async () => {
+    const res = await visitor.post('/api/public/devis', devis())
+    expect(res.statusCode).toBe(404)
     expect(await db.select().from(contactRequests)).toHaveLength(0)
   })
 
   describe('commande créée par la direction', () => {
+    // Demandes reçues avant l'espace client : elles portent leurs pièces et se transforment toujours en commande
     const request = async (over: Record<string, unknown> = {}) => {
-      expect((await visitor.post('/api/public/devis', devis(over))).statusCode).toBe(201)
+      const { ttc, ht } = (await visitor.post('/api/public/configurateur/chiffrage', config())).json().totals
+      await db.insert(contactRequests).values({
+        nom: 'Jean Dupont',
+        email: String(over.email ?? 'jean@example.com').toLowerCase(),
+        telephone: '06 12 34 56 78',
+        codePostal: '42490',
+        ville: 'Fraisses',
+        objet: 'Demande de devis : 4 pièces',
+        message: 'Pour un muret.',
+        configuration: { lignes: config().lignes as never, livraison: { mode: 'retrait' }, resume: ['4 × Couvertine (Mur sud)'], ht, ttc },
+      })
       const list = (await direction.get('/api/site/contacts')).json().demandes
       return list[0] as { id: string; configuration: { ttc: number; resume: string[] }; commandeId: string | null }
     }

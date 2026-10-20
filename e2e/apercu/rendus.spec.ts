@@ -4,7 +4,7 @@ import { ADMIN, apiLogin } from '../tests/fixtures'
 
 const OUT = new URL('../../apercus/', import.meta.url).pathname
 
-const PAGES = [
+const PAGES: { name: string; path: string; anonymous?: boolean; client?: boolean; openMenu?: boolean; sendMail?: boolean; editModel?: boolean; view3d?: boolean }[] = [
   { name: '1-connexion', path: '/connexion', anonymous: true },
   { name: '2-tableau-de-bord', path: '/tableau-de-bord' },
   { name: '3-salaries', path: '/salaries' },
@@ -47,6 +47,13 @@ const PAGES = [
   { name: '36-admin-site-photos', path: '/site-vitrine?onglet=photos' },
   { name: '37-admin-site-emails', path: '/site-vitrine?onglet=emails' },
   { name: '38-envoi-par-email', path: 'FICHE_FACTURE', sendMail: true },
+  { name: '38b-site-boutique', path: '/boutique', anonymous: true },
+  { name: '38c-site-panier', path: '/panier', anonymous: true },
+  { name: '38d-admin-produits', path: '/produits' },
+  { name: '39-espace-connexion', path: '/espace/connexion', anonymous: true },
+  { name: '39b-espace-inscription', path: '/espace/inscription', anonymous: true },
+  { name: '39c-espace-commandes', path: 'ESPACE', client: true },
+  { name: '39d-espace-commande', path: 'ESPACE_COMMANDE', client: true },
 ]
 
 test('captures', async ({ page, baseURL }, info) => {
@@ -69,6 +76,24 @@ test('captures', async ({ page, baseURL }, info) => {
     FICHE_FABRICATION: `/fabrication/${orderId}`,
   }
 
+  // Un client du site avec un devis, pour les pages de l'espace client
+  const customer = await page.context().browser()!.newContext({ ...info.project.use, baseURL })
+  const cp = await customer.newPage()
+  const creds = { email: `apercu-${info.project.name}@exemple.fr`, password: 'Plieuse-numerique-2026' }
+  const origin = { Origin: baseURL! }
+  let login = await cp.request.post('/api/espace/inscription', { data: { ...creds, prenom: 'Jean', nom: 'Dupont', consentement: true }, headers: origin })
+  if (login.status() === 409) login = await cp.request.post('/api/espace/connexion', { data: creds, headers: origin })
+  expect(login.ok()).toBe(true)
+  const cfg = await (await cp.request.get('/api/public/configurateur')).json()
+  const couvertine = (cfg.models as { id: string; nom: string; cotes: number[]; angles: number[] }[]).find((m) => m.nom === 'Couvertine')!
+  const devis = await cp.request.post('/api/espace/devis', {
+    data: { lignes: [{ repere: 'Mur sud', modelId: couvertine.id, materialId: cfg.materials[0].id, colorId: cfg.colors[0].id, cotes: couvertine.cotes, angles: couvertine.angles, longueur: 3000, quantite: 6, accessoires: [] }], livraison: { mode: 'retrait' }, notes: 'Pose prévue en mars.' },
+    headers: origin,
+  })
+  expect(devis.ok(), await devis.text()).toBe(true)
+  SPECIAL.ESPACE = '/espace'
+  SPECIAL.ESPACE_COMMANDE = `/espace/commandes/${(await devis.json()).id}`
+
   const dir = `${OUT}${info.project.name}`
   mkdirSync(dir, { recursive: true })
 
@@ -81,6 +106,13 @@ test('captures', async ({ page, baseURL }, info) => {
       await ap.waitForLoadState('networkidle')
       await ap.screenshot({ path: `${dir}/${p.name}.png`, fullPage: true })
       await anon.close()
+      continue
+    }
+    if (p.client) {
+      await cp.goto(target)
+      await cp.waitForLoadState('networkidle')
+      await expect(cp.locator('h1').first()).toBeVisible()
+      await cp.screenshot({ path: `${dir}/${p.name}.png`, fullPage: true })
       continue
     }
     await page.emulateMedia({ reducedMotion: 'no-preference' })

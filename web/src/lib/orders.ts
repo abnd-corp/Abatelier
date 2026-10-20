@@ -124,6 +124,7 @@ export interface OrderSummary {
   id: string
   numero: string
   statut: OrderStatut
+  kind?: 'sur_mesure' | 'boutique'
   clientId: string
   client: string
   livraisonMode: 'retrait' | 'livraison'
@@ -146,6 +147,8 @@ export interface Order extends Totals {
   id: string
   numero: string
   statut: OrderStatut
+  // Boutique : articles du catalogue payés en ligne ; sur mesure : pièces dessinées
+  kind: 'sur_mesure' | 'boutique'
   statutLabel: string
   next: OrderStatut[]
   clientId: string
@@ -159,8 +162,19 @@ export interface Order extends Totals {
   createdAt: string
 }
 
+export interface OrderPaiement {
+  statut: 'attente' | 'paye' | 'echec' | 'rembourse'
+  montantTtc: number
+  paidAt: string | null
+  refundedAt: string | null
+  refundMotif: string | null
+  prestataire: string
+}
+
 export interface OrderDetail {
   order: Order
+  // Paiement en ligne d'une commande de la boutique
+  paiement: OrderPaiement | null
   client: { id: string; nom: string; type: 'particulier' | 'professionnel'; telephone: string | null; email: string | null }
   lignes: (PricedLine & { id: string; materialId: string | null; colorId: string | null })[]
   events: OrderEvent[]

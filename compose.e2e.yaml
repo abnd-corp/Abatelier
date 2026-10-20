@@ -27,6 +27,9 @@ services:
       QUOTE_RATE_LIMIT: "10000"
       # Adresses localisées en dur, sans appeler les services de l'IGN (voir api/src/geo.ts)
       GEO_FAKE: "1"
+      # Faux paiement en ligne : la boutique se teste de bout en bout sans prestataire
+      PAYMENT_PROVIDER: simulation
+      ALLOW_FAKE_PAYMENT: "true"
   web:
     ports:
       - "127.0.0.1:${E2E_PORT:-8090}:8080"

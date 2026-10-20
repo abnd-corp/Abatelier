@@ -107,6 +107,7 @@ const count = (f: Filtre) => {
           <tr v-for="o in orders" :key="o.id" class="click" @click="router.push({ name: 'order', params: { id: o.id } })">
             <td>
               <RouterLink :to="{ name: 'order', params: { id: o.id } }" class="name mono" @click.stop>{{ o.numero }}</RouterLink>
+              <span v-if="o.kind === 'boutique'" class="pill accent boutique">Boutique</span>
               <span class="sub">{{ o.client }} · {{ formatDay(o.createdAt.slice(0, 10)) }}</span>
             </td>
             <td><span class="pill" :class="statutOf(o.statut).tone">{{ statutOf(o.statut).label }}</span></td>
@@ -195,5 +196,8 @@ tr.click:hover td {
 }
 .empty .btn {
   margin-top: 8px;
+}
+.boutique {
+  margin-left: 8px;
 }
 </style>

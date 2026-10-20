@@ -2,6 +2,7 @@ import { env } from './env.js'
 import { buildApp } from './app.js'
 import { pool, runMigrations } from './db/index.js'
 import { deleteExpiredSessions } from './auth/session.js'
+import { deleteExpiredClientSessions } from './auth/client-session.js'
 import { deleteOldAttempts } from './auth/throttle.js'
 import { deleteOldAuditEntries } from './audit.js'
 import { seedAdmin } from './seed.js'
@@ -15,6 +16,7 @@ await seedAdmin(app.log)
 async function cleanup() {
   await applyDepartures()
   await deleteExpiredSessions()
+  await deleteExpiredClientSessions()
   await deleteOldAttempts()
   await deleteOldAuditEntries()
 }

@@ -17,6 +17,8 @@ export class ApiError extends Error {
 /** Réactions globales, branchées dans main.ts (session expirée, mot de passe à changer). */
 export const apiEvents = {
   onUnauthorized: () => {},
+  // Session de l'espace client expirée (autre cookie que celui de l'atelier)
+  onEspaceUnauthorized: () => {},
   onPasswordChangeRequired: () => {},
 }
 
@@ -39,7 +41,9 @@ async function request(path: string, options: Options): Promise<Response> {
     const message =
       data?.error ?? (res.status === 429 ? 'Trop de tentatives. Réessayez dans une minute.' : 'Le serveur a rencontré un problème. Réessayez.')
     const err = new ApiError(res.status, message, data?.code, data?.field, data ?? undefined)
-    if (res.status === 401 && path !== '/auth/login') apiEvents.onUnauthorized()
+    if (res.status === 401 && path.startsWith('/espace')) {
+      if (path !== '/espace/connexion') apiEvents.onEspaceUnauthorized()
+    } else if (res.status === 401 && path !== '/auth/login') apiEvents.onUnauthorized()
     if (res.status === 403 && err.code === 'PASSWORD_CHANGE_REQUIRED') apiEvents.onPasswordChangeRequired()
     throw err
   }

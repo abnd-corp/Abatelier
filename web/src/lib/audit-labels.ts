@@ -205,7 +205,7 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
     case 'client.site_removed':
       return { text: `A retiré le chantier « ${d.chantier} » de ${d.nom}`, tone: 'neutral' }
     case 'order.created':
-      return { text: `A enregistré la commande ${d.numero} de ${d.client} (${eur(d.ht)} HT)`, tone: 'accent' }
+      return { text: `${d.origine === 'espace' ? 'Commande' : 'A enregistré la commande'} ${d.numero} de ${d.client} (${eur(d.ht)} HT)${d.origine === 'espace' ? ', demandée depuis l’espace client' : ''}`, tone: 'accent' }
     case 'order.updated':
       return { text: `A modifié la commande ${d.numero} (${eur(d.avant)} → ${eur(d.apres)} HT)`, tone: 'neutral' }
     case 'order.status_changed':
@@ -216,7 +216,7 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
     case 'order.sheet_printed':
       return { text: `A imprimé la fiche de fabrication de la commande ${d.numero}`, tone: 'neutral' }
     case 'billing.devis_created':
-      return { text: `A émis le devis ${d.numero} pour ${d.client} (commande ${d.commande}, ${eur(d.ttc)} TTC)`, tone: 'accent' }
+      return { text: `${d.origine === 'espace' ? 'Devis' : 'A émis le devis'} ${d.numero} pour ${d.client} (commande ${d.commande}, ${eur(d.ttc)} TTC)${d.origine === 'espace' ? ', remis dans l’espace client' : ''}`, tone: 'accent' }
     case 'billing.facture_created':
       return { text: `A émis la facture ${d.numero} pour ${d.client} (commande ${d.commande}, ${eur(d.ttc)} TTC)`, tone: 'accent' }
     case 'billing.avoir_created':
@@ -257,6 +257,76 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A remis la demande « ${d.objet} » à traiter`, tone: 'neutral' }
     case 'contact.deleted':
       return { text: `A supprimé la demande de contact « ${d.objet} »`, tone: 'bad' }
+    case 'product.created':
+      return { text: `A créé le produit « ${d.nom} »`, tone: 'accent' }
+    case 'product.updated':
+      return { text: `A modifié le produit « ${d.nom} » (${(d.champs as string[]).join(', ')})`, tone: 'neutral' }
+    case 'product.activated':
+      return { text: `A mis en ligne le produit « ${d.nom} »`, tone: 'accent' }
+    case 'product.deactivated':
+      return { text: `A retiré du site le produit « ${d.nom} »`, tone: 'neutral' }
+    case 'product.deleted':
+      return { text: `A supprimé le produit « ${d.nom} »`, tone: 'bad' }
+    case 'product.image_updated':
+      return { text: `A changé la photo du produit « ${d.nom} » (${d.largeur} × ${d.hauteur})`, tone: 'neutral' }
+    case 'product.image_deleted':
+      return { text: `A retiré la photo du produit « ${d.nom} »`, tone: 'neutral' }
+    case 'product.variant_added':
+      return { text: `A ajouté la déclinaison « ${d.libelle} » (${eur(d.prixTtc)} TTC) à « ${d.nom} »`, tone: 'accent' }
+    case 'product.variant_updated': {
+      const prix = d.prixTtc ? ` : prix ${eur(d.prixTtc.avant)} → ${eur(d.prixTtc.apres)} TTC` : d.actif !== undefined ? ` : ${d.actif ? 'remise en vente' : 'retirée de la vente'}` : ''
+      return { text: `A modifié la déclinaison « ${d.libelle} » du produit « ${d.nom} »${prix}`, tone: 'neutral' }
+    }
+    case 'product.variant_deleted':
+      return { text: `A supprimé la déclinaison « ${d.libelle} » du produit « ${d.nom} »`, tone: 'bad' }
+    case 'boutique.checkout_started':
+      return { text: `Un client ouvre le paiement de ${eur(d.montant)} (${d.articles} article${d.articles > 1 ? 's' : ''})`, tone: 'neutral' }
+    case 'boutique.payment_confirmed':
+      return { text: `Paiement de ${eur(d.montant)} reçu : commande ${d.numero} créée`, tone: 'accent' }
+    case 'boutique.payment_failed':
+      return { text: `Paiement de ${eur(d.montant)} abandonné ou échoué`, tone: 'bad' }
+    case 'order.refused':
+      return { text: `A refusé la commande ${d.numero} et remboursé ${eur(d.montant)} au client : ${d.motif}${d.avoir ? ` (avoir ${d.avoir})` : ''}`, tone: 'bad' }
+    case 'product.created':
+      return { text: `A créé le produit « ${d.nom} »`, tone: 'accent' }
+    case 'product.updated':
+      return { text: `A modifié le produit « ${d.nom} » (${(d.champs as string[]).join(', ')})`, tone: 'neutral' }
+    case 'product.activated':
+      return { text: `A mis le produit « ${d.nom} » en ligne sur le site`, tone: 'accent' }
+    case 'product.deactivated':
+      return { text: `A retiré le produit « ${d.nom} » du site`, tone: 'neutral' }
+    case 'product.deleted':
+      return { text: `A supprimé le produit « ${d.nom} »`, tone: 'bad' }
+    case 'product.image_updated':
+      return { text: `A changé la photo du produit « ${d.nom} » (${d.largeur} × ${d.hauteur})`, tone: 'neutral' }
+    case 'product.image_deleted':
+      return { text: `A retiré la photo du produit « ${d.nom} »`, tone: 'neutral' }
+    case 'product.variant_added':
+      return { text: `A ajouté la déclinaison « ${d.libelle} » (${eur(d.prixTtc)} TTC) à « ${d.nom} »`, tone: 'accent' }
+    case 'product.variant_updated':
+      return { text: `A modifié la déclinaison « ${d.libelle} » de « ${d.nom} »${d.prixTtc ? ` (prix ${eur(d.prixTtc.avant)} → ${eur(d.prixTtc.apres)} TTC)` : ''}${d.actif === false ? ' (retirée de la vente)' : d.actif === true ? ' (remise en vente)' : ''}`, tone: 'neutral' }
+    case 'product.variant_deleted':
+      return { text: `A supprimé la déclinaison « ${d.libelle} » de « ${d.nom} »`, tone: 'bad' }
+    case 'boutique.checkout_started':
+      return { text: `Un client ouvre le paiement de ${eur(d.montant)} (${d.articles} article${d.articles > 1 ? 's' : ''})`, tone: 'neutral' }
+    case 'boutique.payment_confirmed':
+      return { text: `Paiement de ${eur(d.montant)} reçu : commande ${d.numero} créée`, tone: 'accent' }
+    case 'boutique.payment_failed':
+      return { text: `Paiement de ${eur(d.montant)} abandonné ou expiré, aucune commande créée`, tone: 'neutral' }
+    case 'order.refused':
+      return { text: `A refusé la commande ${d.numero} et remboursé ${eur(d.montant)} au client (motif : ${d.motif})${d.avoir ? `, facture annulée par l’avoir ${d.avoir}` : ''}`, tone: 'bad' }
+    case 'espace.registered':
+      return { text: `Espace client créé : ${d.nom}`, tone: 'accent' }
+    case 'espace.login':
+      return { text: 'Connexion d’un client à son espace', tone: 'neutral' }
+    case 'espace.login_failed':
+      return { text: 'Échec de connexion à un espace client', tone: 'bad' }
+    case 'espace.logout':
+      return { text: 'Déconnexion d’un client de son espace', tone: 'neutral' }
+    case 'espace.document_downloaded':
+      return { text: `Un client a téléchargé ${d.type === 'devis' ? 'le devis' : d.type === 'avoir' ? 'l’avoir' : 'la facture'} ${d.numero}`, tone: 'neutral' }
+    case 'espace.devis_answered':
+      return { text: `Un client a ${d.reponse === 'accepte' ? 'accepté' : 'refusé'} le devis ${d.numero} (commande ${d.commande}) depuis son espace`, tone: d.reponse === 'accepte' ? 'accent' : 'neutral' }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

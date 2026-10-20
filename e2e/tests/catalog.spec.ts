@@ -71,7 +71,7 @@ test.describe('Tarifs et catalogue', () => {
     await expect(adminPage).toHaveURL(/onglet=accessoires/)
     const panel = adminPage.getByRole('tabpanel', { name: 'Accessoires' })
     // Catalogue de départ
-    await expect(panel.getByRole('row', { name: /Éclisse de jonction/ })).toContainText(/7,80\s€/)
+    await expect(panel.getByRole('row', { name: /Éclisse de jonction/ })).toContainText(/3,75\s€/)
     await expect(panel.getByRole('row', { name: /Embouts de bavette/ })).toContainText('la paire')
 
     await panel.getByRole('button', { name: 'Ajouter un accessoire' }).click()

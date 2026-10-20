@@ -14,7 +14,7 @@ export const PASSWORD = 'Plieuse-numerique-2026'
 export { buildApp }
 
 export async function resetDb() {
-  await db.execute(sql`truncate audit_log, login_attempts, sessions, employees, users, materials, colors, pricing_settings, piece_models, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events, billing_documents, site_content, site_photos, contact_requests, email_log restart identity cascade`)
+  await db.execute(sql`truncate audit_log, login_attempts, sessions, client_sessions, client_accounts, employees, users, materials, colors, pricing_settings, piece_models, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events, billing_documents, payments, product_variants, products, site_content, site_photos, contact_requests, email_log restart identity cascade`)
 }
 
 // Les quatre modèles de départ, avec les identifiants de la migration 0013
@@ -57,7 +57,7 @@ export async function createUser(
 type Headers = Record<string, string>
 
 /** Client qui garde son cookie de session entre les requêtes, comme un navigateur. */
-export function client(app: App, opts: { userAgent?: string } = {}) {
+export function client(app: App, opts: { userAgent?: string; cookieName?: string } = {}) {
   let cookie = ''
   async function request(method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', url: string, body?: unknown, headers: Headers = {}) {
     const res = await app.inject({
@@ -72,7 +72,7 @@ export function client(app: App, opts: { userAgent?: string } = {}) {
       },
       ...(body !== undefined ? { payload: body as object | Buffer } : {}),
     })
-    const set = res.cookies.find((c) => c.name.endsWith('aps_session'))
+    const set = res.cookies.find((c) => c.name.endsWith(opts.cookieName ?? 'aps_session'))
     if (set) cookie = set.value ? `${set.name}=${set.value}` : ''
     return res
   }

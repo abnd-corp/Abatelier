@@ -2,6 +2,7 @@
 import { computed, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
+import PhotoPlaceholder from '@/components/site/PhotoPlaceholder.vue'
 import { lines, photosOf, photoUrl, site, type Emplacement } from '@/lib/site'
 
 const route = useRoute()
@@ -36,7 +37,7 @@ watch(
     <article v-for="p in PRODUITS" :id="p.id" :key="p.id" class="card produit">
       <div class="photos" :class="{ vide: !photosOf(site, p.id).length }">
         <img v-for="ph in photosOf(site, p.id).slice(0, 2)" :key="ph.id" :src="photoUrl(ph.id)" :alt="ph.alt" loading="lazy" :width="ph.largeur" :height="ph.hauteur" />
-        <AppIcon v-if="!photosOf(site, p.id).length" name="profile" :size="56" aria-hidden="true" />
+        <PhotoPlaceholder v-if="!photosOf(site, p.id).length" :size="56" />
       </div>
       <div class="texte">
         <h2>{{ p.nom }}</h2>

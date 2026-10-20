@@ -27,6 +27,8 @@ services:
       SMTP_PORT: "1025"
       MAIL_FROM: "Alu Pliage Service <contact@aps.test>"
       MAIL_ALERT_TO: "direction@aps.test"
+      # Faux paiement en ligne pour essayer la boutique ; en production : stripe (voir README)
+      PAYMENT_PROVIDER: simulation
     volumes:
       - ./api/src:/app/src:ro
       - ./api/drizzle:/app/drizzle:ro

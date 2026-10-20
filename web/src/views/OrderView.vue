@@ -48,7 +48,7 @@ async function loadDocuments() {
   }
 }
 const invoiced = computed(() => documents.value.some((d) => d.type === 'facture' && d.statut !== 'annulee'))
-const canQuote = computed(() => !!o.value && DEVIS_STATUTS.includes(o.value.statut))
+const canQuote = computed(() => !!o.value && o.value.kind !== 'boutique' && DEVIS_STATUTS.includes(o.value.statut))
 const canInvoice = computed(() => !!o.value && FACTURE_STATUTS.includes(o.value.statut) && !invoiced.value)
 async function issue(type: 'devis' | 'facture') {
   actionError.value = null
@@ -82,7 +82,11 @@ const steps = computed(() => {
 })
 const cancelled = computed(() => detail.value?.events.find((e) => e.statut === 'annulee') ?? null)
 const forward = computed(() => o.value?.next.filter((s) => s !== 'annulee') ?? [])
-const canCancel = computed(() => !!o.value?.next.includes('annulee'))
+const boutique = computed(() => o.value?.kind === 'boutique')
+// Une commande payée en ligne ne s'annule pas : elle se refuse, ce qui rembourse le client
+const paidOnline = computed(() => detail.value?.paiement?.statut === 'paye')
+const canCancel = computed(() => !!o.value?.next.includes('annulee') && !paidOnline.value)
+const canRefuse = computed(() => paidOnline.value && !!o.value?.next.includes('annulee'))
 
 // --- Étapes ---
 const cancelling = ref(false)
@@ -99,6 +103,26 @@ async function step(statut: OrderStatut, note?: string) {
     await load()
   } catch (e) {
     actionError.value = e instanceof ApiError ? { msg: e.message, field: e.field } : { msg: 'L’action a échoué.' }
+  } finally {
+    busy.value = false
+  }
+}
+
+// --- Refus d'une commande payée en ligne : remboursement intégral ---
+const refusing = ref(false)
+const motif = ref('')
+async function refuse() {
+  actionError.value = null
+  notice.value = ''
+  busy.value = true
+  try {
+    const res = await api<{ rembourse: number; avoir: string | null }>(`/orders/${id.value}/refus`, { method: 'POST', body: { motif: motif.value } })
+    notice.value = `Commande refusée : ${eur(res.rembourse)} remboursés au client${res.avoir ? `, facture annulée par l’avoir ${res.avoir}` : ''}. Le client est prévenu par e-mail avec votre motif.`
+    refusing.value = false
+    motif.value = ''
+    await load()
+  } catch (e) {
+    actionError.value = e instanceof ApiError ? { msg: e.message, field: e.field } : { msg: 'Le refus a échoué.' }
   } finally {
     busy.value = false
   }
@@ -169,6 +193,7 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
           </p>
         </div>
         <span class="pill" :class="tone(o.statut)">{{ o.statutLabel }}</span>
+        <span v-if="boutique" class="pill accent">Boutique</span>
       </div>
     </div>
 
@@ -196,7 +221,18 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
         <p v-if="o.datePrevue" class="muted">Prévue le <b>{{ shortDay(o.datePrevue) }}</b> ({{ o.delaiJours }} jours ouvrés après validation).</p>
         <p v-else-if="o.statut === 'recue'" class="muted">Délai : {{ o.delaiJours }} jours ouvrés à partir de la validation.</p>
 
-        <div v-if="cancelling" class="cancel">
+        <div v-if="refusing" class="cancel">
+          <p class="muted">La commande a été payée en ligne : elle vaut contrat. Si vous ne pouvez pas la réaliser, le client est <b>remboursé en totalité</b> ({{ eur(detail.paiement?.montantTtc ?? 0) }} TTC) et reçoit votre motif par e-mail.</p>
+          <div class="field">
+            <label for="refus-motif">Motif du refus (transmis au client)</label>
+            <textarea id="refus-motif" v-model="motif" class="input" rows="3" maxlength="500" placeholder="Longueur impossible à plier sur notre machine, matière indisponible…" :aria-invalid="actionError?.field === 'motif' || undefined" />
+          </div>
+          <div class="actions">
+            <button class="btn danger" type="button" :disabled="busy || !motif.trim()" @click="refuse">Refuser et rembourser {{ eur(detail.paiement?.montantTtc ?? 0) }}</button>
+            <button class="btn" type="button" @click="refusing = false">Retour</button>
+          </div>
+        </div>
+        <div v-else-if="cancelling" class="cancel">
           <div class="field">
             <label for="cancel-reason">Raison de l’annulation</label>
             <input id="cancel-reason" v-model="reason" class="input" maxlength="500" placeholder="Client injoignable, doublon…" :aria-invalid="actionError?.field === 'note' || undefined" />
@@ -206,17 +242,18 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
             <button class="btn" type="button" @click="cancelling = false">Retour</button>
           </div>
         </div>
-        <div v-else-if="forward.length || canCancel || o.statut === 'recue'" class="actions">
+        <div v-else-if="forward.length || canCancel || canRefuse || o.statut === 'recue'" class="actions">
           <button v-for="s in forward" :key="s" class="btn primary" type="button" :disabled="busy" @click="step(s)">{{ STEP_ACTIONS[s] }}</button>
           <a v-if="PRODUCTION_STATUTS.includes(o.statut)" class="btn" :href="sheetUrl(o.id)" target="_blank" rel="noopener"><AppIcon name="printer" :size="16" />Fiche de fabrication</a>
-          <button v-if="o.statut === 'recue'" class="btn" type="button" @click="startEdit"><AppIcon name="pencil" :size="16" />Modifier les pièces</button>
+          <button v-if="o.statut === 'recue' && !boutique" class="btn" type="button" @click="startEdit"><AppIcon name="pencil" :size="16" />Modifier les pièces</button>
           <button v-if="canCancel" class="btn danger-ghost" type="button" @click="cancelling = true">Annuler la commande</button>
+          <button v-if="canRefuse" class="btn danger-ghost" type="button" @click="refusing = true">Refuser et rembourser</button>
         </div>
       </section>
 
       <div class="grid">
         <div class="col">
-          <h2 class="section-title">Pièces</h2>
+          <h2 class="section-title">{{ boutique ? 'Articles' : 'Pièces' }}</h2>
           <OrderLineCard v-for="(l, i) in detail.lignes" :key="l.id" :index="i" :line="l" prices />
         </div>
         <div class="col">
@@ -242,6 +279,15 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
               <dt class="big">Total TTC</dt>
               <dd class="big">{{ eur(o.ttc) }}</dd>
             </dl>
+          </section>
+          <section v-if="detail.paiement" class="card block" aria-labelledby="pay-title">
+            <h2 id="pay-title">Paiement en ligne</h2>
+            <p>
+              <span class="pill" :class="detail.paiement.statut === 'paye' ? 'ok' : detail.paiement.statut === 'rembourse' ? 'neutral' : 'warn'">{{ { paye: 'Payé', rembourse: 'Remboursé', attente: 'En attente', echec: 'Échoué' }[detail.paiement.statut] }}</span>
+              <b class="pay-amount">{{ eur(detail.paiement.montantTtc) }} TTC</b>
+            </p>
+            <p v-if="detail.paiement.paidAt" class="muted">Payé par carte le {{ dateTime(detail.paiement.paidAt) }}.</p>
+            <p v-if="detail.paiement.refundedAt" class="muted">Remboursé en totalité le {{ dateTime(detail.paiement.refundedAt) }} : {{ detail.paiement.refundMotif }}</p>
           </section>
           <section v-if="auth.can('billing.manage')" class="card block" aria-labelledby="billing-title">
             <h2 id="billing-title">Devis et factures</h2>
@@ -479,5 +525,8 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 0.9rem;
+}
+.pay-amount {
+  margin-left: 10px;
 }
 </style>

@@ -41,8 +41,12 @@ const CONFIDENTIALITE = `# Qui est responsable de vos données ?
 # Quelles données, et pourquoi ?
 Quand vous nous écrivez par le formulaire de contact, nous recevons votre nom, votre adresse e-mail, votre message, et ce que vous choisissez d’ajouter : téléphone, adresse, plan joint. Nous les utilisons uniquement pour répondre à votre demande et, si vous passez commande, pour établir votre devis, votre commande et votre facture.
 
+Si vous payez en ligne dans la boutique, le règlement par carte est traité par notre prestataire de paiement : nous recevons seulement la confirmation et le montant, jamais votre numéro de carte.
+
+Si vous créez un espace client, nous gardons en plus votre mot de passe, sous une forme chiffrée que nous ne pouvons pas lire, ainsi que les pièces que vous composez dans le configurateur, vos devis, vos commandes et leur suivi. Ces données servent uniquement à vous remettre votre devis, à fabriquer et facturer vos pièces, et à vous montrer l’avancement de votre commande. Elles ne servent à aucune publicité ni prospection.
+
 # Combien de temps ?
-Une demande restée sans suite est supprimée au bout de 12 mois. Les devis, commandes et factures sont conservés le temps imposé par la loi (10 ans pour les factures).
+Une demande restée sans suite est supprimée au bout de 12 mois. Les devis, commandes et factures sont conservés le temps imposé par la loi (10 ans pour les factures). Vous pouvez demander la fermeture de votre espace client à tout moment : vos identifiants et votre accès sont X
 
 # Qui y a accès ?
 Seule l’équipe de {raisonSociale}. Vos données ne sont ni vendues ni transmises à des tiers à des fins commerciales.
@@ -56,8 +60,11 @@ Ce site n’utilise aucun cookie de suivi ni outil de mesure d’audience. Voir 
 const COOKIES = `# Aucun cookie de suivi
 En tant que visiteur, vous ne recevez aucun cookie : ce site ne contient ni publicité, ni outil de mesure d’audience, ni vidéo ou carte intégrée venant d’un autre site. C’est pourquoi il n’affiche pas de bandeau de consentement.
 
-# Espace réservé à l’équipe
-Seule l’équipe de {raisonSociale}, une fois connectée à l’atelier, reçoit un cookie de session, strictement nécessaire à son fonctionnement.
+# Espace client et espace de l’équipe
+Un cookie de session n’est déposé que si vous vous connectez : à votre espace client, ou, pour l’équipe de {raisonSociale}, à l’atelier. Il sert uniquement à vous reconnaître d’une page à l’autre. Il est strictement nécessaire à ce service, il ne suit pas votre navigation et il n’est lu par aucun autre site. Il disparaît quand vous vous déconnectez (ou à la fermeture du navigateur, sauf si vous cochez « Rester connecté »).
+
+# Panier de la boutique
+Les articles que vous mettez dans votre panier sont gardés dans votre navigateur (stockage local de l’appareil), pour que vous les retrouviez à votre retour. Ils ne sont envoyés à personne tant que vous ne validez pas votre commande, et vous pouvez les effacer en vidant le panier ou les données du site. Ce n’est pas un cookie et il ne sert à aucun suivi.
 
 # Liens vers d’autres sites
 Le bouton « Voir sur Google » et le lien d’itinéraire vous envoient sur le site de Google, qui a ses propres règles.`
@@ -80,8 +87,11 @@ Les délais sont donnés à titre indicatif et courent à partir de la validatio
 # Retrait et livraison
 Les pièces sont à retirer à l’atelier ou livrées sur le chantier. Vérifiez les pièces à la réception et signalez toute anomalie sous 48 heures.
 
+# Commande en ligne (boutique)
+Les articles de la boutique se commandent depuis votre espace client et se règlent à la commande, par carte bancaire, auprès de notre prestataire de paiement : nous ne voyons ni ne conservons votre numéro de carte. La commande est ferme dès la confirmation du paiement, et nous nous engageons à la réaliser. Si, après vérification, nous constatons qu’elle ne peut pas l’être (par exemple une pièce impossible à plier ou une matière indisponible), nous la refusons en vous indiquant le motif et nous vous remboursons la totalité des sommes versées, sur le moyen de paiement utilisé.
+
 # Droit de rétractation
-Les pièces étant fabriquées selon vos spécifications, le droit de rétractation de 14 jours ne s’applique pas aux particuliers (article L221-28 du Code de la consommation).
+Les pièces étant fabriquées selon vos spécifications, le droit de rétractation de 14 jours ne s’applique pas aux particuliers (article L221-28 du Code de la consommation). Pour les articles standard de la boutique, un particulier dispose de 14 jours à compter de la réception pour se rétracter, sauf pour les pièces coupées ou pliées à ses dimensions. À COMPLÉTER : conditions de retour et de remboursement, à faire valider.
 
 # Garanties
 Les garanties légales de conformité et des vices cachés s’appliquent. La garantie ne couvre pas une pièce conforme à la commande mais mal dimensionnée, ni une mauvaise pose.

@@ -3,7 +3,7 @@ import { and, count, desc, eq, ilike, or, sql, sum, type SQL } from 'drizzle-orm
 import { z } from 'zod'
 import { alias } from 'drizzle-orm/pg-core'
 import { db } from '../db/index.js'
-import { BILLING_TYPES, billingDocuments, clients, DEVIS_REPONSES, orders, PAIEMENT_MODES, users } from '../db/schema.js'
+import { BILLING_TYPES, billingDocuments, clients, DEVIS_REPONSES, orders, PAIEMENT_MODES, payments, users } from '../db/schema.js'
 import { csvAmount, csvDate, csvDay, csvText, PAIEMENT_LABELS, STATUT_LABELS_CSV, toCsv } from '../accounting.js'
 import { requirePerm } from '../auth/plugin.js'
 import { getCompany } from '../documents.js'
@@ -207,6 +207,8 @@ export async function billingRoutes(app: FastifyInstance) {
   })
 
   async function issue(req: Parameters<typeof audit>[0], reply: FastifyReply, type: 'devis' | 'facture', o: typeof orders.$inferSelect) {
+    // Une commande de la boutique est payée d'avance : pas de devis, et sa facture est réglée dès son émission
+    if (type === 'devis' && o.kind === 'boutique') return reply.code(409).send({ error: 'Cette commande a été payée en ligne : il n’y a pas de devis à établir.' })
     try {
       const doc = await issueFromOrder(type, o, req.user!.id)
       await audit(req, type === 'devis' ? 'billing.devis_created' : 'billing.facture_created', {
@@ -214,6 +216,14 @@ export async function billingRoutes(app: FastifyInstance) {
         targetId: doc.id,
         details: { numero: doc.numero, commande: o.numero, client: doc.client, ttc: doc.ttc },
       })
+      if (type === 'facture' && o.kind === 'boutique') {
+        const [pay] = await db.select().from(payments).where(and(eq(payments.orderId, o.id), eq(payments.statut, 'paye')))
+        if (pay?.paidAt) {
+          const jour = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(pay.paidAt)
+          await db.update(billingDocuments).set({ payeLe: jour, modePaiement: 'carte', updatedAt: new Date() }).where(eq(billingDocuments.id, doc.id))
+          await audit(req, 'billing.paid', { targetType: 'billing', targetId: doc.id, details: { numero: doc.numero, client: doc.client, ttc: doc.ttc, date: jour, mode: 'carte' } })
+        }
+      }
       return reply.code(201).send({ id: doc.id, numero: doc.numero })
     } catch (e) {
       if (e instanceof BillingConflict) return reply.code(409).send({ error: e.message })
@@ -342,6 +352,8 @@ export async function billingRoutes(app: FastifyInstance) {
     const doc = await findDoc((req.params as { id: string }).id, reply)
     if (!doc) return
     if (doc.type !== 'facture' || !doc.payeLe) return reply.code(409).send({ error: 'Aucun paiement enregistré sur ce document.' })
+    const [online] = await db.select({ id: payments.id }).from(payments).where(and(eq(payments.orderId, doc.orderId), eq(payments.statut, 'paye')))
+    if (online) return reply.code(409).send({ error: 'Ce paiement a été fait en ligne par le client : il ne s’annule pas ici. Pour rembourser, refusez la commande.' })
     await db.update(billingDocuments).set({ payeLe: null, modePaiement: null, updatedAt: new Date() }).where(eq(billingDocuments.id, doc.id))
     await audit(req, 'billing.payment_cancelled', { targetType: 'billing', targetId: doc.id, details: { numero: doc.numero, client: doc.clientNom, date: doc.payeLe, mode: doc.modePaiement } })
     return { statut: await statutOf(doc.id) }

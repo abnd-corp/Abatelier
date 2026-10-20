@@ -30,17 +30,19 @@ const n = (v: number) => v.toLocaleString('fr-FR')
 
 <template>
   <article class="card piece" :aria-label="`Pièce ${index + 1}`">
-    <div class="sketch">
+    <div v-if="line.cotes.length" class="sketch">
       <ProfileSketch :cotes="line.cotes" :angles="line.angles" :cap="line.cap" :color="line.colorHex" :label="`Profil de la pièce ${index + 1}`" />
     </div>
     <div class="info">
       <h3>
         <span class="muted">{{ index + 1 }}.</span> {{ line.modeleLabel }}<template v-if="line.repere"> · {{ line.repere }}</template>
       </h3>
-      <p class="mat"><span class="swatch" :style="{ background: line.colorHex }" aria-hidden="true" />{{ line.materialLabel }} · {{ line.colorLabel }}</p>
+      <p v-if="line.cotes.length" class="mat"><span class="swatch" :style="{ background: line.colorHex }" aria-hidden="true" />{{ line.materialLabel }} · {{ line.colorLabel }}</p>
+      <p v-else class="mat">{{ line.materialLabel }}</p>
       <dl class="facts">
         <dt>Quantité</dt>
-        <dd class="strong">{{ n(line.quantite) }} × {{ n(line.longueur) }} mm</dd>
+        <dd class="strong">{{ n(line.quantite) }}<template v-if="line.cotes.length"> × {{ n(line.longueur) }} mm</template></dd>
+        <template v-if="line.cotes.length">
         <dt>Cotes</dt>
         <dd class="mono">
           <span v-for="(c, j) in line.cotes" :key="j" class="c"><b>{{ letter(j) }}</b> {{ n(c) }}</span>
@@ -53,6 +55,7 @@ const n = (v: number) => v.toLocaleString('fr-FR')
         </template>
         <dt>Développé</dt>
         <dd class="mono">{{ n(developpe(line.cotes)) }} mm</dd>
+        </template>
         <template v-if="line.accessoires.length">
           <dt>Accessoires</dt>
           <dd>
@@ -61,7 +64,7 @@ const n = (v: number) => v.toLocaleString('fr-FR')
         </template>
       </dl>
       <p v-if="prices && line.total !== undefined" class="price">
-        <span class="muted">{{ eur(line.prixUnitaire!) }} la pièce<template v-if="line.remiseQuantite"> · −{{ n(line.remiseQuantite) }} %</template> · mise en route {{ eur(line.miseEnRoute!) }}</span>
+        <span class="muted">{{ eur(line.prixUnitaire!) }} {{ line.cotes.length ? 'la pièce' : 'l’unité' }}<template v-if="line.remiseQuantite"> · −{{ n(line.remiseQuantite) }} %</template><template v-if="line.miseEnRoute"> · mise en route {{ eur(line.miseEnRoute) }}</template></span>
         <b>{{ eur(line.total) }} HT</b>
       </p>
     </div>
@@ -144,5 +147,9 @@ h3 {
   .sketch {
     max-height: 200px;
   }
+}
+/* Article de la boutique : pas de profil, tout l'espace pour le texte */
+.piece:not(:has(.sketch)) {
+  grid-template-columns: minmax(0, 1fr);
 }
 </style>

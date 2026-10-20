@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue'
 import AppIcon from '@/components/AppIcon.vue'
 import SiteReviews from '@/components/site/SiteReviews.vue'
+import PhotoPlaceholder from '@/components/site/PhotoPlaceholder.vue'
 import ProfileSketch from '@/components/orders/ProfileSketch.vue'
 import { setDescription } from '@/lib/seo'
 import { lines, photosOf, photoUrl, site, telHref, type Emplacement } from '@/lib/site'
@@ -43,7 +44,7 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
         </div>
         <figure class="hero-photo">
           <img v-if="hero" :src="photoUrl(hero.id)" :alt="hero.alt" :width="hero.largeur" :height="hero.hauteur" fetchpriority="high" />
-          <div v-else class="placeholder" aria-hidden="true"><AppIcon name="profile" :size="96" /></div>
+          <div v-else class="placeholder"><PhotoPlaceholder :size="96" /></div>
         </figure>
       </div>
     </section>
@@ -80,7 +81,7 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
           <RouterLink :to="{ name: 'site-pliage', hash: `#${p.id}` }" class="card product">
             <span class="thumb">
               <img v-if="cover(p.id)" :src="photoUrl(cover(p.id)!.id)" :alt="cover(p.id)!.alt" loading="lazy" :width="cover(p.id)!.largeur" :height="cover(p.id)!.hauteur" />
-              <AppIcon v-else name="profile" :size="48" aria-hidden="true" />
+              <PhotoPlaceholder v-else :size="48" />
             </span>
             <span class="body">
               <b>{{ p.nom }}</b>

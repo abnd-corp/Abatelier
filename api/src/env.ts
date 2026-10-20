@@ -52,6 +52,13 @@ const schema = z.object({
   MAIL_FROM: z.string().trim().optional(),
   // Adresses qui reçoivent les alertes (demandes de contact), séparées par des virgules ; par défaut l'e-mail de l'entreprise
   MAIL_ALERT_TO: z.string().trim().optional(),
+  // Paiement en ligne de la boutique : none (désactivé), simulation (faux paiement pour le développement et les tests) ou stripe
+  PAYMENT_PROVIDER: z.enum(['none', 'simulation', 'stripe']).default('none'),
+  // Stripe : clé secrète et secret de signature des notifications (webhooks), dans secrets/
+  STRIPE_SECRET_KEY: z.string().trim().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().trim().optional(),
+  // Autorise le faux paiement dans une pile de production jetable (tests de bout en bout) ; jamais sur un vrai serveur
+  ALLOW_FAKE_PAYMENT: bool,
   // À mettre à true dès que le site est servi en HTTPS
   COOKIE_SECURE: bool,
   // Premier compte, créé au démarrage si la table des utilisateurs est vide
@@ -63,12 +70,21 @@ const schema = z.object({
   GOOGLE_PLACES_API_KEY: z.string().trim().optional(),
 })
 
-const parsed = schema.safeParse({ ...process.env, DB_PASSWORD: secret('DB_PASSWORD'), ADMIN_PASSWORD: secret('ADMIN_PASSWORD'), GOOGLE_PLACES_API_KEY: secret('GOOGLE_PLACES_API_KEY'), SMTP_PASSWORD: secret('SMTP_PASSWORD') })
+const parsed = schema.safeParse({ ...process.env, DB_PASSWORD: secret('DB_PASSWORD'), ADMIN_PASSWORD: secret('ADMIN_PASSWORD'), GOOGLE_PLACES_API_KEY: secret('GOOGLE_PLACES_API_KEY'), SMTP_PASSWORD: secret('SMTP_PASSWORD'), STRIPE_SECRET_KEY: secret('STRIPE_SECRET_KEY'), STRIPE_WEBHOOK_SECRET: secret('STRIPE_WEBHOOK_SECRET') })
 if (!parsed.success) {
   console.error('Configuration invalide :', z.prettifyError(parsed.error))
   process.exit(1)
 }
 const e = parsed.data
+
+if (e.PAYMENT_PROVIDER === 'stripe' && (!e.STRIPE_SECRET_KEY || !e.STRIPE_WEBHOOK_SECRET)) {
+  console.error('Configuration invalide : PAYMENT_PROVIDER=stripe demande STRIPE_SECRET_KEY et STRIPE_WEBHOOK_SECRET (ou leurs fichiers _FILE).')
+  process.exit(1)
+}
+if (e.PAYMENT_PROVIDER === 'simulation' && e.NODE_ENV === 'production' && !e.ALLOW_FAKE_PAYMENT) {
+  console.error('Configuration invalide : le paiement « simulation » est interdit en production (sauf ALLOW_FAKE_PAYMENT=true, pour les tests de bout en bout).')
+  process.exit(1)
+}
 
 if (!e.DATABASE_URL && !e.DB_PASSWORD) {
   console.error('Configuration invalide : définir DATABASE_URL, ou DB_PASSWORD / DB_PASSWORD_FILE.')

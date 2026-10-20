@@ -14,8 +14,10 @@ afterEach(() => app.close())
 beforeEach(resetDb)
 
 // Seules routes accessibles sans être connecté. Toute nouvelle route publique doit être ajoutée ici consciemment.
-const PUBLIC = ['GET /api/health', 'GET /api/auth/session', 'POST /api/auth/login', 'POST /api/auth/logout', 'GET /api/public/site', 'GET /api/public/photos/:id', 'GET /api/public/avis', 'GET /api/public/configurateur', 'POST /api/public/configurateur/chiffrage', 'POST /api/public/devis', 'POST /api/public/contact', 'GET /api/public/robots.txt', 'GET /api/public/sitemap.xml']
+const PUBLIC = ['GET /api/health', 'GET /api/auth/session', 'POST /api/auth/login', 'POST /api/auth/logout', 'GET /api/public/site', 'GET /api/public/photos/:id', 'GET /api/public/avis', 'GET /api/public/configurateur', 'POST /api/public/configurateur/chiffrage', 'POST /api/public/contact', 'GET /api/public/boutique', 'GET /api/public/boutique/images/:id', 'POST /api/public/boutique/panier', 'POST /api/paiement/stripe', 'GET /api/public/robots.txt', 'GET /api/public/sitemap.xml', 'POST /api/espace/inscription', 'POST /api/espace/connexion', 'POST /api/espace/deconnexion', 'GET /api/espace/session']
 const UUID = '00000000-0000-4000-8000-000000000000'
+// Notifications signées d'un prestataire extérieur : pas de navigateur, donc pas d'en-tête Origin (voir le test dédié plus bas)
+const WEBHOOKS = ['POST /api/paiement/stripe']
 const routes = () =>
   app.routeList.map((r) => ({ ...r, path: r.url.replace(/:[a-zA-Z]+/g, UUID), key: `${r.method} ${r.url}` }))
 
@@ -35,7 +37,7 @@ describe('Contrôle d’accès', () => {
 })
 
 describe('Protection CSRF', () => {
-  const mutating = () => routes().filter((r) => r.method !== 'GET')
+  const mutating = () => routes().filter((r) => r.method !== 'GET' && !WEBHOOKS.includes(r.key))
 
   it('refuse toute modification sans en-tête Origin, même connecté', async () => {
     await createUser({ identifiant: 'chef', role: 'direction' })
@@ -69,6 +71,17 @@ describe('Protection CSRF', () => {
       payload: { identifiant: 'paul', password: 'Plieuse-numerique-2026' },
     })
     expect(res.statusCode).toBe(200)
+  })
+})
+
+describe('Notifications de paiement', () => {
+  it('n’acceptent rien sans signature valide, même sans en-tête Origin', async () => {
+    for (const w of WEBHOOKS) {
+      const [method, url] = w.split(' ') as ['POST', string]
+      const res = await app.inject({ method, url, headers: { host: HOST, 'content-type': 'application/json' }, payload: '{}' })
+      // 404 : prestataire non configuré ; 400 : signature absente ou fausse. Jamais 200, jamais 403 d'origine.
+      expect([400, 404], w).toContain(res.statusCode)
+    }
   })
 })
 

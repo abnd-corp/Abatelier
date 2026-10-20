@@ -172,6 +172,8 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
   // Rangées de lignes d'information d'une pièce : [libellé, hauteur, dessin]
   const rowsOf = (l: SheetLine) => {
     const rows: { label: string; h: number; draw: (y0: number) => void }[] = []
+    // Article de la boutique : rien à plier, seulement à préparer
+    if (!l.cotes.length) return rows
     const cotes: Chip[] = l.cotes.map((c, j) => ({ strong: letter(j), rest: num(c) }))
     rows.push({ label: 'Cotes (mm)', h: layoutChips(cotes).height, draw: (y0) => drawChips(cotes, y0) })
     if (l.angles.length) {
@@ -206,20 +208,27 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     doc.font('Helvetica-Bold').fontSize(7.5).fillColor(MUTED)
     text('FAIT', RIGHT - PAD - 52, top + PAD + 5, { width: 30, align: 'right', characterSpacing: 0.6 })
 
-    drawProfile(doc, l, l.cap, PAGE.m + PAD, top + PAD, SK_W, SK_H, accent)
+    if (l.cotes.length) drawProfile(doc, l, l.cap, PAGE.m + PAD, top + PAD, SK_W, SK_H, accent)
+    else {
+      doc.roundedRect(PAGE.m + PAD, top + PAD, SK_W, SK_H, 6).fill(ZEBRA)
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(MUTED)
+      text('ARTICLE DE LA BOUTIQUE', PAGE.m + PAD, top + PAD + SK_H / 2 - 5, { width: SK_W, align: 'center', characterSpacing: 0.6 })
+    }
 
     // Titre et quantité
     let yy = top + PAD
     doc.font('Helvetica-Bold').fontSize(11).fillColor(INK)
     text(`${i + 1}. ${l.modeleLabel}${l.repere ? ` · ${l.repere}` : ''}`, infoX, yy, { width: infoW - 60, lineBreak: false, ellipsis: true })
     doc.font('Helvetica-Bold').fontSize(12).fillColor(accent)
-    const qty = `${num(l.quantite)} × ${num(l.longueur)} mm`
+    const qty = l.cotes.length ? `${num(l.quantite)} × ${num(l.longueur)} mm` : `${num(l.quantite)} × à préparer`
     text(qty, infoX, yy + 15, { lineBreak: false })
     yy += 32
-    doc.rect(infoX, yy + 0.5, 9, 9).fill(l.colorHex)
-    doc.rect(infoX, yy + 0.5, 9, 9).lineWidth(0.5).strokeColor(LINE).stroke()
+    if (l.cotes.length) {
+      doc.rect(infoX, yy + 0.5, 9, 9).fill(l.colorHex)
+      doc.rect(infoX, yy + 0.5, 9, 9).lineWidth(0.5).strokeColor(LINE).stroke()
+    }
     doc.font('Helvetica').fontSize(9.5).fillColor(INK)
-    text(`${l.materialLabel} · ${l.colorLabel}`, infoX + 15, yy, { width: infoW - 15, height: 12, ellipsis: true })
+    text([l.materialLabel, l.colorLabel].filter(Boolean).join(' · '), infoX + (l.cotes.length ? 15 : 0), yy, { width: infoW - 15, height: 12, ellipsis: true })
     yy += 20
 
     for (const r of rows) {
@@ -232,7 +241,7 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     // Une case par pièce à cocher au fur et à mesure (ou un compteur au-delà de 40 pièces)
     yy += 6
     doc.font('Helvetica-Bold').fontSize(7.5).fillColor(MUTED)
-    text('PIÈCES PLIÉES', infoX, yy, { characterSpacing: 0.6 })
+    text(l.cotes.length ? 'PIÈCES PLIÉES' : 'ARTICLES PRÉPARÉS', infoX, yy, { characterSpacing: 0.6 })
     yy += 12
     if (l.quantite <= TALLY_MAX) {
       const perRow = Math.floor(infoW / 15)

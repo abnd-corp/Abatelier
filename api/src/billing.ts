@@ -25,6 +25,11 @@ const isoDay = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe
 export function documentLines(order: Order, lines: OrderLine[]): BillingLine[] {
   const out: BillingLine[] = []
   for (const l of lines) {
+    // Article de la boutique : une ligne simple (produit, déclinaison), à son prix
+    if (!l.cotes.length) {
+      out.push({ designation: l.modeleLabel, detail: l.materialLabel, quantite: l.quantite, prixUnitaire: l.prixUnitaire })
+      continue
+    }
     const plis = l.cotes.length - 1
     const developpe = l.cotes.reduce((s, v) => s + v, 0)
     out.push({
@@ -122,7 +127,7 @@ export const DEVIS_STATUTS: Order['statut'][] = ['recue', 'validee', 'fabricatio
 export const FACTURE_STATUTS: Order['statut'][] = ['validee', 'fabrication', 'prete', 'livree']
 
 /** Émet un devis ou une facture pour la commande : numéro, PDF, enregistrement, dans une seule transaction. */
-export async function issueFromOrder(type: Extract<BillingType, 'devis' | 'facture'>, order: Order, userId: string) {
+export async function issueFromOrder(type: Extract<BillingType, 'devis' | 'facture'>, order: Order, userId: string | null) {
   const [[client], lines, company, template, livree] = await Promise.all([
     db.select().from(clients).where(eq(clients.id, order.clientId)),
     db.select().from(orderLines).where(eq(orderLines.orderId, order.id)).orderBy(asc(orderLines.position)),

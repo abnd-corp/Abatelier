@@ -82,10 +82,12 @@ const CLIENT = {
 }
 const SITES = [{ id: 's1', libelle: 'Maison Rivière', adresse: '12 chemin du Bois', codePostal: '42700', ville: 'Firminy' }]
 const ORDER: OrderDetail = {
+  paiement: null,
   order: {
     ...TOTALS,
     id: 'o1',
     numero: 'C-2026-0001',
+    kind: 'sur_mesure',
     statut: 'recue',
     statutLabel: 'Reçue',
     next: ['validee', 'annulee'],
@@ -151,6 +153,19 @@ describe('Outils commandes', () => {
     expect(w.findAll('text.cote').map((t) => t.text())).toEqual(['A 20', 'B 70', 'C 300'])
     expect(w.findAll('text.angle').map((t) => t.text())).toEqual(['90°', '90°'])
     expect(w.get('svg').attributes('aria-label')).toBe('Profil, développé 390 mm')
+  })
+
+  it('ne superpose pas les mesures d’un profil à petites cotes (couvertine)', () => {
+    const w = mount(ProfileSketch, { props: { cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], cap: -45 } })
+    const texts = w.findAll('text').map((t) => ({ x: Number(t.attributes('x')), y: Number(t.attributes('y')), fs: Number(t.attributes('font-size')), n: t.text().length }))
+    expect(texts).toHaveLength(9)
+    for (const [i, a] of texts.entries()) {
+      for (const b of texts.slice(i + 1)) {
+        const ow = ((a.n + 2) * a.fs * 0.62 + (b.n + 2) * b.fs * 0.62) / 2 - Math.abs(a.x - b.x)
+        const oh = (a.fs * 1.15 + b.fs * 1.15) / 2 - Math.abs(a.y - b.y)
+        expect(ow > 0.01 && oh > 0.01).toBe(false)
+      }
+    }
   })
 
   it('prépare la pièce en 3D : une plaque par cote, un cylindre par pli, centrée', () => {
@@ -306,6 +321,37 @@ describe('Nouvelle commande', () => {
     expect(wrapper.findAll('[aria-label^="Pièce "]')).toHaveLength(3)
     await wrapper.get('button[aria-label="Retirer la pièce 1"]').trigger('click')
     expect((wrapper.get('#l0-modele').element as HTMLSelectElement).value).toBe('bandeau')
+  })
+
+  it('propose les tailles standard du modèle et garde la saisie libre', async () => {
+    const { wrapper } = await mountAt(OrderNewView, '/commandes/nouvelle?client=c1', routes())
+    // Couvertine : 270 ou 320, longueurs de 1 à 3 m ; la valeur de départ (300) est « sur mesure »
+    const largeur = () => wrapper.get('#l0-std-largeur')
+    expect(largeur().findAll('option').map((o) => o.text())).toEqual(['Sur mesure (300 mm)', '270 mm', '320 mm'])
+    expect((largeur().element as HTMLSelectElement).value).toBe('')
+    await largeur().setValue('320')
+    expect((wrapper.get('#l0-cote2').element as HTMLInputElement).value).toBe('320')
+    expect((largeur().element as HTMLSelectElement).value).toBe('320')
+    await wrapper.get('#l0-std-longueur').setValue('2000')
+    expect((wrapper.get('#l0-longueur').element as HTMLInputElement).value).toBe('2000')
+    // Retoucher la cote à la main repasse en « sur mesure »
+    await wrapper.get('#l0-cote2').setValue('310')
+    expect((largeur().element as HTMLSelectElement).value).toBe('')
+
+    // Bavette : de 150 à 500 mm par 25 ; bandeau : de 200 à 350 mm, longueurs de 1,20 / 1,50 / 3 m
+    await button(wrapper, 'Ajouter une pièce').trigger('click')
+    await wrapper.get('#l1-modele').setValue('bavette')
+    const bav = wrapper.get('#l1-std-largeur').findAll('option')
+    expect(bav).toHaveLength(1 + 15)
+    expect(bav[1]!.text()).toBe('150 mm')
+    expect(bav.at(-1)!.text()).toBe('500 mm')
+    await wrapper.get('#l1-modele').setValue('bandeau')
+    expect(wrapper.get('#l1-std-largeur').findAll('option').map((o) => o.text()).slice(1)).toEqual(['200 mm', '225 mm', '250 mm', '275 mm', '300 mm', '325 mm', '350 mm'])
+    expect(norm(wrapper.get('#l1-std-longueur').text())).toContain('1,2 m')
+    expect(norm(wrapper.get('#l1-std-longueur').text())).toContain('1,5 m')
+    // Modèle libre : pas de tailles standard
+    await wrapper.get('#l1-modele').setValue('')
+    expect(wrapper.find('#l1-std-largeur').exists()).toBe(false)
   })
 
   it('prévient quand le catalogue est vide', async () => {

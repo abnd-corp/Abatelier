@@ -55,3 +55,28 @@ export function defaultDocumentMail(doc: Doc, client: Pick<Client, 'prenom' | 'n
     message: `${hello}\n\n${body}\n\nCordialement,\n${signature(company)}`,
   }
 }
+
+/** Alerte à la direction : un client du site vient de demander un devis depuis son espace. */
+export function espaceQuoteAlert(r: { client: string; email: string; commande: string; devis: string | null; pieces: number; ht: number; ttc: number }, link: string) {
+  return {
+    subject: `Nouveau devis depuis l’espace client : ${r.client} (${eur(r.ttc)} TTC)`,
+    text: [
+      'Un client vient de composer des pièces dans le configurateur et de demander son devis depuis son espace client.',
+      '',
+      `Client : ${r.client} <${r.email}>`,
+      `Commande : ${r.commande} (${r.pieces} pièce${r.pieces > 1 ? 's' : ''}, ${eur(r.ht)} HT, ${eur(r.ttc)} TTC)`,
+      r.devis ? `Devis remis au client : ${r.devis}` : 'Le devis n’a pas pu être édité automatiquement : émettez-le depuis la commande.',
+      '',
+      `Vérifier la faisabilité et valider la commande : ${link}`,
+    ].join('\n'),
+  }
+}
+
+/** Alerte à la direction : un client a répondu à son devis depuis son espace. */
+export function espaceAnswerAlert(r: { client: string; devis: string; commande: string; reponse: 'accepte' | 'refuse'; ttc: number }, link: string) {
+  const verbe = r.reponse === 'accepte' ? 'accepté' : 'refusé'
+  return {
+    subject: `Devis ${r.devis} ${verbe} par ${r.client}`,
+    text: [`${r.client} a ${verbe} le devis ${r.devis} (${eur(r.ttc)} TTC) depuis son espace client.`, '', r.reponse === 'accepte' ? `La commande ${r.commande} attend votre validation : ${link}` : `Commande concernée : ${r.commande} : ${link}`].join('\n'),
+  }
+}

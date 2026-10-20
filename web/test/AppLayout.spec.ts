@@ -29,7 +29,7 @@ beforeEach(() => {
 describe('Menu latéral', () => {
   it('montre toutes les sections à la direction', async () => {
     const { links, sections } = await setup(ADMIN)
-    expect(links()).toEqual(['Tableau de bord', 'Commandes', 'Devis et factures', 'Clients', 'Fabrication', 'Tarifs et catalogue', 'Modèles de documents', 'Site vitrine', 'Salariés', 'Comptes', 'Journal d’activité'])
+    expect(links()).toEqual(['Tableau de bord', 'Commandes', 'Devis et factures', 'Clients', 'Fabrication', 'Tarifs et catalogue', 'Modèles de documents', 'Boutique', 'Site vitrine', 'Salariés', 'Comptes', 'Journal d’activité'])
     expect(sections()).toEqual(['Ventes', 'Atelier', 'Direction', 'Équipe', 'Administration'])
   })
 

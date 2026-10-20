@@ -22,10 +22,10 @@ test.describe('Commandes', () => {
     await piece.getByLabel('Repère').fill('Mur sud')
     await piece.getByLabel('Quantité').fill('6')
     // Cote trop courte : signalée par le chiffrage en direct
-    await piece.getByLabel(/^A/).fill('3')
+    await piece.locator('#l0-cote0').fill('3')
     await expect(piece.getByRole('alert')).toContainText('Cote A')
     await expect(adminPage.getByRole('button', { name: 'Enregistrer la commande' })).toBeDisabled()
-    await piece.getByLabel(/^A/).fill('20')
+    await piece.locator('#l0-cote0').fill('20')
     await expect(piece.getByRole('alert')).toHaveCount(0)
     await expect(piece.locator('.line-price')).toContainText('HT')
 

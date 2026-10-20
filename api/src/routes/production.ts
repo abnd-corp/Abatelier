@@ -62,6 +62,7 @@ export async function productionRoutes(app: FastifyInstance) {
         id: orders.id,
         numero: orders.numero,
         statut: orders.statut,
+        kind: orders.kind,
         livraisonMode: orders.livraisonMode,
         datePrevue: orders.datePrevue,
         pieces: pieces.n,
@@ -80,7 +81,7 @@ export async function productionRoutes(app: FastifyInstance) {
     if (!o) return
     const lignes = await linesOf(o.id)
     return {
-      order: { id: o.id, numero: o.numero, statut: o.statut, statutLabel: STATUT_LABELS[o.statut], livraisonMode: o.livraisonMode, datePrevue: o.datePrevue, next: next(o.statut) },
+      order: { id: o.id, numero: o.numero, kind: o.kind, statut: o.statut, statutLabel: STATUT_LABELS[o.statut], livraisonMode: o.livraisonMode, datePrevue: o.datePrevue, next: next(o.statut) },
       lignes,
       events: await eventsOf(o.id),
     }

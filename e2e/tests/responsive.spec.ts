@@ -25,6 +25,7 @@ const PAGES = [
   { path: '/factures', heading: 'Devis et factures' },
   { path: '/factures?type=devis', heading: 'Devis et factures' },
   { path: '/site-vitrine', heading: 'Site vitrine' },
+  { path: '/produits', heading: 'Boutique' },
   { path: '/clients/nouveau', heading: 'Nouveau client' },
   { path: '/mon-compte', heading: 'Mon compte' },
 ]
@@ -51,6 +52,53 @@ test.describe('Responsive @responsive', () => {
       expect(await noHorizontalScroll(adminPage)).toBe(true)
     })
   }
+
+  test('espace client : liste et commande lisibles, pas de défilement horizontal', async ({ page, baseURL, uid }) => {
+    const headers = { Origin: baseURL! }
+    const signup = await page.request.post('/api/espace/inscription', { data: { nom: `Resp ${uid.slice(-6)}`, email: `${uid}@exemple.fr`, password: 'Plieuse-numerique-2026', consentement: true }, headers })
+    expect(signup.status(), await signup.text()).toBe(201)
+    const cfg = await (await page.request.get('/api/public/configurateur')).json()
+    const m = cfg.models[0]
+    const devis = await page.request.post('/api/espace/devis', {
+      data: { lignes: [{ modelId: m.id, materialId: cfg.materials[0].id, colorId: cfg.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: m.longueur, quantite: 2, accessoires: [] }], livraison: { mode: 'retrait' } },
+      headers,
+    })
+    expect(devis.status(), await devis.text()).toBe(201)
+    await page.goto('/espace')
+    await expect(page.getByRole('heading', { level: 1, name: /^Bonjour/ })).toBeInViewport()
+    await expect(page.getByRole('list', { name: 'Vos commandes' })).toBeVisible()
+    expect(await noHorizontalScroll(page)).toBe(true)
+    await page.goto(`/espace/commandes/${(await devis.json()).id}`)
+    await expect(page.getByRole('heading', { level: 1 })).toBeInViewport()
+    await expect(page.getByRole('region', { name: 'Suivi de la commande' })).toBeVisible()
+    expect(await noHorizontalScroll(page)).toBe(true)
+  })
+
+  test('boutique : fiche produit, vitrine, produit et panier lisibles, pas de défilement horizontal', async ({ adminPage, browser, baseURL, uid }) => {
+    const h = { Origin: baseURL! }
+    const nom = `Resp boutique ${uid.slice(-6)}`
+    const { id } = await (await adminPage.request.post('/api/boutique/produits', { data: { nom, description: 'Description assez longue pour passer à la ligne sur un petit écran, avec plusieurs mots.' }, headers: h })).json()
+    const v = await (await adminPage.request.post(`/api/boutique/produits/${id}/variantes`, { data: { libelle: 'Une déclinaison au libellé volontairement très long : 320 mm · 1,5 mm · 3 m', prixTtc: 84 }, headers: h })).json()
+    await adminPage.request.patch(`/api/boutique/produits/${id}`, { data: { actif: true }, headers: h })
+    await adminPage.goto(`/produits/${id}`)
+    await expect(adminPage.getByRole('heading', { level: 1, name: nom })).toBeInViewport()
+    expect(await noHorizontalScroll(adminPage)).toBe(true)
+
+    const visitor = await browser.newPage()
+    await visitor.goto('/boutique')
+    await expect(visitor.getByRole('heading', { level: 1 })).toBeInViewport()
+    expect(await noHorizontalScroll(visitor)).toBe(true)
+    await visitor.goto(`/boutique/${id}`)
+    await expect(visitor.getByRole('heading', { level: 1, name: nom })).toBeInViewport()
+    expect(await noHorizontalScroll(visitor)).toBe(true)
+    await visitor.getByRole('button', { name: 'Ajouter au panier' }).click()
+    await visitor.goto('/panier')
+    await expect(visitor.getByRole('heading', { level: 1, name: 'Mon panier' })).toBeInViewport()
+    await expect(visitor.locator('dl.totals')).toBeVisible()
+    expect(await noHorizontalScroll(visitor)).toBe(true)
+    await adminPage.request.delete(`/api/boutique/produits/${id}`, { headers: h })
+    void v
+  })
 
   test('/clients/:id : fiche client lisible, pas de défilement horizontal', async ({ adminPage, baseURL, uid }) => {
     const res = await adminPage.request.post('/api/clients', {

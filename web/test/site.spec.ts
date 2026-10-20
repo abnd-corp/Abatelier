@@ -463,12 +463,6 @@ describe('Configurateur public', () => {
     await flushPromises()
     return { wrapper, calls }
   }
-  const fill = async (wrapper: ReturnType<typeof mount>) => {
-    await wrapper.get('#d-nom').setValue('Jean Dupont')
-    await wrapper.get('#d-email').setValue('jean@example.com')
-    await wrapper.get('#d-consentement').setValue(true)
-  }
-
   it('charge le catalogue public, chiffre avec la route publique et affiche le prix, sans appeler la session', async () => {
     const { wrapper, calls } = await mountConfig()
     expect(wrapper.get('h1').text()).toContain('Dessinez votre pièce')
@@ -484,43 +478,107 @@ describe('Configurateur public', () => {
     expect(wrapper.find('#o-notes').exists()).toBe(false)
   })
 
-  it('envoie la demande de devis avec les pièces, la livraison et les coordonnées', async () => {
-    const { wrapper, calls } = await mountConfig({ 'POST /public/devis': [201, { ok: true }] })
-    await fill(wrapper)
-    await wrapper.get('#d-message').setValue('Pour un muret.')
-    await wrapper.get('form.configurateur').trigger('submit')
-    await flushPromises()
-    const post = calls.find((c) => c.path === '/public/devis')!
-    expect(post.body).toMatchObject({ nom: 'Jean Dupont', email: 'jean@example.com', consentement: true, message: 'Pour un muret.', site: '', livraison: { mode: 'retrait' } })
-    expect(post.body.lignes).toHaveLength(1)
-    expect(post.body.lignes[0]).toMatchObject({ modelId: 'couvertine', materialId: 'm1', colorId: 'k1', longueur: 3000, quantite: 4 })
-    // Le prix n'est jamais envoyé : le serveur le recalcule
-    expect(JSON.stringify(post.body)).not.toMatch(/ttc|518/)
-    expect(wrapper.text()).toContain('Demande de devis envoyée')
-    expect(wrapper.find('form').exists()).toBe(false)
+  const COMPTE = { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: null, type: 'particulier' as const }
+  const signup = async (wrapper: ReturnType<typeof mount>) => {
+    await wrapper.get('#cfg-nom').setValue('Dupont')
+    await wrapper.get('#cfg-email').setValue('jean@example.com')
+    await wrapper.get('#cfg-password').setValue('Plieuse-numerique-2026')
+    await wrapper.get('#cfg-consentement').setValue(true)
+  }
+  const mountSite = (extra: Parameters<typeof mockApi>[0] = {}) => mountConfig({ 'GET /espace/session': [200, { compte: null }], ...extra })
+
+  it('vérifie la session de l’espace client, jamais celle de l’atelier', async () => {
+    const { calls } = await mountSite()
+    expect(calls.map((c) => c.path)).toContain('/espace/session')
+    expect(calls.map((c) => c.path)).not.toContain('/auth/session')
   })
 
-  it('affiche l’erreur du serveur sous le bon champ, et celles des pièces dans le chiffrage', async () => {
-    const { wrapper } = await mountConfig({ 'POST /public/devis': [400, { error: 'Adresse e-mail invalide.', field: 'email' }] })
-    await fill(wrapper)
-    await wrapper.get('form.configurateur').trigger('submit')
+  it('sans compte : crée l’espace client puis demande le devis avec les pièces, et ouvre la commande', async () => {
+    const { wrapper, calls } = await mountSite({
+      'POST /espace/inscription': [201, { compte: COMPTE }],
+      'POST /espace/devis': [201, { id: 'o9', numero: 'C-2026-0009', devis: { id: 'd9', numero: 'D-2026-0009' } }],
+    })
+    expect(wrapper.get('#devis h2').text()).toBe('Obtenir mon devis')
+    await wrapper.get('#d-precision-n').setValue('Pour un muret.')
+    await signup(wrapper)
+    await wrapper.get('form.auth').trigger('submit')
     await flushPromises()
-    expect(wrapper.get('#ed-email').text()).toBe('Adresse e-mail invalide.')
-    expect(wrapper.get('#d-email').attributes('aria-invalid')).toBe('true')
-    expect((wrapper.get('#d-nom').element as HTMLInputElement).value).toBe('Jean Dupont')
+    const inscription = calls.find((c) => c.path === '/espace/inscription')!
+    expect(inscription.body).toMatchObject({ nom: 'Dupont', email: 'jean@example.com', password: 'Plieuse-numerique-2026', consentement: true, site: '' })
+    const devis = calls.find((c) => c.path === '/espace/devis')!
+    expect(devis.method).toBe('POST')
+    expect(devis.body).toMatchObject({ livraison: { mode: 'retrait' }, notes: 'Pour un muret.' })
+    expect(devis.body.lignes[0]).toMatchObject({ modelId: 'couvertine', materialId: 'm1', colorId: 'k1', longueur: 3000, quantite: 4 })
+    // Le prix n'est jamais envoyé : le serveur le recalcule
+    expect(JSON.stringify(devis.body)).not.toMatch(/ttc|518/)
+    // L'ordre compte : le compte d'abord, le devis ensuite
+    expect(calls.findIndex((c) => c.path === '/espace/inscription')).toBeLessThan(calls.findIndex((c) => c.path === '/espace/devis'))
+  })
 
-    const bad = await mountConfig({ 'POST /public/configurateur/chiffrage': [400, { error: 'Longueur : 3000 mm maximum.', field: 'lignes.0.longueur' }] })
+  it('avec un compte existant : se connecte puis demande le devis', async () => {
+    const { wrapper, calls } = await mountSite({
+      'POST /espace/connexion': [200, { compte: COMPTE }],
+      'POST /espace/devis': [201, { id: 'o9', numero: 'C-2026-0009', devis: null }],
+    })
+    await wrapper.findAll('button.chip').find((b) => b.text().includes('déjà un espace'))!.trigger('click')
+    expect(wrapper.find('#cfg-nom').exists()).toBe(false)
+    await wrapper.get('#cfg-email').setValue('jean@example.com')
+    await wrapper.get('#cfg-password').setValue('Plieuse-numerique-2026')
+    await wrapper.get('form.auth').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.path === '/espace/connexion')!.body).toEqual({ email: 'jean@example.com', password: 'Plieuse-numerique-2026', remember: false })
+    expect(calls.map((c) => c.path)).toContain('/espace/devis')
+    expect(calls.map((c) => c.path)).not.toContain('/espace/inscription')
+  })
+
+  it('explique les avantages de l’espace client et l’usage des données avant de créer le compte, mais pas à un client connecté', async () => {
+    const { wrapper } = await mountSite()
+    expect(wrapper.get('#devis').text()).toContain('Pourquoi un espace client ?')
+    expect(wrapper.get('#devis').text()).toContain('Ce que nous faisons de vos données')
+    const logged = await mountConfig({ 'GET /espace/session': [200, { compte: COMPTE }] })
+    expect(logged.wrapper.get('#devis').text()).not.toContain('Ce que nous faisons de vos données')
+  })
+
+  it('déjà connecté : un seul clic pour obtenir le devis', async () => {
+    const { wrapper, calls } = await mountConfig({ 'GET /espace/session': [200, { compte: COMPTE }], 'POST /espace/devis': [201, { id: 'o9', numero: 'C-2026-0009', devis: null }] })
+    expect(wrapper.get('#devis').text()).toContain('Vous êtes connecté')
+    expect(wrapper.find('form.auth').exists()).toBe(false)
+    await wrapper.get('#devis form').trigger('submit')
+    await flushPromises()
+    expect(calls.filter((c) => c.path === '/espace/devis')).toHaveLength(1)
+    expect(calls.map((c) => c.path)).not.toContain('/espace/inscription')
+  })
+
+  it('affiche l’erreur du serveur sous le bon champ, sans demander de devis, et celles des pièces dans le chiffrage', async () => {
+    const { wrapper, calls } = await mountSite({ 'POST /espace/inscription': [409, { error: 'Cette adresse e-mail est déjà enregistrée.', field: 'email' }] })
+    await signup(wrapper)
+    await wrapper.get('form.auth').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('#cfg-e-email').text()).toBe('Cette adresse e-mail est déjà enregistrée.')
+    expect(wrapper.get('#cfg-email').attributes('aria-invalid')).toBe('true')
+    expect((wrapper.get('#cfg-nom').element as HTMLInputElement).value).toBe('Dupont')
+    expect(calls.map((c) => c.path)).not.toContain('/espace/devis')
+
+    const bad = await mountSite({ 'POST /public/configurateur/chiffrage': [400, { error: 'Longueur : 3000 mm maximum.', field: 'lignes.0.longueur' }] })
     expect(bad.wrapper.text()).toContain('Longueur : 3000 mm maximum.')
-    expect(bad.wrapper.get('form.configurateur button[type="submit"]').attributes('disabled')).toBeDefined()
+    expect(bad.wrapper.get('form.auth button[type="submit"]').attributes('disabled')).toBeDefined()
     expect(bad.wrapper.get('a.btn.primary').classes()).toContain('off')
   })
 
+  it('montre l’erreur de la demande de devis, et garde le client connecté', async () => {
+    const { wrapper } = await mountConfig({ 'GET /espace/session': [200, { compte: COMPTE }], 'POST /espace/devis': [429, { error: 'Vous avez déjà demandé 10 devis aujourd’hui.' }] })
+    await wrapper.get('#devis form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('#devis [role="alert"]').text()).toContain('10 devis')
+    expect(wrapper.get('#devis').text()).toContain('Vous êtes connecté')
+  })
+
   it('cache le piège à robots, et dit quand le catalogue est vide', async () => {
-    const { wrapper } = await mountConfig()
+    const { wrapper } = await mountSite()
     expect(wrapper.get('.trap').attributes('aria-hidden')).toBe('true')
-    const empty = await mountConfig({ 'GET /public/configurateur': [200, { ...CATALOG, models: [] }] })
+    const empty = await mountSite({ 'GET /public/configurateur': [200, { ...CATALOG, models: [] }] })
     expect(empty.wrapper.text()).toContain('pas disponible pour l’instant')
-    const down = await mountConfig({ 'GET /public/configurateur': [500, { error: 'Le serveur a rencontré un problème.' }] })
+    const down = await mountSite({ 'GET /public/configurateur': [500, { error: 'Le serveur a rencontré un problème.' }] })
     expect(down.wrapper.find('[role="alert"]').exists()).toBe(true)
   })
 

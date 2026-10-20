@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore, type Permission } from '@/stores/auth'
+import { useEspaceStore } from '@/stores/espace'
+import { retourEspace } from '@/lib/espace'
 import { applySeo } from '@/lib/seo'
 import { HOME } from '@/lib/redirect'
 
@@ -10,6 +12,8 @@ declare module 'vue-router' {
     site?: boolean
     description?: string
     noindex?: boolean
+    // Espace client : « connecte » demande un compte client connecté, « invite » (connexion, inscription) renvoie vers l'espace s'il l'est déjà
+    espace?: 'connecte' | 'invite'
     perm?: Permission
     // Titre de la page (onglet et dernier élément du fil d'Ariane)
     title?: string
@@ -53,6 +57,17 @@ export const router = createRouter({
         legal('politique-de-confidentialite', 'site-confidentialite', 'legal.confidentialite', 'Politique de confidentialité'),
         legal('conditions-generales-de-vente', 'site-cgv', 'legal.cgv', 'Conditions générales de vente'),
         legal('cookies', 'site-cookies', 'legal.cookies', 'Cookies'),
+        // Boutique : les produits en ligne, le panier et le paiement
+        { path: 'boutique', name: 'site-boutique', component: () => import('@/views/site/BoutiqueView.vue'), meta: { public: true, site: true, title: 'Boutique', description: 'Couvertines, bavettes, bandeaux et accessoires en aluminium aux tailles standard, à commander en ligne. Atelier à Fraisses (42).' } },
+        { path: 'boutique/commande/:id', name: 'site-paiement-retour', component: () => import('@/views/site/PaiementRetourView.vue'), props: true, meta: { public: true, site: true, noindex: true, title: 'Votre commande' } },
+        { path: 'boutique/:id', name: 'site-produit', component: () => import('@/views/site/BoutiqueProduitView.vue'), props: true, meta: { public: true, site: true, title: 'Produit de la boutique' } },
+        { path: 'panier', name: 'site-panier', component: () => import('@/views/site/PanierView.vue'), meta: { public: true, site: true, noindex: true, title: 'Mon panier' } },
+        { path: 'paiement-simulation/:id', name: 'site-paiement-simulation', component: () => import('@/views/site/PaiementSimulationView.vue'), props: true, meta: { public: true, site: true, noindex: true, title: 'Paiement de démonstration' } },
+        // Espace client : privé, jamais indexé. La session n'est vérifiée que sur ces pages.
+        { path: 'espace', name: 'espace', component: () => import('@/views/site/EspaceHomeView.vue'), meta: { public: true, site: true, noindex: true, espace: 'connecte', title: 'Mon espace client' } },
+        { path: 'espace/connexion', name: 'espace-connexion', component: () => import('@/views/site/EspaceAuthView.vue'), props: { mode: 'connexion' }, meta: { public: true, site: true, noindex: true, espace: 'invite', title: 'Connexion à mon espace client' } },
+        { path: 'espace/inscription', name: 'espace-inscription', component: () => import('@/views/site/EspaceAuthView.vue'), props: { mode: 'inscription' }, meta: { public: true, site: true, noindex: true, espace: 'invite', title: 'Créer mon espace client' } },
+        { path: 'espace/commandes/:id', name: 'espace-commande', component: () => import('@/views/site/EspaceOrderView.vue'), props: true, meta: { public: true, site: true, noindex: true, espace: 'connecte', title: 'Ma commande' } },
         { path: ':pathMatch(.*)*', name: 'site-404', component: () => import('@/views/site/NotFoundView.vue'), meta: { public: true, site: true, noindex: true, title: 'Page introuvable' } },
       ],
     },
@@ -81,6 +96,19 @@ export const router = createRouter({
           name: 'employee',
           component: () => import('@/views/EmployeeView.vue'),
           meta: { perm: 'employees.manage', section: 'Équipe', parent: employeesParent, title: 'Fiche salarié', menu: 'employees' },
+        },
+        {
+          path: 'produits',
+          name: 'products',
+          component: () => import('@/views/ProductsView.vue'),
+          meta: { perm: 'products.manage', section: 'Direction', title: 'Boutique' },
+        },
+        {
+          path: 'produits/:id',
+          name: 'product',
+          component: () => import('@/views/ProductView.vue'),
+          props: true,
+          meta: { perm: 'products.manage', section: 'Direction', parent: { label: 'Boutique', to: { name: 'products' } }, title: 'Fiche produit', menu: 'products' },
         },
         {
           path: 'clients',
@@ -178,6 +206,14 @@ export const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
+  // Espace client : seules ses pages vérifient la session du client (autre cookie que l'atelier)
+  if (to.meta.espace) {
+    const espace = useEspaceStore()
+    await espace.ensureLoaded()
+    if (to.meta.espace === 'connecte' && !espace.isLoggedIn) return { name: 'espace-connexion', query: { redirect: to.fullPath } }
+    if (to.meta.espace === 'invite' && espace.isLoggedIn) return retourEspace(to.query.redirect)
+    return
+  }
   // Visiteurs du site : aucun appel à la session, aucun cookie
   if (to.meta.site) return
   const auth = useAuthStore()

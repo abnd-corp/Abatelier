@@ -379,6 +379,126 @@ export const clientSites = pgTable(
   (t) => [index('client_sites_client_idx').on(t.clientId)],
 )
 
+// --- Boutique ---
+// Articles du catalogue vendus en ligne (couvertine standard, bavette, bandeau, accessoires…). Un produit a une fiche
+// (description, photo) et des déclinaisons (taille, coloris, épaisseur…) qui portent chacune leur prix. Il n'apparaît
+// sur le site que s'il est actif et a au moins une déclinaison active.
+export const products = pgTable(
+  'products',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    nom: text('nom').notNull(),
+    categorie: text('categorie').notNull().default(''),
+    description: text('description').notNull().default(''),
+    // Photo gardée en base comme celles du site ; null tant que la direction n'en a pas envoyé
+    image: bytea('image'),
+    imageType: text('image_type'),
+    imageLargeur: integer('image_largeur'),
+    imageHauteur: integer('image_hauteur'),
+    imageAlt: text('image_alt').notNull().default(''),
+    // Un nouveau produit est caché tant que la direction ne l'a pas activé
+    actif: boolean('actif').notNull().default(false),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [index('products_actif_idx').on(t.actif, t.position)],
+)
+
+export const productVariants = pgTable(
+  'product_variants',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    // « 320 mm · 1,5 mm · 3 m »
+    libelle: text('libelle').notNull(),
+    reference: text('reference').notNull().default(''),
+    // Prix de vente HT ; le prix TTC affiché au client en découle avec la TVA des réglages
+    prixHt: numeric('prix_ht', { precision: 10, scale: 2, mode: 'number' }).notNull(),
+    actif: boolean('actif').notNull().default(true),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [index('product_variants_product_idx').on(t.productId, t.position), unique('product_variants_libelle_unique').on(t.productId, t.libelle)],
+)
+
+// Un paiement en ligne : le panier figé (prix compris) au moment de payer, puis l'issue chez le prestataire.
+// La commande n'existe qu'une fois le paiement confirmé : c'est là que le contrat se forme.
+export const PAYMENT_STATUTS = ['attente', 'paye', 'echec', 'rembourse'] as const
+export type PaymentStatut = (typeof PAYMENT_STATUTS)[number]
+export interface PaymentCart {
+  lignes: { variantId: string; produit: string; libelle: string; quantite: number; prixHt: number }[]
+  livraison: { mode: 'retrait' } | { mode: 'livraison'; adresse: string; codePostal: string; ville: string }
+  distanceKm: number | null
+  totals: { brut: number; livraisonPrix: number; ht: number; tauxTva: number; tva: number; ttc: number; delaiJours: number }
+  // Adresse du site au moment du paiement, pour les liens des e-mails envoyés ensuite
+  origin: string
+}
+
+export const payments = pgTable(
+  'payments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => clients.id, { onDelete: 'restrict' }),
+    // Aucun enregistrement lié avant le paiement ; restrict : on ne perd jamais la trace d'un paiement
+    orderId: uuid('order_id')
+      .unique()
+      .references((): AnyPgColumn => orders.id, { onDelete: 'restrict' }),
+    provider: text('provider').notNull(),
+    // Identifiant de la session de paiement chez le prestataire, et de l'opération à rembourser
+    providerRef: text('provider_ref'),
+    providerPayment: text('provider_payment'),
+    statut: text('statut', { enum: PAYMENT_STATUTS }).notNull().default('attente'),
+    montantTtc: numeric('montant_ttc', { precision: 12, scale: 2, mode: 'number' }).notNull(),
+    panier: jsonb('panier').$type<PaymentCart>().notNull(),
+    paidAt: ts('paid_at'),
+    refundedAt: ts('refunded_at'),
+    refundRef: text('refund_ref'),
+    refundMotif: text('refund_motif'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('payments_client_idx').on(t.clientId), index('payments_ref_idx').on(t.providerRef)],
+)
+
+// --- Espace client ---
+// Comptes de connexion des clients du site, séparés de ceux de l'équipe (table users) : autre cookie, autres sessions,
+// aucun droit sur l'atelier. Un compte est rattaché à une fiche client (clients), qui porte l'adresse e-mail de connexion.
+export const clientAccounts = pgTable('client_accounts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  clientId: uuid('client_id')
+    .notNull()
+    .unique()
+    .references(() => clients.id, { onDelete: 'cascade' }),
+  passwordHash: text('password_hash').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  lastLoginAt: ts('last_login_at'),
+  passwordChangedAt: ts('password_changed_at'),
+  disabledAt: ts('disabled_at'),
+})
+
+// Comme sessions : l'id est le SHA-256 du jeton du cookie
+export const clientSessions = pgTable(
+  'client_sessions',
+  {
+    id: text('id').primaryKey(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => clientAccounts.id, { onDelete: 'cascade' }),
+    remember: boolean('remember').notNull().default(false),
+    ip: text('ip'),
+    userAgent: text('user_agent'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    lastSeenAt: ts('last_seen_at').notNull().defaultNow(),
+    expiresAt: ts('expires_at').notNull(),
+  },
+  (t) => [index('client_sessions_account_idx').on(t.accountId)],
+)
+
 // --- Commandes ---
 // Les prix sont calculés avec le catalogue au moment de l'enregistrement, puis figés dans la commande :
 // un changement de tarif ne modifie pas une commande déjà passée.
@@ -386,6 +506,9 @@ export const clientSites = pgTable(
 export const ORDER_STATUTS = ['recue', 'validee', 'fabrication', 'prete', 'livree', 'annulee'] as const
 export type OrderStatut = (typeof ORDER_STATUTS)[number]
 export const LIVRAISON_MODES = ['retrait', 'livraison'] as const
+// Sur mesure : pièces dessinées (configurateur ou atelier). Boutique : articles du catalogue payés en ligne.
+export const ORDER_KINDS = ['sur_mesure', 'boutique'] as const
+export type OrderKind = (typeof ORDER_KINDS)[number]
 
 export interface OrderLineAccessory {
   accessoryId: string
@@ -407,6 +530,7 @@ export const orders = pgTable(
       .notNull()
       .references(() => clients.id, { onDelete: 'restrict' }),
     statut: text('statut', { enum: ORDER_STATUTS }).notNull().default('recue'),
+    kind: text('kind', { enum: ORDER_KINDS }).notNull().default('sur_mesure'),
     livraisonMode: text('livraison_mode', { enum: LIVRAISON_MODES }).notNull(),
     // Adresse de livraison recopiée (elle reste lisible si la fiche client change)
     livraisonAdresse: text('livraison_adresse'),
@@ -451,6 +575,8 @@ export const orderLines = pgTable(
     materialId: uuid('material_id').references(() => materials.id, { onDelete: 'set null' }),
     materialLabel: text('material_label').notNull(),
     colorId: uuid('color_id').references(() => colors.id, { onDelete: 'set null' }),
+    // Article de la boutique : sa déclinaison (les cotes sont alors vides)
+    variantId: uuid('variant_id').references((): AnyPgColumn => productVariants.id, { onDelete: 'set null' }),
     colorLabel: text('color_label').notNull(),
     colorHex: text('color_hex').notNull(),
     // Cotes extérieures de chaque segment en mm, et angle intérieur de chaque pli en degrés
@@ -657,5 +783,8 @@ export type DocumentTemplate = typeof documentTemplate.$inferSelect
 export type Client = typeof clients.$inferSelect
 export type ClientSite = typeof clientSites.$inferSelect
 export type Order = typeof orders.$inferSelect
+export type Product = typeof products.$inferSelect
+export type ProductVariant = typeof productVariants.$inferSelect
+export type Payment = typeof payments.$inferSelect
 export type OrderLine = typeof orderLines.$inferSelect
 export type BillingDocument = typeof billingDocuments.$inferSelect

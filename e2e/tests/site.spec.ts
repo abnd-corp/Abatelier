@@ -1,6 +1,8 @@
 import type { Page } from '@playwright/test'
 import { ADMIN, apiLogin, createUser, expect, makePng, NEW_PASSWORD, test, waitForMail } from './fixtures'
 
+const PASSWORD = 'Plieuse-numerique-2026'
+
 // Site vitrine : parcours des visiteurs (sans connexion) et de la direction qui le gère.
 // Les tests tournent en parallèle sur la même base : chaque navigateur modifie son propre champ de texte.
 const FIELD = { chromium: { key: 'pliage.intro', label: 'Introduction' }, firefox: { key: 'contact.intro', label: 'Introduction de la page Contact' } } as const
@@ -135,7 +137,24 @@ test.describe('Site vitrine : visiteurs', () => {
 })
 
 test.describe('Configurateur : du visiteur à la commande', () => {
-  test('le visiteur dessine sa pièce et voit le prix, demande un devis, la direction crée la commande', async ({ page, browser, baseURL, uid, context }) => {
+  test('le visiteur choisit une taille standard en un clic et le prix suit', async ({ page }) => {
+    await page.goto('/configurateur')
+    const piece = page.getByRole('region', { name: 'Pièce 1' })
+    const total = async () => (await page.getByRole('complementary', { name: 'Montant de la commande' }).locator('dd.big').innerText()).replace(/\s/g, '')
+    await expect(piece.getByLabel('Largeur du dessus (taille standard)')).toBeVisible()
+    await piece.getByLabel('Largeur du dessus (taille standard)').selectOption('320')
+    await piece.getByLabel('Longueur (taille standard)').selectOption('1000')
+    await expect(piece.locator('#l0-cote2')).toHaveValue('320')
+    await expect(piece.getByLabel('Longueur', { exact: true })).toHaveValue('1000')
+    const un = await total()
+    await piece.getByLabel('Longueur (taille standard)').selectOption('3000')
+    await expect.poll(total).not.toBe(un)
+    // Un autre modèle propose ses propres tailles
+    await piece.getByLabel('Modèle').selectOption({ label: 'Bavette d’appui' })
+    await expect(piece.getByLabel('Profondeur (taille standard)')).toBeVisible()
+  })
+
+  test('le visiteur dessine sa pièce, crée son espace client et a son devis tout de suite, suit sa commande', async ({ page, browser, baseURL, uid, context }) => {
     const admin = await (await browser.newContext()).newPage()
     await apiLogin(admin.request, baseURL!, ADMIN.identifiant, ADMIN.password)
     const nom = `Visiteur ${uid.slice(-6)}`
@@ -158,46 +177,138 @@ test.describe('Configurateur : du visiteur à la commande', () => {
     await expect.poll(total).not.toBe(before)
 
     // Cote hors limites : signalée tout de suite, la demande est bloquée
-    await piece.getByLabel(/^A/).fill('3')
+    await piece.locator('#l0-cote0').fill('3')
     await expect(piece.getByRole('alert')).toContainText('Cote A')
-    await expect(page.getByRole('button', { name: 'Envoyer ma demande de devis' })).toBeDisabled()
-    await piece.getByLabel(/^A/).fill('20')
+    await expect(page.locator('#devis').getByRole('button', { name: 'Créer mon espace et obtenir mon devis' })).toBeDisabled()
+    await piece.locator('#l0-cote0').fill('20')
     await expect(piece.getByRole('alert')).toHaveCount(0)
     await piece.getByLabel('Repère').fill(`Muret ${uid.slice(-4)}`)
 
-    // Demande de devis : erreur claire, puis envoi
-    await page.getByLabel('Votre nom *').fill(nom)
-    await page.getByLabel('Votre e-mail *').fill('pas-un-mail')
-    await page.getByLabel(/J’accepte que mes données/).check()
-    await page.getByRole('button', { name: 'Envoyer ma demande de devis' }).click()
-    await expect(page.getByText('Adresse e-mail invalide.')).toBeVisible()
-    await page.getByLabel('Votre e-mail *').fill(email)
-    await page.getByRole('button', { name: 'Envoyer ma demande de devis' }).click()
-    await expect(page.getByRole('heading', { name: 'Demande de devis envoyée' })).toBeVisible()
-    // Aucun cookie déposé chez le visiteur
+    // Le visiteur n'a toujours aucun cookie : le prix s'affiche sans compte
     expect(await context.cookies()).toEqual([])
 
-    // La direction est prévenue, avec les pièces et le prix
-    const mail = await waitForMail(page.request, 'Demande de devis : 9 pièces')
-    expect(mail.Text).toContain('Pièces choisies dans le configurateur')
-    expect(mail.Text).toContain(`Muret ${uid.slice(-4)}`)
-    expect(mail.ReplyTo.map((a) => a.Address)).toEqual([email])
+    // Pour le devis : création de l'espace client, erreurs claires, puis le devis est demandé aussitôt
+    const devis = page.locator('#devis')
+    // Les avantages de l'espace client et l'usage des données sont visibles avant de saisir quoi que ce soit
+    await expect(devis.getByRole('heading', { name: 'Pourquoi un espace client ?' })).toBeVisible()
+    await expect(devis.getByRole('heading', { name: /Ce que nous faisons de vos données/ })).toBeVisible()
+    await expect(devis).toContainText('pas de cookie de suivi')
+    await expect(devis.getByRole('link', { name: 'nous envoyer votre plan' })).toBeVisible()
+    await devis.getByLabel('Une précision pour l’atelier').fill('Pose prévue en mars.')
+    await devis.getByLabel('Nom *').fill(nom)
+    await devis.getByLabel('Adresse e-mail *').fill('pas-un-mail')
+    await devis.getByLabel('Mot de passe *').fill('court')
+    await devis.getByLabel(/J’accepte que mes données/).check()
+    await devis.getByRole('button', { name: 'Créer mon espace et obtenir mon devis' }).click()
+    await expect(devis.getByText('Adresse e-mail invalide.')).toBeVisible()
+    await devis.getByLabel('Adresse e-mail *').fill(email)
+    await devis.getByRole('button', { name: 'Créer mon espace et obtenir mon devis' }).click()
+    await expect(devis.getByText(/au moins 12 caractères/)).toBeVisible()
+    await devis.getByLabel('Mot de passe *').fill(PASSWORD)
+    await devis.getByRole('button', { name: 'Créer mon espace et obtenir mon devis' }).click()
 
-    // Elle voit la demande avec les pièces, et crée la commande en un clic
-    await admin.goto('/site-vitrine')
-    await admin.getByRole('button', { name: new RegExp(`Demande de devis : 9 pièces`) }).first().click()
-    await expect(admin.getByText(`Muret ${uid.slice(-4)}`)).toBeVisible()
-    await expect(admin.getByText('Prix affiché au visiteur')).toBeVisible()
-    await admin.getByRole('button', { name: 'Créer la commande' }).first().click()
-    await expect(admin).toHaveURL(/\/commandes\/[0-9a-f-]{36}$/)
-    await expect(admin.getByRole('heading', { level: 1 })).toContainText(/^C-\d{4}-\d{4}$/)
+    // Le devis est tout de suite dans l'espace du client, avec le suivi de la commande
+    await expect(page).toHaveURL(/\/espace\/commandes\/[0-9a-f-]{36}$/)
+    const numero = (await page.getByRole('heading', { level: 1 }).innerText()).trim()
+    expect(numero).toMatch(/^C-\d{4}-\d{4}$/)
+    await expect(page.getByRole('heading', { name: /^Votre devis D-\d{4}-\d{4}$/ })).toBeVisible()
+    await expect(page.locator('#devis')).toContainText('Devis à valider')
+    await expect(page.getByRole('region', { name: 'Suivi de la commande' })).toContainText('Demande reçue')
+    await expect(page.getByText(`Muret ${uid.slice(-4)}`)).toBeVisible()
+    const pdfHref = await page.getByRole('link', { name: /Télécharger le devis/ }).getAttribute('href')
+    const pdf = await page.request.get(pdfHref!)
+    expect(pdf.status()).toBe(200)
+    expect(pdf.headers()['content-type']).toBe('application/pdf')
+    expect((await pdf.body()).subarray(0, 5).toString()).toBe('%PDF-')
+    // Seul cookie du site : celui de la session, jamais lisible par un script
+    const cookies = await context.cookies()
+    expect(cookies.map((c) => c.name.replace('__Host-', ''))).toEqual(['aps_client'])
+    expect(cookies[0]!.httpOnly).toBe(true)
+
+    // La direction est prévenue par e-mail, et retrouve la commande dans l'atelier
+    const mail = await waitForMail(page.request, nom)
+    expect(mail.Subject).toContain('Nouveau devis depuis l’espace client')
+    expect(mail.Text).toContain(numero)
+    expect(mail.ReplyTo.map((a) => a.Address)).toEqual([email])
+    const found = await (await admin.request.get(`/api/orders?q=${numero}&filtre=toutes`)).json()
+    const order = found.orders[0] as { id: string }
+    await admin.goto(`/commandes/${order.id}`)
+    await expect(admin.getByRole('heading', { level: 1 })).toContainText(numero)
     await expect(admin.getByText(nom).first()).toBeVisible()
-    await expect(admin.getByText(`Muret ${uid.slice(-4)}`).first()).toBeVisible()
-    await expect(admin.getByText('Reçue').first()).toBeVisible()
+    await expect(admin.getByText('Pose prévue en mars.').first()).toBeVisible()
+
+    // Le client accepte le devis : l'atelier est prévenu, la commande attend sa validation
+    await page.getByRole('button', { name: 'Accepter le devis' }).click()
+    await expect(page.locator('#devis')).toContainText('Devis accepté')
+    await expect(page.getByRole('button', { name: 'Accepter le devis' })).toHaveCount(0)
+    await waitForMail(page.request, `par ${nom}`)
+
+    // L'atelier valide, puis lance la fabrication : le client suit chaque étape
+    expect((await admin.request.post(`/api/orders/${order.id}/status`, { data: { statut: 'validee' }, headers: { Origin: baseURL! } })).status()).toBe(200)
+    expect((await admin.request.post(`/api/orders/${order.id}/status`, { data: { statut: 'fabrication' }, headers: { Origin: baseURL! } })).status()).toBe(200)
+    await page.reload()
+    const suivi = page.getByRole('region', { name: 'Suivi de la commande' })
+    await expect(suivi.locator('li[aria-current="step"]')).toContainText('En fabrication')
+    await expect(suivi).toContainText('Vos pièces sont en cours de pliage')
+
+    // La liste de ses commandes, puis déconnexion : l'espace est fermé, la connexion le rouvre
+    await page.getByRole('link', { name: 'Mes commandes' }).click()
+    await expect(page.getByRole('list', { name: 'Vos commandes' })).toContainText(numero)
+    await page.getByRole('button', { name: 'Me déconnecter' }).click()
+    await expect(page).toHaveURL('/')
+    await page.goto(`/espace/commandes/${order.id}`)
+    await expect(page).toHaveURL(/\/espace\/connexion\?redirect=/)
+    await page.getByLabel('Adresse e-mail *').fill(email)
+    await page.getByLabel('Mot de passe *').fill('mauvais-mot-de-passe-12')
+    await page.getByRole('button', { name: 'Me connecter' }).click()
+    await expect(page.getByRole('alert')).toContainText('incorrect')
+    await page.getByLabel('Mot de passe *').fill(PASSWORD)
+    await page.getByRole('button', { name: 'Me connecter' }).click()
+    await expect(page).toHaveURL(`/espace/commandes/${order.id}`)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(numero)
 
     // Le client existe, venu du site
     const clients = await (await admin.request.get(`/api/clients?q=${encodeURIComponent(email)}`)).json()
     expect(clients.clients[0]).toMatchObject({ origine: 'site', email })
+  })
+
+  test('la page de création de l’espace client explique les avantages et les données, pas la page de connexion', async ({ page }) => {
+    await page.goto('/espace/inscription')
+    await expect(page.getByRole('heading', { name: 'Pourquoi un espace client ?' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Ce que nous faisons de vos données/ })).toBeVisible()
+    await page.getByRole('link', { name: 'Politique de confidentialité complète' }).first().waitFor()
+    await page.goto('/espace/connexion')
+    await expect(page.getByRole('heading', { name: /Ce que nous faisons de vos données/ })).toHaveCount(0)
+  })
+
+  test('un client ne voit jamais la commande d’un autre, ni avec le cookie de l’atelier', async ({ browser, baseURL, uid }) => {
+    const signup = async (suffix: string) => {
+      const ctx = await browser.newContext()
+      const page = await ctx.newPage()
+      const res = await page.request.post('/api/espace/inscription', { data: { nom: `Client ${uid.slice(-6)}${suffix}`, email: `${uid}${suffix}@exemple.fr`, password: PASSWORD, consentement: true }, headers: { Origin: baseURL! } })
+      expect(res.status(), await res.text()).toBe(201)
+      return page
+    }
+    const config = (await (await (await browser.newContext()).request.get(`${baseURL}/api/public/configurateur`)).json()) as { models: { id: string; cotes: number[]; angles: number[]; longueur: number }[]; materials: { id: string }[]; colors: { id: string }[] }
+    const m = config.models[0]!
+    const a = await signup('a')
+    const res = await a.request.post('/api/espace/devis', { data: { lignes: [{ modelId: m.id, materialId: config.materials[0]!.id, colorId: config.colors[0]!.id, cotes: m.cotes, angles: m.angles, longueur: m.longueur, quantite: 1, accessoires: [] }], livraison: { mode: 'retrait' } }, headers: { Origin: baseURL! } })
+    expect(res.status(), await res.text()).toBe(201)
+    const { id } = await res.json()
+
+    const b = await signup('b')
+    await b.goto(`/espace/commandes/${id}`)
+    await expect(b.getByRole('heading', { name: 'Commande introuvable' })).toBeVisible()
+    expect((await b.request.get(`/api/espace/commandes/${id}`)).status()).toBe(404)
+
+    // Un visiteur sans compte est renvoyé vers la connexion, et l'API le refuse
+    const visitor = await (await browser.newContext()).newPage()
+    await visitor.goto('/espace')
+    await expect(visitor).toHaveURL(/\/espace\/connexion/)
+    expect((await visitor.request.get('/api/espace/commandes')).status()).toBe(401)
+    // Le cookie de l'espace client n'ouvre rien de l'atelier
+    expect((await a.request.get('/api/orders')).status()).toBe(401)
+    expect((await a.request.get('/api/clients')).status()).toBe(401)
   })
 })
 
@@ -282,7 +393,7 @@ test.describe('Site vitrine : direction', () => {
 })
 
 test.describe('Site vitrine : écrans @responsive', () => {
-  for (const path of ['/', '/pliage-aluminium', '/configurateur', '/contact', '/mentions-legales', '/conditions-generales-de-vente']) {
+  for (const path of ['/', '/pliage-aluminium', '/configurateur', '/contact', '/mentions-legales', '/conditions-generales-de-vente', '/espace/connexion', '/espace/inscription', '/boutique', '/panier']) {
     test(`${path} : tient dans l’écran, sans défilement horizontal`, async ({ page }) => {
       await page.goto(path)
       await expect(page.getByRole('heading', { level: 1 })).toBeInViewport()
