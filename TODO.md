@@ -114,6 +114,12 @@ Le pliage commence par de la découpe : chaque pièce est une bande de « dével
 - [ ] Commandes à fabriquer, planning, fiche de fabrication
 
 ## 3. Espace client et site public
+**Ce que fait leur boutique actuelle** (relevé du 20 octobre 2026, détail dans `entreprise/sources/boutique/`) : 52 articles standard à prix fixe par combinaison, panier et compte WooCommerce, paiement par carte selon leurs CGV, sur-mesure par fiche de pliage et devis. À reprendre dans Patalu :
+- [ ] **Tailles standard** dans le configurateur : choisir « couvertine 320 mm, 3 m » ou « bavette 250 mm » en un clic, avant d'ajuster (couvertine 270 / 320 ; bavette 150 à 500 mm par 25 ; bandeau 200 à 350 mm par 25, en L ou en U)
+- [ ] **Accessoires manquants** au catalogue : chapeau de pilier (carré 250 à 600 mm), angle 90° de couvertine, support de fixation ; épaisseur 0,8 mm pour les bandeaux
+- [ ] **Calibrer les tarifs** sur leur grille (après réponse à la question A1b : TTC ou HT, prix fixes ou calculés, erreurs de leur grille)
+- [ ] Coloris : sable / ivoire RAL 1015, brut, chêne doré (bandeaux seulement) à comparer avec notre catalogue ; majoration du noir sablé selon le produit
+
 **Ordre retenu (octobre 2026)** : 1. configurateur public avec prix en direct, qui finit par « Demander un devis » (arrive chez la direction) ; 2. comptes clients séparés de ceux de l'équipe ; 3. commande par le client, validée par l'atelier ; 4. espace client ; 5. paiement en ligne, selon la réponse de la direction (question A6b : leur site actuel parle de paiement par carte, sans qu'on sache s'il marche).
 
 - [x] **Configurateur de pliage public** (`/configurateur`, sans compte ni cookie) : mêmes pièces, mêmes limites de plieuse et même calcul de prix que l'atelier (un seul code), prix en direct, profil et 3D ; « Demander un devis » enregistre la demande avec les pièces et le prix **recalculé par le serveur**, prévient la direction par e-mail, et la direction crée la commande en un clic (fiche client créée ou retrouvée par e-mail, origine « site »)

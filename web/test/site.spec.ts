@@ -101,6 +101,20 @@ describe('Accueil', () => {
     expect(calls.map((c) => c.path)).not.toContain('/auth/session')
   })
 
+  it('met le configurateur au cœur de l’accueil : une section dédiée qui y mène, avec les trois étapes', async () => {
+    const { wrapper } = await mountAt(HomeView, '/')
+    const section = wrapper.get('section[aria-labelledby="configurateur"]')
+    expect(section.get('h2').text()).toBe('Configurez votre pièce en ligne')
+    expect(section.findAll('.cfg-steps li')).toHaveLength(3)
+    const links = section.findAll('a').map((a) => a.attributes('href'))
+    expect(links.filter((h) => h === '/configurateur')).toHaveLength(2)
+    expect(section.get('a.s-btn.primary').text()).toBe('Ouvrir le configurateur')
+    // Le bouton principal du haut de page mène aussi au configurateur
+    expect(wrapper.get('.hero a.s-btn.primary').attributes('href')).toBe('/configurateur')
+    // Un exemple de profil est dessiné pour donner envie
+    expect(section.find('svg').exists()).toBe(true)
+  })
+
   it('remplace une photo absente par un dessin', async () => {
     mockApi({ 'GET /public/site': [200, { ...SITE, photos: [] }], 'GET /public/avis': [200, AVIS] })
     const { wrapper } = await mountAt(HomeView, '/', { 'GET /public/site': [200, { ...SITE, photos: [] }], 'GET /public/avis': [200, AVIS] })

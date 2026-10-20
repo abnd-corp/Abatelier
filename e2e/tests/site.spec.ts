@@ -31,6 +31,20 @@ test.describe('Site vitrine : visiteurs', () => {
     expect(await context.cookies()).toEqual([])
   })
 
+  test('l’accueil mène droit au configurateur : section dédiée et bouton principal', async ({ page }) => {
+    await page.goto('/')
+    const section = page.locator('section[aria-labelledby="configurateur"]')
+    await expect(section.getByRole('heading', { name: 'Configurez votre pièce en ligne' })).toBeVisible()
+    await expect(section.getByRole('listitem')).toHaveCount(3)
+    await section.getByRole('link', { name: 'Ouvrir le configurateur' }).click()
+    await expect(page).toHaveURL('/configurateur')
+    await expect(page.getByRole('heading', { level: 1, name: 'Dessinez votre pièce, voyez le prix' })).toBeVisible()
+    // Le bouton du haut de l'accueil y mène aussi
+    await page.goto('/')
+    await page.locator('.hero').getByRole('link', { name: 'Configurer ma pièce' }).click()
+    await expect(page).toHaveURL('/configurateur')
+  })
+
   test('affiche une page 404 propre, non indexée', async ({ page }) => {
     await page.goto('/une-page-qui-nexiste-pas')
     await expect(page.getByRole('heading', { name: 'Cette page n’existe pas' })).toBeVisible()

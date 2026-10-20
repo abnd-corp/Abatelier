@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue'
 import AppIcon from '@/components/AppIcon.vue'
 import SiteReviews from '@/components/site/SiteReviews.vue'
+import ProfileSketch from '@/components/orders/ProfileSketch.vue'
 import { setDescription } from '@/lib/seo'
 import { lines, photosOf, photoUrl, site, telHref, type Emplacement } from '@/lib/site'
 
@@ -44,6 +45,31 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
           <img v-if="hero" :src="photoUrl(hero.id)" :alt="hero.alt" :width="hero.largeur" :height="hero.hauteur" fetchpriority="high" />
           <div v-else class="placeholder" aria-hidden="true"><AppIcon name="profile" :size="96" /></div>
         </figure>
+      </div>
+    </section>
+
+    <!-- Le chemin principal : le configurateur -->
+    <section class="s-wrap block" aria-labelledby="configurateur">
+      <div class="card cfg">
+        <div class="cfg-text">
+          <span class="eyebrow">Le plus simple</span>
+          <h2 id="configurateur">Configurez votre pièce en ligne</h2>
+          <p class="cfg-lead">Plus besoin d’attendre un devis pour savoir combien ça coûte : dessinez votre pièce et voyez le prix tout de suite.</p>
+          <ol class="cfg-steps">
+            <li><b>Choisissez le modèle</b> : couvertine, bavette d’appui ou bandeau, ou partez d’un profil libre.</li>
+            <li><b>Réglez les cotes</b> : le profil et la 3D se mettent à jour, et les limites de nos machines sont vérifiées pour vous.</li>
+            <li><b>Voyez le prix, demandez le devis</b> : gratuit, sans compte, et nous vous répondons avec votre devis.</li>
+          </ol>
+          <p class="cfg-cta">
+            <RouterLink :to="{ name: 'site-configurateur' }" class="s-btn primary big">Ouvrir le configurateur</RouterLink>
+            <span class="muted">Une pièce très particulière ? <RouterLink :to="{ name: 'site-contact' }">Envoyez-nous votre plan</RouterLink>.</span>
+          </p>
+        </div>
+        <!-- Doublon décoratif du bouton : masqué aux lecteurs d'écran et au clavier -->
+        <RouterLink :to="{ name: 'site-configurateur' }" class="cfg-visual" aria-hidden="true" tabindex="-1">
+          <ProfileSketch :cotes="[20, 70, 300, 70, 20]" :angles="[-135, 90, 90, -135]" :cap="-45" color="#5b34c4" label="Exemple de profil : couvertine, dessus de 300 mm" />
+          <span class="muted">Exemple : une couvertine, dessus de 300 mm</span>
+        </RouterLink>
       </div>
     </section>
 
@@ -178,6 +204,61 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
 .block {
   padding-top: 44px;
 }
+.cfg {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+  padding: 28px;
+  border-color: var(--accent);
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface) 70%);
+}
+.cfg-text {
+  display: grid;
+  gap: 12px;
+}
+.cfg h2 {
+  margin: 0;
+}
+.cfg-lead {
+  color: var(--muted);
+  max-width: 34em;
+}
+.cfg-steps {
+  margin: 0;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 8px;
+}
+.cfg-steps li::marker {
+  color: var(--accent);
+  font-weight: 700;
+}
+.cfg-cta {
+  display: flex;
+  gap: 12px 18px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.s-btn.big {
+  padding: 14px 26px;
+  font-size: 1.05rem;
+}
+.cfg-visual {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 0.86rem;
+}
+.cfg-visual:hover {
+  border-color: var(--accent);
+}
 .block h2,
 .steps-band h2 {
   font-size: clamp(1.3rem, 3vw, 1.8rem);
@@ -304,6 +385,13 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
   flex: none;
 }
 @media (max-width: 860px) {
+  .cfg {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 20px;
+  }
+  .cfg-cta .s-btn {
+    flex: 1 1 100%;
+  }
   .hero-in {
     grid-template-columns: minmax(0, 1fr);
   }
