@@ -12,7 +12,7 @@ async function addEmployee(request: APIRequestContext, baseURL: string, data: Re
 test.describe('Salariés', () => {
   test('ajouter un salarié avec son compte, puis il active son accès', async ({ adminPage, browser, uid }) => {
     const prenom = `Léa${uid.slice(-4)}`
-    await adminPage.goto('/')
+    await adminPage.goto('/tableau-de-bord')
     await adminPage.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Salariés' }).click()
     await adminPage.getByRole('link', { name: 'Ajouter un salarié' }).click()
     await expect(adminPage).toHaveURL('/salaries/nouveau')
@@ -46,11 +46,11 @@ test.describe('Salariés', () => {
     await lea.locator('#pw-next').fill(NEW_PASSWORD)
     await lea.locator('#pw-confirm').fill(NEW_PASSWORD)
     await lea.getByRole('button', { name: 'Changer le mot de passe' }).click()
-    await expect(lea).toHaveURL('/')
+    await expect(lea).toHaveURL('/tableau-de-bord')
     await expect(lea.getByRole('heading', { name: `Bonjour ${prenom}` })).toBeVisible()
     await expect(lea.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication'])
     await lea.goto('/salaries')
-    await expect(lea).toHaveURL('/')
+    await expect(lea).toHaveURL('/tableau-de-bord')
     await lea.context().close()
 
     // Côté admin, la fiche montre maintenant un compte actif et l'activité de la personne

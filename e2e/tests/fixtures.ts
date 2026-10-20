@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { crc32, deflateSync } from 'node:zlib'
 import { test as base, expect, type APIRequestContext, type Page } from '@playwright/test'
 
 export { expect }
@@ -40,3 +41,22 @@ export const test = base.extend<{ uid: string; adminPage: Page }>({
     await use(page)
   },
 })
+
+/** Image PNG unie de la taille voulue, fabriquée à la main (pour tester les envois de photos). */
+export function makePng(width: number, height: number, grey = 0x7b) {
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4)
+    len.writeUInt32BE(data.length)
+    const body = Buffer.concat([Buffer.from(type), data])
+    const crc = Buffer.alloc(4)
+    crc.writeUInt32BE(crc32(body))
+    return Buffer.concat([len, body, crc])
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(width, 0)
+  ihdr.writeUInt32BE(height, 4)
+  ihdr.set([8, 2, 0, 0, 0], 8)
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 3, grey)])
+  const raw = Buffer.concat(Array.from({ length: height }, () => row))
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
+}

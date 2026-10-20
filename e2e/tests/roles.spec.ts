@@ -9,13 +9,13 @@ test.describe('Rôles', () => {
     const change = await rh.request.post('/api/auth/password', { data: { current: temp, next: NEW_PASSWORD }, headers: { Origin: baseURL! } })
     expect(change.status()).toBe(200)
 
-    await rh.goto('/')
+    await rh.goto('/tableau-de-bord')
     const nav = rh.getByRole('navigation', { name: 'Navigation principale' })
     await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Clients', 'Salariés', 'Journal d’activité'])
 
     // Pas d'accès aux comptes, même en tapant l'adresse
     await rh.goto('/utilisateurs')
-    await expect(rh).toHaveURL('/')
+    await expect(rh).toHaveURL('/tableau-de-bord')
 
     // Ajout d'un salarié : la partie « compte de connexion » n'apparaît pas
     await rh.goto('/salaries/nouveau')

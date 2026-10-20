@@ -3,7 +3,7 @@ import { apiLogin, createUser, expect, NEW_PASSWORD, test } from './fixtures'
 test.describe('Clients', () => {
   test('la direction ajoute un professionnel, ses chantiers, modifie sa fiche puis l’archive', async ({ adminPage, uid }) => {
     const raison = `Toitures ${uid}`
-    await adminPage.goto('/')
+    await adminPage.goto('/tableau-de-bord')
     await adminPage.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Clients' }).click()
     await expect(adminPage.getByRole('heading', { level: 1, name: 'Clients' })).toBeVisible()
     await adminPage.getByRole('link', { name: 'Ajouter un client' }).click()
@@ -111,9 +111,9 @@ test.describe('Clients', () => {
         await expect(page.getByRole('button', { name: 'Modifier la fiche' })).toHaveCount(0)
         await expect(page.getByRole('button', { name: 'Archiver le client' })).toHaveCount(0)
         await page.goto('/clients/nouveau')
-        await expect(page).toHaveURL('/')
+        await expect(page).toHaveURL('/tableau-de-bord')
       } else {
-        await expect(page).toHaveURL('/')
+        await expect(page).toHaveURL('/tableau-de-bord')
         await expect(page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Clients' })).toHaveCount(0)
       }
       await page.context().close()

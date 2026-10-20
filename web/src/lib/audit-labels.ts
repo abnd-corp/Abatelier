@@ -30,6 +30,8 @@ const ORDER_STEPS: Record<string, string> = { recue: 'Reçue', validee: 'Validé
 const MODES: Record<string, string> = { virement: 'virement', cheque: 'chèque', carte: 'carte bancaire', especes: 'espèces' }
 const day = (v: unknown) => (typeof v === 'string' ? new Date(`${v}T00:00:00Z`).toLocaleDateString('fr-FR', { timeZone: 'UTC' }) : String(v))
 
+const PLACES: Record<string, string> = { accueil: 'accueil', realisation: 'réalisations', couvertine: 'couvertine', bavette: 'bavette', bandeau: 'bandeau' }
+
 const QTY: Record<string, string> = { aucune: 'aucune', fixe: 'nombre fixe', par_piece: 'une par pièce', jonctions: 'une par jonction' }
 
 // Libellés et unités des champs du catalogue, pour décrire un changement de prix lisiblement
@@ -227,6 +229,26 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A enregistré le paiement de la facture ${d.numero} (${eur(d.ttc)}, ${MODES[d.mode] ?? d.mode}, le ${day(d.date)})`, tone: 'accent' }
     case 'billing.payment_cancelled':
       return { text: `A annulé le paiement enregistré sur la facture ${d.numero}`, tone: 'bad' }
+    case 'site.content_updated':
+      return { text: `A modifié les textes du site (${(d.champs ?? []).join(', ')})`, tone: 'accent' }
+    case 'site.content_reset':
+      return { text: `A rétabli le texte d’origine du site : ${d.champ}`, tone: 'neutral' }
+    case 'site.photo_added':
+      return { text: `A ajouté une photo au site (${PLACES[d.emplacement as string] ?? d.emplacement}, ${d.largeur} × ${d.hauteur} px)`, tone: 'accent' }
+    case 'site.photo_updated':
+      return { text: `A modifié une photo du site (${(d.champs ?? []).join(', ')})`, tone: 'neutral' }
+    case 'site.photo_deleted':
+      return { text: `A supprimé une photo du site (${PLACES[d.emplacement as string] ?? d.emplacement})`, tone: 'bad' }
+    case 'contact.received':
+      return { text: `Demande de contact reçue par le site : « ${d.objet} »${d.fichier ? ' (plan joint)' : ''}`, tone: 'accent' }
+    case 'contact.file_downloaded':
+      return { text: `A téléchargé le plan joint à la demande « ${d.objet} »`, tone: 'neutral' }
+    case 'contact.handled':
+      return { text: `A marqué la demande « ${d.objet} » comme traitée`, tone: 'neutral' }
+    case 'contact.reopened':
+      return { text: `A remis la demande « ${d.objet} » à traiter`, tone: 'neutral' }
+    case 'contact.deleted':
+      return { text: `A supprimé la demande de contact « ${d.objet} »`, tone: 'bad' }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

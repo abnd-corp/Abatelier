@@ -41,7 +41,7 @@ test.describe('Sécurité dans le navigateur', () => {
 
   test('le cookie de session est invisible pour JavaScript', async ({ page, context }) => {
     await uiLogin(page, ADMIN.identifiant, ADMIN.password)
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/tableau-de-bord')
     const cookie = (await context.cookies()).find((c) => c.name.endsWith('aps_session'))!
     expect(cookie.httpOnly).toBe(true)
     expect(cookie.sameSite).toBe('Lax')

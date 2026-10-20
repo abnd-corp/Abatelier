@@ -14,6 +14,8 @@ import { clientRoutes } from './routes/clients.js'
 import { orderRoutes } from './routes/orders.js'
 import { productionRoutes } from './routes/production.js'
 import { billingRoutes } from './routes/billing.js'
+import { publicRoutes } from './routes/public.js'
+import { siteRoutes } from './routes/site.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -72,7 +74,8 @@ export async function buildApp() {
 
   // Les réponses de l'API contiennent des données privées : jamais en cache
   app.addHook('onSend', async (_req, reply) => {
-    reply.header('Cache-Control', 'no-store')
+    // Sauf les routes publiques (photos, textes du site) qui fixent elles-mêmes leur durée de cache
+    if (!reply.hasHeader('cache-control')) reply.header('Cache-Control', 'no-store')
   })
 
   await app.register(authPlugin)
@@ -89,6 +92,8 @@ export async function buildApp() {
   await app.register(orderRoutes, { prefix: '/api/orders' })
   await app.register(productionRoutes, { prefix: '/api/production' })
   await app.register(billingRoutes, { prefix: '/api/billing' })
+  await app.register(publicRoutes, { prefix: '/api/public' })
+  await app.register(siteRoutes, { prefix: '/api/site' })
 
   return app
 }

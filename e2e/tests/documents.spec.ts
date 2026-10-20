@@ -22,7 +22,7 @@ function noisyPng(width: number, height: number) {
 
 test.describe('Modèles de documents', () => {
   test('la direction complète l’identité, voit l’aperçu se mettre à jour et règle le modèle', async ({ adminPage, uid }) => {
-    await adminPage.goto('/')
+    await adminPage.goto('/tableau-de-bord')
     await adminPage.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Modèles de documents' }).click()
     await expect(adminPage.getByRole('heading', { level: 1 })).toHaveText('Modèles de documents')
 
@@ -112,7 +112,7 @@ test.describe('Modèles de documents', () => {
       await apiLogin(page.request, baseURL!, id, temp)
       await page.request.post('/api/auth/password', { data: { current: temp, next: NEW_PASSWORD }, headers: { Origin: baseURL! } })
       await page.goto('/modeles-documents')
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/tableau-de-bord')
       await expect(page.getByRole('link', { name: 'Modèles de documents' })).toHaveCount(0)
       expect((await page.request.get('/api/documents/settings')).status()).toBe(403)
       await page.context().close()

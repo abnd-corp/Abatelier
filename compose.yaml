@@ -40,12 +40,15 @@ services:
       DB_HOST: db
       DB_PASSWORD_FILE: /run/secrets/db_password
       ADMIN_PASSWORD_FILE: /run/secrets/admin_password
+      # Avis Google du site : sans clé, il affiche seulement un lien (clé dans secrets/google_places_api_key.txt)
+      GOOGLE_PLACE_ID: ${GOOGLE_PLACE_ID:-}
+      GOOGLE_PLACES_API_KEY_FILE: /run/secrets/google_places_api_key
       ADMIN_IDENTIFIANT: ${ADMIN_IDENTIFIANT:-admin}
       ADMIN_NOM: ${ADMIN_NOM:-Administrateur}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
       IDLE_TIMEOUT_HOURS: ${IDLE_TIMEOUT_HOURS:-12}
-    secrets: [db_password, admin_password]
+    secrets: [db_password, admin_password, google_places_api_key]
     tmpfs: [/tmp]
     networks: [backend, frontend]
     healthcheck:
@@ -93,6 +96,8 @@ secrets:
     file: ./secrets/db_password.txt
   admin_password:
     file: ./secrets/admin_password.txt
+  google_places_api_key:
+    file: ./secrets/google_places_api_key.txt
 
 networks:
   # La base n'est joignable que par l'API, et n'a pas accès à Internet

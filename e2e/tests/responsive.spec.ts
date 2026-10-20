@@ -4,7 +4,7 @@ import { ADMIN, expect, test, uiLogin } from './fixtures'
 // Tourne sur ordinateur (Chromium, Firefox), téléphone et tablette : voir playwright.config.ts
 
 const PAGES = [
-  { path: '/', heading: /^Bonjour/ },
+  { path: '/tableau-de-bord', heading: /^Bonjour/ },
   { path: '/salaries', heading: 'Salariés' },
   { path: '/salaries/nouveau', heading: 'Nouveau salarié' },
   { path: '/utilisateurs', heading: 'Comptes' },
@@ -24,6 +24,7 @@ const PAGES = [
   { path: '/fabrication', heading: 'Fabrication' },
   { path: '/factures', heading: 'Devis et factures' },
   { path: '/factures?type=devis', heading: 'Devis et factures' },
+  { path: '/site-vitrine', heading: 'Site vitrine' },
   { path: '/clients/nouveau', heading: 'Nouveau client' },
   { path: '/mon-compte', heading: 'Mon compte' },
 ]
@@ -105,7 +106,7 @@ test.describe('Responsive @responsive', () => {
   })
 
   test('le menu est accessible sur tous les écrans', async ({ adminPage }) => {
-    await adminPage.goto('/')
+    await adminPage.goto('/tableau-de-bord')
     // isDrawer() ne patiente pas : on attend que la page soit affichée avant de choisir le cas tiroir ou menu fixe
     await expect(adminPage.getByRole('heading', { level: 1 })).toBeVisible()
     const nav = adminPage.getByRole('navigation', { name: 'Navigation principale' })

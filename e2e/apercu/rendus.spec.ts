@@ -6,7 +6,7 @@ const OUT = new URL('../../apercus/', import.meta.url).pathname
 
 const PAGES = [
   { name: '1-connexion', path: '/connexion', anonymous: true },
-  { name: '2-tableau-de-bord', path: '/' },
+  { name: '2-tableau-de-bord', path: '/tableau-de-bord' },
   { name: '3-salaries', path: '/salaries' },
   { name: '4-fiche-salarie', path: 'FICHE' },
   { name: '5-nouveau-salarie', path: '/salaries/nouveau' },
@@ -37,6 +37,13 @@ const PAGES = [
   { name: '27-devis', path: '/factures?type=devis' },
   { name: '28-fiche-facture', path: 'FICHE_FACTURE' },
   { name: '29-fiche-avoir', path: 'FICHE_AVOIR' },
+  { name: '30-site-accueil', path: '/', anonymous: true },
+  { name: '31-site-pliage', path: '/pliage-aluminium', anonymous: true },
+  { name: '32-site-contact', path: '/contact', anonymous: true },
+  { name: '33-site-mentions-legales', path: '/mentions-legales', anonymous: true },
+  { name: '34-admin-site-demandes', path: '/site-vitrine' },
+  { name: '35-admin-site-textes', path: '/site-vitrine?onglet=textes' },
+  { name: '36-admin-site-photos', path: '/site-vitrine?onglet=photos' },
 ]
 
 test('captures', async ({ page, baseURL }, info) => {

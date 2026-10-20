@@ -1,5 +1,5 @@
 import { request, type FullConfig } from '@playwright/test'
-import { ADMIN } from '../tests/fixtures'
+import { ADMIN, makePng } from '../tests/fixtures'
 
 // Données fictives ajoutées une seule fois, avant toutes les captures
 const DEMO = [
@@ -84,6 +84,14 @@ export default async function seed(config: FullConfig) {
   const f3 = await emit(o3, 'facture')
   if (f3) await api.post(`/api/billing/${f3}/avoir`, { data: { motif: 'Erreur sur le coloris du bandeau' } })
   await emit(o3, 'facture')
+  // Site vitrine : quelques photos (unies, de teintes différentes) et deux demandes de contact
+  const photos: [string, string, number][] = [['accueil', 'Atelier de pliage', 0x9a], ['realisation', 'Couvertine blanche', 0xc8], ['realisation', 'Bandeau gris anthracite', 0x58], ['realisation', 'Bavette d’appui', 0xb0], ['couvertine', 'Couvertine aluminium', 0xa0], ['bandeau', 'Bandeau en L', 0x70]]
+  for (const [place, alt, grey] of photos) {
+    await api.post(`/api/site/photos?emplacement=${place}&alt=${encodeURIComponent(alt)}`, { data: makePng(1200, 800, grey), headers: { 'Content-Type': 'image/png' } })
+  }
+  const contact = { consentement: true, objet: '12 couvertines blanches de 3 m', message: 'Bonjour, je voudrais un devis pour 12 couvertines blanches de 3 mètres, livrées à Firminy.', nom: 'Jean Dupont', email: 'jean.dupont@exemple.fr', telephone: '06 11 22 33 44', codePostal: '42700', ville: 'Firminy' }
+  await api.post('/api/public/contact', { data: { ...contact, fichier: { nom: 'plan-couvertine.pdf', contenu: Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n').toString('base64') } } })
+  await api.post('/api/public/contact', { data: { ...contact, nom: 'Martine Bernard', email: 'martine@exemple.fr', objet: 'Bavettes sur mesure', message: 'Pouvez-vous me rappeler ?' } })
   // Un échec de connexion, pour que le journal et le tableau de bord ne soient pas vides
   await api.post('/api/auth/login', { data: { identifiant: 'inconnu', password: 'faux' } })
   await api.dispose()

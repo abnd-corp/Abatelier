@@ -20,7 +20,7 @@ test.describe('Mon compte', () => {
     await pc.getByRole('button', { name: 'Déconnecter les autres' }).click()
     await expect(sessions).toHaveCount(1)
 
-    await phone.goto('/')
+    await phone.goto('/tableau-de-bord')
     await expect(phone).toHaveURL(/\/connexion/)
     await pc.context().close()
     await phone.context().close()

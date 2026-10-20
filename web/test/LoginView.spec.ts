@@ -90,7 +90,7 @@ describe('Page de connexion', () => {
     await fill(wrapper)
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(router.currentRoute.value.fullPath).toBe('/')
+    expect(router.currentRoute.value.fullPath).toBe('/tableau-de-bord')
   })
 
   it('envoie vers « Mon compte » si le mot de passe est temporaire', async () => {

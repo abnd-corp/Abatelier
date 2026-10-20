@@ -37,6 +37,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
     items: [
       { to: { name: 'catalog' }, name: 'catalog', label: 'Tarifs et catalogue', icon: 'tag', perm: 'catalog.manage' },
       { to: { name: 'documents' }, name: 'documents', label: 'Modèles de documents', icon: 'file', perm: 'documents.manage' },
+      { to: { name: 'site-admin' }, name: 'site-admin', label: 'Site vitrine', icon: 'globe', perm: 'site.manage' },
     ],
   },
   {
@@ -149,6 +150,10 @@ async function logout() {
             <b>{{ auth.user?.nom }}</b>
             <small class="muted">Mon compte</small>
           </span>
+        </RouterLink>
+        <RouterLink :to="{ name: 'site-home' }" class="item" :title="collapsed ? 'Voir le site' : undefined" target="_blank" rel="noopener">
+          <AppIcon name="globe" :size="19" />
+          <span class="label">Voir le site</span>
         </RouterLink>
         <button class="item" type="button" aria-label="Se déconnecter" :title="collapsed ? 'Se déconnecter' : undefined" @click="logout">
           <AppIcon name="logout" :size="19" />

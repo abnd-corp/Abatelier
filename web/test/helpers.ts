@@ -40,8 +40,14 @@ export function makeRouter() {
   return createRouter({
     history: createMemoryHistory(),
     routes: [
+      { path: '/', name: 'site-home', component: page('site-home'), meta: { public: true } },
+      ...(['pliage-aluminium:site-pliage', 'contact:site-contact', 'mentions-legales:site-mentions', 'politique-de-confidentialite:site-confidentialite', 'cookies:site-cookies', 'conditions-generales-de-vente:site-cgv'] as const).map((s) => {
+        const [path, name] = s.split(':') as [string, string]
+        return { path: `/${path}`, name, component: page(name), meta: { public: true } }
+      }),
+      { path: '/site-vitrine', name: 'site-admin', component: page('site-admin'), meta: { section: 'Direction', title: 'Site vitrine' } },
       { path: '/connexion', name: 'login', component: page('login'), meta: { public: true } },
-      { path: '/', name: 'dashboard', component: page('dashboard') },
+      { path: '/tableau-de-bord', name: 'dashboard', component: page('dashboard') },
       { path: '/mon-compte', name: 'account', component: page('account') },
       { path: '/utilisateurs', name: 'users', component: page('users'), meta: { section: 'Équipe', title: 'Comptes' } },
       { path: '/journal', name: 'audit', component: page('audit') },
@@ -91,7 +97,7 @@ export const ADMIN: User = {
   nom: 'Le Chef',
   role: 'direction',
   mustChangePassword: false,
-  permissions: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage', 'documents.manage', 'clients.manage', 'clients.read', 'orders.manage', 'orders.production', 'billing.manage'],
+  permissions: ['users.manage', 'employees.manage', 'audit.read', 'catalog.manage', 'documents.manage', 'clients.manage', 'clients.read', 'orders.manage', 'orders.production', 'billing.manage', 'site.manage'],
 }
 
 export const ATELIER: User = {

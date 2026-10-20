@@ -37,15 +37,20 @@ const schema = z.object({
   LOGIN_RATE_LIMIT: z.coerce.number().int().positive().default(10),
   // Délai après le premier échec, doublé à chaque échec (abaissé pour les tests)
   LOGIN_DELAY_BASE_MS: z.coerce.number().int().min(0).default(1000),
+  // Envois du formulaire de contact du site, par heure et par IP (relevé pour les tests de bout en bout)
+  CONTACT_RATE_LIMIT: z.coerce.number().int().positive().default(20),
   // À mettre à true dès que le site est servi en HTTPS
   COOKIE_SECURE: bool,
   // Premier compte, créé au démarrage si la table des utilisateurs est vide
   ADMIN_IDENTIFIANT: z.string().min(3).optional(),
   ADMIN_PASSWORD: z.string().min(12).optional(),
   ADMIN_NOM: z.string().default('Administrateur'),
+  // Avis Google affichés sur le site : identifiant de la fiche et clé de l'API Places (sans clé, le site affiche seulement un lien)
+  GOOGLE_PLACE_ID: z.string().trim().optional(),
+  GOOGLE_PLACES_API_KEY: z.string().trim().optional(),
 })
 
-const parsed = schema.safeParse({ ...process.env, DB_PASSWORD: secret('DB_PASSWORD'), ADMIN_PASSWORD: secret('ADMIN_PASSWORD') })
+const parsed = schema.safeParse({ ...process.env, DB_PASSWORD: secret('DB_PASSWORD'), ADMIN_PASSWORD: secret('ADMIN_PASSWORD'), GOOGLE_PLACES_API_KEY: secret('GOOGLE_PLACES_API_KEY') })
 if (!parsed.success) {
   console.error('Configuration invalide :', z.prettifyError(parsed.error))
   process.exit(1)

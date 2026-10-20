@@ -20,5 +20,13 @@ for name in db_password admin_password; do
   fi
 done
 
+# Clé de l'API Google (avis du site) : fichier vide tant qu'on n'en a pas, à remplir à la main
+file="$dir/google_places_api_key.txt"
+if [ ! -e "$file" ]; then
+  : >"$file"
+  chmod 644 "$file"
+  echo "• google_places_api_key : fichier vide créé (à remplir quand la clé sera disponible)"
+fi
+
 echo
 echo "Mot de passe du premier compte admin : secrets/admin_password.txt"

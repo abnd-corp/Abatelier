@@ -55,7 +55,7 @@ test.describe('Commandes', () => {
     const atelier = await (await browser.newContext()).newPage()
     await apiLogin(atelier.request, baseURL!, identifiant, temp)
     await atelier.request.post('/api/auth/password', { data: { current: temp, next: NEW_PASSWORD }, headers: { Origin: baseURL! } })
-    await atelier.goto('/')
+    await atelier.goto('/tableau-de-bord')
     const nav = atelier.getByRole('navigation', { name: 'Navigation principale' })
     await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication'])
     await nav.getByRole('link', { name: 'Fabrication' }).click()
@@ -79,7 +79,7 @@ test.describe('Commandes', () => {
     // Pas d'accès aux commandes ni aux clients, même en tapant l'adresse
     for (const path of ['/commandes', `/clients/${clientId}`]) {
       await atelier.goto(path)
-      await expect(atelier).toHaveURL('/')
+      await expect(atelier).toHaveURL('/tableau-de-bord')
     }
     await atelier.context().close()
 

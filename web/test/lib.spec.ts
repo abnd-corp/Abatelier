@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { checkPassword } from '@/lib/password'
-import { safeRedirect } from '@/lib/redirect'
+import { HOME, safeRedirect } from '@/lib/redirect'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 
 describe('checkPassword', () => {
@@ -34,12 +34,12 @@ describe('safeRedirect', () => {
   it.each([
     ['/utilisateurs', '/utilisateurs'],
     ['/journal?user=1', '/journal?user=1'],
-    ['//site-pirate.example', '/'],
-    ['/\\site-pirate.example', '/'],
-    ['https://site-pirate.example', '/'],
-    ['javascript:alert(1)', '/'],
-    [undefined, '/'],
-    [['/a', '/b'], '/'],
+    ['//site-pirate.example', HOME],
+    ['/\\site-pirate.example', HOME],
+    ['https://site-pirate.example', HOME],
+    ['javascript:alert(1)', HOME],
+    [undefined, HOME],
+    [['/a', '/b'], HOME],
   ])('%s → %s', (input, expected) => {
     expect(safeRedirect(input)).toBe(expected)
   })

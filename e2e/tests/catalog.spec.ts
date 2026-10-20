@@ -3,7 +3,7 @@ import { apiLogin, createUser, expect, NEW_PASSWORD, test } from './fixtures'
 test.describe('Tarifs et catalogue', () => {
   test('la direction ajoute, modifie et désactive une matière, et l’historique des prix est au journal', async ({ adminPage, uid }) => {
     const nom = `Essai ${uid.slice(-6)}`
-    await adminPage.goto('/')
+    await adminPage.goto('/tableau-de-bord')
     await adminPage.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Tarifs et catalogue' }).click()
     await expect(adminPage.getByRole('heading', { level: 1 })).toHaveText('Tarifs et catalogue')
     // Le catalogue de départ est là
@@ -211,7 +211,7 @@ test.describe('Tarifs et catalogue', () => {
       await apiLogin(page.request, baseURL!, id, temp)
       await page.request.post('/api/auth/password', { data: { current: temp, next: NEW_PASSWORD }, headers: { Origin: baseURL! } })
       await page.goto('/catalogue')
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/tableau-de-bord')
       await expect(page.getByRole('link', { name: 'Tarifs et catalogue' })).toHaveCount(0)
       expect((await page.request.get('/api/catalog/materials')).status()).toBe(403)
       expect((await page.request.get('/api/catalog/accessories')).status()).toBe(403)

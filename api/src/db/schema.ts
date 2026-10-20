@@ -553,6 +553,62 @@ export const billingDocuments = pgTable(
 
 export type User = typeof users.$inferSelect
 export type Employee = typeof employees.$inferSelect
+// --- Site vitrine ---
+
+// Textes du site modifiables par la direction : une ligne par champ (clé définie dans site.ts)
+export const siteContent = pgTable('site_content', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+})
+
+// Où une photo s'affiche : bandeau d'accueil, galerie de réalisations ou page d'un produit
+export const PHOTO_PLACES = ['accueil', 'realisation', 'couvertine', 'bavette', 'bandeau'] as const
+export type PhotoPlace = (typeof PHOTO_PLACES)[number]
+
+export const sitePhotos = pgTable(
+  'site_photos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    emplacement: text('emplacement', { enum: PHOTO_PLACES }).notNull(),
+    // Description pour les malvoyants et le référencement
+    alt: text('alt').notNull().default(''),
+    type: text('type', { enum: ['image/png', 'image/jpeg'] }).notNull(),
+    largeur: integer('largeur').notNull(),
+    hauteur: integer('hauteur').notNull(),
+    data: bytea('data').notNull(),
+    position: integer('position').notNull().default(0),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('site_photos_place_idx').on(t.emplacement, t.position)],
+)
+
+// Demandes reçues par le formulaire de contact du site
+export const contactRequests = pgTable(
+  'contact_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    nom: text('nom').notNull(),
+    email: text('email').notNull(),
+    telephone: text('telephone'),
+    adresse: text('adresse'),
+    codePostal: text('code_postal'),
+    ville: text('ville'),
+    objet: text('objet').notNull(),
+    message: text('message').notNull(),
+    // Plan joint (PDF, photo ou croquis)
+    fichierNom: text('fichier_nom'),
+    fichierType: text('fichier_type'),
+    fichier: bytea('fichier'),
+    traiteAt: ts('traite_at'),
+    traitePar: uuid('traite_par').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => [index('contact_requests_created_idx').on(t.createdAt)],
+)
+
+export type SitePhoto = typeof sitePhotos.$inferSelect
+export type ContactRequest = typeof contactRequests.$inferSelect
 export type Material = typeof materials.$inferSelect
 export type Color = typeof colors.$inferSelect
 export type PricingSettings = typeof pricingSettings.$inferSelect

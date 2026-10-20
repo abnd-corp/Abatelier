@@ -41,6 +41,13 @@ const PATHS = {
   // Profil de couvertine vu en coupe
   profile: 'M3 18v-6l3-3h12l3 3v6',
   printer: 'M7 9V3h10v6 M7 17H4v-8h16v8h-3 M7 13h10v8H7z',
+  globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M3 12h18 M12 3c2.5 2.5 3.8 5.5 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3Z',
+  star: 'M12 3l2.7 5.8 6.3.8-4.6 4.4 1.2 6.3L12 17.2 6.4 20.3l1.2-6.3L3 9.6l6.3-.8L12 3Z',
+  image: 'M3 5h18v14H3z M3 16l5-5 4 4 3-3 6 6 M8.5 9.5h.01',
+  inbox: 'M3 13h5l1 3h6l1-3h5 M3 13l3-8h12l3 8v6H3v-6Z',
+  'arrow-up': 'M12 19V5 M6 11l6-6 6 6',
+  'arrow-down': 'M12 5v14 M6 13l6 6 6-6',
+  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 2',
   // Ticket de caisse : devis et factures
   receipt: 'M6 3h12v18l-3-2-3 2-3-2-3 2V3Z M9 8h6 M9 12h6 M9 16h3',
 } as const

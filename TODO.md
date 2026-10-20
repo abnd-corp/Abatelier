@@ -21,7 +21,8 @@
 - [ ] Contrôles de collision avec la plieuse (profondeur d'un U ou d'un caisson, aile mini entre deux plis rapprochés) : après les réponses de l'atelier
 - [ ] Jours fériés et fermetures de l'atelier (le délai ne saute aujourd'hui que les week-ends)
 - [ ] Prix du pli par matière ou par épaisseur (aujourd'hui un seul prix)
-- [ ] Données de démonstration chargeables pour une présentation (« make demo »)
+- [x] Données de démonstration (`make demo`, base de dev vide uniquement) : 10 clients inventés, 16 commandes à toutes les étapes sur 2 mois, devis, factures payées / envoyées / en retard, un avoir, équipe et 3 comptes `demo-direction`, `demo-rh`, `demo-atelier`
+- [ ] Démo : compléter quand de nouvelles pages arrivent (stock, achats, avis Google, vitrine) ; test automatique du script ; informations légales de l'entreprise (SIRET, IBAN) non remplies, pour que les PDF de démo soient complets
 - [x] Limites de pliage : angle minimum / maximum, pince activable (saisie 0°, enregistrée ±1° pour garder le sens), refus d'un profil qui se referme sur lui-même
 - [ ] **Questions pour l'atelier sur le pliage** : angle le plus fermé et le plus ouvert que fait la plieuse ; pinces faites ou non ; plus petite aile entre deux plis rapprochés ; profondeur maximale d'un U ou d'un caisson (collision avec la machine) ; longueur et plis maximum selon l'épaisseur
 - [x] Livraison (retrait atelier activable, zones par distance avec livraison offerte dès un montant, supplément pièces longues, distance par la route via l'IGN, simulateur d'adresse)
@@ -80,10 +81,29 @@ Le pliage commence par de la découpe : chaque pièce est une bande de « dével
 - [ ] Tableau de bord chiffré : chiffre d'affaires du mois et de l'année, marge estimée, prévisionnel
 
 ### Site vitrine (à la fin, remplace le WordPress actuel)
-- [ ] Pages publiques : accueil, produits (couvertines, bavettes, bandeaux), réalisations, contact
-- [ ] Éditeur de textes et de **photos** pour la direction (envoi d'images, redimensionnement, légendes)
-- [ ] Référencement : titres, descriptions, plan du site, données structurées « entreprise locale »
+- [x] Pages publiques : accueil (accroche, produits, étapes, réalisations, avis, pourquoi nous), Pliage aluminium, Contact avec envoi de plan, 4 pages légales, 404 ; aucun cookie ni script tiers (donc pas de bandeau)
+- [x] Espace Direction « Site vitrine » (`site.manage`) : demandes reçues (plan en téléchargement, traitée / à traiter, suppression RGPD), textes modifiables avec rétablissement, photos (réduites dans le navigateur, emplacement, description, ordre)
+- [x] Référencement : titre et description par page, robots.txt et plan du site générés avec l'adresse réelle, données « entreprise locale », atelier hors de l'index
+- [x] Avis Google par l'API Places côté serveur (cache 6 h, repli sur un lien sans clé, jamais d'avis inventé)
+- [ ] Brancher la clé API Google (`secrets/google_places_api_key.txt`) et **vérifier le Place ID** `GOOGLE_PLACE_ID` dans `.env` (déduit du lien Maps, jamais testé)
+- [ ] Pages légales : remplir les « À COMPLÉTER » (hébergeur, médiateur de la consommation) et faire relire les CGV, la confidentialité et les mentions par leur comptable ; renseigner SIRET, téléphone et e-mail dans « Modèles de documents » (ils alimentent le site)
+- [ ] Importer les vraies photos du site actuel (`entreprise/sources/images/`) par l'onglet Photos
+- [ ] Demande de contact : bouton « Créer la fiche client », e-mail d'alerte à la direction (avec l'envoi d'e-mails), suppression automatique après 12 mois (annoncée dans la politique de confidentialité), pastille « à traiter » dans le tableau de bord
+- [ ] Boutique en ligne (fiches produit par modèle et coloris, panier) : remplacée par le configurateur, voir section 3
+- [ ] Fiche de pliage PDF téléchargeable de l'ancien site (à récupérer ou à remplacer par le configurateur)
+- [ ] Horaires d'ouverture dans les données structurées Google, plan intégré sans traceur
 - [ ] Récupérer les photos et les textes du site actuel (déjà copiés dans `entreprise/sources/`)
+
+**Inventaire du site actuel (WordPress + WooCommerce, fait par Visicod) : on ne veut rien faire de moins bien**
+- [ ] **Avis Google** : 10 avis affichés sur l'accueil (widget Trustindex « vérifié Google »). Choix : **récupération automatique par l'API Google Places** (clé dans `secrets/`, jamais dans le dépôt). Place ID de la fiche APS : `ChIJNa69EsWx9UcR_WhhkMI3aeQ` (déduit du lien Google Maps fourni, identifiant interne `0x47f5b1c512bdae35:0xe46937c2906168fd` ; **à vérifier** avec un premier appel dès que la clé sera là). Clé API : la direction la fournira plus tard, le code doit fonctionner sans (repli). À prévoir : une clé API restreinte (Places API New, champs `rating`, `userRatingCount`, `reviews`), appel côté serveur uniquement, cache court en base ou en mémoire (Google n'autorise pas de conserver les avis longtemps), note moyenne + nombre d'avis, attribution Google et lien « voir tous les avis », repli propre si l'API est indisponible. Limite : Google ne renvoie que 5 avis, pas les 10 actuels. Pas de cookie ni de script tiers côté visiteur.
+- [ ] Accueil : accroche « Pliage d'aluminium / acier sur mesure », 3 catégories (couvertine, bavette d'appui, bandeau), réalisations en photos, produits les plus vendus, « Comment on fonctionne » en 4 étapes (plan, faisabilité, devis, production / retrait ou livraison), « Pourquoi choisir APS » (texte actuel à remplacer : c'est du lorem ipsum)
+- [ ] Page « Pliage aluminium » : présentation par produit (couvertine jusqu'à 4 m, bavette avec ou sans rejingot, bandeau en L / U / retour, encadrement), types de pliage (Z, L, U, oméga, angles), conseils pour bien choisir
+- [ ] Boutique avec fiches produit : une fiche par modèle et coloris, choix d'épaisseur / largeur / longueur, prix, accessoires associés, produits proches (les autres coloris). Le futur configurateur doit faire mieux : prix sur mesure en direct
+- [ ] Fiche de pliage PDF à télécharger (à remplacer à terme par le configurateur, mais à garder en attendant)
+- [ ] Contact : formulaire avec envoi de plan (PDF, photo), consentement RGPD, confirmation ; à améliorer : demande de devis reliée à la fiche client et à une commande
+- [ ] Coordonnées, horaires, carte cliquable vers Google Maps (mieux : plan intégré sans traceur), recherche dans le site
+- [ ] Pages légales : mentions légales, politique de confidentialité, gestion des cookies, CGV (à reprendre et à faire relire)
+- [ ] À corriger par rapport à l'existant : deux SIRET différents sur la page contact (503 622 433 00061 et 994 800 167 000 11), largeur couvertine 270/320 incohérente avec le texte, description du bandeau copiée de la couvertine, fautes dans les textes
 
 ## 2. Espace Atelier
 - [ ] Commandes à fabriquer, planning, fiche de fabrication

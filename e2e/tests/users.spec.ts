@@ -33,13 +33,13 @@ test.describe('Arrivée et départ d’un employé', () => {
     await employee.locator('#pw-next').fill(NEW_PASSWORD)
     await employee.locator('#pw-confirm').fill(NEW_PASSWORD)
     await employee.getByRole('button', { name: 'Changer le mot de passe' }).click()
-    await expect(employee).toHaveURL('/')
+    await expect(employee).toHaveURL('/tableau-de-bord')
 
     // 4. Rôle atelier : pas d'accès à la gestion des comptes ni au journal
     const nav = employee.getByRole('navigation', { name: 'Navigation principale' })
     await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication'])
     await employee.goto('/utilisateurs')
-    await expect(employee).toHaveURL('/')
+    await expect(employee).toHaveURL('/tableau-de-bord')
 
     // 5. Départ : l'admin désactive le compte
     await adminPage.reload()
