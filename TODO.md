@@ -127,3 +127,39 @@ Le pliage commence par de la découpe : chaque pièce est une bande de « dével
 - [ ] Sauvegardes hors de la machine : copier `make backup-export` sur un autre support
 - [ ] Déploiement sur le Raspberry Pi 5 « meliodas » : `make setup`, nom de domaine, `make prod`
 - [ ] Promotions `dev → staging → main` une fois les PR mergées
+
+## 5. Ce qui manque encore (audit du 20 octobre 2026)
+
+### Avant la mise en ligne
+- [ ] **Dépôt GitHub** : le dépôt local n'a plus de remote, donc ni PR ni CI ; voir la procédure en section 4. Les branches `feature/**` locales attendent
+- [ ] **Nom de domaine**, DNS, serveur (Raspberry Pi), HTTPS, et un vrai serveur de recette (`staging`) avant la production
+- [ ] **Envoi d'e-mails** (déjà noté) : choisir le service, une adresse sur leur domaine, SPF / DKIM / DMARC. Sert à : alerte à la direction à chaque demande de contact, devis, relances de factures, mot de passe oublié, espace client
+- [ ] **Sauvegardes hors de la machine** et test de restauration sur une autre machine ; pour le Pi : disque fiable (SSD plutôt que carte SD), onduleur
+- [ ] **Supervision** : alerte si le site tombe (sonde extérieure), si la sauvegarde échoue, si le disque se remplit ; journaux et erreurs de l'application consultables
+- [ ] **Export pour le comptable** : factures, avoirs et encaissements en CSV (idéalement au format FEC), par mois ou par année
+- [ ] **Facturation électronique** (voir section 1) : aujourd'hui les factures sont des PDF, **pas** des factures électroniques au sens de la réforme
+- [ ] Pages légales à compléter et à faire relire (voir « Site vitrine »)
+
+### Sécurité et conformité
+- [ ] Double authentification (TOTP) pour les comptes direction ; mot de passe oublié par e-mail
+- [ ] Plans joints par les visiteurs : analyse antivirus (ClamAV) avant de les ouvrir ; anti-spam renforcé (CAPTCHA respectueux de la vie privée) si le piège à robots ne suffit pas
+- [ ] RGPD : registre des traitements, purge automatique (demandes de contact 12 mois, clients inactifs), export et suppression des données d'un client
+- [ ] Rotation des secrets documentée (base, clé Google, e-mails)
+
+### Outillage de développement
+- [ ] Aucun linter ni formateur (ESLint, Prettier) : à ajouter à la CI
+- [ ] Tests d'accessibilité automatiques (axe-core dans Playwright) sur le site public et l'atelier
+- [ ] Mesure des performances du site (Lighthouse en CI) : poids de l'accueil, images, chargement sur mobile
+- [ ] Comparaison automatique des captures (`make apercu`) pour repérer les régressions visuelles
+- [ ] Test de montée en charge simple (formulaire de contact, configurateur) avant l'ouverture au public
+
+### Produit
+- [ ] Image d'aperçu pour les réseaux sociaux (Open Graph) et logo officiel en vectoriel
+- [ ] Choix du **paiement en ligne** (aucun pour l'instant : devis puis virement ou chèque) 
+- [ ] Atelier : mode tablette (gros boutons, lisible à distance), étiquettes ou QR code par pièce, notification quand une commande est validée
+- [ ] Planning de l'atelier (charge par jour, jours fériés, fermetures)
+
+### Rôles et accès
+- [x] La **direction a déjà tous les droits de la RH** (salariés, journal, clients) : un seul compte « gestion » suffit
+- [ ] Usage prévu pour l'instant : deux comptes, **direction** (gestion) et **atelier**. Le rôle **RH** reste dans le code (`api/src/auth/permissions.ts`) pour une V2 qui séparera les rôles et les responsabilités ; ne pas le supprimer
+- [ ] Décision à prendre : le masquer de la liste des rôles proposés à la création d'un compte
