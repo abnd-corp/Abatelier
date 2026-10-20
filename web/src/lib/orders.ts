@@ -164,6 +164,8 @@ export interface OrderDetail {
   client: { id: string; nom: string; type: 'particulier' | 'professionnel'; telephone: string | null; email: string | null }
   lignes: (PricedLine & { id: string; materialId: string | null; colorId: string | null })[]
   events: OrderEvent[]
+  // Ce qui empêcherait la facture d'être électronique conforme (l'émission reste possible)
+  facturx: { manque: string[] }
 }
 
 /** Quantité d'accessoire proposée pour une ligne de n pièces. */

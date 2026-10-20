@@ -134,6 +134,36 @@ test.describe('Devis et factures', () => {
     await expect(page.getByRole('cell', { name: new RegExp(`A envoyé par e-mail la facture ${facture.numero} à Léa ${nom}`) })).toBeVisible()
   })
 
+  test('la facture est électronique : avertissement avant de facturer, PDF/A-3 et XML Factur-X après', async ({ adminPage: page, baseURL, uid }) => {
+    const headers = { Origin: baseURL! }
+    const raison = `Elec${uid.slice(-6)}`
+    // Professionnel sans adresse e-mail : la règle française demande celle de l'acheteur
+    const client = await (await page.request.post('/api/clients', { data: { type: 'professionnel', raisonSociale: raison, siret: '732 829 320 00074', adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' }, headers })).json()
+    const cat = await (await page.request.get('/api/orders/catalog')).json()
+    const m = cat.models[0]
+    const ligne = { modelId: m.id, materialId: cat.materials[0].id, colorId: cat.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: 2000, quantite: 3, accessoires: [] }
+    const order = await (await page.request.post('/api/orders', { data: { clientId: client.id, lignes: [ligne], livraison: { mode: 'retrait' } }, headers })).json()
+    await page.request.post(`/api/orders/${order.id}/status`, { data: { statut: 'validee' }, headers })
+
+    await page.goto(`/commandes/${order.id}`)
+    const section = page.getByRole('region', { name: 'Devis et factures' })
+    await expect(section.getByText('l’adresse e-mail du client')).toBeVisible()
+    await section.getByRole('button', { name: 'Facturer' }).click()
+    await expect(page).toHaveURL(/\/factures\/[0-9a-f-]{36}$/)
+    const numero = (await page.getByRole('heading', { level: 1 }).innerText()).trim()
+
+    const pdf = await page.request.get((await page.getByRole('link', { name: 'Ouvrir le PDF' }).getAttribute('href'))!)
+    expect((await pdf.body()).subarray(0, 8).toString()).toContain('%PDF-1.7')
+    const href = await page.getByRole('link', { name: 'XML Factur-X' }).getAttribute('href')
+    const xml = await page.request.get(href!)
+    expect(xml.headers()['content-disposition']).toBe(`attachment; filename="${numero}.xml"`)
+    const text = await xml.text()
+    expect(text).toContain('urn:cen.eu:en16931:2017')
+    expect(text).toContain(`<ram:ID>${numero}</ram:ID>`)
+    expect(text).toContain(raison)
+    expect(text).toContain('<ram:ID schemeID="0002">732829320</ram:ID>')
+  })
+
   test('la direction exporte les ventes et les encaissements en CSV pour son comptable', async ({ adminPage: page, baseURL, uid }) => {
     const headers = { Origin: baseURL! }
     const nom = `Export${uid.slice(-6)}`

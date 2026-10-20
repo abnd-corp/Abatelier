@@ -150,3 +150,40 @@ export function makePng(width: number, height: number) {
   const raw = Buffer.concat(Array.from({ length: height }, () => row))
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
 }
+
+/**
+ * Texte d'un PDF dont les polices sont incorporées (factures et avoirs Factur-X) : pdfjs lit la table
+ * « glyphe → caractère » du fichier, ce que pdfText() ne sait pas faire.
+ */
+export async function pdfTextEmbedded(pdf: Buffer) {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(pdf), useSystemFonts: false, verbosity: 0 }).promise
+  let out = ''
+  for (let n = 1; n <= doc.numPages; n++) {
+    const content = await (await doc.getPage(n)).getTextContent()
+    out += content.items.map((i) => ('str' in i ? i.str + (i.hasEOL ? '\n' : '') : '')).join('\n') + '\n'
+  }
+  return out
+}
+
+/**
+ * Fichier XML Factur-X embarqué dans un PDF (nom → contenu). On parcourt les flux du PDF et on garde celui qui est un
+ * XML de facture : plus simple et plus fiable que les annuaires de pièces jointes de pdfjs.
+ */
+export async function pdfAttachments(pdf: Buffer): Promise<Record<string, string>> {
+  const raw = pdf.toString('latin1')
+  for (const m of raw.matchAll(/stream\r?\n/g)) {
+    const start = m.index! + m[0].length
+    const end = raw.indexOf('endstream', start)
+    for (const bytes of [pdf.subarray(start, end)]) {
+      let text: string
+      try {
+        text = inflateSync(bytes).toString('utf8')
+      } catch {
+        text = bytes.toString('utf8')
+      }
+      if (text.includes('<rsm:CrossIndustryInvoice')) return { 'factur-x.xml': text }
+    }
+  }
+  return {}
+}

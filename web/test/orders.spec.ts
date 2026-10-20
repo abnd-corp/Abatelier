@@ -102,6 +102,7 @@ const ORDER: OrderDetail = {
   client: { id: 'c1', nom: 'Jean Dupont', type: 'particulier', telephone: '06 12 34 56 78', email: null },
   lignes: [{ ...LINE, id: 'l1', materialId: 'm1', colorId: 'k1' }],
   events: [{ statut: 'recue', at: '2026-10-19T08:00:00Z', note: null, nom: 'Le Chef' }],
+  facturx: { manque: [] },
 }
 
 async function mountAt(component: object, path: string, routes: Parameters<typeof mockApi>[0], user: User = ADMIN) {
@@ -327,6 +328,17 @@ describe('Fiche commande', () => {
     await flushPromises()
     expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ statut: 'validee' })
     expect(norm(wrapper.text())).toContain('Commande passée à l’étape « Validée »')
+  })
+
+  it('prévient de ce qui manque avant de facturer, sans bloquer la facturation', async () => {
+    const validee = { ...ORDER, order: { ...ORDER.order, statut: 'validee' as const }, facturx: { manque: ['le SIRET', 'l’adresse e-mail du client'] } }
+    const { wrapper } = await mountAt(OrderView, '/commandes/o1', { 'GET /orders/o1': [200, validee], 'GET /billing?orderId=o1': [200, { documents: [] }] })
+    const warn = wrapper.get('.warn-box')
+    expect(warn.text()).toContain('le SIRET, l’adresse e-mail du client')
+    expect(button(wrapper, 'Facturer').attributes('disabled')).toBeUndefined()
+    // Rien à signaler : pas d'avertissement
+    const ok = await mountAt(OrderView, '/commandes/o1', { 'GET /orders/o1': [200, { ...validee, facturx: { manque: [] } }], 'GET /billing?orderId=o1': [200, { documents: [] }] })
+    expect(ok.wrapper.find('.warn-box').exists()).toBe(false)
   })
 
   it('demande la raison avant d’annuler', async () => {

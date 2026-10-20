@@ -12,6 +12,8 @@ import { colorLabel, isError, materialLabel, priceLine, priceOrder, type PricedL
 import { changeStatus, eventsOf, loadCatalog, NEXT, STATUT_LABELS } from '../orders.js'
 import { clientName } from './clients.js'
 import { activeInvoice } from '../billing.js'
+import { getCompany } from '../documents.js'
+import { facturxMissingFor } from '../facturx.js'
 
 const int = (min: number, max: number, label: string) =>
   z.preprocess(
@@ -249,16 +251,19 @@ export async function orderRoutes(app: FastifyInstance) {
   app.get('/:id', async (req, reply) => {
     const o = await findOrder((req.params as { id: string }).id, reply)
     if (!o) return
-    const [[client], lignes, events] = await Promise.all([
+    const [[client], lignes, events, company] = await Promise.all([
       db.select().from(clients).where(eq(clients.id, o.clientId)),
       db.select().from(orderLines).where(eq(orderLines.orderId, o.id)).orderBy(asc(orderLines.position)),
       eventsOf(o.id),
+      getCompany(),
     ])
     return {
       order: { ...o, statutLabel: STATUT_LABELS[o.statut], next: NEXT[o.statut] },
       client: { id: client!.id, nom: clientName(client!), type: client!.type, telephone: client!.telephone, email: client!.email },
       lignes: lignes.map(({ orderId: _o, ...l }) => l),
       events,
+      // Ce qui empêcherait la facture d'être une facture électronique conforme (l'émission reste possible)
+      facturx: { manque: facturxMissingFor(company, client!) },
     }
   })
 

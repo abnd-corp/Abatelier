@@ -80,6 +80,8 @@ export interface BillingDoc {
   tva: number
   ttc: number
   motif: string | null
+  // Le document embarque un fichier Factur-X (factures et avoirs)
+  facturx: boolean
   envoyeLe: string | null
   reponse: 'accepte' | 'refuse' | null
   reponseLe: string | null
@@ -102,6 +104,7 @@ export const FACTURE_STATUTS: OrderStatut[] = ['validee', 'fabrication', 'prete'
 
 /** PDF tel qu'il a été émis (ouvert dans un nouvel onglet). */
 export const pdfUrl = (id: string) => `/api/billing/${id}/pdf`
+export const facturxUrl = (id: string) => `/api/billing/${id}/facturx.xml`
 
 /** Ligne : quantité × prix, arrondie au centime. */
 export const lineTotal = (l: BillingLine) => Math.round(l.quantite * l.prixUnitaire * 100) / 100

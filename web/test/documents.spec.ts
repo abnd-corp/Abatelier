@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import DocumentsView from '@/views/DocumentsView.vue'
-import { formatNumber, type DocumentSettings } from '@/lib/documents'
+import { facturxMissing, formatNumber, type DocumentSettings } from '@/lib/documents'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 import { useAuthStore } from '@/stores/auth'
 import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
@@ -195,5 +195,34 @@ describe('Modèles de documents', () => {
     expect(e('documents.numbering_updated', { type: 'facture', annee: 2026, avant: 1, apres: 128 })).toBe('A fixé le prochain numéro de facture 2026 : 1 → 128')
     expect(e('documents.logo_updated', { type: 'image/png', largeur: 200, hauteur: 80 })).toBe('A envoyé un nouveau logo (PNG, 200 × 80 px)')
     expect(e('documents.template_updated', { changements: { mentionsLegales: { avant: '', apres: 'x'.repeat(80) } } })).toBe(`A modifié le modèle des devis et factures : mentions légales vide → « ${'x'.repeat(57)}… »`)
+  })
+})
+
+describe('Facturation électronique : informations de l’entreprise', () => {
+  it('liste ce qui manque, et se met à jour pendant la saisie', async () => {
+    const { wrapper, val } = await setup()
+    const card = () => wrapper.get('.facturx').text()
+    // Départ : adresse sur une seule ligne, ni SIRET ni TVA
+    expect(card()).toContain('il manque')
+    expect(card()).toContain('le SIRET')
+    expect(card()).toContain('le numéro de TVA intracommunautaire')
+    expect(card()).toContain('l’adresse complète')
+    await wrapper.get('#c-siret').setValue('732 829 320 00074')
+    await wrapper.get('#c-tva').setValue('FR44732829320')
+    await wrapper.get('#c-adresse').setValue('12 rue de l’Atelier\n42000 Saint-Étienne')
+    expect(card()).toContain('sont complètes')
+    expect(wrapper.get('.facturx').classes()).toContain('ok')
+    expect(val('#c-siret')).toBe('732 829 320 00074')
+  })
+})
+
+describe('facturxMissing', () => {
+  it('applique les mêmes règles que l’API', () => {
+    const ok = { siret: '732 829 320 00074', tvaIntra: 'FR44732829320', adresse: '12 rue X\n42000 St-Étienne' }
+    expect(facturxMissing(ok)).toEqual([])
+    expect(facturxMissing({ ...ok, siret: '732 829 320' })).toEqual(['le SIRET'])
+    expect(facturxMissing({ ...ok, tvaIntra: '  ' })).toEqual(['le numéro de TVA intracommunautaire'])
+    expect(facturxMissing({ ...ok, adresse: '42000 St-Étienne' })).toEqual(['l’adresse complète (rue, code postal et ville)'])
+    expect(facturxMissing({ ...ok, adresse: '12 rue X\nSaint-Étienne' })).toEqual(['l’adresse complète (rue, code postal et ville)'])
   })
 })

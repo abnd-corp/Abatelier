@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
-import { COMPANY_FIELDS, formatNumber, LOGO_MAX, TEMPLATE_FIELDS, type Company, type DocumentSettings, type DocumentType, type Numbering, type Template } from '@/lib/documents'
+import { COMPANY_FIELDS, facturxMissing, formatNumber, LOGO_MAX, TEMPLATE_FIELDS, type Company, type DocumentSettings, type DocumentType, type Numbering, type Template } from '@/lib/documents'
 import AppIcon from '@/components/AppIcon.vue'
 import BrandMark from '@/components/BrandMark.vue'
 import PdfPreview from '@/components/documents/PdfPreview.vue'
@@ -30,6 +30,8 @@ function onKey(e: KeyboardEvent) {
 type CompanyForm = Record<(typeof COMPANY_FIELDS)[number], string>
 type TemplateForm = Record<(typeof TEMPLATE_FIELDS)[number], string>
 const company = reactive({} as CompanyForm)
+// Mis à jour pendant la saisie
+const facturxManque = computed(() => (company.siret === undefined ? [] : facturxMissing(company)))
 const template = reactive({} as TemplateForm)
 const numbering = reactive({ devis: '', facture: '' })
 
@@ -201,6 +203,12 @@ async function removeLogo() {
 
       <!-- Entreprise -->
       <section v-show="tab === 'entreprise'" id="panel-entreprise" role="tabpanel" aria-labelledby="tab-entreprise" class="groups">
+        <div class="card group facturx" :class="{ ok: !facturxManque.length }" role="status">
+          <h3>Facturation électronique</h3>
+          <p v-if="!facturxManque.length">Les informations de l’entreprise sont complètes : les factures et avoirs sont émis au format Factur-X.</p>
+          <p v-else>Pour des factures électroniques conformes, il manque : <b>{{ facturxManque.join(', ') }}</b>.</p>
+        </div>
+
         <fieldset class="card group">
           <legend>Identité</legend>
           <div class="field">
@@ -419,6 +427,16 @@ async function removeLogo() {
 </style>
 
 <style scoped>
+.facturx {
+  border-left: 4px solid var(--warn);
+}
+.facturx.ok {
+  border-left-color: var(--ok);
+}
+.facturx h3 {
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
 .intro {
   margin-top: 6px;
   font-size: 0.9rem;

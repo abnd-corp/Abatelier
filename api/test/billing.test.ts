@@ -4,7 +4,7 @@ import { db } from '../src/db/index.js'
 import { accessories, auditLog, billingDocuments, colors, materials, orders } from '../src/db/schema.js'
 import { yearOf } from '../src/documents.js'
 import { totals } from '../src/pdf.js'
-import { buildApp, createUser, loginAs, M, pdfText, resetDb, seedModels, type App, type Client } from './helpers.js'
+import { buildApp, createUser, loginAs, M, pdfText, pdfTextEmbedded, resetDb, seedModels, type App, type Client } from './helpers.js'
 
 let app: App
 let direction: Client
@@ -183,7 +183,7 @@ describe('Factures', () => {
     const o = await order({}, 'validee')
     for (const statut of ['fabrication', 'prete', 'livree']) await direction.post(`/api/orders/${o.id}/status`, { statut })
     const f = await created(await facture(o.id))
-    const txt = pdfText((await direction.get(`/api/billing/${f.id}/pdf`)).rawPayload)
+    const txt = await pdfTextEmbedded((await direction.get(`/api/billing/${f.id}/pdf`)).rawPayload)
     for (const attendu of ['FACTURE', `N° ${f.numero}`, 'Échéance', 'Retirée le', `Commande : ${o.numero}`, 'Paiement au plus tard le']) expect(txt, attendu).toContain(attendu)
     expect(txt).not.toContain('Bon pour accord')
   })
@@ -257,7 +257,7 @@ describe('Avoirs', () => {
     expect((await avoir({ motif: 'Encore' })).json()).toEqual({ error: 'Cette facture est déjà annulée par un avoir.' })
     expect((await direction.post(`/api/billing/${f.id}/paiement`, { date: new Date().toISOString().slice(0, 10), mode: 'virement' })).statusCode).toBe(409)
 
-    const txt = pdfText((await direction.get(`/api/billing/${a.id}/pdf`)).rawPayload)
+    const txt = await pdfTextEmbedded((await direction.get(`/api/billing/${a.id}/pdf`)).rawPayload)
     for (const attendu of ['AVOIR', `N° ${a.numero}`, `Facture : ${f.numero}`, `annule la facture ${f.numero}`, 'Erreur de coloris']) expect(txt, attendu).toContain(attendu)
     expect((await entries('billing.avoir_created'))[0]!.details).toMatchObject({ numero: a.numero, facture: f.numero, motif: 'Erreur de coloris' })
 

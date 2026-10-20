@@ -120,6 +120,13 @@
       "when": 1792483644398,
       "tag": "0016_emails",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792484531880,
+      "tag": "0017_facturx",
+      "breakpoints": true
     }
   ]
 }

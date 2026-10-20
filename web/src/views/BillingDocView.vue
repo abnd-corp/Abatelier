@@ -5,7 +5,7 @@ import { api, ApiError } from '@/api'
 import { eur } from '@/lib/catalog'
 import { dateTime } from '@/lib/format'
 import { formatDay, todayParis } from '@/lib/employees'
-import { lineTotal, MODES, modeLabel, pdfUrl, statutOf, typeOf, type BillingDetail, type PaiementMode } from '@/lib/billing'
+import { lineTotal, MODES, modeLabel, facturxUrl, pdfUrl, statutOf, typeOf, type BillingDetail, type PaiementMode } from '@/lib/billing'
 import { useUiStore } from '@/stores/ui'
 import AppIcon from '@/components/AppIcon.vue'
 
@@ -239,6 +239,7 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
 
       <div v-else class="actions">
         <a class="btn" :href="pdfUrl(d.id)" target="_blank" rel="noopener"><AppIcon name="download" :size="16" />Ouvrir le PDF</a>
+        <a v-if="d.facturx" class="btn" :href="facturxUrl(d.id)" download title="Fichier de facture électronique (Factur-X), à déposer sur la plateforme agréée"><AppIcon name="file" :size="16" />XML Factur-X</a>
         <button class="btn primary" type="button" :disabled="busy" @click="openMail"><AppIcon name="mail" :size="16" />Envoyer par e-mail</button>
         <button v-if="canSend" class="btn" type="button" :disabled="busy" @click="act('envoi', {}, isDevis ? 'Devis marqué comme envoyé.' : 'Facture marquée comme envoyée.')">
           <AppIcon name="mail" :size="16" />{{ sendLabel }}

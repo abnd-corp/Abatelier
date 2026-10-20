@@ -9,3 +9,4 @@ apercus/
 
 # Informations privées sur l’entreprise (jamais commitées : le dépôt est public)
 entreprise/
+.cache/

@@ -224,7 +224,7 @@ export async function billingRoutes(app: FastifyInstance) {
   app.get('/:id', async (req, reply) => {
     const doc = await findDoc((req.params as { id: string }).id, reply)
     if (!doc) return
-    const { pdf: _pdf, ...rest } = doc
+    const { pdf: _pdf, facturxXml, ...rest } = doc
     const [[order], [creator], linked, statut] = await Promise.all([
       db.select({ id: orders.id, numero: orders.numero, statut: orders.statut }).from(orders).where(eq(orders.id, doc.orderId)),
       doc.createdBy ? db.select({ nom: users.nom }).from(users).where(eq(users.id, doc.createdBy)) : Promise.resolve([]),
@@ -236,7 +236,7 @@ export async function billingRoutes(app: FastifyInstance) {
           : Promise.resolve([]),
       statutOf(doc.id),
     ])
-    return { document: { ...rest, statut, createdByNom: creator?.nom ?? null }, order: { ...order!, statutLabel: STATUT_LABELS[order!.statut] }, lie: linked[0] ?? null }
+    return { document: { ...rest, facturx: facturxXml !== null, statut, createdByNom: creator?.nom ?? null }, order: { ...order!, statutLabel: STATUT_LABELS[order!.statut] }, lie: linked[0] ?? null }
   })
 
   // Le PDF tel qu'il a été émis
@@ -244,6 +244,14 @@ export async function billingRoutes(app: FastifyInstance) {
     const doc = await findDoc((req.params as { id: string }).id, reply)
     if (!doc) return
     return reply.header('Content-Type', 'application/pdf').header('Content-Disposition', `inline; filename="${doc.numero}.pdf"`).send(doc.pdf)
+  })
+
+  // Le fichier XML Factur-X d'une facture ou d'un avoir (le même que celui embarqué dans le PDF)
+  app.get('/:id/facturx.xml', async (req, reply) => {
+    const doc = await findDoc((req.params as { id: string }).id, reply)
+    if (!doc) return
+    if (!doc.facturxXml) return reply.code(404).send({ error: 'Ce document n’a pas de fichier Factur-X (seuls les factures et avoirs en ont un).' })
+    return reply.header('Content-Type', 'application/xml; charset=utf-8').header('Content-Disposition', `attachment; filename="${doc.numero}.xml"`).send(doc.facturxXml)
   })
 
   // Message proposé pour l'envoi par e-mail (modifiable avant l'envoi)

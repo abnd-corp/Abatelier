@@ -72,6 +72,7 @@ const DOC: BillingDoc = {
   payeLe: null,
   modePaiement: null,
   createdByNom: 'Le Chef',
+  facturx: true,
   statut: 'emise',
 }
 const detail = (over: Partial<BillingDoc> = {}, lie: BillingDetail['lie'] = null): BillingDetail => ({
@@ -386,5 +387,17 @@ describe('Envoi par e-mail', () => {
     expect(describeEntry(e('billing.emailed', { numero: 'F-2026-0001', client: 'Jean Dupont', destinataires: 2 })).text).toBe('A envoyé par e-mail la facture F-2026-0001 à Jean Dupont (2 destinataires)')
     expect(describeEntry(e('billing.emailed', { numero: 'D-2026-0001', client: 'Jean Dupont', destinataires: 1 })).text).toBe('A envoyé par e-mail le devis D-2026-0001 à Jean Dupont (1 destinataire)')
     expect(describeEntry(e('mail.test', {})).text).toMatch(/essai/)
+  })
+})
+
+describe('Facture électronique : fichier Factur-X', () => {
+  it('propose le XML sur une facture, pas sur un devis', async () => {
+    const { wrapper } = await mountAt(BillingDocView, '/factures/f1', { 'GET /billing/f1': [200, detail()] })
+    const link = wrapper.find('a[href="/api/billing/f1/facturx.xml"]')
+    expect(link.exists()).toBe(true)
+    expect(link.attributes('download')).toBeDefined()
+    expect(link.text()).toContain('XML Factur-X')
+    const devis = await mountAt(BillingDocView, '/factures/f1', { 'GET /billing/f1': [200, detail({ type: 'devis', numero: 'D-2026-0001', statut: 'emis', facturx: false })] })
+    expect(devis.wrapper.find('a[href$="facturx.xml"]').exists()).toBe(false)
   })
 })

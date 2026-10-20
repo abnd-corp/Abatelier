@@ -254,6 +254,9 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
               </li>
             </ul>
             <p v-else class="muted">Aucun devis ni facture pour cette commande.</p>
+            <p v-if="canInvoice && detail?.facturx?.manque.length" class="warn-box" role="status">
+              Facture électronique : il manque <b>{{ detail.facturx?.manque.join(', ') }}</b>. La facture peut être émise, mais elle ne sera pas conforme tant que ce n’est pas complété (non modifiable après émission : complétez avant).
+            </p>
             <div v-if="canQuote || canInvoice" class="actions">
               <button v-if="canQuote" class="btn" type="button" :disabled="busy" @click="issue('devis')"><AppIcon name="receipt" :size="16" />Faire un devis</button>
               <button v-if="canInvoice" class="btn primary" type="button" :disabled="busy" @click="issue('facture')"><AppIcon name="receipt" :size="16" />Facturer</button>
@@ -469,5 +472,12 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
   .btn.danger-ghost {
     margin-left: 0;
   }
+}
+.warn-box {
+  background: var(--warn-soft);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
 }
 </style>

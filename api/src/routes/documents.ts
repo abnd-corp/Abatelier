@@ -8,6 +8,7 @@ import { inspectImage, renderDocument, sampleDocument } from '../pdf.js'
 import { getPricingSettings } from '../pricing.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
+import { facturxMissing } from '../facturx.js'
 import { diff, digits, formatSiret, integer, invalid, luhn } from '../validation.js'
 
 const LOGO_MAX = 1024 * 1024
@@ -100,7 +101,7 @@ export async function documentRoutes(app: FastifyInstance) {
 
   app.get('/settings', async () => {
     const [company, template] = await Promise.all([getCompany(), getTemplate()])
-    return { company: publicCompany(company), template, numbering: await nextNumbers() }
+    return { company: publicCompany(company), template, numbering: await nextNumbers(), facturx: { manque: facturxMissing(company) } }
   })
 
   app.patch('/company', async (req, reply) => {

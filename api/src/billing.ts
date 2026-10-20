@@ -4,6 +4,7 @@ import { db } from './db/index.js'
 import { billingDocuments, clients, orderEvents, orderLines, orders, type BillingLine, type BillingType, type Client, type Order, type OrderLine } from './db/schema.js'
 import { allocateNumber, getCompany, getTemplate } from './documents.js'
 import { renderDocument, totals, type DocData } from './pdf.js'
+import { buildFacturxXml, type FacturxInput } from './facturx.js'
 import { clientName } from './routes/clients.js'
 import { cents } from './quote.js'
 import { todayParis } from './departures.js'
@@ -150,10 +151,15 @@ export async function issueFromOrder(type: Extract<BillingType, 'devis' | 'factu
     }
     const { label } = await allocateNumber(tx, type, now)
     const data: DocData = { type, numero: label, date: now, echeance, references, client: { nom, adresse }, lignes, tva: order.tauxTva }
-    const pdf = await renderDocument(company, template, company.logo, data)
+    // Une facture est électronique (Factur-X) ; un devis reste un PDF ordinaire
+    const xml =
+      type === 'facture'
+        ? buildFacturxXml(facturxInput({ type: 'facture', numero: label, date: now, echeance, commande: order.numero, livraison: livree, livraisonAdresse: order.livraisonMode === 'livraison' ? [order.livraisonAdresse, [order.livraisonCodePostal, order.livraisonVille].filter(Boolean).join(' ')].filter(Boolean).join('\n') : undefined, company, template, client: client!, lignes, taux: order.tauxTva, totaux: t }))
+        : null
+    const pdf = await renderDocument(company, template, company.logo, data, xml ? { xml } : undefined)
     const [doc] = await tx
       .insert(billingDocuments)
-      .values({ type, numero: label, orderId: order.id, clientId: client!.id, emisLe: now, echeance: isoDay(echeance), clientNom: nom, clientAdresse: adresse, lignes, ht: t.ht, tauxTva: order.tauxTva, tva: t.tva, ttc: t.ttc, pdf, createdBy: userId })
+      .values({ type, numero: label, orderId: order.id, clientId: client!.id, emisLe: now, echeance: isoDay(echeance), clientNom: nom, clientAdresse: adresse, lignes, ht: t.ht, tauxTva: order.tauxTva, tva: t.tva, ttc: t.ttc, pdf, facturxXml: xml, createdBy: userId })
       .returning({ id: billingDocuments.id, numero: billingDocuments.numero, ttc: billingDocuments.ttc })
     return { ...doc!, client: nom }
   })
@@ -161,12 +167,35 @@ export async function issueFromOrder(type: Extract<BillingType, 'devis' | 'factu
 
 /** Avoir qui annule entièrement une facture : mêmes lignes, montants opposés. */
 export async function issueCreditNote(facture: typeof billingDocuments.$inferSelect, motif: string, userId: string) {
-  const [company, template, [order]] = await Promise.all([getCompany(), getTemplate(), db.select({ numero: orders.numero }).from(orders).where(eq(orders.id, facture.orderId))])
+  const [company, template, [order], [client]] = await Promise.all([
+    getCompany(),
+    getTemplate(),
+    db.select({ numero: orders.numero }).from(orders).where(eq(orders.id, facture.orderId)),
+    db.select().from(clients).where(eq(clients.id, facture.clientId)),
+  ])
   const lignes = facture.lignes.map((l) => ({ ...l, prixUnitaire: -l.prixUnitaire }))
   const totaux = { ht: -facture.ht, tva: -facture.tva, ttc: -facture.ttc }
   const now = new Date()
   return db.transaction(async (tx) => {
     const { label } = await allocateNumber(tx, 'avoir', now)
+    // Le XML d'un avoir reprend les lignes de la facture annulée, en positif, et la référence de cette facture
+    const xml = buildFacturxXml(
+      facturxInput({
+        type: 'avoir',
+        numero: label,
+        date: now,
+        echeance: null,
+        commande: order!.numero,
+        livraison: null,
+        company,
+        template,
+        client: client!,
+        lignes: facture.lignes,
+        taux: facture.tauxTva,
+        totaux: { ht: facture.ht, tva: facture.tva, ttc: facture.ttc },
+        facture: { numero: facture.numero, date: facture.emisLe },
+      }),
+    )
     const pdf = await renderDocument(company, template, company.logo, {
       type: 'avoir',
       numero: label,
@@ -177,11 +206,53 @@ export async function issueCreditNote(facture: typeof billingDocuments.$inferSel
       tva: facture.tauxTva,
       totaux,
       avoir: { facture: facture.numero, factureDate: facture.emisLe, motif },
-    })
+    }, { xml })
     const [doc] = await tx
       .insert(billingDocuments)
-      .values({ type: 'avoir', numero: label, orderId: facture.orderId, clientId: facture.clientId, factureId: facture.id, emisLe: now, clientNom: facture.clientNom, clientAdresse: facture.clientAdresse, lignes, ...totaux, tauxTva: facture.tauxTva, pdf, motif, createdBy: userId })
+      .values({ type: 'avoir', numero: label, orderId: facture.orderId, clientId: facture.clientId, factureId: facture.id, emisLe: now, clientNom: facture.clientNom, clientAdresse: facture.clientAdresse, lignes, ...totaux, tauxTva: facture.tauxTva, pdf, facturxXml: xml, motif, createdBy: userId })
       .returning({ id: billingDocuments.id, numero: billingDocuments.numero })
     return doc!
   })
+}
+
+/** Rassemble ce qu'il faut au XML Factur-X : l'entreprise, le client et la facture (ou l'avoir). */
+function facturxInput(o: {
+  type: 'facture' | 'avoir'
+  numero: string
+  date: Date
+  echeance: Date | null
+  commande: string
+  livraison: Date | null
+  livraisonAdresse?: string
+  company: Awaited<ReturnType<typeof getCompany>>
+  template: Awaited<ReturnType<typeof getTemplate>>
+  client: Client
+  lignes: BillingLine[]
+  taux: number
+  totaux: { ht: number; tva: number; ttc: number }
+  facture?: { numero: string; date: Date }
+}): FacturxInput {
+  const { company: c, client } = o
+  return {
+    type: o.type,
+    numero: o.numero,
+    date: o.date,
+    echeance: o.echeance,
+    commande: o.commande,
+    livraison: o.livraison,
+    livraisonAdresse: o.livraisonAdresse,
+    vendeur: { nom: c.raisonSociale, adresse: c.adresse, siret: c.siret, tvaIntra: c.tvaIntra, email: c.email, iban: c.iban, bic: c.bic },
+    acheteur: {
+      nom: clientName(client),
+      adresse: [client.adresse, [client.codePostal, client.ville].filter(Boolean).join(' ')].filter(Boolean).join('\n'),
+      // Seul un professionnel a un SIREN à déclarer
+      siret: client.type === 'professionnel' ? client.siret : null,
+      email: client.email,
+    },
+    lignes: o.lignes,
+    taux: o.taux,
+    totaux: o.totaux,
+    facture: o.facture,
+    conditions: o.template.conditionsPaiement.trim() || undefined,
+  }
 }

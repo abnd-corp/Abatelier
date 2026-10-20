@@ -529,8 +529,10 @@ export const billingDocuments = pgTable(
     tauxTva: numeric('taux_tva', { precision: 5, scale: 2, mode: 'number' }).notNull(),
     tva: money('tva'),
     ttc: money('ttc'),
-    // Le PDF remis au client, conservé tel quel
+    // Le PDF remis au client, conservé tel quel (PDF/A-3 Factur-X pour une facture ou un avoir)
     pdf: bytea('pdf').notNull(),
+    // Le XML Factur-X embarqué dans le PDF, gardé à part pour le déposer sur une plateforme de facturation
+    facturxXml: text('facturx_xml'),
     // Avoir : raison de l'annulation
     motif: text('motif'),
     // Suivi

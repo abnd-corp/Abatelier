@@ -1,7 +1,10 @@
+import { createRequire } from 'node:module'
 import PDFDocument from 'pdfkit'
+import { FACTURX_FILENAME, FACTURX_XMP, MENTIONS_FACTURE } from './facturx.js'
 import type { CompanySettings, DocumentTemplate, DocumentType } from './db/schema.js'
 
 // Génération des devis et factures en PDF (A4), avec les polices standard du PDF (Helvetica).
+// Les factures et avoirs sont des PDF/A-3 Factur-X : police Inter incorporée et fichier XML embarqué (voir facturx.ts).
 
 export interface DocLine {
   designation: string
@@ -89,8 +92,27 @@ export function drawBrandMark(doc: PDFKit.PDFDocument, x: number, y: number, hei
   doc.restore()
 }
 
-export function renderDocument(company: Company, template: Template, logo: Buffer | null, data: DocData): Promise<Buffer> {
-  const doc = new PDFDocument({ size: 'A4', margin: PAGE.m, bufferPages: true, info: { Title: clean(`${TITRES[data.type]} ${data.numero}`), Author: clean(company.raisonSociale) } })
+const requireFont = createRequire(import.meta.url)
+// PDF/A exige que toutes les polices soient incorporées au fichier : Inter remplace Helvetica pour les factures
+const FONTS = { regular: requireFont.resolve('@fontsource/inter/files/inter-latin-400-normal.woff'), bold: requireFont.resolve('@fontsource/inter/files/inter-latin-700-normal.woff') }
+
+/** `facturx` : XML à embarquer ; le document devient alors un PDF/A-3 (facture ou avoir électronique). */
+export function renderDocument(company: Company, template: Template, logo: Buffer | null, data: DocData, facturx?: { xml: string }): Promise<Buffer> {
+  const doc = new PDFDocument({
+    size: 'A4',
+    margin: PAGE.m,
+    bufferPages: true,
+    info: { Title: clean(`${TITRES[data.type]} ${data.numero}`), Author: clean(company.raisonSociale), ...(facturx ? { Creator: 'Patalu', Producer: 'Patalu', CreationDate: data.date } : {}) },
+    ...(facturx ? { pdfVersion: '1.7' as const, subset: 'PDF/A-3b' as const } : {}),
+  })
+  const F = facturx ? { r: 'Inter', b: 'Inter-Bold' } : { r: 'Helvetica', b: 'Helvetica-Bold' }
+  if (facturx) {
+    // Le reste du code écrit avec « F.r » et « F.b » : Helvetica pour un devis, Inter incorporée pour une facture
+    doc.registerFont('Inter', FONTS.regular)
+    doc.registerFont('Inter-Bold', FONTS.bold)
+    // La police courante au départ est « Helvetica » (non incorporée) : on la remplace tout de suite
+    doc.font('Inter')
+  }
   const chunks: Buffer[] = []
   doc.on('data', (c: Buffer) => chunks.push(c))
   const done = new Promise<Buffer>((resolve, reject) => {
@@ -108,10 +130,10 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
   else drawBrandMark(doc, PAGE.m, 45, 56)
 
   let y = 112
-  doc.font('Helvetica-Bold').fontSize(12).fillColor(INK)
+  doc.font(F.b).fontSize(12).fillColor(INK)
   text(company.raisonSociale, PAGE.m, y, { width: 260 })
   y = doc.y + 2
-  doc.font('Helvetica').fontSize(9).fillColor(INK)
+  doc.font(F.r).fontSize(9).fillColor(INK)
   if (company.adresse) {
     text(company.adresse, PAGE.m, y, { width: 260, lineGap: 1 })
     y = doc.y + 3
@@ -125,28 +147,28 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
 
   const colX = 330
   const colW = RIGHT - colX
-  doc.font('Helvetica-Bold').fontSize(24).fillColor(accent)
+  doc.font(F.b).fontSize(24).fillColor(accent)
   text(TITRES[data.type].toUpperCase(), colX, 44, { width: colW, align: 'right', characterSpacing: 1 })
-  doc.font('Helvetica-Bold').fontSize(11).fillColor(INK)
+  doc.font(F.b).fontSize(11).fillColor(INK)
   text(`N° ${data.numero}`, colX, doc.y + 2, { width: colW, align: 'right' })
-  doc.font('Helvetica').fontSize(9.5)
+  doc.font(F.r).fontSize(9.5)
   const limite = data.echeance ?? addDays(data.date, isDevis ? template.validiteDevis : template.echeanceFacture)
   const dates = [`Date : ${day(data.date)}`, isAvoir ? `Facture : ${data.avoir?.facture ?? ''}` : `${isDevis ? 'Valable jusqu’au' : 'Échéance'} : ${day(limite)}`, ...(data.references ?? [])]
   text(dates.join('\n'), colX, doc.y + 2, { width: colW, align: 'right', lineGap: 1 })
 
   // Bloc client, sous les références
   const boxY = Math.max(132, doc.y + 12)
-  doc.font('Helvetica-Bold').fontSize(10.5)
+  doc.font(F.b).fontSize(10.5)
   const nameH = doc.heightOfString(clean(data.client.nom), { width: colW - 24 })
-  doc.font('Helvetica').fontSize(9.5)
+  doc.font(F.r).fontSize(9.5)
   const addrH = doc.heightOfString(clean(data.client.adresse), { width: colW - 24, lineGap: 1 })
   const boxH = 30 + nameH + addrH
   doc.roundedRect(colX, boxY, colW, boxH, 6).fill(ZEBRA)
-  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(MUTED)
+  doc.font(F.b).fontSize(7.5).fillColor(MUTED)
   text('CLIENT', colX + 12, boxY + 10, { characterSpacing: 0.8 })
-  doc.font('Helvetica-Bold').fontSize(10.5).fillColor(INK)
+  doc.font(F.b).fontSize(10.5).fillColor(INK)
   text(data.client.nom, colX + 12, boxY + 22, { width: colW - 24 })
-  doc.font('Helvetica').fontSize(9.5)
+  doc.font(F.r).fontSize(9.5)
   text(data.client.adresse, colX + 12, doc.y + 1, { width: colW - 24, lineGap: 1 })
 
   y = Math.max(leftBottom, boxY + boxH) + 24
@@ -159,7 +181,7 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
   }
 
   if (template.entete) {
-    doc.font('Helvetica').fontSize(9.5).fillColor(INK)
+    doc.font(F.r).fontSize(9.5).fillColor(INK)
     const h = doc.heightOfString(clean(template.entete), { width: WIDTH, lineGap: 1.5 })
     ensure(h)
     text(template.entete, PAGE.m, y, { width: WIDTH, lineGap: 1.5 })
@@ -176,16 +198,16 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
   const pad = 8
   const header = () => {
     doc.rect(PAGE.m, y, WIDTH, 22).fill(accent)
-    doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#ffffff')
+    doc.font(F.b).fontSize(8.5).fillColor('#ffffff')
     for (const c of cols) text(c.label, c.x + pad, y + 7, { width: c.w - 2 * pad, align: c.align })
     y += 22
   }
   ensure(60)
   header()
   data.lignes.forEach((l, i) => {
-    doc.font('Helvetica-Bold').fontSize(9.5)
+    doc.font(F.b).fontSize(9.5)
     let h = doc.heightOfString(clean(l.designation), { width: cols[0]!.w - 2 * pad })
-    doc.font('Helvetica').fontSize(8.5)
+    doc.font(F.r).fontSize(8.5)
     if (l.detail) h += 2 + doc.heightOfString(clean(l.detail), { width: cols[0]!.w - 2 * pad })
     h += 16
     if (y + h > BOTTOM) {
@@ -194,13 +216,13 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
       header()
     }
     if (i % 2 === 1) doc.rect(PAGE.m, y, WIDTH, h).fill(ZEBRA)
-    doc.font('Helvetica-Bold').fontSize(9.5).fillColor(INK)
+    doc.font(F.b).fontSize(9.5).fillColor(INK)
     text(l.designation, cols[0]!.x + pad, y + 8, { width: cols[0]!.w - 2 * pad })
     if (l.detail) {
-      doc.font('Helvetica').fontSize(8.5).fillColor(MUTED)
+      doc.font(F.r).fontSize(8.5).fillColor(MUTED)
       text(l.detail, cols[0]!.x + pad, doc.y + 2, { width: cols[0]!.w - 2 * pad })
     }
-    doc.font('Helvetica').fontSize(9.5).fillColor(INK)
+    doc.font(F.r).fontSize(9.5).fillColor(INK)
     const values = [qty(l.quantite), eur(l.prixUnitaire), eur(cents(l.quantite * l.prixUnitaire))]
     values.forEach((v, j) => text(v, cols[j + 1]!.x + pad, y + 8, { width: cols[j + 1]!.w - 2 * pad, align: 'right' }))
     y += h
@@ -219,8 +241,8 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
   for (const [label, value, strong] of rows) {
     if (strong) {
       doc.roundedRect(colX, y - 4, colW, 24, 4).fill(accent)
-      doc.font('Helvetica-Bold').fontSize(11).fillColor('#ffffff')
-    } else doc.font('Helvetica').fontSize(9.5).fillColor(INK)
+      doc.font(F.b).fontSize(11).fillColor('#ffffff')
+    } else doc.font(F.r).fontSize(9.5).fillColor(INK)
     text(label, colX + 12, y + (strong ? 3 : 0), { width: colW / 2 })
     text(value, colX + colW / 2, y + (strong ? 3 : 0), { width: colW / 2 - 12, align: 'right' })
     y += strong ? 28 : 18
@@ -230,12 +252,12 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
   // --- Conditions et textes ---
   const section = (title: string, body: string) => {
     if (!body.trim()) return
-    doc.font('Helvetica').fontSize(9)
+    doc.font(F.r).fontSize(9)
     const h = 14 + doc.heightOfString(clean(body), { width: WIDTH, lineGap: 1.5 })
     ensure(h)
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(accent)
+    doc.font(F.b).fontSize(9).fillColor(accent)
     text(title, PAGE.m, y)
-    doc.font('Helvetica').fontSize(9).fillColor(INK)
+    doc.font(F.r).fontSize(9).fillColor(INK)
     text(body, PAGE.m, doc.y + 3, { width: WIDTH, lineGap: 1.5 })
     y = doc.y + 12
   }
@@ -257,19 +279,21 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
     ensure(92)
     const w = 240
     doc.roundedRect(RIGHT - w, y, w, 80, 6).lineWidth(0.8).strokeColor(LINE).stroke()
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(INK)
+    doc.font(F.b).fontSize(9).fillColor(INK)
     text('Bon pour accord', RIGHT - w + 12, y + 10)
-    doc.font('Helvetica').fontSize(8).fillColor(MUTED)
+    doc.font(F.r).fontSize(8).fillColor(MUTED)
     text('Date, signature et cachet, précédés de la mention « Bon pour accord »', RIGHT - w + 12, doc.y + 2, { width: w - 24 })
     y += 92
   }
 
-  if (template.mentionsLegales.trim()) {
-    doc.font('Helvetica').fontSize(7.5)
-    const h = doc.heightOfString(clean(template.mentionsLegales), { width: WIDTH, lineGap: 1 })
+  // Mentions du modèle, puis (factures et avoirs électroniques) les trois mentions que la loi impose et que le XML reprend à l'identique
+  const mentions = [template.mentionsLegales.trim(), ...(facturx ? MENTIONS_FACTURE.map((m) => m.texte) : [])].filter(Boolean).join('\n')
+  if (mentions) {
+    doc.font(F.r).fontSize(7.5)
+    const h = doc.heightOfString(clean(mentions), { width: WIDTH, lineGap: 1 })
     ensure(h)
     doc.fillColor(MUTED)
-    text(template.mentionsLegales, PAGE.m, y, { width: WIDTH, lineGap: 1 })
+    text(mentions, PAGE.m, y, { width: WIDTH, lineGap: 1 })
   }
 
   // --- Pied de page et filigrane, sur chaque page ---
@@ -289,19 +313,24 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
     const margin = doc.page.margins.bottom
     doc.page.margins.bottom = 0
     if (data.apercu) {
-      doc.save().rotate(-32, { origin: [PAGE.w / 2, PAGE.h / 2] }).fillOpacity(0.07).fillColor(accent).font('Helvetica-Bold').fontSize(110)
+      doc.save().rotate(-32, { origin: [PAGE.w / 2, PAGE.h / 2] }).fillOpacity(0.07).fillColor(accent).font(F.b).fontSize(110)
       doc.text('APERÇU', 0, PAGE.h / 2 - 55, { width: PAGE.w, align: 'center', lineBreak: false })
       doc.restore()
     }
     const fy = PAGE.h - PAGE.m - FOOTER_H + 14
     doc.moveTo(PAGE.m, fy).lineTo(RIGHT, fy).lineWidth(0.6).strokeColor(LINE).stroke()
-    doc.font('Helvetica').fontSize(7.5).fillColor(MUTED)
+    doc.font(F.r).fontSize(7.5).fillColor(MUTED)
     const lines = [template.piedDePage, identity].filter((s) => s.trim()).join('\n')
     text(lines, PAGE.m, fy + 8, { width: WIDTH - 50, lineGap: 1 })
     text(`${i + 1} / ${range.count}`, RIGHT - 50, fy + 8, { width: 50, align: 'right' })
     doc.page.margins.bottom = margin
   }
 
+  if (facturx) {
+    // Le XML est joint au PDF (« Alternative » : il dit la même chose que la page) et déclaré dans les métadonnées XMP
+    doc.file(Buffer.from(facturx.xml, 'utf8'), { name: FACTURX_FILENAME, type: 'text/xml', description: 'Factur-X', relationship: 'Alternative', creationDate: data.date, modifiedDate: data.date } as Parameters<typeof doc.file>[1])
+    doc.appendXML(FACTURX_XMP)
+  }
   doc.end()
   return done
 }
