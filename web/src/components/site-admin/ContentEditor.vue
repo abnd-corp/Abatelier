@@ -69,9 +69,9 @@ async function reset(c: Champ) {
 <template>
   <form class="pane" @submit.prevent="save">
     <p v-if="error" class="alert bad" role="alert">{{ error }}</p>
-    <p v-if="saved" class="alert ok" role="status"><AppIcon name="check" :size="16" />Textes enregistrés : ils sont déjà en ligne.</p>
+    <p v-if="saved" class="alert ok" role="status"><AppIcon name="check" :size="16" /><span>Textes enregistrés : ils sont déjà en ligne.</span></p>
     <p v-if="toComplete.length" class="alert" role="status">
-      À compléter avant la mise en ligne : <b>{{ toComplete.map((c) => c.label).join(', ') }}</b> (cherchez « À COMPLÉTER » dans le texte).
+      <span>À compléter avant la mise en ligne : <b>{{ toComplete.map((c) => c.label).join(', ') }}</b> (cherchez « À COMPLÉTER » dans le texte).</span>
     </p>
     <p v-if="loading" class="muted" aria-busy="true">Chargement…</p>
 

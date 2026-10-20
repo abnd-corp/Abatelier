@@ -607,6 +607,27 @@ export const contactRequests = pgTable(
   (t) => [index('contact_requests_created_idx').on(t.createdAt)],
 )
 
+// Journal des e-mails envoyés par l'application (preuve d'envoi, diagnostic quand un message n'arrive pas)
+export const EMAIL_KINDS = ['contact', 'document', 'test'] as const
+export const emailLog = pgTable(
+  'email_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    at: ts('at').notNull().defaultNow(),
+    kind: text('kind', { enum: EMAIL_KINDS }).notNull(),
+    // Adresses séparées par une virgule
+    destinataires: text('destinataires').notNull(),
+    objet: text('objet').notNull(),
+    statut: text('statut', { enum: ['envoye', 'echec'] }).notNull(),
+    // Raison de l'échec, sans mot de passe ni détail technique sensible
+    erreur: text('erreur'),
+    targetType: text('target_type'),
+    targetId: text('target_id'),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => [index('email_log_at_idx').on(t.at)],
+)
+
 export type SitePhoto = typeof sitePhotos.$inferSelect
 export type ContactRequest = typeof contactRequests.$inferSelect
 export type Material = typeof materials.$inferSelect

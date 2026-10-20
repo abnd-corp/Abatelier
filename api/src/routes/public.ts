@@ -8,6 +8,8 @@ import { fillCompany, getContent } from '../site.js'
 import { getReviews } from '../google-reviews.js'
 import { audit } from '../audit.js'
 import { env } from '../env.js'
+import { alertRecipients, sendMail, withTimeout } from '../mail.js'
+import { contactAlert } from '../mail-texts.js'
 import { invalid } from '../validation.js'
 
 // Routes ouvertes à tous les visiteurs du site vitrine : aucune donnée privée, jamais de session.
@@ -145,6 +147,13 @@ export async function publicRoutes(app: FastifyInstance) {
         .values({ ...data, ...file })
         .returning({ id: contactRequests.id })
       // Pas d'identité d'utilisateur ici : c'est un visiteur. On ne recopie ni l'e-mail ni le message dans le journal.
+      // Alerte à la direction. Si la messagerie est absente ou lente, la demande est quand même enregistrée.
+      const to = await alertRecipients()
+      if (to.length) {
+        const proto = req.headers['x-forwarded-proto'] ?? req.protocol
+        const mail = contactAlert({ ...data, fichierNom: file?.fichierNom ?? null }, `${proto}://${req.headers.host}/site-vitrine`)
+        await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: data.email, targetType: 'contact', targetId: row!.id }), 6000, { ok: false, notConfigured: false, error: 'délai dépassé' })
+      }
       await audit(req, 'contact.received', { actor: null, targetType: 'contact', targetId: row!.id, details: { objet: data.objet, fichier: Boolean(file) } })
       return reply.code(201).send({ ok: true })
     },

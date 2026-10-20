@@ -44,6 +44,8 @@ const PAGES = [
   { name: '34-admin-site-demandes', path: '/site-vitrine' },
   { name: '35-admin-site-textes', path: '/site-vitrine?onglet=textes' },
   { name: '36-admin-site-photos', path: '/site-vitrine?onglet=photos' },
+  { name: '37-admin-site-emails', path: '/site-vitrine?onglet=emails' },
+  { name: '38-envoi-par-email', path: 'FICHE_FACTURE', sendMail: true },
 ]
 
 test('captures', async ({ page, baseURL }, info) => {
@@ -92,6 +94,7 @@ test('captures', async ({ page, baseURL }, info) => {
     await expect(page.locator('h1').first()).toBeVisible()
     // L'aperçu PDF se dessine après le chargement : on attend sa première page
     if (p.path.startsWith('/modeles-documents')) await page.getByRole('img', { name: /Aperçu du devis, page 1/ }).waitFor()
+    if (p.sendMail) await page.getByRole('button', { name: 'Envoyer par e-mail' }).click()
     // Le chiffrage se fait après la saisie : on attend le total
     if (p.path === 'NOUVELLE_COMMANDE') await page.getByText('Total TTC').waitFor()
     if (p.editModel) await page.getByRole('button', { name: 'Modifier Couvertine' }).click()

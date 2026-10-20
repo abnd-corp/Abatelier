@@ -7,11 +7,26 @@ services:
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
 
+  # Boîte de réception de test : tous les e-mails envoyés par l'application s'y arrêtent, rien ne part pour de vrai.
+  # À ouvrir sur http://localhost:8025 (« make mails »)
+  mailpit:
+    image: axllent/mailpit:v1.31.6
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
+    networks: [frontend]
+
   api:
     build: { target: dev }
     read_only: false
+    depends_on:
+      mailpit: { condition: service_started }
     environment:
       NODE_ENV: development
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      MAIL_FROM: "Alu Pliage Service <contact@aps.test>"
+      MAIL_ALERT_TO: "direction@aps.test"
     volumes:
       - ./api/src:/app/src:ro
       - ./api/drizzle:/app/drizzle:ro

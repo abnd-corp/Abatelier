@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ContactRequests from '@/components/site-admin/ContactRequests.vue'
 import ContentEditor from '@/components/site-admin/ContentEditor.vue'
+import MailSettings from '@/components/site-admin/MailSettings.vue'
 import PhotoManager from '@/components/site-admin/PhotoManager.vue'
 import AppIcon from '@/components/AppIcon.vue'
 
@@ -10,6 +11,7 @@ const TABS = [
   { id: 'demandes', label: 'Demandes reçues' },
   { id: 'textes', label: 'Textes' },
   { id: 'photos', label: 'Photos' },
+  { id: 'emails', label: 'E-mails' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 
@@ -41,7 +43,8 @@ function select(t: Tab) {
   <div :id="`panel-${tab}`" role="tabpanel" :aria-labelledby="`tab-${tab}`">
     <ContactRequests v-if="tab === 'demandes'" @count="pending = $event" />
     <ContentEditor v-else-if="tab === 'textes'" />
-    <PhotoManager v-else />
+    <PhotoManager v-else-if="tab === 'photos'" />
+    <MailSettings v-else />
   </div>
 </template>
 
@@ -55,7 +58,7 @@ function select(t: Tab) {
 .tab {
   border: 0;
   background: none;
-  padding: 10px 16px;
+  padding: 10px 12px;
   font-weight: 600;
   color: var(--muted);
   border-bottom: 2px solid transparent;

@@ -7,7 +7,7 @@ BK = $(BASE) exec -T backup /bin/sh /opt/backup/backup.sh
 # ECRAN=chromium | firefox | telephone | tablette
 PW_ARGS = $(if $(PAGE),--grep "$(PAGE)") $(if $(ECRAN),--project=$(ECRAN))
 
-.PHONY: help setup secrets dev dev-d down logs prod prod-down check demo test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
+.PHONY: help setup secrets dev dev-d down logs prod prod-down check demo mails test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
 
 help: ## Liste les commandes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -69,6 +69,9 @@ apercu: ## Captures de toutes les pages (téléphone, tablette, ordinateur, clai
 
 demo: ## Remplit la base de dev vide avec des clients, commandes, devis et factures de démonstration (comptes demo-*)
 	docker compose exec -T api npx tsx src/demo.ts 2>&1 | grep -v '^{"level"'
+
+mails: ## Ouvre la boîte de réception de test des e-mails (Mailpit, http://localhost:8025)
+	@echo "http://localhost:$${MAILPIT_PORT:-8025}"; xdg-open http://localhost:$${MAILPIT_PORT:-8025} >/dev/null 2>&1 || true
 
 e2e-up: ## Démarre seulement la stack e2e (pour « cd e2e && npm run test:ui »)
 	$(E2E) up -d --build --wait

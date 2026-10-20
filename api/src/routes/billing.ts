@@ -6,6 +6,9 @@ import { db } from '../db/index.js'
 import { BILLING_TYPES, billingDocuments, clients, DEVIS_REPONSES, orders, PAIEMENT_MODES, users } from '../db/schema.js'
 import { csvAmount, csvDate, csvDay, csvText, PAIEMENT_LABELS, STATUT_LABELS_CSV, toCsv } from '../accounting.js'
 import { requirePerm } from '../auth/plugin.js'
+import { getCompany } from '../documents.js'
+import { isMailConfigured, sendMail } from '../mail.js'
+import { defaultDocumentMail } from '../mail-texts.js'
 import { audit } from '../audit.js'
 import { avoirAlias, BillingConflict, DEVIS_STATUTS, FACTURE_STATUTS, issueCreditNote, issueFromOrder, statutSql } from '../billing.js'
 import { todayParis } from '../departures.js'
@@ -38,6 +41,17 @@ const exportQuery = z
   })
   .refine((q) => q.du <= q.au, { message: 'La date de fin doit être après la date de début.', path: ['au'] })
   .refine((q) => Date.parse(q.au) - Date.parse(q.du) <= 5 * 366 * 86400000, { message: 'Période trop longue : 5 ans au maximum.', path: ['au'] })
+
+const emailBody = z.object({
+  to: z
+    .string()
+    .trim()
+    .min(1, 'Indiquez au moins une adresse e-mail.')
+    .transform((s) => s.split(/[,;\s]+/).filter(Boolean))
+    .pipe(z.array(z.email('Adresse e-mail invalide.')).min(1, 'Indiquez au moins une adresse e-mail.').max(3, '3 destinataires au maximum.')),
+  sujet: z.string().trim().min(1, 'Indiquez l’objet du message.').max(200, 'Objet : 200 caractères maximum.').refine((s) => !/[\r\n]/.test(s), 'L’objet tient sur une seule ligne.'),
+  message: z.string().trim().min(1, 'Écrivez le message.').max(5000, 'Message : 5000 caractères maximum.'),
+})
 
 const reponseBody = z.object({ reponse: z.enum(DEVIS_REPONSES, { error: 'Indiquez si le devis est accepté ou refusé.' }) })
 
@@ -230,6 +244,46 @@ export async function billingRoutes(app: FastifyInstance) {
     const doc = await findDoc((req.params as { id: string }).id, reply)
     if (!doc) return
     return reply.header('Content-Type', 'application/pdf').header('Content-Disposition', `inline; filename="${doc.numero}.pdf"`).send(doc.pdf)
+  })
+
+  // Message proposé pour l'envoi par e-mail (modifiable avant l'envoi)
+  app.get('/:id/email', async (req, reply) => {
+    const doc = await findDoc((req.params as { id: string }).id, reply)
+    if (!doc) return
+    const [[client], company] = await Promise.all([db.select().from(clients).where(eq(clients.id, doc.clientId)), getCompany()])
+    return { configure: isMailConfigured(), fichier: `${doc.numero}.pdf`, ...defaultDocumentMail(doc, client!, company) }
+  })
+
+  // Envoie le PDF au client, puis marque le document comme envoyé
+  app.post('/:id/email', async (req, reply) => {
+    const doc = await findDoc((req.params as { id: string }).id, reply)
+    if (!doc) return
+    const parsed = emailBody.safeParse(req.body)
+    if (!parsed.success) {
+      // Le champ est « to », pas « to.0 » : il désigne la zone du formulaire
+      const issue = parsed.error.issues[0]
+      return reply.code(400).send({ error: issue?.message ?? 'Données invalides.', field: issue?.path[0] !== undefined ? String(issue.path[0]) : undefined })
+    }
+    if (!isMailConfigured()) return reply.code(503).send({ error: 'L’envoi d’e-mails n’est pas configuré sur ce serveur. Ouvrez le PDF pour l’envoyer vous-même.' })
+    const result = await sendMail({
+      kind: 'document',
+      to: parsed.data.to,
+      subject: parsed.data.sujet,
+      text: parsed.data.message,
+      attachments: [{ filename: `${doc.numero}.pdf`, content: doc.pdf, contentType: 'application/pdf' }],
+      targetType: 'billing',
+      targetId: doc.id,
+      userId: req.user!.id,
+    })
+    if (!result.ok) return reply.code(502).send({ error: `Le message n’a pas été envoyé : ${result.error}. Réessayez, ou ouvrez le PDF pour l’envoyer vous-même.` })
+    // Un avoir n'a pas de suivi d'envoi ; un devis ou une facture est maintenant « envoyé »
+    let envoyeLe = doc.envoyeLe
+    if (doc.type !== 'avoir' && !doc.envoyeLe) {
+      const [row] = await db.update(billingDocuments).set({ envoyeLe: new Date(), updatedAt: new Date() }).where(eq(billingDocuments.id, doc.id)).returning({ envoyeLe: billingDocuments.envoyeLe })
+      envoyeLe = row!.envoyeLe
+    }
+    await audit(req, 'billing.emailed', { targetType: 'billing', targetId: doc.id, details: { numero: doc.numero, client: doc.clientNom, destinataires: parsed.data.to.length } })
+    return { ok: true, envoyeLe }
   })
 
   app.post('/:id/envoi', async (req, reply) => {

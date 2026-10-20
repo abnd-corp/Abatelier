@@ -1,4 +1,4 @@
-import { apiLogin, createUser, expect, NEW_PASSWORD, test } from './fixtures'
+import { apiLogin, createUser, expect, mailPart, NEW_PASSWORD, test, waitForMail } from './fixtures'
 
 test.describe('Devis et factures', () => {
   test('la direction fait un devis, facture la commande, encaisse puis annule par un avoir', async ({ adminPage: page, baseURL, uid }) => {
@@ -91,6 +91,47 @@ test.describe('Devis et factures', () => {
     await page.getByRole('button', { name: 'Devis et factures', exact: true }).click()
     await expect(page.getByRole('cell', { name: new RegExp(`A émis la facture ${facture} pour Léa ${nom} \\(commande ${commande}`) })).toBeVisible()
     await expect(page.getByRole('cell', { name: new RegExp(`A émis l’avoir ${avoir} qui annule la facture ${facture}`) })).toBeVisible()
+  })
+
+  test('la direction envoie la facture au client par e-mail, avec le PDF en pièce jointe', async ({ adminPage: page, baseURL, uid }) => {
+    const headers = { Origin: baseURL! }
+    const nom = `Mail${uid.slice(-6)}`
+    const email = `${uid}@exemple.fr`
+    const client = await (await page.request.post('/api/clients', { data: { type: 'particulier', prenom: 'Léa', nom, email, adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' }, headers })).json()
+    const cat = await (await page.request.get('/api/orders/catalog')).json()
+    const m = cat.models[0]
+    const ligne = { modelId: m.id, materialId: cat.materials[0].id, colorId: cat.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: 2000, quantite: 3, accessoires: [] }
+    const order = await (await page.request.post('/api/orders', { data: { clientId: client.id, lignes: [ligne], livraison: { mode: 'retrait' } }, headers })).json()
+    await page.request.post(`/api/orders/${order.id}/status`, { data: { statut: 'validee' }, headers })
+    const facture = await (await page.request.post(`/api/billing/orders/${order.id}/facture`, { headers })).json()
+
+    await page.goto(`/factures/${facture.id}`)
+    await expect(page.getByText('À envoyer')).toBeVisible()
+    await page.getByRole('button', { name: 'Envoyer par e-mail' }).click()
+    // Message prêt : adresse du client, numéro de facture, montant
+    await expect(page.getByLabel('Destinataire(s)')).toHaveValue(email)
+    await expect(page.getByLabel('Objet')).toHaveValue(new RegExp(`Facture ${facture.numero}`))
+    await expect(page.getByLabel('Message')).toHaveValue(new RegExp(`Bonjour Léa ${nom}`))
+    // Adresse invalide : message clair sous le champ, rien n'est envoyé
+    await page.getByLabel('Destinataire(s)').fill('pas-un-mail')
+    await page.getByRole('button', { name: 'Envoyer', exact: true }).click()
+    await expect(page.getByText('Adresse e-mail invalide.')).toBeVisible()
+    await page.getByLabel('Destinataire(s)').fill(email)
+    await page.getByLabel('Objet').fill(`Facture ${facture.numero} pour ${uid}`)
+    await page.getByRole('button', { name: 'Envoyer', exact: true }).click()
+    await expect(page.getByText('E-mail envoyé avec le PDF en pièce jointe.')).toBeVisible()
+    await expect(page.getByText('Envoyée').first()).toBeVisible()
+
+    // Le message est arrivé, avec la facture en PDF
+    const mail = await waitForMail(page.request, uid)
+    expect(mail.To.map((a) => a.Address)).toEqual([email])
+    expect(mail.Attachments).toHaveLength(1)
+    expect(mail.Attachments[0]).toMatchObject({ FileName: `${facture.numero}.pdf`, ContentType: 'application/pdf' })
+    expect((await mailPart(page.request, mail, mail.Attachments[0]!.PartID)).subarray(0, 5).toString()).toBe('%PDF-')
+
+    await page.goto('/journal')
+    await page.getByRole('button', { name: 'Devis et factures', exact: true }).click()
+    await expect(page.getByRole('cell', { name: new RegExp(`A envoyé par e-mail la facture ${facture.numero} à Léa ${nom}`) })).toBeVisible()
   })
 
   test('la direction exporte les ventes et les encaissements en CSV pour son comptable', async ({ adminPage: page, baseURL, uid }) => {

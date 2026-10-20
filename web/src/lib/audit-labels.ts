@@ -229,6 +229,10 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A enregistré le paiement de la facture ${d.numero} (${eur(d.ttc)}, ${MODES[d.mode] ?? d.mode}, le ${day(d.date)})`, tone: 'accent' }
     case 'billing.exported':
       return { text: `A exporté les ${d.type === 'ventes' ? 'ventes (factures et avoirs)' : 'encaissements'} du ${day(d.du)} au ${day(d.au)} pour le comptable (${d.lignes} ligne${Number(d.lignes) > 1 ? 's' : ''})`, tone: 'neutral' }
+    case 'billing.emailed':
+      return { text: `A envoyé par e-mail ${String(d.numero).startsWith('D') ? 'le devis' : String(d.numero).startsWith('A') ? 'l’avoir' : 'la facture'} ${d.numero} à ${d.client} (${d.destinataires} destinataire${Number(d.destinataires) > 1 ? 's' : ''})`, tone: 'accent' }
+    case 'mail.test':
+      return { text: 'A envoyé un e-mail d’essai pour vérifier la messagerie', tone: 'neutral' }
     case 'billing.payment_cancelled':
       return { text: `A annulé le paiement enregistré sur la facture ${d.numero}`, tone: 'bad' }
     case 'site.content_updated':

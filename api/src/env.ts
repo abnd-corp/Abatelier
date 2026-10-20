@@ -39,6 +39,17 @@ const schema = z.object({
   LOGIN_DELAY_BASE_MS: z.coerce.number().int().min(0).default(1000),
   // Envois du formulaire de contact du site, par heure et par IP (relevé pour les tests de bout en bout)
   CONTACT_RATE_LIMIT: z.coerce.number().int().positive().default(20),
+  // Envoi d'e-mails : sans SMTP_HOST et MAIL_FROM, l'application fonctionne sans envoyer (boutons masqués ou refusés)
+  SMTP_HOST: z.string().trim().optional(),
+  SMTP_PORT: z.coerce.number().int().default(587),
+  SMTP_USER: z.string().trim().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  // true pour le port 465 (TLS dès la connexion) ; sinon STARTTLS, obligatoire dès qu'il y a un identifiant
+  SMTP_SECURE: bool,
+  // Expéditeur, par exemple « Alu Pliage Service <contact@exemple.fr> »
+  MAIL_FROM: z.string().trim().optional(),
+  // Adresses qui reçoivent les alertes (demandes de contact), séparées par des virgules ; par défaut l'e-mail de l'entreprise
+  MAIL_ALERT_TO: z.string().trim().optional(),
   // À mettre à true dès que le site est servi en HTTPS
   COOKIE_SECURE: bool,
   // Premier compte, créé au démarrage si la table des utilisateurs est vide
@@ -50,7 +61,7 @@ const schema = z.object({
   GOOGLE_PLACES_API_KEY: z.string().trim().optional(),
 })
 
-const parsed = schema.safeParse({ ...process.env, DB_PASSWORD: secret('DB_PASSWORD'), ADMIN_PASSWORD: secret('ADMIN_PASSWORD'), GOOGLE_PLACES_API_KEY: secret('GOOGLE_PLACES_API_KEY') })
+const parsed = schema.safeParse({ ...process.env, DB_PASSWORD: secret('DB_PASSWORD'), ADMIN_PASSWORD: secret('ADMIN_PASSWORD'), GOOGLE_PLACES_API_KEY: secret('GOOGLE_PLACES_API_KEY'), SMTP_PASSWORD: secret('SMTP_PASSWORD') })
 if (!parsed.success) {
   console.error('Configuration invalide :', z.prettifyError(parsed.error))
   process.exit(1)

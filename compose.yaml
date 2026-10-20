@@ -42,13 +42,21 @@ services:
       ADMIN_PASSWORD_FILE: /run/secrets/admin_password
       # Avis Google du site : sans clé, il affiche seulement un lien (clé dans secrets/google_places_api_key.txt)
       GOOGLE_PLACE_ID: ${GOOGLE_PLACE_ID:-}
+      # E-mails : sans SMTP_HOST ni MAIL_FROM, rien n'est envoyé (mot de passe dans secrets/smtp_password.txt)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_ALERT_TO: ${MAIL_ALERT_TO:-}
+      SMTP_PASSWORD_FILE: /run/secrets/smtp_password
       GOOGLE_PLACES_API_KEY_FILE: /run/secrets/google_places_api_key
       ADMIN_IDENTIFIANT: ${ADMIN_IDENTIFIANT:-admin}
       ADMIN_NOM: ${ADMIN_NOM:-Administrateur}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
       IDLE_TIMEOUT_HOURS: ${IDLE_TIMEOUT_HOURS:-12}
-    secrets: [db_password, admin_password, google_places_api_key]
+    secrets: [db_password, admin_password, google_places_api_key, smtp_password]
     tmpfs: [/tmp]
     networks: [backend, frontend]
     healthcheck:
@@ -98,6 +106,8 @@ secrets:
     file: ./secrets/admin_password.txt
   google_places_api_key:
     file: ./secrets/google_places_api_key.txt
+  smtp_password:
+    file: ./secrets/smtp_password.txt
 
 networks:
   # La base n'est joignable que par l'API, et n'a pas accès à Internet

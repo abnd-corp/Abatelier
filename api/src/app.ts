@@ -16,6 +16,7 @@ import { productionRoutes } from './routes/production.js'
 import { billingRoutes } from './routes/billing.js'
 import { publicRoutes } from './routes/public.js'
 import { siteRoutes } from './routes/site.js'
+import { mailRoutes } from './routes/mail.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -94,6 +95,7 @@ export async function buildApp() {
   await app.register(billingRoutes, { prefix: '/api/billing' })
   await app.register(publicRoutes, { prefix: '/api/public' })
   await app.register(siteRoutes, { prefix: '/api/site' })
+  await app.register(mailRoutes, { prefix: '/api/mail' })
 
   return app
 }

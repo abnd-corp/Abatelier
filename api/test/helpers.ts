@@ -14,7 +14,7 @@ export const PASSWORD = 'Plieuse-numerique-2026'
 export { buildApp }
 
 export async function resetDb() {
-  await db.execute(sql`truncate audit_log, login_attempts, sessions, employees, users, materials, colors, pricing_settings, piece_models, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events, billing_documents, site_content, site_photos, contact_requests restart identity cascade`)
+  await db.execute(sql`truncate audit_log, login_attempts, sessions, employees, users, materials, colors, pricing_settings, piece_models, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events, billing_documents, site_content, site_photos, contact_requests, email_log restart identity cascade`)
 }
 
 // Les quatre modèles de départ, avec les identifiants de la migration 0013

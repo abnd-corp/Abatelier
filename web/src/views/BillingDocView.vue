@@ -19,7 +19,7 @@ const loadError = ref('')
 const notice = ref('')
 const actionError = ref<{ field?: string; msg: string } | null>(null)
 const busy = ref(false)
-const form = ref<'paiement' | 'avoir' | null>(null)
+const form = ref<'paiement' | 'avoir' | 'email' | null>(null)
 
 async function load() {
   try {
@@ -84,6 +84,34 @@ const openCredit = () => {
 }
 const credit = () => act('avoir', { motif: motif.value }, 'Avoir émis : la facture est annulée.')
 
+// --- Envoi par e-mail ---
+interface MailProposal {
+  configure: boolean
+  to: string
+  sujet: string
+  message: string
+  fichier: string
+}
+const mail = ref<MailProposal | null>(null)
+const mailTo = ref('')
+const mailSubject = ref('')
+const mailMessage = ref('')
+const openMail = async () => {
+  actionError.value = null
+  notice.value = ''
+  try {
+    mail.value = await api<MailProposal>(`/billing/${id.value}/email`)
+  } catch (e) {
+    actionError.value = { msg: e instanceof ApiError ? e.message : 'Préparation du message impossible.' }
+    return
+  }
+  mailTo.value = mail.value.to
+  mailSubject.value = mail.value.sujet
+  mailMessage.value = mail.value.message
+  form.value = 'email'
+}
+const sendMail = () => act('email', { to: mailTo.value, sujet: mailSubject.value, message: mailMessage.value }, 'E-mail envoyé avec le PDF en pièce jointe.')
+
 const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer envoyée'))
 </script>
 
@@ -108,7 +136,7 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
     </div>
 
     <p v-if="notice" class="alert ok" role="status">{{ notice }}</p>
-    <p v-if="actionError && !['date', 'mode', 'motif'].includes(actionError.field ?? '')" class="alert bad" role="alert">{{ actionError.msg }}</p>
+    <p v-if="actionError && !['date', 'mode', 'motif', 'to', 'sujet', 'message'].includes(actionError.field ?? '')" class="alert bad" role="alert">{{ actionError.msg }}</p>
 
     <section class="card block" aria-labelledby="suivi-title">
       <h2 id="suivi-title">Suivi</h2>
@@ -166,6 +194,32 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
         </div>
       </form>
 
+      <!-- Envoyer par e-mail -->
+      <form v-else-if="form === 'email' && mail" class="inline-form mail" novalidate @submit.prevent="sendMail">
+        <p v-if="!mail.configure" class="warn-box">L’envoi d’e-mails n’est pas encore configuré sur ce serveur. Ouvrez le PDF pour l’envoyer vous-même (le bouton « {{ sendLabel }} » garde le suivi).</p>
+        <div class="field">
+          <label for="mail-to">Destinataire(s)</label>
+          <input id="mail-to" v-model="mailTo" class="input" type="text" inputmode="email" autocomplete="off" placeholder="client@exemple.fr" :aria-invalid="actionError?.field === 'to' || undefined" aria-describedby="mail-error-to" />
+          <p v-if="actionError?.field === 'to'" id="mail-error-to" class="field-error" role="alert">{{ actionError.msg }}</p>
+          <p v-else-if="!mailTo" class="muted small">Ce client n’a pas d’adresse e-mail : saisissez-la ici (jusqu’à 3, séparées par une virgule).</p>
+        </div>
+        <div class="field">
+          <label for="mail-subject">Objet</label>
+          <input id="mail-subject" v-model="mailSubject" class="input" maxlength="200" :aria-invalid="actionError?.field === 'sujet' || undefined" aria-describedby="mail-error-sujet" />
+          <p v-if="actionError?.field === 'sujet'" id="mail-error-sujet" class="field-error" role="alert">{{ actionError.msg }}</p>
+        </div>
+        <div class="field">
+          <label for="mail-message">Message</label>
+          <textarea id="mail-message" v-model="mailMessage" class="input" rows="10" :aria-invalid="actionError?.field === 'message' || undefined" aria-describedby="mail-error-message" />
+          <p v-if="actionError?.field === 'message'" id="mail-error-message" class="field-error" role="alert">{{ actionError.msg }}</p>
+        </div>
+        <p class="muted small"><AppIcon name="file" :size="14" /> Pièce jointe : {{ mail.fichier }}</p>
+        <div class="actions">
+          <button class="btn primary" type="submit" :disabled="busy || !mail.configure || !mailTo.trim() || !mailMessage.trim()"><AppIcon name="mail" :size="16" />{{ busy ? 'Envoi…' : 'Envoyer' }}</button>
+          <button class="btn" type="button" @click="form = null">Retour</button>
+        </div>
+      </form>
+
       <!-- Faire un avoir -->
       <form v-else-if="form === 'avoir'" class="inline-form avoir" novalidate @submit.prevent="credit">
         <p class="warn-box">
@@ -185,6 +239,7 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
 
       <div v-else class="actions">
         <a class="btn" :href="pdfUrl(d.id)" target="_blank" rel="noopener"><AppIcon name="download" :size="16" />Ouvrir le PDF</a>
+        <button class="btn primary" type="button" :disabled="busy" @click="openMail"><AppIcon name="mail" :size="16" />Envoyer par e-mail</button>
         <button v-if="canSend" class="btn" type="button" :disabled="busy" @click="act('envoi', {}, isDevis ? 'Devis marqué comme envoyé.' : 'Facture marquée comme envoyée.')">
           <AppIcon name="mail" :size="16" />{{ sendLabel }}
         </button>
@@ -330,8 +385,9 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
 .inline-form .warn-box {
   grid-column: 1 / -1;
 }
-.inline-form.avoir {
-  grid-template-columns: minmax(0, 520px);
+.inline-form.avoir,
+.inline-form.mail {
+  grid-template-columns: minmax(0, 640px);
 }
 .warn-box {
   background: var(--warn-soft);

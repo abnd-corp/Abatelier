@@ -60,3 +60,39 @@ export function makePng(width: number, height: number, grey = 0x7b) {
   const raw = Buffer.concat(Array.from({ length: height }, () => row))
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
 }
+
+// --- Boîte de réception de test (Mailpit) : tous les e-mails de l'application s'y arrêtent ---
+const MAIL = `http://localhost:${process.env.E2E_MAIL_PORT ?? '8091'}`
+
+export interface Mail {
+  ID: string
+  Subject: string
+  Text: string
+  To: { Address: string }[]
+  ReplyTo: { Address: string }[]
+  Attachments: { PartID: string; FileName: string; ContentType: string }[]
+}
+
+/** Attend le message dont l'objet contient `fragment` (unique par test) et le renvoie en entier. */
+export async function waitForMail(request: APIRequestContext, fragment: string): Promise<Mail> {
+  let found: { ID: string } | undefined
+  await expect
+    .poll(async () => {
+      const res = await request.get(`${MAIL}/api/v1/search?query=${encodeURIComponent(`subject:"${fragment}"`)}`)
+      found = (await res.json()).messages?.[0]
+      return Boolean(found)
+    }, { message: `Aucun e-mail dont l'objet contient « ${fragment} »`, timeout: 10_000 })
+    .toBe(true)
+  return (await request.get(`${MAIL}/api/v1/message/${found!.ID}`)).json()
+}
+
+/** Contenu d'une pièce jointe d'un message. */
+export async function mailPart(request: APIRequestContext, mail: Mail, partId: string) {
+  return Buffer.from(await (await request.get(`${MAIL}/api/v1/message/${mail.ID}/part/${partId}`)).body())
+}
+
+/** Nombre de messages dont l'objet contient `fragment`. */
+export async function countMails(request: APIRequestContext, fragment: string) {
+  const res = await request.get(`${MAIL}/api/v1/search?query=${encodeURIComponent(`subject:"${fragment}"`)}`)
+  return ((await res.json()).messages ?? []).length as number
+}

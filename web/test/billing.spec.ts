@@ -326,3 +326,65 @@ describe('Export pour le comptable', () => {
     expect(clicks).toEqual([])
   })
 })
+
+describe('Envoi par e-mail', () => {
+  const PROPOSAL = { configure: true, to: 'jean@example.com', sujet: 'Facture F-2026-0001 — Alu Pliage Service', message: 'Bonjour Jean,\n\nVoici la facture.', fichier: 'F-2026-0001.pdf' }
+  const open = async (routes: Parameters<typeof mockApi>[0] = {}) => {
+    const res = await mountAt(BillingDocView, '/factures/f1', { 'GET /billing/f1': [200, detail()], 'GET /billing/f1/email': [200, PROPOSAL], ...routes })
+    await button(res.wrapper, 'Envoyer par e-mail')!.trigger('click')
+    await flushPromises()
+    return res
+  }
+
+  it('propose le message prêt à envoyer, puis envoie avec les champs modifiés', async () => {
+    const { wrapper, calls } = await open({ 'POST /billing/f1/email': [200, { ok: true, envoyeLe: '2026-10-20T09:00:00Z' }] })
+    expect((wrapper.get('#mail-to').element as HTMLInputElement).value).toBe('jean@example.com')
+    expect((wrapper.get('#mail-subject').element as HTMLInputElement).value).toBe(PROPOSAL.sujet)
+    expect((wrapper.get('#mail-message').element as HTMLTextAreaElement).value).toContain('Voici la facture.')
+    expect(wrapper.text()).toContain('Pièce jointe : F-2026-0001.pdf')
+    await wrapper.get('#mail-to').setValue('jean@example.com, compta@example.com')
+    await wrapper.get('#mail-message').setValue('Bonjour, voici la facture à régler.')
+    await wrapper.get('form.inline-form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'POST')).toMatchObject({ path: '/billing/f1/email', body: { to: 'jean@example.com, compta@example.com', sujet: PROPOSAL.sujet, message: 'Bonjour, voici la facture à régler.' } })
+    expect(wrapper.text()).toContain('E-mail envoyé avec le PDF en pièce jointe.')
+    expect(wrapper.find('form.inline-form').exists()).toBe(false)
+  })
+
+  it('affiche l’erreur sous le bon champ, et celle du serveur de messagerie', async () => {
+    const { wrapper } = await open({ 'POST /billing/f1/email': [400, { error: 'Adresse e-mail invalide.', field: 'to' }] })
+    await wrapper.get('#mail-to').setValue('pas-un-mail')
+    await wrapper.get('form.inline-form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('#mail-error-to').text()).toBe('Adresse e-mail invalide.')
+    expect(wrapper.get('#mail-to').attributes('aria-invalid')).toBe('true')
+    expect(wrapper.findAll('[role="alert"]')).toHaveLength(1)
+  })
+
+  it('montre l’échec d’envoi sans perdre le message saisi', async () => {
+    const { wrapper } = await open({ 'POST /billing/f1/email': [502, { error: 'Le message n’a pas été envoyé : serveur de messagerie injoignable.' }] })
+    await wrapper.get('form.inline-form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('serveur de messagerie injoignable')
+    expect((wrapper.get('#mail-message').element as HTMLTextAreaElement).value).toContain('Voici la facture.')
+  })
+
+  it('prévient quand la messagerie n’est pas configurée, et bloque l’envoi', async () => {
+    const { wrapper } = await open({ 'GET /billing/f1/email': [200, { ...PROPOSAL, configure: false }] })
+    expect(wrapper.text()).toContain('pas encore configuré')
+    expect(wrapper.get('form.inline-form button[type="submit"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('invite à saisir l’adresse quand le client n’en a pas', async () => {
+    const { wrapper } = await open({ 'GET /billing/f1/email': [200, { ...PROPOSAL, to: '' }] })
+    expect(wrapper.text()).toContain('n’a pas d’adresse e-mail')
+    expect(wrapper.get('form.inline-form button[type="submit"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('décrit l’envoi et l’essai dans le journal', () => {
+    const e = (action: string, details: Record<string, unknown>): AuditEntry => ({ id: 1, at: '2026-10-20T08:00:00Z', action, identifiant: 'chef', nom: 'Le Chef', userId: 'u1', targetType: 'billing', targetId: 'f1', targetName: null, ip: null, device: '', details })
+    expect(describeEntry(e('billing.emailed', { numero: 'F-2026-0001', client: 'Jean Dupont', destinataires: 2 })).text).toBe('A envoyé par e-mail la facture F-2026-0001 à Jean Dupont (2 destinataires)')
+    expect(describeEntry(e('billing.emailed', { numero: 'D-2026-0001', client: 'Jean Dupont', destinataires: 1 })).text).toBe('A envoyé par e-mail le devis D-2026-0001 à Jean Dupont (1 destinataire)')
+    expect(describeEntry(e('mail.test', {})).text).toMatch(/essai/)
+  })
+})

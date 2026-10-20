@@ -7,6 +7,7 @@ import PliageView from '@/views/site/PliageView.vue'
 import ContactView from '@/views/site/ContactView.vue'
 import LegalView from '@/views/site/LegalView.vue'
 import SiteAdminView from '@/views/SiteAdminView.vue'
+import MailSettings from '@/components/site-admin/MailSettings.vue'
 import { legalBlocks, lines, loadSite, site, splitAddress, telHref, type AvisGoogle, type SiteData } from '@/lib/site'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 import { useAuthStore } from '@/stores/auth'
@@ -357,5 +358,64 @@ describe('Journal : actions du site', () => {
     const d = describeEntry(entry(action, details))
     expect(d.text).toMatch(expected)
     expect(d.text).not.toBe(action)
+  })
+})
+
+describe('Onglet E-mails', () => {
+  const STATUS = {
+    configure: true,
+    expediteur: 'Alu Pliage Service <contact@aps.test>',
+    alertes: ['direction@aps.test'],
+    journal: [
+      { id: 'l1', at: '2026-10-20T08:00:00Z', kind: 'contact', destinataires: 'direction@aps.test', objet: 'Nouvelle demande de contact : Couvertine', statut: 'envoye', erreur: null },
+      { id: 'l2', at: '2026-10-20T08:05:00Z', kind: 'document', destinataires: 'jean@example.com', objet: 'Facture F-2026-0001', statut: 'echec', erreur: 'serveur de messagerie injoignable' },
+    ],
+  }
+  const mountMail = async (routes: Parameters<typeof mockApi>[0]) => {
+    const calls = mockApi(routes)
+    const pinia = freshPinia()
+    useAuthStore().user = ADMIN
+    const router = makeRouter()
+    await router.push('/site-vitrine?onglet=emails')
+    await router.isReady()
+    const wrapper = mount(MailSettings, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    return { wrapper, calls }
+  }
+
+  it('montre l’expéditeur, les destinataires des alertes et les derniers envois, échecs compris', async () => {
+    const { wrapper } = await mountMail({ 'GET /mail/status': [200, STATUS] })
+    expect(wrapper.text()).toContain('contact@aps.test')
+    expect(wrapper.text()).toContain('direction@aps.test')
+    const rows = wrapper.findAll('tbody tr')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]!.text()).toContain('Envoyé')
+    expect(rows[1]!.text()).toContain('Échec')
+    expect(rows[1]!.text()).toContain('serveur de messagerie injoignable')
+  })
+
+  it('envoie un message d’essai et rafraîchit l’historique', async () => {
+    const { wrapper, calls } = await mountMail({ 'GET /mail/status': [200, STATUS], 'POST /mail/test': [200, { ok: true }] })
+    await wrapper.get('#mail-test').setValue('moi@example.com')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'POST')).toMatchObject({ path: '/mail/test', body: { to: 'moi@example.com' } })
+    expect(wrapper.text()).toContain('Message d’essai envoyé')
+    expect(calls.filter((c) => c.path === '/mail/status')).toHaveLength(2)
+  })
+
+  it('montre l’erreur quand l’essai échoue', async () => {
+    const { wrapper } = await mountMail({ 'GET /mail/status': [200, STATUS], 'POST /mail/test': [502, { error: 'Le message d’essai n’est pas parti : identifiants refusés par le serveur de messagerie.' }] })
+    await wrapper.get('#mail-test').setValue('moi@example.com')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('identifiants refusés')
+  })
+
+  it('explique clairement que rien n’est envoyé tant que ce n’est pas configuré, sans proposer d’essai', async () => {
+    const { wrapper } = await mountMail({ 'GET /mail/status': [200, { ...STATUS, configure: false, expediteur: null, alertes: [], journal: [] }] })
+    expect(wrapper.text()).toContain('Pas encore configuré')
+    expect(wrapper.find('#mail-test').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Aucun e-mail envoyé')
   })
 })

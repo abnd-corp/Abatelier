@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { ADMIN, apiLogin, createUser, expect, makePng, NEW_PASSWORD, test } from './fixtures'
+import { ADMIN, apiLogin, createUser, expect, makePng, NEW_PASSWORD, test, waitForMail } from './fixtures'
 
 // Site vitrine : parcours des visiteurs (sans connexion) et de la direction qui le gère.
 // Les tests tournent en parallèle sur la même base : chaque navigateur modifie son propre champ de texte.
@@ -65,6 +65,14 @@ test.describe('Site vitrine : visiteurs', () => {
     await page.getByLabel(/J’accepte que mes données/).check()
     await page.getByRole('button', { name: 'Envoyer' }).click()
     await expect(page.getByRole('heading', { name: 'Message envoyé' })).toBeVisible()
+
+    // La direction est prévenue par e-mail, avec la réponse directe au visiteur
+    const alerte = await waitForMail(page.request, `12 couvertines ${uid}`)
+    expect(alerte.To.map((a) => a.Address)).toEqual(['direction@aps.test'])
+    expect(alerte.ReplyTo.map((a) => a.Address)).toEqual([`${uid}@exemple.fr`])
+    expect(alerte.Text).toContain('Bonjour, je voudrais un devis pour 12 couvertines')
+    expect(alerte.Text).toContain('Plan joint : plan.pdf')
+    expect(alerte.Attachments).toHaveLength(0)
 
     // Côté direction : la demande est là, avec son plan
     await admin.goto('/site-vitrine')
@@ -156,6 +164,24 @@ test.describe('Site vitrine : direction', () => {
     await expect(adminPage.getByText('Textes enregistrés')).toBeVisible()
   })
 
+  test('l’onglet E-mails vérifie la messagerie : essai reçu, historique, alerte de contact', async ({ adminPage, uid }) => {
+    await adminPage.goto('/site-vitrine?onglet=emails')
+    await expect(adminPage.getByText('Configuré : les messages partent de')).toBeVisible()
+    await expect(adminPage.getByText('direction@aps.test').first()).toBeVisible()
+    await adminPage.getByLabel('Adresse qui reçoit l’essai').fill(`${uid}@exemple.fr`)
+    await adminPage.getByRole('button', { name: 'Envoyer l’essai' }).click()
+    await expect(adminPage.getByText('Message d’essai envoyé')).toBeVisible()
+    const essai = await waitForMail(adminPage.request, 'Essai d’envoi')
+    expect(essai.Subject).toContain('Essai d’envoi')
+    await expect(adminPage.getByRole('cell', { name: /Essai d’envoi/ }).first()).toBeVisible()
+    await expect(adminPage.getByText('Envoyé', { exact: true }).first()).toBeVisible()
+
+    // Adresse invalide : refus clair
+    await adminPage.getByLabel('Adresse qui reçoit l’essai').fill('pas-un-mail')
+    await adminPage.getByRole('button', { name: 'Envoyer l’essai' }).click()
+    await expect(adminPage.getByRole('alert').filter({ hasText: 'Adresse e-mail invalide.' })).toBeVisible()
+  })
+
   test('est réservé à la direction : la RH n’a ni le menu, ni la page, ni l’API', async ({ adminPage, browser, baseURL, uid }) => {
     const temp = await createUser(adminPage.request, baseURL!, { identifiant: uid, nom: `Claire ${uid.slice(-4)}`, role: 'rh' })
     const rh = await (await browser.newContext()).newPage()
@@ -200,7 +226,7 @@ test.describe('Site vitrine : écrans @responsive', () => {
   })
 
   test('/site-vitrine (direction) : onglets lisibles, sans défilement horizontal', async ({ adminPage }) => {
-    for (const onglet of ['', '?onglet=textes', '?onglet=photos']) {
+    for (const onglet of ['', '?onglet=textes', '?onglet=photos', '?onglet=emails']) {
       await adminPage.goto(`/site-vitrine${onglet}`)
       await expect(adminPage.getByRole('heading', { level: 1, name: 'Site vitrine' })).toBeInViewport()
       expect(await noHorizontalScroll(adminPage)).toBe(true)
