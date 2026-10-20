@@ -585,6 +585,17 @@ export const sitePhotos = pgTable(
   (t) => [index('site_photos_place_idx').on(t.emplacement, t.position)],
 )
 
+// Pièces choisies par un visiteur dans le configurateur du site, avec le prix qu'il a vu
+export interface ContactConfiguration {
+  // Pièces et livraison telles que saisies (même forme que le corps d'une commande de l'atelier, sans le client)
+  lignes: Record<string, unknown>[]
+  livraison: { mode: 'retrait' } | { mode: 'livraison'; adresse: string; codePostal: string; ville: string }
+  // Une ligne lisible par pièce, pour l'alerte et la liste des demandes
+  resume: string[]
+  ht: number
+  ttc: number
+}
+
 // Demandes reçues par le formulaire de contact du site
 export const contactRequests = pgTable(
   'contact_requests',
@@ -603,6 +614,10 @@ export const contactRequests = pgTable(
     fichierNom: text('fichier_nom'),
     fichierType: text('fichier_type'),
     fichier: bytea('fichier'),
+    // Demande de devis faite depuis le configurateur : les pièces et le prix
+    configuration: jsonb('configuration').$type<ContactConfiguration>(),
+    // Commande créée par la direction à partir de cette demande
+    commandeId: uuid('commande_id').references((): AnyPgColumn => orders.id, { onDelete: 'set null' }),
     traiteAt: ts('traite_at'),
     traitePar: uuid('traite_par').references(() => users.id, { onDelete: 'set null' }),
   },

@@ -40,6 +40,7 @@ const PAGES = [
   { name: '30-site-accueil', path: '/', anonymous: true },
   { name: '31-site-pliage', path: '/pliage-aluminium', anonymous: true },
   { name: '32-site-contact', path: '/contact', anonymous: true },
+  { name: '33b-site-configurateur', path: '/configurateur', anonymous: true },
   { name: '33-site-mentions-legales', path: '/mentions-legales', anonymous: true },
   { name: '34-admin-site-demandes', path: '/site-vitrine' },
   { name: '35-admin-site-textes', path: '/site-vitrine?onglet=textes' },

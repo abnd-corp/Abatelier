@@ -120,6 +120,73 @@ test.describe('Site vitrine : visiteurs', () => {
   })
 })
 
+test.describe('Configurateur : du visiteur à la commande', () => {
+  test('le visiteur dessine sa pièce et voit le prix, demande un devis, la direction crée la commande', async ({ page, browser, baseURL, uid, context }) => {
+    const admin = await (await browser.newContext()).newPage()
+    await apiLogin(admin.request, baseURL!, ADMIN.identifiant, ADMIN.password)
+    const nom = `Visiteur ${uid.slice(-6)}`
+    const email = `${uid}@exemple.fr`
+
+    await page.goto('/configurateur')
+    await expect(page.getByRole('heading', { level: 1, name: 'Dessinez votre pièce, voyez le prix' })).toBeVisible()
+    const piece = page.getByRole('region', { name: 'Pièce 1' })
+    const summary = page.getByRole('complementary', { name: 'Montant de la commande' })
+    await expect(summary).toContainText('Total TTC')
+    await expect(piece.locator('.line-price')).toContainText('HT')
+    // Pas de notes internes ni de remise pro pour un visiteur
+    await expect(page.getByText('Notes internes')).toHaveCount(0)
+    await expect(summary).not.toContainText('Remise pro')
+
+    // Le prix suit la quantité
+    const total = async () => (await summary.locator('dd.big').innerText()).replace(/\s/g, '')
+    const before = await total()
+    await piece.getByLabel('Quantité').fill('9')
+    await expect.poll(total).not.toBe(before)
+
+    // Cote hors limites : signalée tout de suite, la demande est bloquée
+    await piece.getByLabel(/^A/).fill('3')
+    await expect(piece.getByRole('alert')).toContainText('Cote A')
+    await expect(page.getByRole('button', { name: 'Envoyer ma demande de devis' })).toBeDisabled()
+    await piece.getByLabel(/^A/).fill('20')
+    await expect(piece.getByRole('alert')).toHaveCount(0)
+    await piece.getByLabel('Repère').fill(`Muret ${uid.slice(-4)}`)
+
+    // Demande de devis : erreur claire, puis envoi
+    await page.getByLabel('Votre nom *').fill(nom)
+    await page.getByLabel('Votre e-mail *').fill('pas-un-mail')
+    await page.getByLabel(/J’accepte que mes données/).check()
+    await page.getByRole('button', { name: 'Envoyer ma demande de devis' }).click()
+    await expect(page.getByText('Adresse e-mail invalide.')).toBeVisible()
+    await page.getByLabel('Votre e-mail *').fill(email)
+    await page.getByRole('button', { name: 'Envoyer ma demande de devis' }).click()
+    await expect(page.getByRole('heading', { name: 'Demande de devis envoyée' })).toBeVisible()
+    // Aucun cookie déposé chez le visiteur
+    expect(await context.cookies()).toEqual([])
+
+    // La direction est prévenue, avec les pièces et le prix
+    const mail = await waitForMail(page.request, 'Demande de devis : 9 pièces')
+    expect(mail.Text).toContain('Pièces choisies dans le configurateur')
+    expect(mail.Text).toContain(`Muret ${uid.slice(-4)}`)
+    expect(mail.ReplyTo.map((a) => a.Address)).toEqual([email])
+
+    // Elle voit la demande avec les pièces, et crée la commande en un clic
+    await admin.goto('/site-vitrine')
+    await admin.getByRole('button', { name: new RegExp(`Demande de devis : 9 pièces`) }).first().click()
+    await expect(admin.getByText(`Muret ${uid.slice(-4)}`)).toBeVisible()
+    await expect(admin.getByText('Prix affiché au visiteur')).toBeVisible()
+    await admin.getByRole('button', { name: 'Créer la commande' }).first().click()
+    await expect(admin).toHaveURL(/\/commandes\/[0-9a-f-]{36}$/)
+    await expect(admin.getByRole('heading', { level: 1 })).toContainText(/^C-\d{4}-\d{4}$/)
+    await expect(admin.getByText(nom).first()).toBeVisible()
+    await expect(admin.getByText(`Muret ${uid.slice(-4)}`).first()).toBeVisible()
+    await expect(admin.getByText('Reçue').first()).toBeVisible()
+
+    // Le client existe, venu du site
+    const clients = await (await admin.request.get(`/api/clients?q=${encodeURIComponent(email)}`)).json()
+    expect(clients.clients[0]).toMatchObject({ origine: 'site', email })
+  })
+})
+
 test.describe('Site vitrine : direction', () => {
   test('modifie un texte et une photo, visibles tout de suite sur le site, puis les rétablit', async ({ adminPage, browser, uid }, info) => {
     const field = FIELD[info.project.name as keyof typeof FIELD]
@@ -201,7 +268,7 @@ test.describe('Site vitrine : direction', () => {
 })
 
 test.describe('Site vitrine : écrans @responsive', () => {
-  for (const path of ['/', '/pliage-aluminium', '/contact', '/mentions-legales', '/conditions-generales-de-vente']) {
+  for (const path of ['/', '/pliage-aluminium', '/configurateur', '/contact', '/mentions-legales', '/conditions-generales-de-vente']) {
     test(`${path} : tient dans l’écran, sans défilement horizontal`, async ({ page }) => {
       await page.goto(path)
       await expect(page.getByRole('heading', { level: 1 })).toBeInViewport()

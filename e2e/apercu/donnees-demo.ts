@@ -91,6 +91,15 @@ export default async function seed(config: FullConfig) {
   }
   const contact = { consentement: true, objet: '12 couvertines blanches de 3 m', message: 'Bonjour, je voudrais un devis pour 12 couvertines blanches de 3 mètres, livrées à Firminy.', nom: 'Jean Dupont', email: 'jean.dupont@exemple.fr', telephone: '06 11 22 33 44', codePostal: '42700', ville: 'Firminy' }
   await api.post('/api/public/contact', { data: { ...contact, fichier: { nom: 'plan-couvertine.pdf', contenu: Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n').toString('base64') } } })
+  // Une demande de devis du configurateur : le visiteur a choisi une couvertine du catalogue de départ
+  const m0 = catalog.models[0]
+  await api.post('/api/public/devis', {
+    data: {
+      nom: 'Luc Morel', email: 'luc.morel@exemple.fr', telephone: '06 11 22 33 44', codePostal: '42700', message: 'Pose prévue en novembre.', consentement: true,
+      lignes: [{ repere: 'Muret de clôture', modelId: m0.id, materialId: catalog.materials[0].id, colorId: catalog.colors[0].id, cotes: m0.cotes, angles: m0.angles, longueur: 3000, quantite: 6, accessoires: [] }],
+      livraison: { mode: 'retrait' },
+    },
+  })
   await api.post('/api/public/contact', { data: { ...contact, nom: 'Martine Bernard', email: 'martine@exemple.fr', objet: 'Bavettes sur mesure', message: 'Pouvez-vous me rappeler ?' } })
   // Un échec de connexion, pour que le journal et le tableau de bord ne soient pas vides
   await api.post('/api/auth/login', { data: { identifiant: 'inconnu', password: 'faux' } })

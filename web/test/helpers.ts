@@ -41,7 +41,7 @@ export function makeRouter() {
     history: createMemoryHistory(),
     routes: [
       { path: '/', name: 'site-home', component: page('site-home'), meta: { public: true } },
-      ...(['pliage-aluminium:site-pliage', 'contact:site-contact', 'mentions-legales:site-mentions', 'politique-de-confidentialite:site-confidentialite', 'cookies:site-cookies', 'conditions-generales-de-vente:site-cgv'] as const).map((s) => {
+      ...(['pliage-aluminium:site-pliage', 'configurateur:site-configurateur', 'contact:site-contact', 'mentions-legales:site-mentions', 'politique-de-confidentialite:site-confidentialite', 'cookies:site-cookies', 'conditions-generales-de-vente:site-cgv'] as const).map((s) => {
         const [path, name] = s.split(':') as [string, string]
         return { path: `/${path}`, name, component: page(name), meta: { public: true } }
       }),

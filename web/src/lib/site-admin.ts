@@ -31,6 +31,10 @@ export interface Demande {
   message: string
   fichierNom: string | null
   fichierType: string | null
+  // Demande de devis du configurateur : les pièces choisies et le prix affiché
+  configuration: { resume: string[]; ht: number; ttc: number } | null
+  // Commande créée à partir de cette demande
+  commandeId: string | null
   traiteAt: string | null
 }
 

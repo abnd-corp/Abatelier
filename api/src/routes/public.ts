@@ -11,6 +11,7 @@ import { env } from '../env.js'
 import { alertRecipients, sendMail, withTimeout } from '../mail.js'
 import { contactAlert } from '../mail-texts.js'
 import { invalid } from '../validation.js'
+import { line, livraison, orderCatalog, priceBody } from './orders.js'
 
 // Routes ouvertes à tous les visiteurs du site vitrine : aucune donnée privée, jamais de session.
 
@@ -33,16 +34,32 @@ const opt = (max: number, label: string) =>
     .nullish()
     .transform((v) => v || null)
 
-const contactBody = z.object({
+const contactFields = {
   nom: z.string().trim().min(1, 'Indiquez votre nom.').max(100, 'Nom : 100 caractères maximum.'),
   email: z.string().trim().toLowerCase().min(1, 'Indiquez votre adresse e-mail.').max(120).pipe(z.email('Adresse e-mail invalide.')),
   telephone: opt(30, 'Téléphone').refine((v) => v === null || /^\+?[0-9 .()-]{6,25}$/.test(v), 'Numéro de téléphone invalide.'),
   adresse: opt(200, 'Adresse'),
   codePostal: opt(10, 'Code postal').refine((v) => v === null || /^\d{5}$/.test(v), 'Code postal : 5 chiffres.'),
   ville: opt(80, 'Ville'),
+}
+const consentement = z.literal(true, { error: 'Cochez la case pour accepter l’utilisation de vos données pour traiter votre demande.' })
+
+// Pièces et livraison du configurateur : mêmes règles que la saisie de l'atelier, avec moins de pièces
+const configBody = z.object({ lignes: z.array(line).min(1, 'Ajoutez au moins une pièce.').max(20, '20 pièces maximum : pour plus, contactez-nous.'), livraison })
+const devisBody = z.object({
+  ...contactFields,
+  message: opt(5000, 'Message'),
+  consentement,
+  // Champ caché que seuls les robots remplissent
+  site: z.string().optional(),
+  ...configBody.shape,
+})
+
+const contactBody = z.object({
+  ...contactFields,
   objet: z.string().trim().min(1, 'Indiquez l’objet de votre demande.').max(150, 'Objet : 150 caractères maximum.'),
   message: z.string().trim().min(1, 'Écrivez votre message.').max(5000, 'Message : 5000 caractères maximum.'),
-  consentement: z.literal(true, { error: 'Cochez la case pour accepter l’utilisation de vos données pour traiter votre demande.' }),
+  consentement,
   // Champ caché que seuls les robots remplissent
   site: z.string().optional(),
   fichier: z
@@ -55,7 +72,7 @@ const contactBody = z.object({
 })
 
 // Pages du site, pour le plan du site
-const PUBLIC_PAGES = ['/', '/pliage-aluminium', '/contact', '/mentions-legales', '/politique-de-confidentialite', '/conditions-generales-de-vente', '/cookies']
+const PUBLIC_PAGES = ['/', '/pliage-aluminium', '/configurateur', '/contact', '/mentions-legales', '/politique-de-confidentialite', '/conditions-generales-de-vente', '/cookies']
 
 const safeName = (n: string) => n.replace(/[^\p{L}\p{N}._ -]/gu, '_').slice(0, 100) || 'plan'
 
@@ -116,6 +133,51 @@ export async function publicRoutes(app: FastifyInstance) {
       .send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`)
   })
 
+  // --- Configurateur : les pièces et le prix en direct, sans compte ---
+
+  app.get('/configurateur', async (_req, reply) => {
+    reply.header('Cache-Control', 'no-cache')
+    return orderCatalog()
+  })
+
+  const pathField = (e: z.ZodError) => (e.issues[0]?.path.length ? e.issues[0].path.join('.') : undefined)
+
+  // Chiffrage d'un visiteur : particulier (pas de remise pro), 60 chiffrages par minute et par adresse
+  app.post('/configurateur/chiffrage', { config: { rateLimit: { max: env.QUOTE_RATE_LIMIT, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const parsed = configBody.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'Données invalides.', field: pathField(parsed.error) })
+    const p = await priceBody(parsed.data, false)
+    if ('error' in p) return reply.code(p.status).send({ error: p.error, field: p.field })
+    return { lignes: p.lines, totals: p.totals, distanceKm: p.distanceKm }
+  })
+
+  // Demande de devis : le visiteur laisse ses coordonnées avec ses pièces. Le prix est recalculé ici, jamais repris du navigateur.
+  app.post('/devis', { config: { rateLimit: { max: env.CONTACT_RATE_LIMIT, timeWindow: '1 hour' } } }, async (req, reply) => {
+    const parsed = devisBody.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'Données invalides.', field: pathField(parsed.error) })
+    const { site, consentement: _c, lignes, livraison: liv, message, ...contact } = parsed.data
+    if (site) return reply.code(201).send({ ok: true })
+    const p = await priceBody({ lignes, livraison: liv }, false)
+    if ('error' in p) return reply.code(p.status).send({ error: p.error, field: p.field })
+    const pieces = p.lines.reduce((s, l) => s + l.quantite, 0)
+    const euros = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }).replace(/[  ]/g, ' ')
+    const resume = p.lines.map((l) => `${l.quantite} × ${l.modeleLabel}${l.repere ? ` (${l.repere})` : ''} · ${l.materialLabel} · ${l.colorLabel} · longueur ${l.longueur.toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, ' ')} mm`)
+    const configuration = { lignes, livraison: liv, resume, ht: p.totals.ht, ttc: p.totals.ttc }
+    const objet = `Demande de devis : ${pieces} pièce${pieces > 1 ? 's' : ''}, ${euros(p.totals.ttc)} TTC`
+    const [row] = await db
+      .insert(contactRequests)
+      .values({ ...contact, objet, message: message ?? '', configuration })
+      .returning({ id: contactRequests.id })
+    const to = await alertRecipients()
+    if (to.length) {
+      const proto = req.headers['x-forwarded-proto'] ?? req.protocol
+      const mail = contactAlert({ ...contact, objet, message: message ?? '', fichierNom: null, configuration }, `${proto}://${req.headers.host}/site-vitrine`)
+      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: contact.email, targetType: 'contact', targetId: row!.id }), 6000, { ok: false, notConfigured: false, error: 'délai dépassé' })
+    }
+    await audit(req, 'contact.received', { actor: null, targetType: 'contact', targetId: row!.id, details: { objet, fichier: false, configurateur: true } })
+    return reply.code(201).send({ ok: true })
+  })
+
   app.get('/avis', async (_req, reply) => {
     reply.header('Cache-Control', 'public, max-age=300')
     return getReviews()
@@ -151,7 +213,7 @@ export async function publicRoutes(app: FastifyInstance) {
       const to = await alertRecipients()
       if (to.length) {
         const proto = req.headers['x-forwarded-proto'] ?? req.protocol
-        const mail = contactAlert({ ...data, fichierNom: file?.fichierNom ?? null }, `${proto}://${req.headers.host}/site-vitrine`)
+        const mail = contactAlert({ ...data, fichierNom: file?.fichierNom ?? null, configuration: null }, `${proto}://${req.headers.host}/site-vitrine`)
         await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: data.email, targetType: 'contact', targetId: row!.id }), 6000, { ok: false, notConfigured: false, error: 'délai dépassé' })
       }
       await audit(req, 'contact.received', { actor: null, targetType: 'contact', targetId: row!.id, details: { objet: data.objet, fichier: Boolean(file) } })

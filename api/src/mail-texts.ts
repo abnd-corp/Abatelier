@@ -7,7 +7,7 @@ const eur = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', curren
 const day = (iso: string | null) => (iso ? iso.split('-').reverse().join('/') : '')
 
 /** Alerte à la direction : une demande vient d'arriver par le formulaire du site. */
-export function contactAlert(r: Pick<ContactRequest, 'nom' | 'email' | 'telephone' | 'adresse' | 'codePostal' | 'ville' | 'objet' | 'message' | 'fichierNom'>, link: string) {
+export function contactAlert(r: Pick<ContactRequest, 'nom' | 'email' | 'telephone' | 'adresse' | 'codePostal' | 'ville' | 'objet' | 'message' | 'fichierNom' | 'configuration'>, link: string) {
   const lieu = [r.adresse, [r.codePostal, r.ville].filter(Boolean).join(' ')].filter(Boolean).join(', ')
   return {
     subject: `Nouvelle demande de contact : ${r.objet}`,
@@ -19,6 +19,10 @@ export function contactAlert(r: Pick<ContactRequest, 'nom' | 'email' | 'telephon
       r.telephone && `Téléphone : ${r.telephone}`,
       lieu && `Adresse : ${lieu}`,
       r.fichierNom && `Plan joint : ${r.fichierNom} (à télécharger depuis l’atelier)`,
+      r.configuration && '',
+      r.configuration && 'Pièces choisies dans le configurateur :',
+      ...(r.configuration?.resume.map((l) => `  - ${l}`) ?? []),
+      r.configuration && `Prix affiché au visiteur : ${eur(r.configuration.ht)} HT, ${eur(r.configuration.ttc)} TTC`,
       '',
       r.message,
       '',

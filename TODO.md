@@ -114,7 +114,12 @@ Le pliage commence par de la découpe : chaque pièce est une bande de « dével
 - [ ] Commandes à fabriquer, planning, fiche de fabrication
 
 ## 3. Espace client et site public
-- [ ] Configurateur de pliage public (sans compte), prix en direct à partir du catalogue
+**Ordre retenu (octobre 2026)** : 1. configurateur public avec prix en direct, qui finit par « Demander un devis » (arrive chez la direction) ; 2. comptes clients séparés de ceux de l'équipe ; 3. commande par le client, validée par l'atelier ; 4. espace client ; 5. paiement en ligne, selon la réponse de la direction (question A6b : leur site actuel parle de paiement par carte, sans qu'on sache s'il marche).
+
+- [x] **Configurateur de pliage public** (`/configurateur`, sans compte ni cookie) : mêmes pièces, mêmes limites de plieuse et même calcul de prix que l'atelier (un seul code), prix en direct, profil et 3D ; « Demander un devis » enregistre la demande avec les pièces et le prix **recalculé par le serveur**, prévient la direction par e-mail, et la direction crée la commande en un clic (fiche client créée ou retrouvée par e-mail, origine « site »)
+- [ ] Configurateur : plusieurs pièces et livraison sont déjà gérées ; à ajouter : joindre un plan à la demande de devis, enregistrer sa configuration pour la reprendre plus tard (avec le compte client), prix pro quand le client est connecté, limites réelles de la plieuse (questions B1)
+- [ ] Livraison dans le configurateur : le calcul de distance appelle un service extérieur (IGN) à chaque chiffrage avec une adresse ; limité à 60 chiffrages par minute et par adresse, à surveiller
+
 - [ ] Comptes clients séparés des comptes de l'équipe : inscription, connexion, mot de passe oublié par e-mail
 - [ ] Commander (compte obligatoire), suivre et gérer ses commandes, recommander à l'identique
 - [ ] **Devis imprimable par le client** depuis son panier (PDF au modèle de devis, numéro D-…, valable N jours), transformable en commande

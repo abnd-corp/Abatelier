@@ -16,6 +16,7 @@ const address = computed(() => (e.value ? e.value.adresse.split('\n').filter(Boo
 const NAV = [
   { name: 'site-home', label: 'Accueil' },
   { name: 'site-pliage', label: 'Pliage aluminium' },
+  { name: 'site-configurateur', label: 'Configurateur' },
   { name: 'site-contact', label: 'Contact' },
 ] as const
 const LEGAL = [

@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply } from 'fastify'
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
@@ -21,7 +21,7 @@ const int = (min: number, max: number, label: string) =>
     z.number({ error: `${label} : nombre attendu.` }).int(`${label} : nombre entier attendu.`).min(min, `${label} : ${min} minimum.`).max(max, `${label} : ${max} maximum.`),
   )
 
-const line = z.object({
+export const line = z.object({
   repere: z.string().trim().max(60, 'Repère : 60 caractères maximum.').nullish(),
   modelId: z.uuid('Choisissez un modèle.'),
   materialId: z.uuid('Choisissez une matière.'),
@@ -34,7 +34,7 @@ const line = z.object({
   accessoires: z.array(z.object({ accessoryId: z.uuid('Accessoire inconnu.'), quantite: int(0, 9999, 'Quantité d’accessoires') })).max(20).default([]),
 })
 
-const livraison = z.discriminatedUnion(
+export const livraison = z.discriminatedUnion(
   'mode',
   [
     z.object({ mode: z.literal('retrait') }),
@@ -48,7 +48,7 @@ const livraison = z.discriminatedUnion(
   { error: 'Choisissez le retrait à l’atelier ou la livraison.' },
 )
 
-const orderBody = z.object({
+export const orderBody = z.object({
   clientId: z.uuid('Choisissez un client.'),
   lignes: z.array(line).min(1, 'Ajoutez au moins une pièce.').max(50, '50 pièces maximum par commande.'),
   livraison,
@@ -84,14 +84,16 @@ function invalidPath(reply: FastifyReply, e: z.ZodError) {
   return reply.code(400).send({ error: issue?.message ?? 'Données invalides.', field: issue?.path.length ? issue.path.join('.') : undefined })
 }
 
-type Body = z.infer<typeof orderBody>
+export type Body = z.infer<typeof orderBody>
 type Priced = { client: Client; lines: PricedLine[]; totals: Totals; distanceKm: number | null }
 
-/** Chiffre la commande avec le catalogue actuel. Renvoie l'erreur à afficher, ou le chiffrage. */
-async function quote(body: Body): Promise<{ status: number; error: string; field?: string } | Priced> {
-  const [client] = await db.select().from(clients).where(eq(clients.id, body.clientId))
-  if (!client) return { status: 400, error: 'Client introuvable.', field: 'clientId' }
-  if (client.archivedAt) return { status: 400, error: 'Ce client est archivé : sortez-le des archives pour lui passer une commande.', field: 'clientId' }
+type Failure = { status: number; error: string; field?: string }
+
+/**
+ * Chiffre des pièces et une livraison avec le catalogue actuel, pour un professionnel (remise pro) ou un particulier.
+ * Sert à l'atelier comme au configurateur public : un seul calcul.
+ */
+export async function priceBody(body: Pick<Body, 'lignes' | 'livraison'>, pro: boolean): Promise<Failure | { lines: PricedLine[]; totals: Totals; distanceKm: number | null }> {
   const catalog = await loadCatalog()
   const lines: PricedLine[] = []
   for (const [i, l] of body.lignes.entries()) {
@@ -111,9 +113,18 @@ async function quote(body: Body): Promise<{ status: number; error: string; field
       throw e
     }
   }
-  const totals = priceOrder(lines, { pro: client.type === 'professionnel', delivery: distanceKm === null ? { mode: 'retrait' } : { mode: 'livraison', distanceKm } }, catalog)
+  const totals = priceOrder(lines, { pro, delivery: distanceKm === null ? { mode: 'retrait' } : { mode: 'livraison', distanceKm } }, catalog)
   if (isError(totals)) return { status: 400, ...totals }
-  return { client, lines, totals, distanceKm }
+  return { lines, totals, distanceKm }
+}
+
+/** Chiffre la commande d'un client de l'atelier. Renvoie l'erreur à afficher, ou le chiffrage. */
+async function quote(body: Body): Promise<Failure | Priced> {
+  const [client] = await db.select().from(clients).where(eq(clients.id, body.clientId))
+  if (!client) return { status: 400, error: 'Client introuvable.', field: 'clientId' }
+  if (client.archivedAt) return { status: 400, error: 'Ce client est archivé : sortez-le des archives pour lui passer une commande.', field: 'clientId' }
+  const priced = await priceBody(body, client.type === 'professionnel')
+  return 'error' in priced ? priced : { client, ...priced }
 }
 
 const isPriced = (x: Awaited<ReturnType<typeof quote>>): x is Priced => 'lines' in x
@@ -147,6 +158,43 @@ async function findOrder(id: string, reply: FastifyReply) {
 }
 
 const clientColumns = { type: clients.type, raisonSociale: clients.raisonSociale, prenom: clients.prenom, nom: clients.nom }
+
+/** Ce qu'il faut pour saisir une commande : modèles, matières, coloris, accessoires actifs et limites de la plieuse (rien de confidentiel). */
+export async function orderCatalog() {
+  const c = await loadCatalog()
+  const s = c.settings
+  const byPos = <T extends { position: number; nom: string }>(a: T[]) => a.sort((x, y) => x.position - y.position || x.nom.localeCompare(y.nom))
+  return {
+    models: byPos(c.models.filter((m) => m.actif)).map((m) => ({ id: m.id, nom: m.nom, cotes: m.cotes, angles: m.angles, noms: m.noms, cap: m.cap, longueur: m.longueur, quantite: m.quantite })),
+    materials: byPos(c.materials.filter((m) => m.actif)).map((m) => ({ id: m.id, label: materialLabel(m), epaisseur: m.epaisseur, retourMin: m.retourMin })),
+    colors: byPos(c.colors.filter((x) => x.actif)).map((x) => ({ id: x.id, label: colorLabel(x), hex: x.hex })),
+    accessories: byPos(c.accessories.filter((a) => a.actif)).map((a) => ({ id: a.id, nom: a.nom, prix: a.prix, unite: a.unite, modeles: a.modeles, quantiteAuto: a.quantiteAuto, quantiteFixe: a.quantiteFixe })),
+    limits: { largeurTole: s.largeurTole, longueurMin: s.longueurMin, longueurMax: s.longueurMax, plisMax: s.plisMax, angleMin: s.angleMin, angleMax: s.angleMax, pince: s.pinceAutorisee },
+    retrait: c.delivery.retraitActif,
+  }
+}
+
+/** Enregistre une commande déjà validée par zod : chiffrage, numéro, lignes, première étape et journal. */
+export async function placeOrder(req: FastifyRequest, body: Body): Promise<Failure | { id: string; numero: string }> {
+  const p = await quote(body)
+  if (!isPriced(p)) return p
+  const order = await db.transaction(async (tx) => {
+    const { label } = await allocateNumber(tx, 'commande')
+    const [o] = await tx
+      .insert(orders)
+      .values({ ...orderValues(body, p), numero: label, createdBy: req.user!.id })
+      .returning()
+    await tx.insert(orderLines).values(lineValues(o!.id, p.lines))
+    await tx.insert(orderEvents).values({ orderId: o!.id, statut: 'recue', userId: req.user!.id })
+    return o!
+  })
+  await audit(req, 'order.created', {
+    targetType: 'order',
+    targetId: order.id,
+    details: { numero: order.numero, client: clientName(p.client), clientId: p.client.id, ht: order.ht, pieces: p.lines.reduce((s, l) => s + l.quantite, 0) },
+  })
+  return { id: order.id, numero: order.numero }
+}
 
 export async function orderRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requirePerm('orders.manage'))
@@ -202,19 +250,7 @@ export async function orderRoutes(app: FastifyInstance) {
   })
 
   // Catalogue actif et limites des machines, pour le formulaire de commande
-  app.get('/catalog', async () => {
-    const c = await loadCatalog()
-    const s = c.settings
-    const byPos = <T extends { position: number; nom: string }>(a: T[]) => a.sort((x, y) => x.position - y.position || x.nom.localeCompare(y.nom))
-    return {
-      models: byPos(c.models.filter((m) => m.actif)).map((m) => ({ id: m.id, nom: m.nom, cotes: m.cotes, angles: m.angles, noms: m.noms, cap: m.cap, longueur: m.longueur, quantite: m.quantite })),
-      materials: byPos(c.materials.filter((m) => m.actif)).map((m) => ({ id: m.id, label: materialLabel(m), epaisseur: m.epaisseur, retourMin: m.retourMin })),
-      colors: byPos(c.colors.filter((x) => x.actif)).map((x) => ({ id: x.id, label: colorLabel(x), hex: x.hex })),
-      accessories: byPos(c.accessories.filter((a) => a.actif)).map((a) => ({ id: a.id, nom: a.nom, prix: a.prix, unite: a.unite, modeles: a.modeles, quantiteAuto: a.quantiteAuto, quantiteFixe: a.quantiteFixe })),
-      limits: { largeurTole: s.largeurTole, longueurMin: s.longueurMin, longueurMax: s.longueurMax, plisMax: s.plisMax, angleMin: s.angleMin, angleMax: s.angleMax, pince: s.pinceAutorisee },
-      retrait: c.delivery.retraitActif,
-    }
-  })
+  app.get('/catalog', async () => orderCatalog())
 
   // Chiffrage en direct, sans rien enregistrer
   app.post('/quote', async (req, reply) => {
@@ -228,24 +264,9 @@ export async function orderRoutes(app: FastifyInstance) {
   app.post('/', async (req, reply) => {
     const parsed = orderBody.safeParse(req.body)
     if (!parsed.success) return invalidPath(reply, parsed.error)
-    const p = await quote(parsed.data)
-    if (!isPriced(p)) return reply.code(p.status).send({ error: p.error, field: p.field })
-    const order = await db.transaction(async (tx) => {
-      const { label } = await allocateNumber(tx, 'commande')
-      const [o] = await tx
-        .insert(orders)
-        .values({ ...orderValues(parsed.data, p), numero: label, createdBy: req.user!.id })
-        .returning()
-      await tx.insert(orderLines).values(lineValues(o!.id, p.lines))
-      await tx.insert(orderEvents).values({ orderId: o!.id, statut: 'recue', userId: req.user!.id })
-      return o!
-    })
-    await audit(req, 'order.created', {
-      targetType: 'order',
-      targetId: order.id,
-      details: { numero: order.numero, client: clientName(p.client), clientId: p.client.id, ht: order.ht, pieces: p.lines.reduce((s, l) => s + l.quantite, 0) },
-    })
-    return reply.code(201).send({ id: order.id, numero: order.numero })
+    const placed = await placeOrder(req, parsed.data)
+    if ('error' in placed) return reply.code(placed.status).send({ error: placed.error, field: placed.field })
+    return reply.code(201).send(placed)
   })
 
   app.get('/:id', async (req, reply) => {

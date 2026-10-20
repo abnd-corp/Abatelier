@@ -30,7 +30,8 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
           <h1>{{ c['accueil.titre'] }}</h1>
           <p class="lead">{{ c['accueil.accroche'] }}</p>
           <p class="cta">
-            <RouterLink :to="{ name: 'site-contact' }" class="s-btn primary">Demander un devis</RouterLink>
+            <RouterLink :to="{ name: 'site-configurateur' }" class="s-btn primary">Configurer ma pièce</RouterLink>
+            <RouterLink :to="{ name: 'site-contact' }" class="s-btn">Demander un devis</RouterLink>
             <a v-if="e?.telephone" class="s-btn" :href="`tel:${telHref(e.telephone)}`"><AppIcon name="phone" :size="17" />{{ e.telephone }}</a>
           </p>
           <ul class="facts" aria-label="En bref">

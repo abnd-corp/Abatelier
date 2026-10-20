@@ -39,6 +39,8 @@ const schema = z.object({
   LOGIN_DELAY_BASE_MS: z.coerce.number().int().min(0).default(1000),
   // Envois du formulaire de contact du site, par heure et par IP (relevé pour les tests de bout en bout)
   CONTACT_RATE_LIMIT: z.coerce.number().int().positive().default(20),
+  // Chiffrages du configurateur public, par minute et par IP (relevé pour les tests de bout en bout)
+  QUOTE_RATE_LIMIT: z.coerce.number().int().positive().default(60),
   // Envoi d'e-mails : sans SMTP_HOST et MAIL_FROM, l'application fonctionne sans envoyer (boutons masqués ou refusés)
   SMTP_HOST: z.string().trim().optional(),
   SMTP_PORT: z.coerce.number().int().default(587),

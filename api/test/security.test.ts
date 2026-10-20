@@ -14,7 +14,7 @@ afterEach(() => app.close())
 beforeEach(resetDb)
 
 // Seules routes accessibles sans être connecté. Toute nouvelle route publique doit être ajoutée ici consciemment.
-const PUBLIC = ['GET /api/health', 'GET /api/auth/session', 'POST /api/auth/login', 'POST /api/auth/logout', 'GET /api/public/site', 'GET /api/public/photos/:id', 'GET /api/public/avis', 'POST /api/public/contact', 'GET /api/public/robots.txt', 'GET /api/public/sitemap.xml']
+const PUBLIC = ['GET /api/health', 'GET /api/auth/session', 'POST /api/auth/login', 'POST /api/auth/logout', 'GET /api/public/site', 'GET /api/public/photos/:id', 'GET /api/public/avis', 'GET /api/public/configurateur', 'POST /api/public/configurateur/chiffrage', 'POST /api/public/devis', 'POST /api/public/contact', 'GET /api/public/robots.txt', 'GET /api/public/sitemap.xml']
 const UUID = '00000000-0000-4000-8000-000000000000'
 const routes = () =>
   app.routeList.map((r) => ({ ...r, path: r.url.replace(/:[a-zA-Z]+/g, UUID), key: `${r.method} ${r.url}` }))

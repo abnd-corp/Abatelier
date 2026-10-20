@@ -8,6 +8,9 @@ import ContactView from '@/views/site/ContactView.vue'
 import LegalView from '@/views/site/LegalView.vue'
 import SiteAdminView from '@/views/SiteAdminView.vue'
 import MailSettings from '@/components/site-admin/MailSettings.vue'
+import ConfiguratorView from '@/views/site/ConfiguratorView.vue'
+import ContactRequests from '@/components/site-admin/ContactRequests.vue'
+import type { OrderCatalog, Totals } from '@/lib/orders'
 import { legalBlocks, lines, loadSite, site, splitAddress, telHref, type AvisGoogle, type SiteData } from '@/lib/site'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 import { useAuthStore } from '@/stores/auth'
@@ -417,5 +420,140 @@ describe('Onglet E-mails', () => {
     expect(wrapper.text()).toContain('Pas encore configuré')
     expect(wrapper.find('#mail-test').exists()).toBe(false)
     expect(wrapper.text()).toContain('Aucun e-mail envoyé')
+  })
+})
+
+describe('Configurateur public', () => {
+  const CATALOG: OrderCatalog = {
+    models: [{ id: 'couvertine', nom: 'Couvertine', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'], cap: -45, longueur: 3000, quantite: 4 }],
+    materials: [{ id: 'm1', label: 'Aluminium 1,5 mm', epaisseur: 1.5, retourMin: 10 }],
+    colors: [{ id: 'k1', label: 'Gris anthracite (RAL 7016)', hex: '#383e42' }],
+    accessories: [],
+    limits: { largeurTole: 1250, longueurMin: 200, longueurMax: 3000, plisMax: 8, angleMin: 30, angleMax: 175, pince: true },
+    retrait: true,
+  }
+  const TOTALS: Totals = { brut: 432.12, tauxRemisePro: 0, remisePro: 0, complementMinimum: 0, livraisonPrix: 0, livraisonOfferte: false, ht: 432.12, tauxTva: 20, tva: 86.42, ttc: 518.54, delaiJours: 5 } as Totals
+  const LINE = { repere: null, modelId: 'couvertine', modeleLabel: 'Couvertine', cap: -45, materialLabel: 'Aluminium 1,5 mm', colorLabel: 'Gris anthracite (RAL 7016)', colorHex: '#383e42', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], longueur: 3000, quantite: 4, accessoires: [], prixUnitaire: 100.08, remiseQuantite: 0, montantPieces: 400.32, montantAccessoires: 0, miseEnRoute: 18, total: 432.12 }
+  const QUOTE = { lignes: [LINE], totals: TOTALS, distanceKm: null }
+  const routes = (extra: Parameters<typeof mockApi>[0] = {}) => ({ 'GET /public/configurateur': [200, CATALOG], 'POST /public/configurateur/chiffrage': [200, QUOTE], ...extra }) as Parameters<typeof mockApi>[0]
+
+  const mountConfig = async (extra: Parameters<typeof mockApi>[0] = {}) => {
+    const calls = mockApi(routes(extra))
+    const pinia = freshPinia()
+    const router = makeRouter()
+    await router.push('/configurateur')
+    await router.isReady()
+    const wrapper = mount(ConfiguratorView, { global: { plugins: [pinia, router] }, attachTo: document.body })
+    await flushPromises()
+    await new Promise((r) => setTimeout(r, 450))
+    await flushPromises()
+    return { wrapper, calls }
+  }
+  const fill = async (wrapper: ReturnType<typeof mount>) => {
+    await wrapper.get('#d-nom').setValue('Jean Dupont')
+    await wrapper.get('#d-email').setValue('jean@example.com')
+    await wrapper.get('#d-consentement').setValue(true)
+  }
+
+  it('charge le catalogue public, chiffre avec la route publique et affiche le prix, sans appeler la session', async () => {
+    const { wrapper, calls } = await mountConfig()
+    expect(wrapper.get('h1').text()).toContain('Dessinez votre pièce')
+    expect(calls.map((c) => c.path)).toContain('/public/configurateur')
+    const quote = calls.find((c) => c.path === '/public/configurateur/chiffrage')!
+    expect(quote.method).toBe('POST')
+    expect(quote.body.lignes).toHaveLength(1)
+    expect(quote.body.livraison).toEqual({ mode: 'retrait' })
+    expect(wrapper.text().replace(/[\u202f\u00a0]/g, ' ')).toContain('518,54 €')
+    expect(calls.map((c) => c.path)).not.toContain('/auth/session')
+    expect(calls.map((c) => c.path)).not.toContain('/orders/quote')
+    // Pas de notes internes pour un visiteur
+    expect(wrapper.find('#o-notes').exists()).toBe(false)
+  })
+
+  it('envoie la demande de devis avec les pièces, la livraison et les coordonnées', async () => {
+    const { wrapper, calls } = await mountConfig({ 'POST /public/devis': [201, { ok: true }] })
+    await fill(wrapper)
+    await wrapper.get('#d-message').setValue('Pour un muret.')
+    await wrapper.get('form.configurateur').trigger('submit')
+    await flushPromises()
+    const post = calls.find((c) => c.path === '/public/devis')!
+    expect(post.body).toMatchObject({ nom: 'Jean Dupont', email: 'jean@example.com', consentement: true, message: 'Pour un muret.', site: '', livraison: { mode: 'retrait' } })
+    expect(post.body.lignes).toHaveLength(1)
+    expect(post.body.lignes[0]).toMatchObject({ modelId: 'couvertine', materialId: 'm1', colorId: 'k1', longueur: 3000, quantite: 4 })
+    // Le prix n'est jamais envoyé : le serveur le recalcule
+    expect(JSON.stringify(post.body)).not.toMatch(/ttc|518/)
+    expect(wrapper.text()).toContain('Demande de devis envoyée')
+    expect(wrapper.find('form').exists()).toBe(false)
+  })
+
+  it('affiche l’erreur du serveur sous le bon champ, et celles des pièces dans le chiffrage', async () => {
+    const { wrapper } = await mountConfig({ 'POST /public/devis': [400, { error: 'Adresse e-mail invalide.', field: 'email' }] })
+    await fill(wrapper)
+    await wrapper.get('form.configurateur').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('#ed-email').text()).toBe('Adresse e-mail invalide.')
+    expect(wrapper.get('#d-email').attributes('aria-invalid')).toBe('true')
+    expect((wrapper.get('#d-nom').element as HTMLInputElement).value).toBe('Jean Dupont')
+
+    const bad = await mountConfig({ 'POST /public/configurateur/chiffrage': [400, { error: 'Longueur : 3000 mm maximum.', field: 'lignes.0.longueur' }] })
+    expect(bad.wrapper.text()).toContain('Longueur : 3000 mm maximum.')
+    expect(bad.wrapper.get('form.configurateur button[type="submit"]').attributes('disabled')).toBeDefined()
+    expect(bad.wrapper.get('a.btn.primary').classes()).toContain('off')
+  })
+
+  it('cache le piège à robots, et dit quand le catalogue est vide', async () => {
+    const { wrapper } = await mountConfig()
+    expect(wrapper.get('.trap').attributes('aria-hidden')).toBe('true')
+    const empty = await mountConfig({ 'GET /public/configurateur': [200, { ...CATALOG, models: [] }] })
+    expect(empty.wrapper.text()).toContain('pas disponible pour l’instant')
+    const down = await mountConfig({ 'GET /public/configurateur': [500, { error: 'Le serveur a rencontré un problème.' }] })
+    expect(down.wrapper.find('[role="alert"]').exists()).toBe(true)
+  })
+
+  describe('côté direction', () => {
+    const DEMANDE = { id: 'd1', createdAt: '2026-10-20T08:00:00Z', nom: 'Jean Dupont', email: 'jean@example.com', telephone: null, adresse: null, codePostal: '42490', ville: 'Fraisses', objet: 'Demande de devis : 4 pièces, 518,54 € TTC', message: 'Pour un muret.', fichierNom: null, fichierType: null, configuration: { resume: ['4 × Couvertine · Aluminium 1,5 mm · Gris anthracite (RAL 7016) · longueur 3 000 mm'], ht: 432.12, ttc: 518.54 }, commandeId: null, traiteAt: null }
+    const mountList = async (demande: object, extra: Parameters<typeof mockApi>[0] = {}) => {
+      const calls = mockApi({ 'GET /site/contacts?filtre=a_traiter': [200, { demandes: [demande], aTraiter: 1 }], ...extra })
+      const pinia = freshPinia()
+      useAuthStore().user = ADMIN
+      const router = makeRouter()
+      await router.push('/site-vitrine')
+      await router.isReady()
+      const wrapper = mount(ContactRequests, { global: { plugins: [pinia, router] } })
+      await flushPromises()
+      await wrapper.get('.summary').trigger('click')
+      return { wrapper, router, calls }
+    }
+
+    it('montre les pièces et le prix, et crée la commande puis l’ouvre', async () => {
+      const { wrapper, router, calls } = await mountList(DEMANDE, { 'POST /site/contacts/d1/commande': [201, { id: 'o9', numero: 'C-2026-0009' }] })
+      expect(wrapper.text()).toContain('Pièces choisies dans le configurateur')
+      expect(wrapper.text()).toContain('4 × Couvertine')
+      expect(wrapper.text().replace(/[\u202f\u00a0]/g, ' ')).toContain('518,54 € TTC')
+      await wrapper.findAll('button').find((b) => b.text().includes('Créer la commande'))!.trigger('click')
+      await flushPromises()
+      expect(calls.find((c) => c.method === 'POST')!.path).toBe('/site/contacts/d1/commande')
+      expect(router.currentRoute.value.path).toBe('/commandes/o9')
+    })
+
+    it('propose de voir la commande déjà créée, et affiche l’erreur sinon', async () => {
+      const done = await mountList({ ...DEMANDE, commandeId: 'o9', traiteAt: '2026-10-20T09:00:00Z' })
+      expect(done.wrapper.find('a[href="/commandes/o9"]').text()).toContain('Voir la commande')
+      expect(done.wrapper.text()).not.toContain('Créer la commande')
+      const fail = await mountList(DEMANDE, { 'POST /site/contacts/d1/commande': [409, { error: 'Les pièces de cette demande ne passent plus les contrôles actuels.' }] })
+      await fail.wrapper.findAll('button').find((b) => b.text().includes('Créer la commande'))!.trigger('click')
+      await flushPromises()
+      expect(fail.wrapper.get('[role="alert"]').text()).toContain('ne passent plus')
+    })
+
+    it('n’offre pas de commande pour une simple demande de contact', async () => {
+      const { wrapper } = await mountList({ ...DEMANDE, configuration: null, objet: 'Question' })
+      expect(wrapper.text()).not.toContain('Créer la commande')
+    })
+
+    it('décrit la création de commande dans le journal', () => {
+      const d = describeEntry({ id: 1, at: '2026-10-20T08:00:00Z', action: 'contact.order_created', identifiant: 'chef', nom: 'Le Chef', userId: 'u', targetType: null, targetId: null, targetName: null, ip: null, device: '', details: { objet: 'Demande de devis', commande: 'C-2026-0009', clientCree: true } })
+      expect(d.text).toBe('A créé la commande C-2026-0009 à partir de la demande « Demande de devis » (nouvelle fiche client)')
+    })
   })
 })

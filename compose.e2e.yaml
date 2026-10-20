@@ -24,6 +24,7 @@ services:
       LOGIN_RATE_LIMIT: "1000"
       LOGIN_DELAY_BASE_MS: "50"
       CONTACT_RATE_LIMIT: "1000"
+      QUOTE_RATE_LIMIT: "10000"
       # Adresses localisées en dur, sans appeler les services de l'IGN (voir api/src/geo.ts)
       GEO_FAKE: "1"
   web:

@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { auditLog, contactRequests, siteContent } from '../src/db/schema.js'
+import { auditLog, clients, colors, contactRequests, materials, orders, siteContent } from '../src/db/schema.js'
 import { env } from '../src/env.js'
 import { resetReviewsCache } from '../src/google-reviews.js'
-import { buildApp, client, createUser, loginAs, makePng, resetDb, type App, type Client } from './helpers.js'
+import { buildApp, client, createUser, loginAs, M, makePng, resetDb, seedModels, type App, type Client } from './helpers.js'
+import { setTransport, type Transport } from '../src/mail.js'
 
 let app: App
 let direction: Client
@@ -290,5 +291,199 @@ describe('Référencement', () => {
     expect(map.headers['content-type']).toMatch(/application\/xml/)
     expect(map.body).toContain('<loc>https://atelier.test/pliage-aluminium</loc>')
     expect(map.body).not.toContain('/clients')
+  })
+})
+
+describe('Configurateur public', () => {
+  let ids: { alu: string; anthracite: string }
+  beforeEach(async () => {
+    await seedModels()
+    const [alu] = await db.insert(materials).values({ nom: 'Aluminium', epaisseur: 1.5, prixM2: 62, retourMin: 10 }).returning()
+    const [anthracite] = await db.insert(colors).values({ nom: 'Gris anthracite', reference: 'RAL 7016', hex: '#383e42' }).returning()
+    ids = { alu: alu!.id, anthracite: anthracite!.id }
+  })
+  const piece = (over: Record<string, unknown> = {}) => ({
+    repere: 'Mur sud',
+    modelId: M.couvertine,
+    materialId: ids.alu,
+    colorId: ids.anthracite,
+    cotes: [20, 70, 300, 70, 20],
+    angles: [135, 90, 90, 135],
+    longueur: 3000,
+    quantite: 4,
+    accessoires: [],
+    ...over,
+  })
+  const config = (over: Record<string, unknown> = {}) => ({ lignes: [piece()], livraison: { mode: 'retrait' }, ...over })
+  const devis = (over: Record<string, unknown> = {}) => ({ ...config(), nom: 'Jean Dupont', email: 'Jean@Example.com', telephone: '06 12 34 56 78', codePostal: '42490', ville: 'Fraisses', message: 'Pour un muret.', consentement: true, ...over })
+  const mailSent: Parameters<Transport['sendMail']>[0][] = []
+  const mailOn = () => {
+    env.SMTP_HOST = 'smtp.test'
+    env.MAIL_FROM = 'APS <contact@aps.test>'
+    env.MAIL_ALERT_TO = 'direction@aps.test'
+    setTransport({ async sendMail(o) { mailSent.push(o); return {} } })
+  }
+  afterEach(() => {
+    setTransport(null)
+    env.SMTP_HOST = undefined
+    env.MAIL_FROM = undefined
+    env.MAIL_ALERT_TO = undefined
+    mailSent.length = 0
+  })
+
+  it('donne le catalogue sans connexion, sans prix de matière ni donnée interne', async () => {
+    const res = await visitor.get('/api/public/configurateur')
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.models.map((m: { nom: string }) => m.nom)).toContain('Couvertine')
+    expect(body.materials[0]).toMatchObject({ label: 'Aluminium 1,5 mm', retourMin: 10 })
+    expect(body.limits).toMatchObject({ longueurMax: expect.any(Number), plisMax: expect.any(Number) })
+    expect(res.body).not.toMatch(/prixM2|prixPliMl|remisePro|miseEnRoute/i)
+    expect(res.headers['set-cookie']).toBeUndefined()
+  })
+
+  it('chiffre comme l’atelier le ferait pour un particulier, sans compte', async () => {
+    const dupont = (await direction.post('/api/clients', { type: 'particulier', prenom: 'Jean', nom: 'Dupont' })).json().id
+    const atelier = (await direction.post('/api/orders/quote', { clientId: dupont, ...config() })).json()
+    const res = await visitor.post('/api/public/configurateur/chiffrage', config())
+    expect(res.statusCode, res.body).toBe(200)
+    const pub = res.json()
+    expect(pub.totals).toEqual(atelier.totals)
+    expect(pub.lignes).toEqual(atelier.lignes)
+    expect(pub.totals.remisePro).toBe(0)
+    expect(pub.totals.ttc).toBeGreaterThan(0)
+    // Un chiffrage ne crée ni commande ni client
+    expect(await db.select().from(orders)).toHaveLength(0)
+  })
+
+  it('refuse ce que la plieuse ne sait pas faire, avec le champ concerné', async () => {
+    const bad = async (body: object) => (await visitor.post('/api/public/configurateur/chiffrage', body)).json()
+    expect(await bad(config({ lignes: [piece({ longueur: 99999 })] }))).toMatchObject({ field: expect.stringMatching(/^lignes\.0\.longueur/) })
+    expect(await bad(config({ lignes: [piece({ angles: [0, 90, 90, 135] })] }))).toMatchObject({ field: expect.stringMatching(/^lignes\.0\.angles/) })
+    expect(await bad(config({ lignes: [] }))).toMatchObject({ error: expect.stringMatching(/au moins une pièce/) })
+    expect(await bad(config({ lignes: Array(21).fill(piece()) }))).toMatchObject({ error: expect.stringMatching(/20 pièces maximum/) })
+    expect(await bad(config({ lignes: [piece({ modelId: '00000000-0000-4000-8000-000000000000' })] }))).toMatchObject({ error: expect.any(String) })
+    expect(await bad({})).toMatchObject({ error: expect.any(String) })
+  })
+
+  it('limite le nombre de chiffrages par minute et par adresse', async () => {
+    env.QUOTE_RATE_LIMIT = 3
+    const limited = await buildApp()
+    try {
+      const c = client(limited)
+      for (let i = 0; i < 3; i++) expect((await c.post('/api/public/configurateur/chiffrage', config())).statusCode).toBe(200)
+      const res = await c.post('/api/public/configurateur/chiffrage', config())
+      expect(res.statusCode).toBe(429)
+    } finally {
+      env.QUOTE_RATE_LIMIT = 60
+      await limited.close()
+    }
+  })
+
+  it('enregistre une demande de devis avec les pièces et le prix recalculé par le serveur, et prévient la direction', async () => {
+    mailOn()
+    const expected = (await visitor.post('/api/public/configurateur/chiffrage', config())).json().totals
+    // Le visiteur ne peut pas imposer son prix : un montant envoyé est ignoré
+    const res = await visitor.post('/api/public/devis', devis({ ttc: 1, ht: 1, totals: { ttc: 1 } }))
+    expect(res.statusCode, res.body).toBe(201)
+    const [row] = await db.select().from(contactRequests)
+    expect(row).toMatchObject({ nom: 'Jean Dupont', email: 'jean@example.com', message: 'Pour un muret.' })
+    expect(row!.objet).toMatch(/^Demande de devis : 4 pièces, /)
+    expect(row!.configuration).toMatchObject({ ht: expected.ht, ttc: expected.ttc, livraison: { mode: 'retrait' } })
+    expect(row!.configuration!.resume).toEqual(['4 × Couvertine (Mur sud) · Aluminium 1,5 mm · Gris anthracite (RAL 7016) · longueur 3 000 mm'])
+    expect(mailSent).toHaveLength(1)
+    expect(mailSent[0]!.replyTo).toBe('jean@example.com')
+    expect(mailSent[0]!.text).toContain('Pièces choisies dans le configurateur')
+    expect(mailSent[0]!.text).toContain('4 × Couvertine (Mur sud)')
+    expect(mailSent[0]!.text).toMatch(/Prix affiché au visiteur : .* HT, .* TTC/)
+    const [e] = await entries('contact.received')
+    expect(e!.details).toMatchObject({ configurateur: true })
+  })
+
+  it('valide les coordonnées et les pièces, exige le consentement, ignore les robots', async () => {
+    const post = (b: object) => visitor.post('/api/public/devis', b)
+    expect((await post(devis({ email: 'pas-un-mail' }))).json()).toMatchObject({ field: 'email' })
+    expect((await post(devis({ nom: '' }))).json()).toMatchObject({ field: 'nom' })
+    expect((await post(devis({ consentement: false }))).json()).toMatchObject({ field: 'consentement' })
+    expect((await post(devis({ lignes: [piece({ longueur: 99999 })] }))).json()).toMatchObject({ field: expect.stringMatching(/^lignes\.0\.longueur/) })
+    expect(await db.select().from(contactRequests)).toHaveLength(0)
+    expect((await post(devis({ site: 'http://spam.example' }))).statusCode).toBe(201)
+    expect(await db.select().from(contactRequests)).toHaveLength(0)
+  })
+
+  describe('commande créée par la direction', () => {
+    const request = async (over: Record<string, unknown> = {}) => {
+      expect((await visitor.post('/api/public/devis', devis(over))).statusCode).toBe(201)
+      const list = (await direction.get('/api/site/contacts')).json().demandes
+      return list[0] as { id: string; configuration: { ttc: number; resume: string[] }; commandeId: string | null }
+    }
+
+    it('montre les pièces et le prix dans la liste des demandes', async () => {
+      const d = await request()
+      expect(d.configuration.resume).toHaveLength(1)
+      expect(d.configuration.ttc).toBeGreaterThan(0)
+      expect(d.commandeId).toBeNull()
+    })
+
+    it('crée la fiche client et la commande, au prix que le visiteur a vu, et traite la demande', async () => {
+      const d = await request()
+      const res = await direction.post(`/api/site/contacts/${d.id}/commande`)
+      expect(res.statusCode, res.body).toBe(201)
+      const { id, numero } = res.json()
+      expect(numero).toMatch(/^C-\d{4}-\d{4}$/)
+      const [c] = await db.select().from(clients)
+      expect(c).toMatchObject({ type: 'particulier', origine: 'site', prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', ville: 'Fraisses' })
+      const order = (await direction.get(`/api/orders/${id}`)).json()
+      expect(order.order.statut).toBe('recue')
+      expect(order.order.ttc).toBe(d.configuration.ttc)
+      expect(order.client.id).toBe(c!.id)
+      expect(order.order.notes).toContain('Demande de devis du site')
+      const after = (await direction.get('/api/site/contacts?filtre=traitees')).json().demandes[0]
+      expect(after).toMatchObject({ commandeId: id })
+      expect(after.traiteAt).not.toBeNull()
+      const [e] = await entries('contact.order_created')
+      expect(e!.details).toMatchObject({ commande: numero, clientCree: true })
+      expect((await entries('client.created')).length).toBe(1)
+    })
+
+    it('reprend la fiche client existante quand l’adresse e-mail est connue', async () => {
+      await direction.post('/api/clients', { type: 'particulier', prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com' })
+      const d = await request()
+      expect((await direction.post(`/api/site/contacts/${d.id}/commande`)).statusCode).toBe(201)
+      expect(await db.select().from(clients)).toHaveLength(1)
+      expect((await entries('contact.order_created'))[0]!.details).toMatchObject({ clientCree: false })
+    })
+
+    it('ne crée qu’une commande par demande', async () => {
+      const d = await request()
+      await direction.post(`/api/site/contacts/${d.id}/commande`)
+      const again = await direction.post(`/api/site/contacts/${d.id}/commande`)
+      expect(again.statusCode).toBe(409)
+      expect(again.json().error).toMatch(/déjà été créée/)
+      expect(await db.select().from(orders)).toHaveLength(1)
+    })
+
+    it('refuse une demande sans pièces, et dit quand le catalogue a changé depuis', async () => {
+      expect((await visitor.post('/api/public/contact', { nom: 'A B', email: 'a@b.fr', objet: 'Question', message: 'Bonjour', consentement: true })).statusCode).toBe(201)
+      const [plain] = await db.select().from(contactRequests)
+      const res = await direction.post(`/api/site/contacts/${plain!.id}/commande`)
+      expect(res.statusCode).toBe(409)
+      expect(res.json().error).toMatch(/ne vient pas du configurateur/)
+
+      const d = await request({ email: 'autre@example.com' })
+      await db.update(materials).set({ actif: false })
+      const gone = await direction.post(`/api/site/contacts/${d.id}/commande`)
+      expect(gone.statusCode).toBe(400)
+      expect(await db.select().from(orders)).toHaveLength(0)
+    })
+
+    it('est réservé à la direction', async () => {
+      const d = await request()
+      const unknown = '00000000-0000-4000-8000-000000000000'
+      expect((await visitor.post(`/api/site/contacts/${d.id}/commande`)).statusCode).toBe(401)
+      await createUser({ identifiant: 'claire', role: 'rh' })
+      expect((await (await loginAs(app, 'claire')).post(`/api/site/contacts/${d.id}/commande`)).statusCode).toBe(403)
+      expect((await direction.post(`/api/site/contacts/${unknown}/commande`)).statusCode).toBe(404)
+    })
   })
 })

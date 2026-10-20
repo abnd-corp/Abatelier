@@ -247,6 +247,8 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A supprimé une photo du site (${PLACES[d.emplacement as string] ?? d.emplacement})`, tone: 'bad' }
     case 'contact.received':
       return { text: `Demande de contact reçue par le site : « ${d.objet} »${d.fichier ? ' (plan joint)' : ''}`, tone: 'accent' }
+    case 'contact.order_created':
+      return { text: `A créé la commande ${d.commande} à partir de la demande « ${d.objet} »${d.clientCree ? ' (nouvelle fiche client)' : ''}`, tone: 'accent' }
     case 'contact.file_downloaded':
       return { text: `A téléchargé le plan joint à la demande « ${d.objet} »`, tone: 'neutral' }
     case 'contact.handled':

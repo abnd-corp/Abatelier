@@ -16,6 +16,10 @@ const props = defineProps<{
   addresses: { label: string; adresse: string; codePostal: string; ville: string }[]
   // Erreur renvoyée à l'enregistrement
   error?: { field?: string; msg: string } | null
+  // Chiffrage en direct : celui de l'atelier par défaut, celui du configurateur sur le site public
+  quoteUrl?: string
+  // Site public : pas de notes internes
+  visitor?: boolean
 }>()
 const form = defineModel<OrderForm>({ required: true })
 const emit = defineEmits<{ priced: [ok: boolean] }>()
@@ -36,7 +40,7 @@ async function refresh() {
   const mine = ++seq
   pricing.value = true
   try {
-    const res = await api<{ lignes: PricedLine[]; totals: Totals; distanceKm: number | null }>('/orders/quote', { method: 'POST', body: form.value })
+    const res = await api<{ lignes: PricedLine[]; totals: Totals; distanceKm: number | null }>(props.quoteUrl ?? '/orders/quote', { method: 'POST', body: form.value })
     if (mine !== seq) return
     quote.value = res
     quoteError.value = null
@@ -300,7 +304,7 @@ defineExpose({ refresh })
         </template>
       </fieldset>
 
-      <fieldset class="card group">
+      <fieldset v-if="!visitor" class="card group">
         <legend>Notes internes</legend>
         <label for="o-notes" class="sr-only">Notes internes</label>
         <textarea id="o-notes" v-model="form.notes" class="input" rows="3" placeholder="Rappeler avant de livrer, plan reçu par e-mail…" aria-describedby="h-o-notes" />
