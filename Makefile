@@ -7,7 +7,7 @@ BK = $(BASE) exec -T backup /bin/sh /opt/backup/backup.sh
 # ECRAN=chromium | firefox | telephone | tablette
 PW_ARGS = $(if $(PAGE),--grep "$(PAGE)") $(if $(ECRAN),--project=$(ECRAN))
 
-.PHONY: help setup secrets dev dev-d down logs prod prod-down check demo mails test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
+.PHONY: help setup secrets dev dev-d down logs prod prod-down check bdd-minimale bdd-demo mdp demo demo-boutique mails test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
 
 help: ## Liste les commandes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -45,6 +45,7 @@ check: ## Vérifie les types et compile l'API, le front et les tests e2e
 	cd api && npm run typecheck && npm run build
 	cd web && npm run build
 	cd e2e && npm run typecheck
+	for f in scripts/*.sh scripts/backup/*.sh; do bash -n $$f || exit 1; done
 
 test: test-api test-web e2e ## Lance tous les tests (API, composants, Playwright)
 
@@ -66,6 +67,19 @@ apercu: ## Captures de toutes les pages (téléphone, tablette, ordinateur, clai
 	$(E2E) up -d --build --wait
 	cd e2e && npx playwright test -c apercu.config.ts; status=$$?; cd .. && $(E2E) down -v; exit $$status
 	@echo "Ouvrir : $$(pwd)/apercus/index.html"
+
+bdd-minimale: ## Remonte la base de dev de zéro, avec le strict nécessaire (catalogue de départ + compte admin). Sauvegarde avant.
+	./scripts/bdd.sh minimale
+
+bdd-demo: ## Remonte la base de dev de zéro, en démonstration complète (équipe, clients, commandes, factures, boutique, stock). Sauvegarde avant.
+	./scripts/bdd.sh demo
+
+mdp: ## Mot de passe oublié : make mdp COMPTE=admin (mot de passe provisoire affiché une fois)
+	@test -n "$(COMPTE)" || { echo "Usage : make mdp COMPTE=identifiant"; exit 1; }
+	docker compose exec -T api npx tsx src/reset-password.ts "$(COMPTE)" 2>&1 | grep -v '^{"level"' | grep -v '^npm '
+
+demo-boutique: ## Ajoute à la base de dev des produits de boutique en ligne (avec photos) et du stock de feuilles, sans rien supprimer
+	docker compose exec -T api npx tsx src/demo-boutique.ts 2>&1 | grep -v '^{"level"'
 
 demo: ## Remplit la base de dev vide avec des clients, commandes, devis et factures de démonstration (comptes demo-*)
 	docker compose exec -T api npx tsx src/demo.ts 2>&1 | grep -v '^{"level"'

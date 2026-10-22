@@ -101,6 +101,35 @@ export default async function seed(config: FullConfig) {
     },
   })
   await api.post('/api/public/contact', { data: { ...contact, nom: 'Martine Bernard', email: 'martine@exemple.fr', objet: 'Bavettes sur mesure', message: 'Pouvez-vous me rappeler ?' } })
+  // Stock de feuilles : feuilles entières dans deux coloris et deux épaisseurs, une chute, un stock bas, puis quelques mouvements
+  const mats = catalog.materials as { id: string }[]
+  const cols = catalog.colors as { id: string }[]
+  const feuilles = [
+    { materialId: mats[0]!.id, colorId: cols[0]!.id, largeur: 1250, longueur: 3000, quantite: 24, seuil: 8, note: 'Rack A, palette 1' },
+    { materialId: mats[0]!.id, colorId: cols[1]?.id ?? cols[0]!.id, largeur: 1250, longueur: 3000, quantite: 3, seuil: 6, note: 'Commande fournisseur à passer' },
+    { materialId: mats[0]!.id, colorId: cols[0]!.id, largeur: 450, longueur: 3000, quantite: 5, chute: true, note: 'Chutes de la couvertine C-0004' },
+    { materialId: (mats[1] ?? mats[0])!.id, colorId: null, largeur: 1000, longueur: 2000, quantite: 12, seuil: 4 },
+    { materialId: (mats[1] ?? mats[0])!.id, colorId: cols[0]!.id, largeur: 1250, longueur: 2500, quantite: 0, seuil: 5, note: 'Épuisée' },
+  ]
+  for (const f of feuilles) {
+    const res = await api.post('/api/stock/feuilles', { data: f })
+    if (!res.ok()) continue
+    const id = (await res.json()).feuille.id as string
+    if (f.quantite > 5) await api.post(`/api/stock/feuilles/${id}/mouvement`, { data: { delta: -4, motif: 'fabrication', note: 'C-2026-0003' } })
+  }
+  // Boutique : trois produits en ligne avec leurs déclinaisons et une photo
+  for (const [nom, categorie, variantes] of [
+    ['Couvertine blanche RAL 9010', 'Couvertine', [['270 mm · 1 mm · 1 m', 21], ['320 mm · 1,5 mm · 3 m', 84]]],
+    ['Bavette simple gris anthracite RAL 7016', 'Bavette', [['150 mm · 1 mm · 1 m', 15], ['300 mm · 1,5 mm · 3 m', 81]]],
+    ['Bandeau en « L » noir sablé RAL 2100', 'Bandeau', [['200 mm · 1 mm · 1,50 m', 26.5]]],
+  ] as const) {
+    const p = await api.post('/api/boutique/produits', { data: { nom, categorie, description: 'Aluminium laqué, fabriqué dans notre atelier de Fraisses.' } })
+    if (!p.ok()) continue
+    const id = (await p.json()).id as string
+    for (const [libelle, prixTtc] of variantes) await api.post(`/api/boutique/produits/${id}/variantes`, { data: { libelle, prixTtc } })
+    await api.put(`/api/boutique/produits/${id}/image?alt=${encodeURIComponent(nom)}`, { data: makePng(640, 480, 0x9a), headers: { 'Content-Type': 'image/png' } })
+    await api.patch(`/api/boutique/produits/${id}`, { data: { actif: true } })
+  }
   // Un échec de connexion, pour que le journal et le tableau de bord ne soient pas vides
   await api.post('/api/auth/login', { data: { identifiant: 'inconnu', password: 'faux' } })
   await api.dispose()

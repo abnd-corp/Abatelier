@@ -50,6 +50,20 @@ make e2e                        # avant la PR : tout Playwright, Chromium, Firef
 make pr                         # pousse la branche et ouvre la PR vers dev
 ```
 
+## La base de développement
+
+```bash
+make bdd-demo                   # remonte la base de dev en démonstration complète (équipe, clients, commandes, factures, boutique, stock)
+make bdd-minimale               # remonte la base de dev avec le strict nécessaire : catalogue de départ + compte admin
+make mdp COMPTE=admin           # mot de passe oublié : un mot de passe provisoire est affiché une fois
+```
+
+Les deux premières commandes **remplacent toute la base de dev** (une sauvegarde est faite avant : `make backups`, `make restore`). Elles refusent de tourner en production et ne touchent jamais à la base des tests. Comptes de démonstration : `demo-direction`, `demo-rh`, `demo-atelier` (mot de passe `Demo-Alu-Pliage-2026!`, public : ce sont des données inventées). Pour essayer sans risque : `BDD_NOM=patalu_essai ./scripts/bdd.sh demo --oui`.
+
+`make demo` et `make demo-boutique` existent toujours : le premier remplit une base **vide**, le second **ajoute** la boutique et le stock sans rien supprimer.
+
+`e2e/apercu/` sert à `make apercu` : des captures de toutes les pages (téléphone, tablette, ordinateur, clair et sombre) sur une stack jetable remplie de données de démonstration, rangées dans `apercus/` (ignoré par Git).
+
 Pour livrer :
 
 ```bash
