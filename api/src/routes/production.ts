@@ -2,12 +2,14 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { asc, eq, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { ORDER_STATUTS, orderLines, orders } from '../db/schema.js'
+import { colors, materials, ORDER_STATUTS, orderLines, orders, sheetStock } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
 import { changeStatus, eventsOf, NEXT, PRODUCTION_STATUTS, PRODUCTION_STEPS, STATUT_LABELS } from '../orders.js'
 import { getCompany, getTemplate } from '../documents.js'
 import { renderProductionSheet } from '../production-sheet.js'
 import { audit } from '../audit.js'
+import { adviseSheets, type SheetOption } from '../cutting.js'
+import { colorLabel, materialLabel } from '../quote.js'
 
 // Vue de l'atelier : les commandes à fabriquer, sans rien sur le client (ni nom, ni coordonnées, ni adresse) et sans les prix.
 
@@ -84,6 +86,34 @@ export async function productionRoutes(app: FastifyInstance) {
       order: { id: o.id, numero: o.numero, kind: o.kind, statut: o.statut, statutLabel: STATUT_LABELS[o.statut], livraisonMode: o.livraisonMode, datePrevue: o.datePrevue, next: next(o.statut) },
       lignes,
       events: await eventsOf(o.id),
+    }
+  })
+
+  // Quelle feuille prendre pour chaque pièce, d'après le stock de l'atelier (matière, épaisseur et coloris de la pièce).
+  // Un conseil : l'opérateur garde la main, et le stock n'est pas décompté ici.
+  app.get('/:id/feuilles', async (req, reply) => {
+    const o = await findOrder((req.params as { id: string }).id, reply)
+    if (!o) return
+    const lignes = await db.select().from(orderLines).where(eq(orderLines.orderId, o.id)).orderBy(asc(orderLines.position))
+    const stock = await db
+      .select({ s: sheetStock, m: materials, c: colors })
+      .from(sheetStock)
+      .innerJoin(materials, eq(materials.id, sheetStock.materialId))
+      .leftJoin(colors, eq(colors.id, sheetStock.colorId))
+    const options = (materialId: string | null, colorId: string | null): SheetOption[] =>
+      stock
+        .filter((r) => r.s.materialId === materialId && (r.s.colorId ?? null) === (colorId ?? null))
+        .map((r) => ({ id: r.s.id, largeur: r.s.largeur, longueur: r.s.longueur, chute: r.s.chute, quantite: r.s.quantite, libelle: `${materialLabel(r.m)} · ${r.c ? colorLabel(r.c) : 'brut'} · ${r.s.largeur.toLocaleString('fr-FR')} × ${r.s.longueur.toLocaleString('fr-FR')} mm${r.s.chute ? ' (chute)' : ''}` }))
+    return {
+      lignes: lignes.map((l) => {
+        // Un article de la boutique n'a pas de pièce dessinée : rien à découper
+        if (!l.cotes.length) return { ligneId: l.id, repere: l.repere, modeleLabel: l.modeleLabel, besoin: null, conseils: [], raison: 'Article standard : pas de calcul de découpe.' }
+        const developpe = l.cotes.reduce((a, b) => a + b, 0)
+        const besoin = { developpe, longueur: l.longueur, quantite: l.quantite }
+        const conseils = adviseSheets(besoin, options(l.materialId, l.colorId)).slice(0, 3)
+        const raison = conseils.length ? null : 'Aucune feuille en stock pour cette matière et ce coloris dans un format qui convient. Vérifiez le stock ou commandez des feuilles.'
+        return { ligneId: l.id, repere: l.repere, modeleLabel: l.modeleLabel, besoin, conseils, raison }
+      }),
     }
   })
 

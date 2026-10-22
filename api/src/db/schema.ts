@@ -1,5 +1,6 @@
 import { bigint, boolean, check, customType, type AnyPgColumn, date, index, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
+import type { PricedLine } from '../quote.js'
 
 const ts = (name: string) => timestamp(name, { withTimezone: true })
 
@@ -436,6 +437,8 @@ export interface PaymentCart {
   totals: { brut: number; livraisonPrix: number; ht: number; tauxTva: number; tva: number; ttc: number; delaiJours: number }
   // Adresse du site au moment du paiement, pour les liens des e-mails envoyés ensuite
   origin: string
+  // Commande sur mesure passée depuis le configurateur : les pièces chiffrées (lignes est alors vide)
+  surMesure?: { lignes: PricedLine[]; notes: string | null; remisePro: number; complementMinimum: number }
 }
 
 export const payments = pgTable(
@@ -497,6 +500,56 @@ export const clientSessions = pgTable(
     expiresAt: ts('expires_at').notNull(),
   },
   (t) => [index('client_sessions_account_idx').on(t.accountId)],
+)
+
+// --- Stock de feuilles ---
+// Les feuilles de tôle de l'atelier : une ligne par matière (nature + épaisseur, du catalogue), coloris (ou brut), format et nature
+// (feuille entière ou chute), avec sa quantité. Chaque entrée ou sortie est tracée (sheet_movements). Sert à conseiller la feuille à prendre.
+export const sheetStock = pgTable(
+  'sheet_stock',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    materialId: uuid('material_id')
+      .notNull()
+      .references(() => materials.id, { onDelete: 'restrict' }),
+    // Null = tôle brute, sans laquage
+    colorId: uuid('color_id').references(() => colors.id, { onDelete: 'restrict' }),
+    // Largeur et longueur de la feuille, en mm (largeur ≤ longueur)
+    largeur: integer('largeur').notNull(),
+    longueur: integer('longueur').notNull(),
+    // Une chute est un morceau récupéré d'une feuille déjà entamée
+    chute: boolean('chute').notNull().default(false),
+    quantite: integer('quantite').notNull().default(0),
+    // Seuil d'alerte : en dessous, la feuille est signalée « stock bas » (0 = pas d'alerte)
+    seuil: integer('seuil').notNull().default(0),
+    note: text('note').notNull().default(''),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('sheet_stock_format_idx').on(t.materialId, sql`coalesce(${t.colorId}, '00000000-0000-0000-0000-000000000000'::uuid)`, t.largeur, t.longueur, t.chute),
+    check('sheet_stock_format', sql`${t.largeur} > 0 and ${t.longueur} >= ${t.largeur}`),
+    check('sheet_stock_quantite', sql`${t.quantite} >= 0 and ${t.seuil} >= 0`),
+  ],
+)
+
+export const SHEET_MOTIFS = ['reception', 'inventaire', 'fabrication', 'chute', 'perte', 'autre'] as const
+export type SheetMotif = (typeof SHEET_MOTIFS)[number]
+export const sheetMovements = pgTable(
+  'sheet_movements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // Gardé même si la feuille est supprimée du stock : l'historique reste lisible grâce au libellé recopié
+    sheetId: uuid('sheet_id').references(() => sheetStock.id, { onDelete: 'set null' }),
+    libelle: text('libelle').notNull(),
+    delta: integer('delta').notNull(),
+    apres: integer('apres').notNull(),
+    motif: text('motif', { enum: SHEET_MOTIFS }).notNull(),
+    note: text('note').notNull().default(''),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('sheet_movements_sheet_idx').on(t.sheetId, t.createdAt)],
 )
 
 // --- Commandes ---

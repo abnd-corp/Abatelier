@@ -33,6 +33,7 @@ const PAGES: { name: string; path: string; anonymous?: boolean; client?: boolean
   { name: '23-fiche-commande', path: 'FICHE_COMMANDE' },
   { name: '24-fabrication', path: '/fabrication' },
   { name: '25-fiche-fabrication', path: 'FICHE_FABRICATION' },
+  { name: '25b-stock-feuilles', path: '/stock' },
   { name: '26-factures', path: '/factures' },
   { name: '27-devis', path: '/factures?type=devis' },
   { name: '28-fiche-facture', path: 'FICHE_FACTURE' },

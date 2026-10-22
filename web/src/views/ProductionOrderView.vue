@@ -7,6 +7,7 @@ import { sheetUrl, shortDay, statutOf, STEP_ACTIONS, type OrderEvent, type Order
 import { useUiStore } from '@/stores/ui'
 import AppIcon from '@/components/AppIcon.vue'
 import OrderLineCard from '@/components/orders/OrderLineCard.vue'
+import type { LigneFeuilles } from '@/lib/stock'
 
 // Fiche de fabrication : les pièces à plier, sans rien sur le client ni sur les prix
 interface Detail {
@@ -35,12 +36,15 @@ const error = ref('')
 const notice = ref('')
 const busy = ref(false)
 const id = computed(() => route.params.id as string)
+// Feuilles conseillées d'après le stock : un plus, l'absence de réponse ne bloque rien
+const feuilles = ref<LigneFeuilles[]>([])
 
 async function load() {
   try {
     detail.value = await api<Detail>(`/production/${id.value}`)
     ui.crumb = { for: route.fullPath, label: detail.value.order.numero }
     document.title = `${detail.value.order.numero} · Fabrication · Atelier · Alu Pliage Service`
+    api<{ lignes: LigneFeuilles[] }>(`/production/${id.value}/feuilles`).then((r) => (feuilles.value = r.lignes.filter((l) => l.besoin))).catch(() => {})
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : 'Chargement impossible.'
   }
@@ -91,6 +95,27 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
       <OrderLineCard v-for="(l, i) in detail.lignes" :key="l.id" :index="i" :line="l" />
     </div>
 
+    <section v-if="feuilles.length" class="card block" aria-labelledby="feuilles">
+      <h2 id="feuilles">Feuilles à prendre</h2>
+      <p class="muted hint">Conseil d’après le stock de l’atelier : les chutes d’abord, puis la feuille qui perd le moins. À vous de confirmer sur place ; le stock se met à jour dans « Stock de feuilles ».</p>
+      <ul class="conseils">
+        <li v-for="(l, i) in feuilles" :key="l.ligneId">
+          <h3>Pièce {{ i + 1 }}<template v-if="l.repere"> · {{ l.repere }}</template> <span class="muted">{{ l.modeleLabel }} · développé {{ l.besoin!.developpe.toLocaleString('fr-FR') }} mm × {{ l.besoin!.longueur.toLocaleString('fr-FR') }} mm · {{ l.besoin!.quantite }} pièce{{ l.besoin!.quantite > 1 ? 's' : '' }}</span></h3>
+          <template v-if="l.conseils.length">
+            <p class="best">
+              Prendre <b>{{ l.conseils[0]!.feuilles }} feuille{{ l.conseils[0]!.feuilles > 1 ? 's' : '' }}</b> : {{ l.conseils[0]!.libelle }}
+              <span class="pill accent">{{ l.conseils[0]!.parFeuille }} pièce{{ l.conseils[0]!.parFeuille > 1 ? 's' : '' }} par feuille</span>
+              <span class="pill" :class="l.conseils[0]!.perte > 40 ? 'warn' : 'ok'">{{ l.conseils[0]!.perte.toLocaleString('fr-FR') }} % de perte</span>
+              <span v-if="l.conseils[0]!.chute" class="pill neutral">Chute</span>
+              <span v-if="l.conseils[0]!.feuilles > l.conseils[0]!.enStock" class="pill bad">Il n’y en a que {{ l.conseils[0]!.enStock }} en stock</span>
+            </p>
+            <p v-if="l.conseils.length > 1" class="muted alt">Sinon : <template v-for="(c, j) in l.conseils.slice(1)" :key="c.sheetId">{{ j ? ' · ' : '' }}{{ c.feuilles }} × {{ c.libelle }} ({{ c.perte.toLocaleString('fr-FR') }} % de perte, {{ c.enStock }} en stock)</template></p>
+          </template>
+          <p v-else class="alert warn" role="status">{{ l.raison }}</p>
+        </li>
+      </ul>
+    </section>
+
     <section class="card block">
       <h2>Historique</h2>
       <ol class="events">
@@ -103,6 +128,37 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
 </template>
 
 <style scoped>
+.conseils {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.conseils h3 {
+  margin: 0 0 4px;
+  font-size: 0.98rem;
+  text-transform: none;
+}
+.conseils p {
+  margin: 4px 0;
+}
+.best {
+  display: flex;
+  gap: 6px 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.alt {
+  font-size: 0.86rem;
+}
+.alert.warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.hint {
+  font-size: 0.86rem;
+}
 .back {
   display: inline-flex;
   align-items: center;

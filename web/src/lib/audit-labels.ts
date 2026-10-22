@@ -279,6 +279,22 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
     }
     case 'product.variant_deleted':
       return { text: `A supprimé la déclinaison « ${d.libelle} » du produit « ${d.nom} »`, tone: 'bad' }
+    case 'stock.sheet_created':
+      return { text: `A ajouté au stock la feuille ${d.libelle} (${d.quantite})`, tone: 'accent' }
+    case 'stock.sheet_updated':
+      return { text: `A modifié la feuille ${d.libelle} (${(d.champs as string[]).join(', ')})`, tone: 'neutral' }
+    case 'stock.moved':
+      return { text: `${d.motif === 'inventaire' ? 'Inventaire' : d.delta > 0 ? 'Entrée' : 'Sortie'} de ${Math.abs(d.delta)} feuille${Math.abs(d.delta) > 1 ? 's' : ''} : ${d.libelle} (reste ${d.apres})`, tone: d.delta > 0 ? 'accent' : 'neutral' }
+    case 'stock.sheet_deleted':
+      return { text: `A supprimé du stock la référence ${d.libelle}`, tone: 'bad' }
+    case 'product.imported':
+      return { text: `A importé un catalogue : ${d.produitsCrees} produit${d.produitsCrees > 1 ? 's' : ''} créé${d.produitsCrees > 1 ? 's' : ''} (cachés du site), ${d.variantesCreees} déclinaison${d.variantesCreees > 1 ? 's' : ''} ajoutée${d.variantesCreees > 1 ? 's' : ''}, ${d.variantesMisesAJour} prix mis à jour`, tone: 'accent' }
+    case 'product.duplicated':
+      return { text: `A copié le produit « ${d.source} » en « ${d.nom} »`, tone: 'accent' }
+    case 'product.prices_adjusted':
+      return { text: `A ${d.pourcent > 0 ? 'augmenté' : 'baissé'} de ${Math.abs(d.pourcent).toLocaleString('fr-FR')} % les prix de « ${d.nom} » (${d.variantes} déclinaison${d.variantes > 1 ? 's' : ''})`, tone: 'neutral' }
+    case 'product.bulk':
+      return { text: `A ${d.action === 'mettre_en_ligne' ? 'mis en ligne' : d.action === 'retirer' ? 'retiré du site' : 'supprimé'} ${d.produits} produit${d.produits > 1 ? 's' : ''}`, tone: d.action === 'supprimer' ? 'bad' : 'neutral' }
     case 'boutique.checkout_started':
       return { text: `Un client ouvre le paiement de ${eur(d.montant)} (${d.articles} article${d.articles > 1 ? 's' : ''})`, tone: 'neutral' }
     case 'boutique.payment_confirmed':
@@ -325,6 +341,8 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: 'Déconnexion d’un client de son espace', tone: 'neutral' }
     case 'espace.document_downloaded':
       return { text: `Un client a téléchargé ${d.type === 'devis' ? 'le devis' : d.type === 'avoir' ? 'l’avoir' : 'la facture'} ${d.numero}`, tone: 'neutral' }
+    case 'espace.account_closed':
+      return { text: 'Un client a fermé son espace : sa fiche est anonymisée, ses factures sont conservées', tone: 'neutral' }
     case 'espace.devis_answered':
       return { text: `Un client a ${d.reponse === 'accepte' ? 'accepté' : 'refusé'} le devis ${d.numero} (commande ${d.commande}) depuis son espace`, tone: d.reponse === 'accepte' ? 'accent' : 'neutral' }
     case 'user.enabled':

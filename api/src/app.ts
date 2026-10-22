@@ -21,6 +21,7 @@ import { mailRoutes } from './routes/mail.js'
 import { espaceRoutes } from './routes/espace.js'
 import { boutiqueRoutes } from './routes/boutique.js'
 import { paiementRoutes } from './routes/paiement.js'
+import { stockRoutes } from './routes/stock.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -106,6 +107,7 @@ export async function buildApp() {
   await app.register(espaceRoutes, { prefix: '/api/espace' })
   await app.register(boutiqueRoutes, { prefix: '/api/boutique' })
   await app.register(paiementRoutes, { prefix: '/api/paiement' })
+  await app.register(stockRoutes, { prefix: '/api/stock' })
 
   return app
 }
