@@ -16,7 +16,7 @@ import { alertRecipients, sendMail, withTimeout } from '../mail.js'
 import { espaceAnswerAlert, espaceQuoteAlert } from '../mail-texts.js'
 import { eventsOf, STATUT_LABELS } from '../orders.js'
 import { invalid, isUniqueViolation } from '../validation.js'
-import { clientName } from './clients.js'
+import { clientFields, clientName, identityError, normalize } from './clients.js'
 import { orderBody, placeOrder, priceBody } from './orders.js'
 import { cartBody } from './public.js'
 import { PaymentError, paymentProvider } from '../payments.js'
@@ -39,7 +39,12 @@ const optText = (max: number, label: string) =>
 
 const emailField = z.string().trim().toLowerCase().min(1, 'Indiquez votre adresse e-mail.').max(120, 'Adresse e-mail : 120 caractères maximum.').pipe(z.email('Adresse e-mail invalide.'))
 
-const registerBody = z.object({
+const clientType = z.enum(['particulier', 'professionnel'], { error: 'Indiquez si vous êtes un particulier ou un professionnel.' })
+
+const registerBody = z
+  .object({
+  type: clientType.default('particulier'),
+  raisonSociale: optText(120, 'Raison sociale'),
   prenom: optText(60, 'Prénom'),
   nom: z.string().trim().min(1, 'Indiquez votre nom.').max(80, 'Nom : 80 caractères maximum.'),
   email: emailField,
@@ -48,13 +53,16 @@ const registerBody = z.object({
   consentement: z.literal(true, { error: 'Cochez la case pour accepter l’utilisation de vos données pour gérer votre espace client.' }),
   // Champ caché que seuls les robots remplissent
   site: z.string().optional(),
-})
+  })
+  .superRefine((b, ctx) => {
+    if (b.type === 'professionnel' && !b.raisonSociale) ctx.addIssue({ code: 'custom', path: ['raisonSociale'], message: 'Indiquez la raison sociale de votre entreprise.' })
+  })
 const loginBody = z.object({ email: z.string().trim().toLowerCase().min(1).max(120), password: z.string().min(1).max(200), remember: z.boolean().default(false) })
 const devisBody = orderBody.omit({ clientId: true })
 const fermetureBody = z.object({ password: z.string().min(1, 'Saisissez votre mot de passe pour confirmer.').max(200) })
 const reponseBody = z.object({ reponse: z.enum(DEVIS_REPONSES, { error: 'Indiquez si vous acceptez ou refusez le devis.' }) })
 
-const publicAccount = (a: ClientAccount) => ({ prenom: a.prenom, nom: a.nom, email: a.email, telephone: a.telephone, type: a.type })
+const publicAccount = (a: ClientAccount) => ({ prenom: a.prenom, nom: a.nom, email: a.email, telephone: a.telephone, type: a.type, proVerifie: a.proVerifie })
 const isUuid = (id: string) => z.uuid().safeParse(id).success
 /** Pour le journal : le client n'est pas un utilisateur de l'atelier, on le désigne par sa fiche. */
 const who = (a: Pick<ClientAccount, 'clientId'>) => ({ actor: null, identifiant: `espace:${a.clientId}` })
@@ -79,12 +87,13 @@ export async function espaceRoutes(app: FastifyInstance) {
     const passwordHash = await hashPassword(password)
     try {
       const created = await db.transaction(async (tx) => {
-        const [c] = await tx.insert(clients).values({ type: 'particulier', origine: 'site', ...data }).returning()
+        // Un professionnel déclaré sur le site n'a la remise pro qu'une fois validé par l'atelier (proVerifie)
+        const [c] = await tx.insert(clients).values({ origine: 'site', ...data, raisonSociale: data.type === 'professionnel' ? data.raisonSociale : null, proVerifie: false }).returning()
         const [a] = await tx.insert(clientAccounts).values({ clientId: c!.id, passwordHash, lastLoginAt: new Date() }).returning()
         return { client: c!, account: a! }
       })
       await startSession(req, reply, created.account.id, false)
-      await audit(req, 'espace.registered', { ...who({ clientId: created.client.id }), targetType: 'client', targetId: created.client.id, details: { nom: clientName(created.client) } })
+      await audit(req, 'espace.registered', { ...who({ clientId: created.client.id }), targetType: 'client', targetId: created.client.id, details: { nom: clientName(created.client), type: created.client.type } })
       return reply.code(201).send({ compte: publicAccount({ ...created.client, clientId: created.client.id, id: created.account.id } as ClientAccount) })
     } catch (e) {
       // Une adresse e-mail désigne une seule fiche client : on ne dit pas si elle a déjà un compte
@@ -197,6 +206,42 @@ export async function espaceRoutes(app: FastifyInstance) {
     return reply.code(204).send()
   })
 
+  // --- Mes informations : type, coordonnées et adresse de facturation ---
+  // L'adresse e-mail est l'identifiant de connexion : elle ne se change pas ici.
+
+  const profilFields = ['type', 'raisonSociale', 'siret', 'tvaIntra', 'prenom', 'nom', 'telephone', 'adresse', 'codePostal', 'ville'] as const
+  const profilBody = z.object({ type: clientType, ...clientFields }).pick({ type: true, raisonSociale: true, siret: true, tvaIntra: true, prenom: true, nom: true, telephone: true, adresse: true, codePostal: true, ville: true }).partial()
+  const PROFIL_LABELS: Record<(typeof profilFields)[number], string> = { type: 'type', raisonSociale: 'raison sociale', siret: 'SIRET', tvaIntra: 'TVA intracommunautaire', prenom: 'prénom', nom: 'nom', telephone: 'téléphone', adresse: 'adresse', codePostal: 'code postal', ville: 'ville' }
+  const profilOf = (c: typeof clients.$inferSelect) => ({ type: c.type, proVerifie: c.proVerifie, raisonSociale: c.raisonSociale, siret: c.siret, tvaIntra: c.tvaIntra, prenom: c.prenom, nom: c.nom, email: c.email, telephone: c.telephone, adresse: c.adresse, codePostal: c.codePostal, ville: c.ville })
+
+  app.get('/profil', { preHandler: requireAccount }, async (req) => {
+    const [c] = await db.select().from(clients).where(eq(clients.id, req.account!.clientId))
+    return { profil: profilOf(c!) }
+  })
+
+  app.patch('/profil', { preHandler: requireAccount, config: { rateLimit: { max: 30, timeWindow: '1 hour' } } }, async (req, reply) => {
+    const me = req.account!
+    const parsed = profilBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const [c] = await db.select().from(clients).where(eq(clients.id, me.clientId))
+    const given = Object.fromEntries(Object.entries(parsed.data).filter(([, v]) => v !== undefined))
+    const merged = normalize({ ...c!, ...given }) as typeof c & {}
+    const bad = identityError(merged)
+    if (bad) return reply.code(400).send(bad)
+    if (!merged.nom) return reply.code(400).send({ error: 'Indiquez votre nom.', field: 'nom' })
+    // Devenir professionnel (ou le rester) sur simple déclaration ne donne pas droit à la remise : l'atelier valide
+    merged.proVerifie = merged.type === 'professionnel' && c!.type === 'professionnel' ? c!.proVerifie : false
+    const changed = profilFields.filter((k) => merged[k] !== c![k])
+    if (!changed.length) return { profil: profilOf(c!) }
+    const [saved] = await db
+      .update(clients)
+      .set({ ...Object.fromEntries(changed.map((k) => [k, merged[k]])), proVerifie: merged.proVerifie, updatedAt: new Date() })
+      .where(eq(clients.id, c!.id))
+      .returning()
+    await audit(req, 'espace.profile_updated', { ...who(me), targetType: 'client', targetId: c!.id, details: { champs: changed.map((k) => PROFIL_LABELS[k]), ...(changed.includes('type') ? { type: merged.type } : {}) } })
+    return { profil: profilOf(saved!) }
+  })
+
   // Toujours 200, avec compte à null sans session : pas d'erreur 401 dans la console du navigateur
   app.get('/session', async (req) => ({ compte: req.account ? publicAccount(req.account) : null }))
 
@@ -252,7 +297,7 @@ export async function espaceRoutes(app: FastifyInstance) {
     }
     const provider = paymentProvider()
     if (!provider) return reply.code(503).send({ error: 'Le paiement en ligne n’est pas encore ouvert. Enregistrez votre devis : l’atelier vous confirmera la suite.' })
-    const priced = await priceBody(parsed.data, me.type === 'professionnel')
+    const priced = await priceBody(parsed.data, me.type === 'professionnel' && me.proVerifie)
     if ('error' in priced) return reply.code(priced.status).send({ error: priced.error, field: priced.field })
     const { lines, totals, distanceKm } = priced
     const origin = baseUrl(req)

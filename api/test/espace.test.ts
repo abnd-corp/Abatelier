@@ -75,7 +75,7 @@ describe('Création du compte', () => {
   it('crée la fiche client, le compte et la session, sans jamais stocker le mot de passe ni le jeton en clair', async () => {
     const res = await visitor.post('/api/espace/inscription', signup())
     expect(res.statusCode, res.body).toBe(201)
-    expect(res.json().compte).toEqual({ prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: '06 12 34 56 78', type: 'particulier' })
+    expect(res.json().compte).toEqual({ prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: '06 12 34 56 78', type: 'particulier', proVerifie: false })
     expect(res.body).not.toMatch(/password|hash/i)
     const [c] = await db.select().from(clients)
     expect(c).toMatchObject({ type: 'particulier', origine: 'site', email: 'jean@example.com' })
@@ -133,6 +133,80 @@ describe('Création du compte', () => {
       env.CONTACT_RATE_LIMIT = 20
       await limited.close()
     }
+  })
+})
+
+describe('Particulier ou professionnel, et mes informations', () => {
+  it('à la création : particulier par défaut, ou professionnel avec sa raison sociale obligatoire, jamais reconnu d’office', async () => {
+    const p = await member()
+    expect((await p.get('/api/espace/session')).json().compte).toMatchObject({ type: 'particulier', proVerifie: false })
+    expect((await espace().post('/api/espace/inscription', signup({ email: 'pro@example.com', type: 'professionnel' }))).json()).toMatchObject({ field: 'raisonSociale', error: expect.stringContaining('raison sociale') })
+    expect((await espace().post('/api/espace/inscription', signup({ email: 'x@example.com', type: 'artisan' }))).json().field).toBe('type')
+    const pro = espace()
+    const res = await pro.post('/api/espace/inscription', signup({ email: 'pro@example.com', type: 'professionnel', raisonSociale: 'Toitures du Forez' }))
+    expect(res.statusCode, res.body).toBe(201)
+    expect(res.json().compte).toMatchObject({ type: 'professionnel', proVerifie: false })
+    const [fiche] = await db.select().from(clients).where(eq(clients.email, 'pro@example.com'))
+    expect(fiche).toMatchObject({ type: 'professionnel', raisonSociale: 'Toitures du Forez', proVerifie: false, origine: 'site' })
+    // Un particulier n'enregistre pas de raison sociale, même envoyée
+    await espace().post('/api/espace/inscription', signup({ email: 'part@example.com', raisonSociale: 'Ignorée' }))
+    expect((await db.select().from(clients).where(eq(clients.email, 'part@example.com')))[0]!.raisonSociale).toBeNull()
+    expect((await entries('espace.registered')).map((e) => (e.details as { type: string }).type).sort()).toEqual(['particulier', 'particulier', 'professionnel'])
+  })
+
+  it('un professionnel déclaré n’a pas la remise pro tant que l’atelier ne l’a pas validé', async () => {
+    const pro = await member({ email: 'pro@example.com', type: 'professionnel', raisonSociale: 'Toitures du Forez' })
+    const plein = (await pro.post('/api/espace/devis', config({ lignes: [piece({ quantite: 1 })] }))).json()
+    const [avant] = await db.select().from(orders).where(eq(orders.id, plein.id))
+    expect(avant!.remisePro).toBe(0)
+    const [fiche] = await db.select().from(clients).where(eq(clients.email, 'pro@example.com'))
+    expect((await direction.patch(`/api/clients/${fiche!.id}`, { proVerifie: true })).statusCode).toBe(200)
+    const remise = (await pro.post('/api/espace/devis', config({ lignes: [piece({ quantite: 1 })] }))).json()
+    const [apres] = await db.select().from(orders).where(eq(orders.id, remise.id))
+    expect(apres!.remisePro).toBeGreaterThan(0)
+    expect((await pro.get('/api/espace/session')).json().compte.proVerifie).toBe(true)
+  })
+
+  it('lit et modifie ses informations (adresse, téléphone, SIRET), sans pouvoir changer d’e-mail ni de droits', async () => {
+    const c = await member()
+    expect((await espace().get('/api/espace/profil')).statusCode).toBe(401)
+    expect((await c.get('/api/espace/profil')).json().profil).toMatchObject({ type: 'particulier', prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', adresse: null })
+    const res = await c.patch('/api/espace/profil', { adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses', telephone: '06 11 22 33 44', email: 'autre@example.com', proVerifie: true, notes: 'x' })
+    expect(res.statusCode, res.body).toBe(200)
+    const [fiche] = await db.select().from(clients)
+    expect(fiche).toMatchObject({ adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses', email: 'jean@example.com', proVerifie: false, notes: null })
+    expect((await entries('espace.profile_updated'))[0]!.details).toMatchObject({ champs: ['téléphone', 'adresse', 'code postal', 'ville'] })
+    // Aucune donnée sensible dans la réponse
+    expect(res.body).not.toMatch(/passwordHash|notes|origine/)
+  })
+
+  it('passer professionnel exige la raison sociale et ne donne pas la remise ; repasser particulier efface les champs pro', async () => {
+    const c = await member()
+    const bad = await c.patch('/api/espace/profil', { type: 'professionnel' })
+    expect(bad.statusCode).toBe(400)
+    expect(bad.json().field).toBe('raisonSociale')
+    const ok = await c.patch('/api/espace/profil', { type: 'professionnel', raisonSociale: 'Zinguerie Ondaine', siret: '73282932000074', tvaIntra: 'FR12345678901' })
+    expect(ok.statusCode, ok.body).toBe(200)
+    expect(ok.json().profil).toMatchObject({ type: 'professionnel', raisonSociale: 'Zinguerie Ondaine', proVerifie: false })
+    expect((await c.patch('/api/espace/profil', { siret: '12345678901234' })).json().field).toBe('siret')
+    expect((await c.patch('/api/espace/profil', { codePostal: '4249' })).json().field).toBe('codePostal')
+    const back = await c.patch('/api/espace/profil', { type: 'particulier' })
+    expect(back.json().profil).toMatchObject({ type: 'particulier', raisonSociale: null, siret: null, tvaIntra: null, proVerifie: false })
+    expect((await c.patch('/api/espace/profil', { nom: '' })).json().field).toBe('nom')
+  })
+
+  it('la direction valide ou retire le statut professionnel, noté au journal ; une fiche créée par l’atelier est reconnue d’office', async () => {
+    const id = (await direction.post('/api/clients', { type: 'professionnel', raisonSociale: 'Atelier pro' })).json().id
+    expect((await db.select().from(clients).where(eq(clients.id, id)))[0]!.proVerifie).toBe(true)
+    expect((await direction.patch(`/api/clients/${id}`, { proVerifie: false })).statusCode).toBe(200)
+    expect((await db.select().from(clients).where(eq(clients.id, id)))[0]!.proVerifie).toBe(false)
+    const part = (await direction.post('/api/clients', { type: 'particulier', nom: 'Martin' })).json().id
+    await direction.patch(`/api/clients/${part}`, { proVerifie: true })
+    expect((await db.select().from(clients).where(eq(clients.id, part)))[0]!.proVerifie).toBe(false)
+    // Un particulier de l'atelier qui passe professionnel l'est d'office
+    await direction.patch(`/api/clients/${part}`, { type: 'professionnel', raisonSociale: 'Martin SARL' })
+    expect((await db.select().from(clients).where(eq(clients.id, part)))[0]!.proVerifie).toBe(true)
+    expect((await entries('client.updated')).some((e) => JSON.stringify(e.details).includes('statut professionnel'))).toBe(true)
   })
 })
 

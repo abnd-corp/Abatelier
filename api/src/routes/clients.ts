@@ -17,7 +17,7 @@ const optText = (max: number, label: string) =>
     .nullish()
     .transform((v) => (v ? v : null))
 
-const fields = {
+export const clientFields = {
   raisonSociale: optText(120, 'Raison sociale'),
   siret: optText(20, 'SIRET')
     .transform((v) => (v ? digits(v) : null))
@@ -39,22 +39,23 @@ const fields = {
   notes: optText(5000, 'Notes'),
 }
 
-type Fields = { [K in keyof typeof fields]?: z.infer<(typeof fields)[K]> } & { type?: Client['type'] }
+type Fields = { [K in keyof typeof clientFields]?: z.infer<(typeof clientFields)[K]> } & { type?: Client['type'] }
 
 /** Un particulier n'a ni raison sociale, ni SIRET, ni TVA. */
-const normalize = <T extends Fields>(c: T): T => (c.type === 'particulier' ? { ...c, raisonSociale: null, siret: null, tvaIntra: null } : c)
+export const normalize = <T extends Fields>(c: T): T => (c.type === 'particulier' ? { ...c, raisonSociale: null, siret: null, tvaIntra: null } : c)
 
 /** Identité minimale : la raison sociale d'un professionnel, le nom d'un particulier. */
-function identityError(c: Fields) {
+export function identityError(c: Fields) {
   if (c.type === 'professionnel' && !c.raisonSociale) return { error: 'La raison sociale est requise.', field: 'raisonSociale' }
   if (c.type === 'particulier' && !c.nom) return { error: 'Le nom est requis.', field: 'nom' }
   return null
 }
 
-const type = z.enum(CLIENT_TYPES, { error: 'Type de client inconnu.' })
+export const type = z.enum(CLIENT_TYPES, { error: 'Type de client inconnu.' })
 // Une fiche créée à la main ; « site » est réservé aux commandes passées sur le site
-const createBody = z.object({ type, origine: z.enum(['atelier', 'telephone', 'email'], { error: 'Origine inconnue.' }).default('atelier'), ...fields })
-const updateBody = z.object({ type, ...fields }).partial()
+const createBody = z.object({ type, origine: z.enum(['atelier', 'telephone', 'email'], { error: 'Origine inconnue.' }).default('atelier'), ...clientFields })
+// proVerifie : l'atelier valide (ou retire) le statut professionnel d'un client inscrit sur le site
+const updateBody = z.object({ type, ...clientFields, proVerifie: z.boolean({ error: 'Statut professionnel : oui ou non.' }) }).partial()
 
 const siteBody = z.object({
   libelle: z.string().trim().min(1, 'Donnez un nom au chantier.').max(80, 'Nom du chantier : 80 caractères maximum.'),
@@ -76,6 +77,7 @@ export const clientName = (c: Pick<Client, 'type' | 'raisonSociale' | 'prenom' |
 // Libellés des champs pour le journal ; le contenu des notes n'y est jamais copié
 const LABELS: Record<string, string> = {
   type: 'type',
+  proVerifie: 'statut professionnel',
   raisonSociale: 'raison sociale',
   siret: 'SIRET',
   tvaIntra: 'TVA intracommunautaire',
@@ -187,7 +189,8 @@ export async function clientRoutes(app: FastifyInstance) {
     const bad = identityError(data)
     if (bad) return reply.code(400).send(bad)
     try {
-      const [c] = await db.insert(clients).values(data).returning()
+      // Une fiche créée par l'atelier est reconnue tout de suite comme professionnelle
+      const [c] = await db.insert(clients).values({ ...data, proVerifie: data.type === 'professionnel' }).returning()
       await audit(req, 'client.created', { targetType: 'client', targetId: c!.id, details: { nom: clientName(c!), type: c!.type, origine: c!.origine } })
       return reply.code(201).send({ id: c!.id })
     } catch (e) {
@@ -240,9 +243,12 @@ export async function clientRoutes(app: FastifyInstance) {
     const parsed = updateBody.safeParse(req.body)
     if (!parsed.success) return invalid(reply, parsed.error)
     const given = Object.fromEntries(Object.entries(parsed.data).filter(([, v]) => v !== undefined)) as Fields
-    const merged = normalize({ ...c, ...given })
+    const merged = normalize({ ...c, ...given }) as typeof c
     const bad = identityError(merged)
     if (bad) return reply.code(400).send(bad)
+    // Statut professionnel : l'atelier qui passe une fiche en « professionnel » le reconnaît d'office ; un particulier ne l'est jamais
+    const asked = (given as { proVerifie?: boolean }).proVerifie
+    merged.proVerifie = merged.type !== 'professionnel' ? false : asked !== undefined ? asked : c.type !== 'professionnel' ? true : c.proVerifie
 
     const keys = Object.keys(LABELS) as (keyof typeof LABELS & keyof Client)[]
     const changed = keys.filter((k) => merged[k] !== c[k])

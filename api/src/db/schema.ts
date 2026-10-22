@@ -350,6 +350,8 @@ export const clients = pgTable(
     codePostal: text('code_postal'),
     ville: text('ville'),
     origine: text('origine', { enum: CLIENT_ORIGINES }).notNull(),
+    // Un professionnel déclaré sur le site ne profite de la remise pro qu'une fois validé par l'atelier ; les fiches créées par l'atelier le sont d'office
+    proVerifie: boolean('pro_verifie').notNull().default(false),
     notes: text('notes'),
     archivedAt: ts('archived_at'),
     createdAt: ts('created_at').notNull().defaultNow(),

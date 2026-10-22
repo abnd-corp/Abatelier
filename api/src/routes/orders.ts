@@ -133,7 +133,7 @@ async function quote(body: Body): Promise<Failure | Priced> {
   const [client] = await db.select().from(clients).where(eq(clients.id, body.clientId))
   if (!client) return { status: 400, error: 'Client introuvable.', field: 'clientId' }
   if (client.archivedAt) return { status: 400, error: 'Ce client est archivé : sortez-le des archives pour lui passer une commande.', field: 'clientId' }
-  const priced = await priceBody(body, client.type === 'professionnel')
+  const priced = await priceBody(body, client.type === 'professionnel' && client.proVerifie)
   return 'error' in priced ? priced : { client, ...priced }
 }
 

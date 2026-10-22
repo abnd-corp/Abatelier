@@ -24,6 +24,7 @@ export interface ClientAccount {
   nom: string | null
   telephone: string | null
   type: 'particulier' | 'professionnel'
+  proVerifie: boolean
 }
 
 declare module 'fastify' {
@@ -67,6 +68,7 @@ async function validateClientSession(token: string) {
         nom: clients.nom,
         telephone: clients.telephone,
         type: clients.type,
+        proVerifie: clients.proVerifie,
       },
     })
     .from(clientSessions)
