@@ -143,7 +143,9 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
       <dl class="facts">
         <div>
           <dt>Émis le</dt>
-          <dd>{{ dateTime(d.emisLe) }}<template v-if="d.createdByNom"> · {{ d.createdByNom }}</template></dd>
+          <dd>
+            {{ dateTime(d.emisLe) }}<template v-if="d.createdByNom"> · {{ d.createdByNom }}</template>
+          </dd>
         </div>
         <div v-if="d.echeance">
           <dt>{{ isDevis ? 'Valable jusqu’au' : 'Échéance' }}</dt>
@@ -173,7 +175,9 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
         Devis accepté : pensez à <RouterLink :to="{ name: 'order', params: { id: detail.order.id } }">valider la commande</RouterLink>.
       </p>
       <p v-if="d.statut === 'expire'" class="hint">Ce devis a expiré. Pour le proposer à nouveau, émettez un nouveau devis depuis la commande, aux tarifs actuels.</p>
-      <p v-if="d.statut === 'annulee'" class="hint">Pour refacturer, émettez une nouvelle facture depuis la <RouterLink :to="{ name: 'order', params: { id: detail.order.id } }">commande</RouterLink>.</p>
+      <p v-if="d.statut === 'annulee'" class="hint">
+        Pour refacturer, émettez une nouvelle facture depuis la <RouterLink :to="{ name: 'order', params: { id: detail.order.id } }">commande</RouterLink>.
+      </p>
 
       <!-- Enregistrer un paiement -->
       <form v-if="form === 'paiement'" class="inline-form" novalidate @submit.prevent="pay">
@@ -196,10 +200,22 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
 
       <!-- Envoyer par e-mail -->
       <form v-else-if="form === 'email' && mail" class="inline-form mail" novalidate @submit.prevent="sendMail">
-        <p v-if="!mail.configure" class="warn-box">L’envoi d’e-mails n’est pas encore configuré sur ce serveur. Ouvrez le PDF pour l’envoyer vous-même (le bouton « {{ sendLabel }} » garde le suivi).</p>
+        <p v-if="!mail.configure" class="warn-box">
+          L’envoi d’e-mails n’est pas encore configuré sur ce serveur. Ouvrez le PDF pour l’envoyer vous-même (le bouton « {{ sendLabel }} » garde le suivi).
+        </p>
         <div class="field">
           <label for="mail-to">Destinataire(s)</label>
-          <input id="mail-to" v-model="mailTo" class="input" type="text" inputmode="email" autocomplete="off" placeholder="client@exemple.fr" :aria-invalid="actionError?.field === 'to' || undefined" aria-describedby="mail-error-to" />
+          <input
+            id="mail-to"
+            v-model="mailTo"
+            class="input"
+            type="text"
+            inputmode="email"
+            autocomplete="off"
+            placeholder="client@exemple.fr"
+            :aria-invalid="actionError?.field === 'to' || undefined"
+            aria-describedby="mail-error-to"
+          />
           <p v-if="actionError?.field === 'to'" id="mail-error-to" class="field-error" role="alert">{{ actionError.msg }}</p>
           <p v-else-if="!mailTo" class="muted small">Ce client n’a pas d’adresse e-mail : saisissez-la ici (jusqu’à 3, séparées par une virgule).</p>
         </div>
@@ -215,7 +231,9 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
         </div>
         <p class="muted small"><AppIcon name="file" :size="14" /> Pièce jointe : {{ mail.fichier }}</p>
         <div class="actions">
-          <button class="btn primary" type="submit" :disabled="busy || !mail.configure || !mailTo.trim() || !mailMessage.trim()"><AppIcon name="mail" :size="16" />{{ busy ? 'Envoi…' : 'Envoyer' }}</button>
+          <button class="btn primary" type="submit" :disabled="busy || !mail.configure || !mailTo.trim() || !mailMessage.trim()">
+            <AppIcon name="mail" :size="16" />{{ busy ? 'Envoi…' : 'Envoyer' }}
+          </button>
           <button class="btn" type="button" @click="form = null">Retour</button>
         </div>
       </form>
@@ -228,7 +246,15 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
         </p>
         <div class="field">
           <label for="avoir-motif">Motif de l’avoir</label>
-          <input id="avoir-motif" v-model="motif" class="input" maxlength="500" placeholder="Erreur de coloris, commande annulée…" :aria-invalid="actionError?.field === 'motif' || undefined" aria-describedby="avoir-error" />
+          <input
+            id="avoir-motif"
+            v-model="motif"
+            class="input"
+            maxlength="500"
+            placeholder="Erreur de coloris, commande annulée…"
+            :aria-invalid="actionError?.field === 'motif' || undefined"
+            aria-describedby="avoir-error"
+          />
           <p v-if="actionError?.field === 'motif'" id="avoir-error" class="field-error" role="alert">{{ actionError.msg }}</p>
         </div>
         <div class="actions">
@@ -239,12 +265,16 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
 
       <div v-else class="actions">
         <a class="btn" :href="pdfUrl(d.id)" target="_blank" rel="noopener"><AppIcon name="download" :size="16" />Ouvrir le PDF</a>
-        <a v-if="d.facturx" class="btn" :href="facturxUrl(d.id)" download title="Fichier de facture électronique (Factur-X), à déposer sur la plateforme agréée"><AppIcon name="file" :size="16" />XML Factur-X</a>
+        <a v-if="d.facturx" class="btn" :href="facturxUrl(d.id)" download title="Fichier de facture électronique (Factur-X), à déposer sur la plateforme agréée"
+          ><AppIcon name="file" :size="16" />XML Factur-X</a
+        >
         <button class="btn primary" type="button" :disabled="busy" @click="openMail"><AppIcon name="mail" :size="16" />Envoyer par e-mail</button>
         <button v-if="canSend" class="btn" type="button" :disabled="busy" @click="act('envoi', {}, isDevis ? 'Devis marqué comme envoyé.' : 'Facture marquée comme envoyée.')">
           <AppIcon name="mail" :size="16" />{{ sendLabel }}
         </button>
-        <button v-if="canAccept" class="btn primary" type="button" :disabled="busy" @click="act('reponse', { reponse: 'accepte' }, 'Devis accepté.')"><AppIcon name="check" :size="16" />Accepté par le client</button>
+        <button v-if="canAccept" class="btn primary" type="button" :disabled="busy" @click="act('reponse', { reponse: 'accepte' }, 'Devis accepté.')">
+          <AppIcon name="check" :size="16" />Accepté par le client
+        </button>
         <button v-if="canAnswer" class="btn" type="button" :disabled="busy" @click="act('reponse', { reponse: 'refuse' }, 'Devis refusé.')">Refusé</button>
         <button v-if="canPay" class="btn primary" type="button" @click="openPay">Enregistrer le paiement</button>
         <button v-if="isFacture && d.payeLe" class="btn" type="button" :disabled="busy" @click="act('paiement', undefined, 'Paiement annulé.', 'DELETE')">Annuler le paiement</button>
@@ -295,7 +325,8 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
         <section class="card block">
           <h2>Client</h2>
           <p class="address">
-            <b>{{ d.clientNom }}</b><template v-if="d.clientAdresse"><br />{{ d.clientAdresse }}</template>
+            <b>{{ d.clientNom }}</b
+            ><template v-if="d.clientAdresse"><br />{{ d.clientAdresse }}</template>
           </p>
           <p class="muted small">Tel qu’imprimé sur le document.</p>
         </section>

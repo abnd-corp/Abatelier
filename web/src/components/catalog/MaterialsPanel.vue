@@ -67,9 +67,7 @@ async function toggle(m: Material) {
   notice.value = ''
   try {
     await api(`/catalog/materials/${m.id}`, { method: 'PATCH', body: { actif: !m.actif } })
-    notice.value = m.actif
-      ? `${m.nom} ${mm(m.epaisseur)} désactivé : il ne sera plus proposé dans les nouveaux devis.`
-      : `${m.nom} ${mm(m.epaisseur)} réactivé.`
+    notice.value = m.actif ? `${m.nom} ${mm(m.epaisseur)} désactivé : il ne sera plus proposé dans les nouveaux devis.` : `${m.nom} ${mm(m.epaisseur)} réactivé.`
     await load()
   } catch (e) {
     loadError.value = e instanceof ApiError ? e.message : 'Modification impossible.'
@@ -100,12 +98,18 @@ const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
         <div class="field">
           <label for="m-nom">Matière</label>
           <input id="m-nom" v-model="form.nom" class="input" list="m-noms" autocomplete="off" :aria-invalid="!!err('nom') || undefined" />
-          <datalist id="m-noms"><option value="Aluminium" /><option value="Acier galvanisé" /><option value="Inox" /></datalist>
+          <datalist id="m-noms">
+            <option value="Aluminium" />
+            <option value="Acier galvanisé" />
+            <option value="Inox" />
+          </datalist>
           <span v-if="err('nom')" class="field-error">{{ err('nom') }}</span>
         </div>
         <div class="field">
           <label for="m-epaisseur">Épaisseur</label>
-          <span class="unit"><input id="m-epaisseur" v-model="form.epaisseur" class="input mono" inputmode="decimal" placeholder="1,5" :aria-invalid="!!err('epaisseur') || undefined" /><span>mm</span></span>
+          <span class="unit"
+            ><input id="m-epaisseur" v-model="form.epaisseur" class="input mono" inputmode="decimal" placeholder="1,5" :aria-invalid="!!err('epaisseur') || undefined" /><span>mm</span></span
+          >
           <span v-if="err('epaisseur')" class="field-error">{{ err('epaisseur') }}</span>
         </div>
         <div class="field">
@@ -115,7 +119,9 @@ const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
         </div>
         <div class="field">
           <label for="m-retour">Retour minimum</label>
-          <span class="unit"><input id="m-retour" v-model="form.retourMin" class="input mono" inputmode="numeric" placeholder="10" :aria-invalid="!!err('retourMin') || undefined" /><span>mm</span></span>
+          <span class="unit"
+            ><input id="m-retour" v-model="form.retourMin" class="input mono" inputmode="numeric" placeholder="10" :aria-invalid="!!err('retourMin') || undefined" /><span>mm</span></span
+          >
           <span v-if="err('retourMin')" class="field-error">{{ err('retourMin') }}</span>
         </div>
       </div>
@@ -149,7 +155,9 @@ const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
               <span class="pill" :class="m.actif ? 'ok' : 'neutral'">{{ m.actif ? 'Active' : 'Désactivée' }}</span>
             </td>
             <td class="n actions-cell">
-              <button class="btn small" type="button" :aria-label="`Modifier ${m.nom} ${mm(m.epaisseur)}`" @click="openEdit(m)"><AppIcon name="pencil" :size="14" /><span class="hide-sm">Modifier</span></button>
+              <button class="btn small" type="button" :aria-label="`Modifier ${m.nom} ${mm(m.epaisseur)}`" @click="openEdit(m)">
+                <AppIcon name="pencil" :size="14" /><span class="hide-sm">Modifier</span>
+              </button>
               <button class="btn small" type="button" @click="toggle(m)">{{ m.actif ? 'Désactiver' : 'Activer' }}</button>
             </td>
           </tr>

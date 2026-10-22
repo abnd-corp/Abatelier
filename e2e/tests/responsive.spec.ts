@@ -56,12 +56,18 @@ test.describe('Responsive @responsive', () => {
 
   test('espace client : liste et commande lisibles, pas de défilement horizontal', async ({ page, baseURL, uid }) => {
     const headers = { Origin: baseURL! }
-    const signup = await page.request.post('/api/espace/inscription', { data: { nom: `Resp ${uid.slice(-6)}`, email: `${uid}@exemple.fr`, password: 'Plieuse-numerique-2026', consentement: true }, headers })
+    const signup = await page.request.post('/api/espace/inscription', {
+      data: { nom: `Resp ${uid.slice(-6)}`, email: `${uid}@exemple.fr`, password: 'Plieuse-numerique-2026', consentement: true },
+      headers,
+    })
     expect(signup.status(), await signup.text()).toBe(201)
     const cfg = await (await page.request.get('/api/public/configurateur')).json()
     const m = cfg.models[0]
     const devis = await page.request.post('/api/espace/devis', {
-      data: { lignes: [{ modelId: m.id, materialId: cfg.materials[0].id, colorId: cfg.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: m.longueur, quantite: 2, accessoires: [] }], livraison: { mode: 'retrait' } },
+      data: {
+        lignes: [{ modelId: m.id, materialId: cfg.materials[0].id, colorId: cfg.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: m.longueur, quantite: 2, accessoires: [] }],
+        livraison: { mode: 'retrait' },
+      },
       headers,
     })
     expect(devis.status(), await devis.text()).toBe(201)
@@ -78,8 +84,15 @@ test.describe('Responsive @responsive', () => {
   test('boutique : fiche produit, vitrine, produit et panier lisibles, pas de défilement horizontal', async ({ adminPage, browser, baseURL, uid }) => {
     const h = { Origin: baseURL! }
     const nom = `Resp boutique ${uid.slice(-6)}`
-    const { id } = await (await adminPage.request.post('/api/boutique/produits', { data: { nom, description: 'Description assez longue pour passer à la ligne sur un petit écran, avec plusieurs mots.' }, headers: h })).json()
-    const v = await (await adminPage.request.post(`/api/boutique/produits/${id}/variantes`, { data: { libelle: 'Une déclinaison au libellé volontairement très long : 320 mm · 1,5 mm · 3 m', prixTtc: 84 }, headers: h })).json()
+    const { id } = await (
+      await adminPage.request.post('/api/boutique/produits', { data: { nom, description: 'Description assez longue pour passer à la ligne sur un petit écran, avec plusieurs mots.' }, headers: h })
+    ).json()
+    const v = await (
+      await adminPage.request.post(`/api/boutique/produits/${id}/variantes`, {
+        data: { libelle: 'Une déclinaison au libellé volontairement très long : 320 mm · 1,5 mm · 3 m', prixTtc: 84 },
+        headers: h,
+      })
+    ).json()
     await adminPage.request.patch(`/api/boutique/produits/${id}`, { data: { actif: true }, headers: h })
     await adminPage.goto(`/produits/${id}`)
     await expect(adminPage.getByRole('heading', { level: 1, name: nom })).toBeInViewport()
@@ -87,7 +100,10 @@ test.describe('Responsive @responsive', () => {
 
     const visitor = await browser.newPage()
     // Sans espace client on ne peut pas ajouter au panier : on en crée un
-    const signup = await visitor.request.post('/api/espace/inscription', { data: { nom: `Resp ${uid.slice(-6)}`, email: `${uid}-b@exemple.fr`, password: 'Plieuse-numerique-2026', consentement: true }, headers: h })
+    const signup = await visitor.request.post('/api/espace/inscription', {
+      data: { nom: `Resp ${uid.slice(-6)}`, email: `${uid}-b@exemple.fr`, password: 'Plieuse-numerique-2026', consentement: true },
+      headers: h,
+    })
     expect(signup.status(), await signup.text()).toBe(201)
     await visitor.goto('/boutique')
     await expect(visitor.getByRole('heading', { level: 1 })).toBeInViewport()
@@ -106,7 +122,16 @@ test.describe('Responsive @responsive', () => {
 
   test('/clients/:id : fiche client lisible, pas de défilement horizontal', async ({ adminPage, baseURL, uid }) => {
     const res = await adminPage.request.post('/api/clients', {
-      data: { type: 'professionnel', raisonSociale: `Couverture Très Longue Raison Sociale ${uid}`, prenom: 'Luc', nom: 'Morel', email: `${uid}@exemple.fr`, adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' },
+      data: {
+        type: 'professionnel',
+        raisonSociale: `Couverture Très Longue Raison Sociale ${uid}`,
+        prenom: 'Luc',
+        nom: 'Morel',
+        email: `${uid}@exemple.fr`,
+        adresse: '8 avenue de la Gare',
+        codePostal: '42700',
+        ville: 'Firminy',
+      },
       headers: { Origin: baseURL! },
     })
     const { id } = await res.json()
@@ -137,10 +162,25 @@ test.describe('Responsive @responsive', () => {
 
   test('devis et facture : fiche lisible, pas de défilement horizontal', async ({ adminPage, baseURL, uid }) => {
     const headers = { Origin: baseURL! }
-    const client = await (await adminPage.request.post('/api/clients', { data: { type: 'professionnel', raisonSociale: `Couverture Très Longue Raison Sociale ${uid}`, adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' }, headers })).json()
+    const client = await (
+      await adminPage.request.post('/api/clients', {
+        data: { type: 'professionnel', raisonSociale: `Couverture Très Longue Raison Sociale ${uid}`, adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' },
+        headers,
+      })
+    ).json()
     const catalog = await (await adminPage.request.get('/api/orders/catalog')).json()
     const m = catalog.models[0]
-    const ligne = { repere: 'Mur sud', modelId: m.id, materialId: catalog.materials[0].id, colorId: catalog.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: m.longueur, quantite: m.quantite, accessoires: [] }
+    const ligne = {
+      repere: 'Mur sud',
+      modelId: m.id,
+      materialId: catalog.materials[0].id,
+      colorId: catalog.colors[0].id,
+      cotes: m.cotes,
+      angles: m.angles,
+      longueur: m.longueur,
+      quantite: m.quantite,
+      accessoires: [],
+    }
     const order = await (await adminPage.request.post('/api/orders', { data: { clientId: client.id, lignes: [ligne], livraison: { mode: 'retrait' } }, headers })).json()
     await adminPage.request.post(`/api/orders/${order.id}/status`, { data: { statut: 'validee' }, headers })
     const facture = await (await adminPage.request.post(`/api/billing/orders/${order.id}/facture`, { headers })).json()

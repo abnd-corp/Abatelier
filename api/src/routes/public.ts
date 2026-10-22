@@ -70,7 +70,15 @@ const contactBody = z.object({
 // Panier de la boutique : des déclinaisons et des quantités (le prix n'est jamais envoyé par le navigateur)
 export const cartBody = z.object({
   lignes: z
-    .array(z.object({ variantId: z.uuid('Article inconnu.'), quantite: z.preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number({ error: 'Quantité : nombre attendu.' }).int('Quantité : nombre entier attendu.').min(1, 'Quantité : 1 minimum.').max(QUANTITE_MAX, `Quantité : ${QUANTITE_MAX} maximum.`)) }))
+    .array(
+      z.object({
+        variantId: z.uuid('Article inconnu.'),
+        quantite: z.preprocess(
+          (v) => (typeof v === 'string' ? Number(v) : v),
+          z.number({ error: 'Quantité : nombre attendu.' }).int('Quantité : nombre entier attendu.').min(1, 'Quantité : 1 minimum.').max(QUANTITE_MAX, `Quantité : ${QUANTITE_MAX} maximum.`),
+        ),
+      }),
+    )
     .min(1, 'Votre panier est vide.')
     .max(LIGNES_MAX, `${LIGNES_MAX} articles différents maximum : contactez-nous pour une grosse commande.`),
   livraison,
@@ -87,7 +95,10 @@ export async function publicRoutes(app: FastifyInstance) {
     const [company, content, photos] = await Promise.all([
       getCompany(),
       getContent(),
-      db.select({ id: sitePhotos.id, emplacement: sitePhotos.emplacement, alt: sitePhotos.alt, largeur: sitePhotos.largeur, hauteur: sitePhotos.hauteur }).from(sitePhotos).orderBy(asc(sitePhotos.position), asc(sitePhotos.createdAt)),
+      db
+        .select({ id: sitePhotos.id, emplacement: sitePhotos.emplacement, alt: sitePhotos.alt, largeur: sitePhotos.largeur, hauteur: sitePhotos.hauteur })
+        .from(sitePhotos)
+        .orderBy(asc(sitePhotos.position), asc(sitePhotos.createdAt)),
     ])
     const contenu = await fillCompany(content)
     const placeId = env.GOOGLE_PLACE_ID
@@ -123,7 +134,23 @@ export async function publicRoutes(app: FastifyInstance) {
   const origin = (req: { headers: Record<string, string | string[] | undefined>; protocol: string }) => `${req.headers['x-forwarded-proto'] ?? req.protocol}://${req.headers.host}`
   app.get('/robots.txt', async (req, reply) => {
     // L'atelier (pages privées) et l'API ne doivent pas apparaître dans Google
-    const privatePaths = ['/api/', '/connexion', '/tableau-de-bord', '/mon-compte', '/salaries', '/clients', '/commandes', '/factures', '/fabrication', '/catalogue', '/modeles-documents', '/site-vitrine', '/utilisateurs', '/journal', '/espace']
+    const privatePaths = [
+      '/api/',
+      '/connexion',
+      '/tableau-de-bord',
+      '/mon-compte',
+      '/salaries',
+      '/clients',
+      '/commandes',
+      '/factures',
+      '/fabrication',
+      '/catalogue',
+      '/modeles-documents',
+      '/site-vitrine',
+      '/utilisateurs',
+      '/journal',
+      '/espace',
+    ]
     return reply
       .header('Content-Type', 'text/plain; charset=utf-8')
       .header('Cache-Control', 'public, max-age=3600')
@@ -165,7 +192,15 @@ export async function publicRoutes(app: FastifyInstance) {
     if ('error' in p) return reply.code(p.status).send({ error: p.error, field: p.field })
     const { livraison: liv } = parsed.data
     const lignes = documentLines(
-      { remisePro: p.totals.remisePro, brut: p.totals.brut, complementMinimum: p.totals.complementMinimum, livraisonPrix: p.totals.livraisonPrix, livraisonMode: liv.mode, livraisonVille: liv.mode === 'livraison' ? liv.ville : null, distanceKm: p.distanceKm },
+      {
+        remisePro: p.totals.remisePro,
+        brut: p.totals.brut,
+        complementMinimum: p.totals.complementMinimum,
+        livraisonPrix: p.totals.livraisonPrix,
+        livraisonMode: liv.mode,
+        livraisonVille: liv.mode === 'livraison' ? liv.ville : null,
+        distanceKm: p.distanceKm,
+      },
       p.lines,
     )
     const [company, template] = await Promise.all([getCompany(), getTemplate()])
@@ -221,7 +256,12 @@ export async function publicRoutes(app: FastifyInstance) {
 
   app.get('/boutique/images/:id', async (req, reply) => {
     const { id } = req.params as { id: string }
-    const [row] = z.uuid().safeParse(id).success ? await db.select({ image: products.image, type: products.imageType }).from(products).where(and(eq(products.id, id), eq(products.actif, true))) : []
+    const [row] = z.uuid().safeParse(id).success
+      ? await db
+          .select({ image: products.image, type: products.imageType })
+          .from(products)
+          .where(and(eq(products.id, id), eq(products.actif, true)))
+      : []
     if (!row?.image || !row.type) return reply.code(404).send({ error: 'Photo introuvable.' })
     // L'adresse change (?v=) à chaque nouvelle photo : le navigateur peut la garder longtemps
     return reply.header('Content-Type', row.type).header('Cache-Control', 'public, max-age=31536000, immutable').header('X-Content-Type-Options', 'nosniff').send(row.image)
@@ -241,41 +281,40 @@ export async function publicRoutes(app: FastifyInstance) {
   })
 
   // Formulaire de contact : 20 envois par heure et par adresse IP (les essais refusés comptent aussi), plan joint en base64 (5 Mo maximum)
-  app.post(
-    '/contact',
-    { bodyLimit: Math.ceil((ATTACHMENT_MAX * 4) / 3) + 256 * 1024, config: { rateLimit: { max: env.CONTACT_RATE_LIMIT, timeWindow: '1 hour' } } },
-    async (req, reply) => {
-      const parsed = contactBody.safeParse(req.body)
-      if (!parsed.success) return invalid(reply, parsed.error)
-      const { site, fichier, consentement: _c, ...data } = parsed.data
-      // Robot : on répond comme si tout allait bien, sans rien enregistrer
-      if (site) return reply.code(201).send({ ok: true })
+  app.post('/contact', { bodyLimit: Math.ceil((ATTACHMENT_MAX * 4) / 3) + 256 * 1024, config: { rateLimit: { max: env.CONTACT_RATE_LIMIT, timeWindow: '1 hour' } } }, async (req, reply) => {
+    const parsed = contactBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const { site, fichier, consentement: _c, ...data } = parsed.data
+    // Robot : on répond comme si tout allait bien, sans rien enregistrer
+    if (site) return reply.code(201).send({ ok: true })
 
-      let file: { fichierNom: string; fichierType: string; fichier: Buffer } | null = null
-      if (fichier) {
-        const buf = Buffer.from(fichier.contenu, 'base64')
-        if (buf.length === 0) return reply.code(400).send({ error: 'Le fichier joint est vide.', field: 'fichier' })
-        if (buf.length > ATTACHMENT_MAX) return reply.code(413).send({ error: 'Fichier trop lourd : 5 Mo maximum.', field: 'fichier' })
-        const type = sniffAttachment(buf)
-        if (!type) return reply.code(400).send({ error: 'Format non accepté : joignez un PDF, une photo JPEG ou une image PNG.', field: 'fichier' })
-        file = { fichierNom: safeName(fichier.nom), fichierType: type, fichier: buf }
-      }
+    let file: { fichierNom: string; fichierType: string; fichier: Buffer } | null = null
+    if (fichier) {
+      const buf = Buffer.from(fichier.contenu, 'base64')
+      if (buf.length === 0) return reply.code(400).send({ error: 'Le fichier joint est vide.', field: 'fichier' })
+      if (buf.length > ATTACHMENT_MAX) return reply.code(413).send({ error: 'Fichier trop lourd : 5 Mo maximum.', field: 'fichier' })
+      const type = sniffAttachment(buf)
+      if (!type) return reply.code(400).send({ error: 'Format non accepté : joignez un PDF, une photo JPEG ou une image PNG.', field: 'fichier' })
+      file = { fichierNom: safeName(fichier.nom), fichierType: type, fichier: buf }
+    }
 
-      const [row] = await db
-        .insert(contactRequests)
-        .values({ ...data, ...file })
-        .returning({ id: contactRequests.id })
-      // Pas d'identité d'utilisateur ici : c'est un visiteur. On ne recopie ni l'e-mail ni le message dans le journal.
-      // Alerte à la direction. Si la messagerie est absente ou lente, la demande est quand même enregistrée.
-      const to = await alertRecipients()
-      if (to.length) {
-        const proto = req.headers['x-forwarded-proto'] ?? req.protocol
-        const mail = contactAlert({ ...data, fichierNom: file?.fichierNom ?? null, configuration: null }, `${proto}://${req.headers.host}/site-vitrine`)
-        await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: data.email, targetType: 'contact', targetId: row!.id }), 6000, { ok: false, notConfigured: false, error: 'délai dépassé' })
-      }
-      await audit(req, 'contact.received', { actor: null, targetType: 'contact', targetId: row!.id, details: { objet: data.objet, fichier: Boolean(file) } })
-      return reply.code(201).send({ ok: true })
-    },
-  )
+    const [row] = await db
+      .insert(contactRequests)
+      .values({ ...data, ...file })
+      .returning({ id: contactRequests.id })
+    // Pas d'identité d'utilisateur ici : c'est un visiteur. On ne recopie ni l'e-mail ni le message dans le journal.
+    // Alerte à la direction. Si la messagerie est absente ou lente, la demande est quand même enregistrée.
+    const to = await alertRecipients()
+    if (to.length) {
+      const proto = req.headers['x-forwarded-proto'] ?? req.protocol
+      const mail = contactAlert({ ...data, fichierNom: file?.fichierNom ?? null, configuration: null }, `${proto}://${req.headers.host}/site-vitrine`)
+      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: data.email, targetType: 'contact', targetId: row!.id }), 6000, {
+        ok: false,
+        notConfigured: false,
+        error: 'délai dépassé',
+      })
+    }
+    await audit(req, 'contact.received', { actor: null, targetType: 'contact', targetId: row!.id, details: { objet: data.objet, fichier: Boolean(file) } })
+    return reply.code(201).send({ ok: true })
+  })
 }
-

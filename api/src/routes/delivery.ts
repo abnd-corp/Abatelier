@@ -37,8 +37,7 @@ const estimateBody = z.object({
 })
 
 const unavailable = (reply: FastifyReply) => reply.code(503).send({ error: 'Le service de localisation des adresses ne répond pas. Réessayez dans quelques minutes.' })
-const notFound = (reply: FastifyReply, field: string) =>
-  reply.code(400).send({ error: 'Adresse introuvable : précisez la rue, le code postal et la commune.', field })
+const notFound = (reply: FastifyReply, field: string) => reply.code(400).send({ error: 'Adresse introuvable : précisez la rue, le code postal et la commune.', field })
 
 export async function deliveryRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requirePerm('catalog.manage'))

@@ -97,7 +97,9 @@ const FILTERS: { value: Filtre; label: string }[] = [
 
     <div v-if="!loading && !demandes.length && !error" class="empty">
       <AppIcon name="inbox" :size="32" class="muted" />
-      <p><b>{{ filtre === 'a_traiter' ? 'Aucune demande à traiter.' : 'Aucune demande.' }}</b></p>
+      <p>
+        <b>{{ filtre === 'a_traiter' ? 'Aucune demande à traiter.' : 'Aucune demande.' }}</b>
+      </p>
       <p class="muted">Les messages envoyés depuis la page Contact du site arrivent ici.</p>
     </div>
 
@@ -106,7 +108,9 @@ const FILTERS: { value: Filtre; label: string }[] = [
         <button type="button" class="summary" :aria-expanded="openId === d.id" @click="openId = openId === d.id ? null : d.id">
           <span class="main">
             <b>{{ d.objet }}</b>
-            <span class="muted">{{ d.nom }}<template v-if="place(d)"> · {{ place(d) }}</template></span>
+            <span class="muted"
+              >{{ d.nom }}<template v-if="place(d)"> · {{ place(d) }}</template></span
+            >
           </span>
           <span class="meta">
             <AppIcon v-if="d.fichierNom" name="file" :size="15" title="Plan joint" />
@@ -125,19 +129,36 @@ const FILTERS: { value: Filtre; label: string }[] = [
           </div>
           <p v-if="d.message" class="message">{{ d.message }}</p>
           <dl>
-            <div><dt>E-mail</dt><dd><a :href="`mailto:${d.email}`">{{ d.email }}</a></dd></div>
-            <div v-if="d.telephone"><dt>Téléphone</dt><dd><a :href="`tel:${d.telephone.replace(/\s/g, '')}`">{{ d.telephone }}</a></dd></div>
-            <div v-if="place(d)"><dt>Adresse</dt><dd>{{ place(d) }}</dd></div>
+            <div>
+              <dt>E-mail</dt>
+              <dd>
+                <a :href="`mailto:${d.email}`">{{ d.email }}</a>
+              </dd>
+            </div>
+            <div v-if="d.telephone">
+              <dt>Téléphone</dt>
+              <dd>
+                <a :href="`tel:${d.telephone.replace(/\s/g, '')}`">{{ d.telephone }}</a>
+              </dd>
+            </div>
+            <div v-if="place(d)">
+              <dt>Adresse</dt>
+              <dd>{{ place(d) }}</dd>
+            </div>
             <div v-if="d.fichierNom">
               <dt>Plan joint</dt>
-              <dd><a :href="`/api/site/contacts/${d.id}/fichier`" download>{{ d.fichierNom }}</a></dd>
+              <dd>
+                <a :href="`/api/site/contacts/${d.id}/fichier`" download>{{ d.fichierNom }}</a>
+              </dd>
             </div>
           </dl>
           <p v-if="d.fichierNom" class="muted note">Le plan vient d’un inconnu : ouvrez-le seulement si vous êtes à l’aise avec ce fichier.</p>
           <div class="actions">
             <RouterLink v-if="d.commandeId" class="btn primary small" :to="{ name: 'order', params: { id: d.commandeId } }"><AppIcon name="box" :size="15" />Voir la commande</RouterLink>
             <button v-else-if="d.configuration" type="button" class="btn primary small" :disabled="busy === d.id" @click="createOrder(d)"><AppIcon name="box" :size="15" />Créer la commande</button>
-            <button v-if="!d.traiteAt" type="button" class="btn small" :class="{ primary: !d.configuration && !d.commandeId }" :disabled="busy === d.id" @click="mark(d, true)"><AppIcon name="check" :size="15" />Marquer comme traitée</button>
+            <button v-if="!d.traiteAt" type="button" class="btn small" :class="{ primary: !d.configuration && !d.commandeId }" :disabled="busy === d.id" @click="mark(d, true)">
+              <AppIcon name="check" :size="15" />Marquer comme traitée
+            </button>
             <button v-else type="button" class="btn small" :disabled="busy === d.id" @click="mark(d, false)">Remettre à traiter</button>
             <a class="btn small" :href="`mailto:${d.email}?subject=${encodeURIComponent('Re : ' + d.objet)}`"><AppIcon name="mail" :size="15" />Répondre</a>
             <button v-if="confirmDelete !== d.id" type="button" class="btn small danger" @click="confirmDelete = d.id"><AppIcon name="trash" :size="15" />Supprimer</button>

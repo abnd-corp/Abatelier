@@ -20,7 +20,11 @@ import { facturxMissingFor } from '../facturx.js'
 const int = (min: number, max: number, label: string) =>
   z.preprocess(
     (v) => (typeof v === 'string' && v.trim() !== '' ? Number(v) : v),
-    z.number({ error: `${label} : nombre attendu.` }).int(`${label} : nombre entier attendu.`).min(min, `${label} : ${min} minimum.`).max(max, `${label} : ${max} maximum.`),
+    z
+      .number({ error: `${label} : nombre attendu.` })
+      .int(`${label} : nombre entier attendu.`)
+      .min(min, `${label} : ${min} minimum.`)
+      .max(max, `${label} : ${max} maximum.`),
   )
 
 export const line = z.object({
@@ -28,12 +32,18 @@ export const line = z.object({
   modelId: z.uuid('Choisissez un modèle.'),
   materialId: z.uuid('Choisissez une matière.'),
   colorId: z.uuid('Choisissez un coloris.'),
-  cotes: z.array(int(1, 2000, 'Cote')).min(1, 'Au moins une cote.').max(20, '20 cotes maximum.'),
+  cotes: z
+    .array(int(1, 2000, 'Cote'))
+    .min(1, 'Au moins une cote.')
+    .max(20, '20 cotes maximum.'),
   // Angle intérieur du pli ; négatif quand le pli se fait dans l'autre sens ; ±1 pour une pince (voir profile.ts)
   angles: z.array(int(-179, 179, 'Angle').refine((a) => a !== 0, 'Angle : 0° impossible.')).max(19),
   longueur: int(1, 20000, 'Longueur'),
   quantite: int(1, 9999, 'Quantité'),
-  accessoires: z.array(z.object({ accessoryId: z.uuid('Accessoire inconnu.'), quantite: int(0, 9999, 'Quantité d’accessoires') })).max(20).default([]),
+  accessoires: z
+    .array(z.object({ accessoryId: z.uuid('Accessoire inconnu.'), quantite: int(0, 9999, 'Quantité d’accessoires') }))
+    .max(20)
+    .default([]),
 })
 
 export const livraison = z.discriminatedUnion(
@@ -43,7 +53,10 @@ export const livraison = z.discriminatedUnion(
     z.object({
       mode: z.literal('livraison'),
       adresse: z.string().trim().min(1, 'Indiquez l’adresse de livraison.').max(200),
-      codePostal: z.string().trim().regex(/^\d{5}$/, 'Code postal : 5 chiffres.'),
+      codePostal: z
+        .string()
+        .trim()
+        .regex(/^\d{5}$/, 'Code postal : 5 chiffres.'),
       ville: z.string().trim().min(1, 'Indiquez la ville de livraison.').max(80),
     }),
   ],
@@ -73,11 +86,7 @@ const statusBody = z.object({
 })
 
 const refusBody = z.object({
-  motif: z
-    .string()
-    .trim()
-    .min(1, 'Indiquez le motif du refus : il est transmis au client.')
-    .max(500, 'Motif : 500 caractères maximum.'),
+  motif: z.string().trim().min(1, 'Indiquez le motif du refus : il est transmis au client.').max(500, 'Motif : 500 caractères maximum.'),
 })
 
 const FILTRES = ['en_cours', 'toutes', ...ORDER_STATUTS] as const
@@ -175,7 +184,15 @@ export async function orderCatalog() {
     models: byPos(c.models.filter((m) => m.actif)).map((m) => ({ id: m.id, nom: m.nom, cotes: m.cotes, angles: m.angles, noms: m.noms, cap: m.cap, longueur: m.longueur, quantite: m.quantite })),
     materials: byPos(c.materials.filter((m) => m.actif)).map((m) => ({ id: m.id, label: materialLabel(m), epaisseur: m.epaisseur, retourMin: m.retourMin })),
     colors: byPos(c.colors.filter((x) => x.actif)).map((x) => ({ id: x.id, label: colorLabel(x), hex: x.hex })),
-    accessories: byPos(c.accessories.filter((a) => a.actif)).map((a) => ({ id: a.id, nom: a.nom, prix: a.prix, unite: a.unite, modeles: a.modeles, quantiteAuto: a.quantiteAuto, quantiteFixe: a.quantiteFixe })),
+    accessories: byPos(c.accessories.filter((a) => a.actif)).map((a) => ({
+      id: a.id,
+      nom: a.nom,
+      prix: a.prix,
+      unite: a.unite,
+      modeles: a.modeles,
+      quantiteAuto: a.quantiteAuto,
+      quantiteFixe: a.quantiteFixe,
+    })),
     limits: { largeurTole: s.largeurTole, longueurMin: s.longueurMin, longueurMax: s.longueurMax, plisMax: s.plisMax, angleMin: s.angleMin, angleMax: s.angleMax, pince: s.pinceAutorisee },
     retrait: c.delivery.retraitActif,
   }
@@ -204,7 +221,14 @@ export async function placeOrder(
     ...(by.origine ? { actor: null, identifiant: `espace:${p.client.id}` } : {}),
     targetType: 'order',
     targetId: order.id,
-    details: { numero: order.numero, client: clientName(p.client), clientId: p.client.id, ht: order.ht, pieces: p.lines.reduce((s, l) => s + l.quantite, 0), ...(by.origine ? { origine: by.origine } : {}) },
+    details: {
+      numero: order.numero,
+      client: clientName(p.client),
+      clientId: p.client.id,
+      ht: order.ht,
+      pieces: p.lines.reduce((s, l) => s + l.quantite, 0),
+      ...(by.origine ? { origine: by.origine } : {}),
+    },
   })
   return { id: order.id, numero: order.numero }
 }
@@ -338,7 +362,8 @@ export async function orderRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: `Une commande « ${STATUT_LABELS[o.statut]} » ne peut pas passer à « ${STATUT_LABELS[statut]} ».`, field: 'statut' })
     }
     if (statut === 'annulee' && !note) return reply.code(400).send({ error: 'Indiquez la raison de l’annulation.', field: 'note' })
-    if (statut === 'annulee' && (await paidOnline(o.id))) return reply.code(409).send({ error: 'Cette commande a été payée en ligne : pour l’annuler, utilisez « Refuser et rembourser », qui rembourse le client.', field: 'statut' })
+    if (statut === 'annulee' && (await paidOnline(o.id)))
+      return reply.code(409).send({ error: 'Cette commande a été payée en ligne : pour l’annuler, utilisez « Refuser et rembourser », qui rembourse le client.', field: 'statut' })
     if (statut === 'annulee') {
       const facture = await activeInvoice(o.id)
       if (facture) return reply.code(409).send({ error: `La commande est facturée (${facture.numero}) : faites d’abord un avoir pour annuler la facture.`, field: 'statut' })
@@ -376,7 +401,11 @@ export async function orderRoutes(app: FastifyInstance) {
       const [doc] = await db.select().from(billingDocuments).where(eq(billingDocuments.id, facture.id))
       const credit = await issueCreditNote(doc!, `Commande refusée et remboursée : ${motif}`, req.user!.id)
       avoir = credit.numero
-      await audit(req, 'billing.avoir_created', { targetType: 'billing', targetId: credit.id, details: { numero: credit.numero, facture: facture.numero, client: doc!.clientNom, ttc: -doc!.ttc, motif } })
+      await audit(req, 'billing.avoir_created', {
+        targetType: 'billing',
+        targetId: credit.id,
+        details: { numero: credit.numero, facture: facture.numero, client: doc!.clientNom, ttc: -doc!.ttc, motif },
+      })
     }
     await changeStatus(req, o, 'annulee', `Refusée par l’atelier, client remboursé : ${motif}`)
     await audit(req, 'order.refused', { targetType: 'order', targetId: o.id, details: { numero: o.numero, montant: pay.montantTtc, motif, ...(avoir ? { avoir } : {}) } })
@@ -404,6 +433,9 @@ export async function orderRoutes(app: FastifyInstance) {
 
 /** Paiement en ligne encaissé de la commande (sinon null). */
 async function paidOnline(orderId: string) {
-  const [p] = await db.select().from(payments).where(and(eq(payments.orderId, orderId), eq(payments.statut, 'paye')))
+  const [p] = await db
+    .select()
+    .from(payments)
+    .where(and(eq(payments.orderId, orderId), eq(payments.statut, 'paye')))
   return p ?? null
 }

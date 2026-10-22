@@ -81,7 +81,11 @@ const departures = computed(() => team.value?.employees.filter((e) => e.dateSort
           <li v-for="a in recent" :key="a.id">
             <span class="dot" :data-tone="describe(a).tone" aria-hidden="true" />
             <div>
-              <span :class="{ bad: describe(a).tone === 'bad' }"><template v-if="a.nom || !a.identifiant"><b>{{ a.nom ?? 'Automatique' }}</b> · </template>{{ describe(a).text }}</span>
+              <span :class="{ bad: describe(a).tone === 'bad' }"
+                ><template v-if="a.nom || !a.identifiant"
+                  ><b>{{ a.nom ?? 'Automatique' }}</b> · </template
+                >{{ describe(a).text }}</span
+              >
               <span class="sub" :title="dateTime(a.at)">{{ relative(a.at) }}</span>
             </div>
           </li>
@@ -101,9 +105,7 @@ const departures = computed(() => team.value?.employees.filter((e) => e.dateSort
           </li>
         </ul>
         <p v-else class="muted">Aucun départ prévu. Les comptes sont désactivés automatiquement le jour de la sortie.</p>
-        <p v-if="team.totals.actifs === 0" class="hint">
-          <RouterLink :to="{ name: 'employee-new' }">Ajoutez votre premier salarié</RouterLink> pour commencer.
-        </p>
+        <p v-if="team.totals.actifs === 0" class="hint"><RouterLink :to="{ name: 'employee-new' }">Ajoutez votre premier salarié</RouterLink> pour commencer.</p>
       </section>
     </div>
   </template>

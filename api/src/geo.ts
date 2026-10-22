@@ -75,8 +75,7 @@ export const geo = {
     if (fake()) return { ...estimate, methode: 'route' }
     try {
       const data = await getJson(
-        `${BASE}/navigation/itineraire?resource=bdtopo-osrm&profile=car&optimization=fastest&distanceUnit=kilometer&getSteps=false` +
-          `&start=${from.lon},${from.lat}&end=${to.lon},${to.lat}`,
+        `${BASE}/navigation/itineraire?resource=bdtopo-osrm&profile=car&optimization=fastest&distanceUnit=kilometer&getSteps=false` + `&start=${from.lon},${from.lat}&end=${to.lon},${to.lat}`,
       )
       return typeof data?.distance === 'number' ? { km: data.distance, methode: 'route' } : estimate
     } catch {

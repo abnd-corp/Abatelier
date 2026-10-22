@@ -21,8 +21,8 @@ async function copy(password: string) {
     <div>
       <h2>Mot de passe temporaire de {{ nom }}</h2>
       <p class="muted">
-        Transmettez-le à la personne avec son identifiant <b class="mono">{{ identifiant }}</b>. Elle devra le changer à sa première
-        connexion. Il ne sera plus affiché ensuite.
+        Transmettez-le à la personne avec son identifiant <b class="mono">{{ identifiant }}</b
+        >. Elle devra le changer à sa première connexion. Il ne sera plus affiché ensuite.
       </p>
     </div>
     <div class="temp-pw">

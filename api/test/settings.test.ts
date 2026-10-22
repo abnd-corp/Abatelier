@@ -71,8 +71,26 @@ describe('Façonnage et conditions', () => {
     [{ angleMin: 10 }, 'angleMin', /15 ° minimum/],
     [{ angleMax: 180 }, 'angleMax', /179 ° maximum/],
     [{ pinceAutorisee: 'oui' }, 'pinceAutorisee', /oui ou non/],
-    [{ remisesQuantite: [{ seuil: 50, remise: 10 }, { seuil: 20, remise: 15 }] }, 'remisesQuantite', /du plus petit au plus grand/],
-    [{ remisesQuantite: [{ seuil: 20, remise: 10 }, { seuil: 50, remise: 5 }] }, 'remisesQuantite', /plus forte que le précédent/],
+    [
+      {
+        remisesQuantite: [
+          { seuil: 50, remise: 10 },
+          { seuil: 20, remise: 15 },
+        ],
+      },
+      'remisesQuantite',
+      /du plus petit au plus grand/,
+    ],
+    [
+      {
+        remisesQuantite: [
+          { seuil: 20, remise: 10 },
+          { seuil: 50, remise: 5 },
+        ],
+      },
+      'remisesQuantite',
+      /plus forte que le précédent/,
+    ],
     [{ remisesQuantite: [{ seuil: 1, remise: 5 }] }, 'remisesQuantite', /2 pièces minimum/],
     [{ remisesQuantite: Array.from({ length: 7 }, (_, i) => ({ seuil: (i + 1) * 10, remise: i + 1 })) }, 'remisesQuantite', /6 paliers/],
   ])('refuse %o et désigne le champ', async (body, field, msg) => {

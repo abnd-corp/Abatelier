@@ -182,7 +182,11 @@ const lastZone = computed(() => original.value?.zones.at(-1)?.distanceMax)
                 </span>
                 <span class="cell franco">
                   <span class="cap" aria-hidden="true">Offerte dès</span>
-                  <span class="unit"><input :id="`d-franco-${i}`" v-model="z.franco" class="input mono" inputmode="decimal" placeholder="jamais" :aria-label="`Zone ${i + 1} : livraison offerte dès`" /><span>€ HT</span></span>
+                  <span class="unit"
+                    ><input :id="`d-franco-${i}`" v-model="z.franco" class="input mono" inputmode="decimal" placeholder="jamais" :aria-label="`Zone ${i + 1} : livraison offerte dès`" /><span
+                      >€ HT</span
+                    ></span
+                  >
                 </span>
                 <button class="btn small icon del" type="button" :aria-label="`Supprimer la zone ${i + 1}`" @click="form.zones.splice(i, 1)">
                   <AppIcon name="trash" :size="15" />
@@ -211,7 +215,9 @@ const lastZone = computed(() => original.value?.zones.at(-1)?.distanceMax)
             </div>
             <div class="field">
               <label for="d-supplement">Supplément</label>
-              <span class="unit"><input id="d-supplement" v-model="form.longueurPrix" class="input mono" inputmode="decimal" :aria-invalid="!!err('longueurPrix') || undefined" /><span>€ HT</span></span>
+              <span class="unit"
+                ><input id="d-supplement" v-model="form.longueurPrix" class="input mono" inputmode="decimal" :aria-invalid="!!err('longueurPrix') || undefined" /><span>€ HT</span></span
+              >
               <span v-if="err('longueurPrix')" class="field-error">{{ err('longueurPrix') }}</span>
             </div>
           </div>
@@ -228,7 +234,10 @@ const lastZone = computed(() => original.value?.zones.at(-1)?.distanceMax)
 
     <form v-if="original" class="card sim settings" novalidate aria-label="Tester une adresse" @submit.prevent="estimate">
       <h3>Tester une adresse</h3>
-      <p class="hint muted">Calcule la distance depuis l’atelier et le prix de livraison, avec les réglages enregistrés. Le montant et la longueur sont facultatifs : ils servent à la livraison offerte et au supplément pièces longues.</p>
+      <p class="hint muted">
+        Calcule la distance depuis l’atelier et le prix de livraison, avec les réglages enregistrés. Le montant et la longueur sont facultatifs : ils servent à la livraison offerte et au supplément
+        pièces longues.
+      </p>
       <div class="sim-fields">
         <div class="field grow">
           <label for="sim-adresse">Adresse du chantier</label>
@@ -257,10 +266,16 @@ const lastZone = computed(() => original.value?.zones.at(-1)?.distanceMax)
           <span class="muted">· {{ km(simResult.distanceKm) }} {{ simResult.methode === 'route' ? 'par la route' : 'environ (estimation à vol d’oiseau)' }}</span>
         </p>
         <template v-if="simResult.zone">
-          <p>Zone jusqu’à {{ simResult.zone.distanceMax }} km : <span class="mono">{{ eur(simResult.zone.prix) }}</span> HT</p>
+          <p>
+            Zone jusqu’à {{ simResult.zone.distanceMax }} km : <span class="mono">{{ eur(simResult.zone.prix) }}</span> HT
+          </p>
           <p v-if="simResult.offerte">Livraison offerte : la commande atteint {{ eur(simResult.zone.franco ?? 0) }} HT.</p>
-          <p v-if="simResult.supplement">Supplément pièces longues : <span class="mono">+{{ eur(simResult.supplement) }}</span> HT</p>
-          <p class="total">Livraison : <span class="mono">{{ eur(simResult.total ?? 0) }}</span> HT</p>
+          <p v-if="simResult.supplement">
+            Supplément pièces longues : <span class="mono">+{{ eur(simResult.supplement) }}</span> HT
+          </p>
+          <p class="total">
+            Livraison : <span class="mono">{{ eur(simResult.total ?? 0) }}</span> HT
+          </p>
         </template>
         <p v-else class="total out">Hors zone : pas de livraison au-delà de {{ lastZone ?? 0 }} km.</p>
         <p class="muted">{{ simResult.retrait.actif ? 'Retrait à l’atelier possible, gratuit.' : 'Retrait à l’atelier désactivé.' }}</p>

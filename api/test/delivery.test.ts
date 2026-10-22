@@ -110,7 +110,16 @@ describe('Réglages de livraison', () => {
   })
 
   it.each([
-    [{ zones: [{ distanceMax: 50, prix: 10, franco: null }, { distanceMax: 50, prix: 20, franco: null }] }, 'zones', /plus proche à la plus lointaine/],
+    [
+      {
+        zones: [
+          { distanceMax: 50, prix: 10, franco: null },
+          { distanceMax: 50, prix: 20, franco: null },
+        ],
+      },
+      'zones',
+      /plus proche à la plus lointaine/,
+    ],
     [{ zones: [{ distanceMax: 0, prix: 10, franco: null }] }, 'zones', /1 km minimum/],
     [{ zones: [{ distanceMax: 10, prix: -1, franco: null }] }, 'zones', /0 € minimum/],
     [{ zones: Array.from({ length: 9 }, (_, i) => ({ distanceMax: (i + 1) * 10, prix: 10, franco: null })) }, 'zones', /8 zones maximum/],

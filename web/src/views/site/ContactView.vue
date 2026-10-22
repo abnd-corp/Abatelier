@@ -70,7 +70,10 @@ const size = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1).r
         <AppIcon name="check" :size="32" />
         <h2>Message envoyé</h2>
         <p>Merci ! Nous avons bien reçu votre demande et nous vous répondons dès que possible, pendant nos horaires d’ouverture.</p>
-        <p v-if="e?.telephone" class="muted">Pour une urgence, appelez-nous au <a :href="`tel:${telHref(e.telephone)}`">{{ e.telephone }}</a>.</p>
+        <p v-if="e?.telephone" class="muted">
+          Pour une urgence, appelez-nous au <a :href="`tel:${telHref(e.telephone)}`">{{ e.telephone }}</a
+          >.
+        </p>
         <p><RouterLink :to="{ name: 'site-home' }" class="s-btn">Retour à l’accueil</RouterLink></p>
       </section>
 
@@ -79,18 +82,46 @@ const size = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1).r
 
         <div class="field">
           <label for="c-nom">Votre nom *</label>
-          <input id="c-nom" v-model="form.nom" class="input" :class="{ invalid: errors.nom }" autocomplete="name" required :aria-invalid="!!errors.nom" :aria-describedby="errors.nom ? 'e-nom' : undefined" />
+          <input
+            id="c-nom"
+            v-model="form.nom"
+            class="input"
+            :class="{ invalid: errors.nom }"
+            autocomplete="name"
+            required
+            :aria-invalid="!!errors.nom"
+            :aria-describedby="errors.nom ? 'e-nom' : undefined"
+          />
           <span v-if="errors.nom" id="e-nom" class="field-error">{{ errors.nom }}</span>
         </div>
         <div class="two">
           <div class="field">
             <label for="c-email">Votre e-mail *</label>
-            <input id="c-email" v-model="form.email" type="email" class="input" :class="{ invalid: errors.email }" autocomplete="email" required :aria-invalid="!!errors.email" :aria-describedby="errors.email ? 'e-email' : undefined" />
+            <input
+              id="c-email"
+              v-model="form.email"
+              type="email"
+              class="input"
+              :class="{ invalid: errors.email }"
+              autocomplete="email"
+              required
+              :aria-invalid="!!errors.email"
+              :aria-describedby="errors.email ? 'e-email' : undefined"
+            />
             <span v-if="errors.email" id="e-email" class="field-error">{{ errors.email }}</span>
           </div>
           <div class="field">
             <label for="c-telephone">Votre téléphone</label>
-            <input id="c-telephone" v-model="form.telephone" type="tel" class="input" :class="{ invalid: errors.telephone }" autocomplete="tel" :aria-invalid="!!errors.telephone" :aria-describedby="errors.telephone ? 'e-telephone' : undefined" />
+            <input
+              id="c-telephone"
+              v-model="form.telephone"
+              type="tel"
+              class="input"
+              :class="{ invalid: errors.telephone }"
+              autocomplete="tel"
+              :aria-invalid="!!errors.telephone"
+              :aria-describedby="errors.telephone ? 'e-telephone' : undefined"
+            />
             <span v-if="errors.telephone" id="e-telephone" class="field-error">{{ errors.telephone }}</span>
           </div>
         </div>
@@ -101,7 +132,16 @@ const size = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1).r
         <div class="two">
           <div class="field">
             <label for="c-codePostal">Code postal</label>
-            <input id="c-codePostal" v-model="form.codePostal" class="input" :class="{ invalid: errors.codePostal }" inputmode="numeric" autocomplete="postal-code" :aria-invalid="!!errors.codePostal" :aria-describedby="errors.codePostal ? 'e-codePostal' : undefined" />
+            <input
+              id="c-codePostal"
+              v-model="form.codePostal"
+              class="input"
+              :class="{ invalid: errors.codePostal }"
+              inputmode="numeric"
+              autocomplete="postal-code"
+              :aria-invalid="!!errors.codePostal"
+              :aria-describedby="errors.codePostal ? 'e-codePostal' : undefined"
+            />
             <span v-if="errors.codePostal" id="e-codePostal" class="field-error">{{ errors.codePostal }}</span>
           </div>
           <div class="field">
@@ -111,12 +151,30 @@ const size = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1).r
         </div>
         <div class="field">
           <label for="c-objet">Objet *</label>
-          <input id="c-objet" v-model="form.objet" class="input" :class="{ invalid: errors.objet }" placeholder="Ex. : 12 couvertines blanches de 3 m" required :aria-invalid="!!errors.objet" :aria-describedby="errors.objet ? 'e-objet' : undefined" />
+          <input
+            id="c-objet"
+            v-model="form.objet"
+            class="input"
+            :class="{ invalid: errors.objet }"
+            placeholder="Ex. : 12 couvertines blanches de 3 m"
+            required
+            :aria-invalid="!!errors.objet"
+            :aria-describedby="errors.objet ? 'e-objet' : undefined"
+          />
           <span v-if="errors.objet" id="e-objet" class="field-error">{{ errors.objet }}</span>
         </div>
         <div class="field">
           <label for="c-message">Votre message *</label>
-          <textarea id="c-message" v-model="form.message" class="input" :class="{ invalid: errors.message }" rows="6" required :aria-invalid="!!errors.message" :aria-describedby="errors.message ? 'e-message' : undefined" />
+          <textarea
+            id="c-message"
+            v-model="form.message"
+            class="input"
+            :class="{ invalid: errors.message }"
+            rows="6"
+            required
+            :aria-invalid="!!errors.message"
+            :aria-describedby="errors.message ? 'e-message' : undefined"
+          />
           <span v-if="errors.message" id="e-message" class="field-error">{{ errors.message }}</span>
         </div>
 
@@ -149,10 +207,19 @@ const size = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1).r
       <aside class="card side" aria-label="Coordonnées">
         <h2>Nos coordonnées</h2>
         <template v-if="e">
-          <p><b>{{ e.nom }}</b><br /><template v-for="l in e.adresse.split('\n')" :key="l">{{ l }}<br /></template></p>
-          <p v-if="e.telephone"><AppIcon name="phone" :size="16" /> <a :href="`tel:${telHref(e.telephone)}`">{{ e.telephone }}</a></p>
-          <p v-if="e.email"><AppIcon name="mail" :size="16" /> <a :href="`mailto:${e.email}`">{{ e.email }}</a></p>
-          <p><a class="s-btn" :href="e.itineraire" target="_blank" rel="noopener noreferrer"><AppIcon name="map-pin" :size="16" />Itinéraire</a></p>
+          <p>
+            <b>{{ e.nom }}</b
+            ><br /><template v-for="l in e.adresse.split('\n')" :key="l">{{ l }}<br /></template>
+          </p>
+          <p v-if="e.telephone">
+            <AppIcon name="phone" :size="16" /> <a :href="`tel:${telHref(e.telephone)}`">{{ e.telephone }}</a>
+          </p>
+          <p v-if="e.email">
+            <AppIcon name="mail" :size="16" /> <a :href="`mailto:${e.email}`">{{ e.email }}</a>
+          </p>
+          <p>
+            <a class="s-btn" :href="e.itineraire" target="_blank" rel="noopener noreferrer"><AppIcon name="map-pin" :size="16" />Itinéraire</a>
+          </p>
         </template>
         <h2>Horaires</h2>
         <p v-for="l in horaires" :key="l">{{ l }}</p>

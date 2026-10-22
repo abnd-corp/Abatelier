@@ -20,7 +20,10 @@ if (!u) {
   process.exit(1)
 }
 const mdp = generateTempPassword()
-await db.update(users).set({ passwordHash: await hashPassword(mdp), mustChangePassword: true, disabledAt: null, passwordChangedAt: new Date() }).where(eq(users.id, u.id))
+await db
+  .update(users)
+  .set({ passwordHash: await hashPassword(mdp), mustChangePassword: true, disabledAt: null, passwordChangedAt: new Date() })
+  .where(eq(users.id, u.id))
 await deleteUserSessions(u.id)
 await auditSystem('user.password_reset', { targetType: 'user', targetId: u.id, details: { identifiant, via: 'make mdp' } })
 console.log(`Compte « ${identifiant} » : mot de passe provisoire ${mdp}\nIl sera à changer à la prochaine connexion.`)

@@ -24,7 +24,8 @@ async function submit() {
   failure.value = ''
   sending.value = true
   try {
-    if (props.mode === 'inscription') await espace.inscrire({ prenom: form.prenom, nom: form.nom, email: form.email, telephone: form.telephone, password: form.password, consentement: form.consentement, site: form.site })
+    if (props.mode === 'inscription')
+      await espace.inscrire({ prenom: form.prenom, nom: form.nom, email: form.email, telephone: form.telephone, password: form.password, consentement: form.consentement, site: form.site })
     else await espace.connecter(form.email, form.password, form.remember)
     form.password = ''
     await props.after?.()
@@ -51,26 +52,62 @@ async function submit() {
         </div>
         <div class="field">
           <label :for="`${p}-nom`">Nom *</label>
-          <input :id="`${p}-nom`" v-model="form.nom" class="input" :class="{ invalid: errors.nom }" autocomplete="family-name" required :aria-invalid="!!errors.nom" :aria-describedby="errors.nom ? `${p}-e-nom` : undefined" />
+          <input
+            :id="`${p}-nom`"
+            v-model="form.nom"
+            class="input"
+            :class="{ invalid: errors.nom }"
+            autocomplete="family-name"
+            required
+            :aria-invalid="!!errors.nom"
+            :aria-describedby="errors.nom ? `${p}-e-nom` : undefined"
+          />
           <span v-if="errors.nom" :id="`${p}-e-nom`" class="field-error">{{ errors.nom }}</span>
         </div>
       </div>
     </template>
     <div class="field">
       <label :for="`${p}-email`">Adresse e-mail *</label>
-      <input :id="`${p}-email`" v-model="form.email" type="email" class="input" :class="{ invalid: errors.email }" autocomplete="email" required :aria-invalid="!!errors.email" :aria-describedby="errors.email ? `${p}-e-email` : undefined" />
+      <input
+        :id="`${p}-email`"
+        v-model="form.email"
+        type="email"
+        class="input"
+        :class="{ invalid: errors.email }"
+        autocomplete="email"
+        required
+        :aria-invalid="!!errors.email"
+        :aria-describedby="errors.email ? `${p}-e-email` : undefined"
+      />
       <span v-if="errors.email" :id="`${p}-e-email`" class="field-error">{{ errors.email }}</span>
     </div>
     <div v-if="mode === 'inscription'" class="field">
       <label :for="`${p}-telephone`">Téléphone</label>
-      <input :id="`${p}-telephone`" v-model="form.telephone" type="tel" class="input" :class="{ invalid: errors.telephone }" autocomplete="tel" :aria-invalid="!!errors.telephone" :aria-describedby="errors.telephone ? `${p}-e-telephone` : undefined" />
+      <input
+        :id="`${p}-telephone`"
+        v-model="form.telephone"
+        type="tel"
+        class="input"
+        :class="{ invalid: errors.telephone }"
+        autocomplete="tel"
+        :aria-invalid="!!errors.telephone"
+        :aria-describedby="errors.telephone ? `${p}-e-telephone` : undefined"
+      />
       <span v-if="errors.telephone" :id="`${p}-e-telephone`" class="field-error">{{ errors.telephone }}</span>
     </div>
     <div class="field">
       <label :for="`${p}-password`">Mot de passe *</label>
-      <PasswordInput :id="`${p}-password`" v-model="form.password" :autocomplete="mode === 'inscription' ? 'new-password' : 'current-password'" :invalid="!!errors.password" :describedby="errors.password ? `${p}-e-password` : mode === 'inscription' ? `${p}-h-password` : undefined" />
+      <PasswordInput
+        :id="`${p}-password`"
+        v-model="form.password"
+        :autocomplete="mode === 'inscription' ? 'new-password' : 'current-password'"
+        :invalid="!!errors.password"
+        :describedby="errors.password ? `${p}-e-password` : mode === 'inscription' ? `${p}-h-password` : undefined"
+      />
       <span v-if="errors.password" :id="`${p}-e-password`" class="field-error">{{ errors.password }}</span>
-      <span v-else-if="mode === 'inscription'" :id="`${p}-h-password`" class="muted hint">12 caractères minimum, pas un mot de passe courant.<template v-if="form.password"> Solidité : {{ strength.label }}.</template></span>
+      <span v-else-if="mode === 'inscription'" :id="`${p}-h-password`" class="muted hint"
+        >12 caractères minimum, pas un mot de passe courant.<template v-if="form.password"> Solidité : {{ strength.label }}.</template></span
+      >
     </div>
     <label v-if="mode === 'connexion'" class="check">
       <input v-model="form.remember" type="checkbox" />
@@ -84,8 +121,17 @@ async function submit() {
       </div>
       <div class="field">
         <label class="check">
-          <input :id="`${p}-consentement`" v-model="form.consentement" type="checkbox" :aria-invalid="!!errors.consentement" :aria-describedby="errors.consentement ? `${p}-e-consentement` : undefined" />
-          <span>J’accepte que mes données servent à gérer mon espace client et mes devis (<RouterLink :to="{ name: 'site-confidentialite' }" target="_blank">politique de confidentialité</RouterLink>). *</span>
+          <input
+            :id="`${p}-consentement`"
+            v-model="form.consentement"
+            type="checkbox"
+            :aria-invalid="!!errors.consentement"
+            :aria-describedby="errors.consentement ? `${p}-e-consentement` : undefined"
+          />
+          <span
+            >J’accepte que mes données servent à gérer mon espace client et mes devis (<RouterLink :to="{ name: 'site-confidentialite' }" target="_blank">politique de confidentialité</RouterLink>).
+            *</span
+          >
         </label>
         <span v-if="errors.consentement" :id="`${p}-e-consentement`" class="field-error">{{ errors.consentement }}</span>
       </div>

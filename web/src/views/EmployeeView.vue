@@ -2,16 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, ApiError } from '@/api'
-import {
-  accountStatus,
-  CONTRAT_LABELS,
-  employmentStatus,
-  formatDay,
-  fullName,
-  suggestIdentifiant,
-  type Employee,
-  type EmployeeFields,
-} from '@/lib/employees'
+import { accountStatus, CONTRAT_LABELS, employmentStatus, formatDay, fullName, suggestIdentifiant, type Employee, type EmployeeFields } from '@/lib/employees'
 import { describe, type AuditEntry } from '@/lib/audit-labels'
 import { dateTime, relative } from '@/lib/format'
 import { ROLE_LABELS, roleOptions, useAuthStore, type Role } from '@/stores/auth'
@@ -298,7 +289,15 @@ async function changeRole(role: Role) {
               <p v-if="accountError && accountError.field !== 'identifiant'" class="alert bad" role="alert">{{ accountError.msg }}</p>
               <div class="field">
                 <label for="new-identifiant">Identifiant de connexion</label>
-                <input id="new-identifiant" v-model="newAccount.identifiant" class="input mono" autocomplete="off" autocapitalize="none" spellcheck="false" :aria-invalid="accountError?.field === 'identifiant' || undefined" />
+                <input
+                  id="new-identifiant"
+                  v-model="newAccount.identifiant"
+                  class="input mono"
+                  autocomplete="off"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  :aria-invalid="accountError?.field === 'identifiant' || undefined"
+                />
                 <span v-if="accountError?.field === 'identifiant'" class="field-error" role="alert">{{ accountError.msg }}</span>
               </div>
               <div class="field">
@@ -326,7 +325,9 @@ async function changeRole(role: Role) {
               <span class="dot" :data-tone="describe(a).tone" aria-hidden="true" />
               <div>
                 <span :class="{ bad: describe(a).tone === 'bad' }">{{ describe(a).text }}</span>
-                <span class="sub" :title="dateTime(a.at)">{{ relative(a.at) }}<template v-if="a.userId && a.userId !== employee.account?.id"> · par {{ a.nom }}</template></span>
+                <span class="sub" :title="dateTime(a.at)"
+                  >{{ relative(a.at) }}<template v-if="a.userId && a.userId !== employee.account?.id"> · par {{ a.nom }}</template></span
+                >
               </div>
             </li>
           </ol>

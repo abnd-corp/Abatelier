@@ -157,7 +157,14 @@ test.describe('Tarifs et catalogue', () => {
 
     // Retour aux valeurs de départ pour les autres tests
     const res = await adminPage.request.patch('/api/catalog/delivery', {
-      data: { zones: [{ distanceMax: 30, prix: 39, franco: null }, { distanceMax: 80, prix: 69, franco: null }], longueurSeuil: null, longueurPrix: 0 },
+      data: {
+        zones: [
+          { distanceMax: 30, prix: 39, franco: null },
+          { distanceMax: 80, prix: 69, franco: null },
+        ],
+        longueurSeuil: null,
+        longueurPrix: 0,
+      },
       headers: { Origin: new URL(adminPage.url()).origin },
     })
     expect(res.status()).toBe(200)
@@ -197,7 +204,13 @@ test.describe('Tarifs et catalogue', () => {
 
     // Retour aux valeurs de départ pour les autres tests
     const res = await adminPage.request.patch('/api/catalog/settings', {
-      data: { prixPliMl: 0.9, remisesQuantite: [{ seuil: 20, remise: 5 }, { seuil: 50, remise: 10 }] },
+      data: {
+        prixPliMl: 0.9,
+        remisesQuantite: [
+          { seuil: 20, remise: 5 },
+          { seuil: 50, remise: 10 },
+        ],
+      },
       headers: { Origin: new URL(adminPage.url()).origin },
     })
     expect(res.status()).toBe(200)

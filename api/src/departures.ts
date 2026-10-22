@@ -24,7 +24,15 @@ export async function applyDepartures() {
   const disabled = await db
     .update(users)
     .set({ disabledAt: new Date() })
-    .where(and(inArray(users.id, due.map((d) => d.userId)), isNull(users.disabledAt)))
+    .where(
+      and(
+        inArray(
+          users.id,
+          due.map((d) => d.userId),
+        ),
+        isNull(users.disabledAt),
+      ),
+    )
     .returning({ id: users.id, identifiant: users.identifiant, nom: users.nom })
 
   for (const u of disabled) {

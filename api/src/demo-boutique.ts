@@ -43,9 +43,37 @@ const COLORIS: { nom: string; ral: string; rgb: [number, number, number] }[] = [
   { nom: 'sable / ivoire', ral: 'RAL 1015', rgb: [226, 214, 187] },
 ]
 const FAMILLES: { nom: string; categorie: string; description: string; variantes: [string, number][] }[] = [
-  { nom: 'Couvertine', categorie: 'Couvertine', description: 'Protège le dessus des murs et des acrotères. Aluminium laqué, avec larmiers.', variantes: [['270 mm · 1 mm · 1 m', 21], ['270 mm · 1 mm · 3 m', 55], ['320 mm · 1,5 mm · 3 m', 84], ['320 mm · 1,5 mm · 2 m', 61]] },
-  { nom: 'Bavette simple', categorie: 'Bavette', description: 'Appui de fenêtre avec pente et larmier. Aluminium laqué.', variantes: [['150 mm · 1 mm · 1 m', 15], ['200 mm · 1 mm · 2 m', 38], ['300 mm · 1,5 mm · 3 m', 81]] },
-  { nom: 'Bandeau en « L »', categorie: 'Bandeau', description: 'Habille et protège les rives de toiture et les débords de façade.', variantes: [['200 mm · 1 mm · 1,50 m', 26.5], ['250 mm · 1 mm · 3 m', 59], ['300 mm · 1,5 mm · 3 m', 68.5]] },
+  {
+    nom: 'Couvertine',
+    categorie: 'Couvertine',
+    description: 'Protège le dessus des murs et des acrotères. Aluminium laqué, avec larmiers.',
+    variantes: [
+      ['270 mm · 1 mm · 1 m', 21],
+      ['270 mm · 1 mm · 3 m', 55],
+      ['320 mm · 1,5 mm · 3 m', 84],
+      ['320 mm · 1,5 mm · 2 m', 61],
+    ],
+  },
+  {
+    nom: 'Bavette simple',
+    categorie: 'Bavette',
+    description: 'Appui de fenêtre avec pente et larmier. Aluminium laqué.',
+    variantes: [
+      ['150 mm · 1 mm · 1 m', 15],
+      ['200 mm · 1 mm · 2 m', 38],
+      ['300 mm · 1,5 mm · 3 m', 81],
+    ],
+  },
+  {
+    nom: 'Bandeau en « L »',
+    categorie: 'Bandeau',
+    description: 'Habille et protège les rives de toiture et les débords de façade.',
+    variantes: [
+      ['200 mm · 1 mm · 1,50 m', 26.5],
+      ['250 mm · 1 mm · 3 m', 59],
+      ['300 mm · 1,5 mm · 3 m', 68.5],
+    ],
+  },
 ]
 
 const taux = (await getPricingSettings()).tva
@@ -59,7 +87,18 @@ for (const f of FAMILLES) {
     if (existe) continue
     const [p] = await db
       .insert(products)
-      .values({ nom, categorie: f.categorie, description: f.description, image: png(640, 480, c.rgb), imageType: 'image/png', imageLargeur: 640, imageHauteur: 480, imageAlt: `${f.nom} ${c.nom}`, actif: true, position: ++position })
+      .values({
+        nom,
+        categorie: f.categorie,
+        description: f.description,
+        image: png(640, 480, c.rgb),
+        imageType: 'image/png',
+        imageLargeur: 640,
+        imageHauteur: 480,
+        imageAlt: `${f.nom} ${c.nom}`,
+        actif: true,
+        position: ++position,
+      })
       .returning({ id: products.id })
     await db.insert(productVariants).values(f.variantes.map(([libelle, prix], i) => ({ productId: p!.id, libelle, prixHt: htFromTtc(prix, taux), position: i + 1 })))
     cree++
@@ -83,10 +122,28 @@ for (const [i, m] of mats.slice(0, 3).entries()) {
     const [existe] = await db
       .select({ id: sheetStock.id })
       .from(sheetStock)
-      .where(and(eq(sheetStock.materialId, m.id), colorId ? eq(sheetStock.colorId, colorId) : isNull(sheetStock.colorId), eq(sheetStock.largeur, l.largeur), eq(sheetStock.longueur, l.longueur), eq(sheetStock.chute, l.chute)))
+      .where(
+        and(
+          eq(sheetStock.materialId, m.id),
+          colorId ? eq(sheetStock.colorId, colorId) : isNull(sheetStock.colorId),
+          eq(sheetStock.largeur, l.largeur),
+          eq(sheetStock.longueur, l.longueur),
+          eq(sheetStock.chute, l.chute),
+        ),
+      )
     if (existe) continue
-    const [s] = await db.insert(sheetStock).values({ materialId: m.id, colorId, ...l }).returning({ id: sheetStock.id })
-    await db.insert(sheetMovements).values({ sheetId: s!.id, libelle: `${m.nom} ${m.epaisseur} mm · ${col ? col.reference : 'brut'} · ${l.largeur} × ${l.longueur} mm${l.chute ? ' (chute)' : ''}`, delta: l.quantite, apres: l.quantite, motif: 'reception', note: 'Démonstration' })
+    const [s] = await db
+      .insert(sheetStock)
+      .values({ materialId: m.id, colorId, ...l })
+      .returning({ id: sheetStock.id })
+    await db.insert(sheetMovements).values({
+      sheetId: s!.id,
+      libelle: `${m.nom} ${m.epaisseur} mm · ${col ? col.reference : 'brut'} · ${l.largeur} × ${l.longueur} mm${l.chute ? ' (chute)' : ''}`,
+      delta: l.quantite,
+      apres: l.quantite,
+      motif: 'reception',
+      note: 'Démonstration',
+    })
     feuilles++
   }
 }

@@ -46,7 +46,8 @@ async function respond(reponse: 'accepte' | 'refuse') {
   error.value = ''
   try {
     await api(`/espace/documents/${devis.value.id}/reponse`, { method: 'POST', body: { reponse } })
-    answered.value = reponse === 'accepte' ? 'Merci ! Votre accord est transmis à l’atelier, qui valide votre commande.' : 'Le devis est refusé. Vous pouvez en composer un autre dans le configurateur.'
+    answered.value =
+      reponse === 'accepte' ? 'Merci ! Votre accord est transmis à l’atelier, qui valide votre commande.' : 'Le devis est refusé. Vous pouvez en composer un autre dans le configurateur.'
     confirmRefus.value = false
     await load()
   } catch (e) {
@@ -61,7 +62,9 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
 
 <template>
   <div class="s-wrap page">
-    <p><RouterLink :to="{ name: 'espace' }" class="back"><AppIcon name="arrow-left" :size="15" /> Mes commandes</RouterLink></p>
+    <p>
+      <RouterLink :to="{ name: 'espace' }" class="back"><AppIcon name="arrow-left" :size="15" /> Mes commandes</RouterLink>
+    </p>
 
     <section v-if="notFound" class="card box">
       <h1>Commande introuvable</h1>
@@ -74,7 +77,9 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
       <header class="top">
         <span class="eyebrow">Commande</span>
         <h1>{{ c.numero }}</h1>
-        <p class="muted">Demandée le {{ jour(c.createdAt) }}<template v-if="c.datePrevue && !annulee && c.statut !== 'livree'"> · prévue le {{ jour(c.datePrevue) }}</template></p>
+        <p class="muted">
+          Demandée le {{ jour(c.createdAt) }}<template v-if="c.datePrevue && !annulee && c.statut !== 'livree'"> · prévue le {{ jour(c.datePrevue) }}</template>
+        </p>
       </header>
 
       <p v-if="answered" class="alert ok" role="status">{{ answered }}</p>
@@ -84,12 +89,22 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
       <section class="card box" aria-labelledby="suivi">
         <h2 id="suivi">Suivi de la commande</h2>
         <p v-if="annulee && rembourse" class="alert bad" role="status">
-          L’atelier n’a pas pu réaliser cette commande<template v-if="data.paiement?.refundedAt"> (refusée le {{ jour(data.paiement.refundedAt) }})</template>. <b>Vous êtes remboursé de la totalité, {{ eur(data.paiement?.montantTtc ?? 0) }}</b>, sur le moyen de paiement utilisé (quelques jours selon votre banque).
+          L’atelier n’a pas pu réaliser cette commande<template v-if="data.paiement?.refundedAt"> (refusée le {{ jour(data.paiement.refundedAt) }})</template>.
+          <b>Vous êtes remboursé de la totalité, {{ eur(data.paiement?.montantTtc ?? 0) }}</b
+          >, sur le moyen de paiement utilisé (quelques jours selon votre banque).
           <template v-if="data.paiement?.refundMotif"><br />Motif : {{ data.paiement.refundMotif }}</template>
         </p>
-        <p v-else-if="annulee" class="alert bad" role="status">Cette commande a été annulée<template v-if="etapes.get('annulee')"> le {{ jour(etapes.get('annulee')!) }}</template>.</p>
+        <p v-else-if="annulee" class="alert bad" role="status">
+          Cette commande a été annulée<template v-if="etapes.get('annulee')"> le {{ jour(etapes.get('annulee')!) }}</template
+          >.
+        </p>
         <ol v-else class="steps">
-          <li v-for="(p, i) in PARCOURS" :key="p.statut" :class="[`t-${statutOf(p.statut).tone}`, { done: i < courant || (i === courant && c.statut === 'livree'), now: i === courant && c.statut !== 'livree', todo: i > courant }]" :aria-current="i === courant ? 'step' : undefined">
+          <li
+            v-for="(p, i) in PARCOURS"
+            :key="p.statut"
+            :class="[`t-${statutOf(p.statut).tone}`, { done: i < courant || (i === courant && c.statut === 'livree'), now: i === courant && c.statut !== 'livree', todo: i > courant }]"
+            :aria-current="i === courant ? 'step' : undefined"
+          >
             <span class="dot" aria-hidden="true"><AppIcon v-if="i < courant || (i === courant && c.statut === 'livree')" name="check" :size="14" /></span>
             <span class="what">
               <b>{{ p.label }}</b>
@@ -105,7 +120,9 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
       <section v-if="payee && data.paiement" class="card box" aria-labelledby="titre-paiement">
         <h2 id="titre-paiement">Paiement</h2>
         <p>
-          <span class="pill" :class="data.paiement.statut === 'paye' ? 'ok' : 'neutral'">{{ data.paiement.statut === 'paye' ? 'Payé' : data.paiement.statut === 'rembourse' ? 'Remboursé' : 'En attente' }}</span>
+          <span class="pill" :class="data.paiement.statut === 'paye' ? 'ok' : 'neutral'">{{
+            data.paiement.statut === 'paye' ? 'Payé' : data.paiement.statut === 'rembourse' ? 'Remboursé' : 'En attente'
+          }}</span>
           <b class="ttc">{{ eur(data.paiement.montantTtc) }} TTC</b>
           <span v-if="data.paiement.paidAt" class="muted"> · par carte le {{ jour(data.paiement.paidAt) }}</span>
         </p>
@@ -143,13 +160,24 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
           <li v-for="(l, i) in data.lignes" :key="i" class="piece">
             <div v-if="l.cotes.length" class="sketch"><ProfileSketch :cotes="l.cotes" :angles="l.angles" :cap="l.cap" :color="l.colorHex" :label="`Profil de la pièce ${i + 1}`" /></div>
             <div class="info">
-              <h3>{{ l.quantite }} × {{ l.modeleLabel }}<span v-if="l.repere" class="muted"> · {{ l.repere }}</span></h3>
+              <h3>
+                {{ l.quantite }} × {{ l.modeleLabel }}<span v-if="l.repere" class="muted"> · {{ l.repere }}</span>
+              </h3>
               <p v-if="l.cotes.length" class="muted">{{ l.materialLabel }} · {{ l.colorLabel }} · longueur {{ l.longueur.toLocaleString('fr-FR') }} mm</p>
               <p v-else class="muted">{{ l.materialLabel }}</p>
-              <p v-if="l.cotes.length" class="cotes">Cotes : <template v-for="(v, j) in l.cotes" :key="j"><b>{{ letter(j) }}</b> {{ fmt(v) }}<span v-if="j < l.cotes.length - 1"> · </span></template> mm</p>
+              <p v-if="l.cotes.length" class="cotes">
+                Cotes :
+                <template v-for="(v, j) in l.cotes" :key="j"
+                  ><b>{{ letter(j) }}</b> {{ fmt(v) }}<span v-if="j < l.cotes.length - 1"> · </span></template
+                >
+                mm
+              </p>
               <p v-for="a in l.accessoires" :key="a.nom" class="muted">+ {{ a.quantite }} × {{ a.nom }}</p>
             </div>
-            <div class="price"><b>{{ eur(l.total) }}</b><span class="muted">HT</span></div>
+            <div class="price">
+              <b>{{ eur(l.total) }}</b
+              ><span class="muted">HT</span>
+            </div>
           </li>
         </ul>
       </section>
@@ -162,9 +190,18 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
             <dt>Pièces</dt>
             <dd>{{ eur(c.totaux.brut) }}</dd>
           </template>
-          <template v-if="c.totaux.remisePro"><dt>Remise</dt><dd>− {{ eur(c.totaux.remisePro) }}</dd></template>
-          <template v-if="c.totaux.complementMinimum"><dt>Complément au minimum de commande</dt><dd>{{ eur(c.totaux.complementMinimum) }}</dd></template>
-          <template v-if="c.totaux.livraisonPrix"><dt>Livraison</dt><dd>{{ eur(c.totaux.livraisonPrix) }}</dd></template>
+          <template v-if="c.totaux.remisePro"
+            ><dt>Remise</dt>
+            <dd>− {{ eur(c.totaux.remisePro) }}</dd></template
+          >
+          <template v-if="c.totaux.complementMinimum"
+            ><dt>Complément au minimum de commande</dt>
+            <dd>{{ eur(c.totaux.complementMinimum) }}</dd></template
+          >
+          <template v-if="c.totaux.livraisonPrix"
+            ><dt>Livraison</dt>
+            <dd>{{ eur(c.totaux.livraisonPrix) }}</dd></template
+          >
           <dt>Total HT</dt>
           <dd>{{ eur(c.totaux.ht) }}</dd>
           <dt>TVA {{ c.totaux.tauxTva.toLocaleString('fr-FR') }} %</dt>
@@ -183,7 +220,9 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
         <h2 id="docs">Factures</h2>
         <ul class="docs">
           <li v-for="d in factures" :key="d.id">
-            <span><b>{{ d.numero }}</b> <span class="muted">du {{ jour(d.emisLe) }} · {{ eur(d.ttc) }} TTC</span></span>
+            <span
+              ><b>{{ d.numero }}</b> <span class="muted">du {{ jour(d.emisLe) }} · {{ eur(d.ttc) }} TTC</span></span
+            >
             <span class="pill" :class="statutDocument(d.type, d.statut).tone">{{ statutDocument(d.type, d.statut).label }}</span>
             <a :href="documentUrl(d.id)" target="_blank" rel="noopener" class="s-btn"><AppIcon name="download" :size="16" /> PDF</a>
           </li>
@@ -289,11 +328,26 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
   place-items: center;
 }
 /* Chaque étape a la couleur de sa pastille (la même dans l'atelier) */
-.t-warn { --c: var(--warn); --c-soft: var(--warn-soft); }
-.t-info { --c: var(--info); --c-soft: var(--info-soft); }
-.t-accent { --c: var(--accent); --c-soft: var(--accent-soft); }
-.t-ok { --c: var(--ok); --c-soft: var(--ok-soft); }
-.t-done { --c: var(--done); --c-soft: var(--done-soft); }
+.t-warn {
+  --c: var(--warn);
+  --c-soft: var(--warn-soft);
+}
+.t-info {
+  --c: var(--info);
+  --c-soft: var(--info-soft);
+}
+.t-accent {
+  --c: var(--accent);
+  --c-soft: var(--accent-soft);
+}
+.t-ok {
+  --c: var(--ok);
+  --c-soft: var(--ok-soft);
+}
+.t-done {
+  --c: var(--done);
+  --c-soft: var(--done-soft);
+}
 .done .dot {
   background: var(--c);
   border-color: var(--c);

@@ -34,6 +34,11 @@ async function logout() {
   await router.replace({ name: 'site-home' })
 }
 
+function annulerFermeture() {
+  closing.value = false
+  closePassword.value = ''
+  closeError.value = ''
+}
 async function closeAccount() {
   closeError.value = ''
   closeBusy.value = true
@@ -65,9 +70,7 @@ async function closeAccount() {
     <p v-if="error" class="alert bad" role="alert">{{ error }}</p>
     <p v-else-if="!commandes" class="muted" aria-busy="true">Chargement…</p>
     <template v-else>
-      <p v-if="aValider" class="alert ok" role="status">
-        {{ aValider === 1 ? 'Un devis attend' : `${aValider} devis attendent` }} votre réponse.
-      </p>
+      <p v-if="aValider" class="alert ok" role="status">{{ aValider === 1 ? 'Un devis attend' : `${aValider} devis attendent` }} votre réponse.</p>
       <section v-if="!commandes.length" class="card empty">
         <h2>Pas encore de commande</h2>
         <p class="muted">Composez vos pièces dans le configurateur : le devis apparaît ici tout de suite, avec le suivi de la commande.</p>
@@ -102,7 +105,7 @@ async function closeAccount() {
           <p v-if="closeError" class="alert bad" role="alert">{{ closeError }}</p>
           <div class="actions">
             <button class="s-btn danger" type="submit" :disabled="closeBusy || !closePassword">Fermer définitivement mon espace</button>
-            <button class="s-btn" type="button" @click="closing = false; closePassword = ''; closeError = ''">Annuler</button>
+            <button class="s-btn" type="button" @click="annulerFermeture">Annuler</button>
           </div>
         </form>
       </section>

@@ -62,7 +62,8 @@ function onKey(e: KeyboardEvent) {
       :tabindex="tab === t.id ? 0 : -1"
       @click="tab = t.id"
     >
-      <AppIcon :name="t.icon" :size="17" />{{ t.label }}<span v-if="t.more" class="more">{{ t.more }}</span><span v-if="counts[t.id] !== null" class="count">{{ counts[t.id] }}</span>
+      <AppIcon :name="t.icon" :size="17" />{{ t.label }}<span v-if="t.more" class="more">{{ t.more }}</span
+      ><span v-if="counts[t.id] !== null" class="count">{{ counts[t.id] }}</span>
     </button>
   </div>
 

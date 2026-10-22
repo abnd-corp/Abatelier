@@ -37,7 +37,10 @@ const stars = (n: number) => Array.from({ length: 5 }, (_, i) => i < n)
         <li v-for="(a, i) in data.avis" :key="i" class="card review">
           <p class="stars" :aria-label="`${a.note} étoiles sur 5`"><AppIcon v-for="(on, j) in stars(a.note)" :key="j" name="star" :size="16" :class="{ on }" aria-hidden="true" /></p>
           <blockquote>{{ a.texte }}</blockquote>
-          <p class="who"><b>{{ a.auteur }}</b><span v-if="a.quand" class="muted"> · {{ a.quand }}</span></p>
+          <p class="who">
+            <b>{{ a.auteur }}</b
+            ><span v-if="a.quand" class="muted"> · {{ a.quand }}</span>
+          </p>
         </li>
       </ul>
       <p v-else class="muted">Retrouvez les avis de nos clients sur notre fiche Google.</p>

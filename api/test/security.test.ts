@@ -14,12 +14,33 @@ afterEach(() => app.close())
 beforeEach(resetDb)
 
 // Seules routes accessibles sans être connecté. Toute nouvelle route publique doit être ajoutée ici consciemment.
-const PUBLIC = ['GET /api/health', 'GET /api/auth/session', 'POST /api/auth/login', 'POST /api/auth/logout', 'GET /api/public/site', 'GET /api/public/photos/:id', 'GET /api/public/avis', 'GET /api/public/configurateur', 'POST /api/public/configurateur/chiffrage', 'POST /api/public/configurateur/estimation.pdf', 'POST /api/public/contact', 'GET /api/public/boutique', 'GET /api/public/boutique/images/:id', 'POST /api/public/boutique/panier', 'POST /api/paiement/stripe', 'GET /api/public/robots.txt', 'GET /api/public/sitemap.xml', 'POST /api/espace/inscription', 'POST /api/espace/connexion', 'POST /api/espace/deconnexion', 'GET /api/espace/session']
+const PUBLIC = [
+  'GET /api/health',
+  'GET /api/auth/session',
+  'POST /api/auth/login',
+  'POST /api/auth/logout',
+  'GET /api/public/site',
+  'GET /api/public/photos/:id',
+  'GET /api/public/avis',
+  'GET /api/public/configurateur',
+  'POST /api/public/configurateur/chiffrage',
+  'POST /api/public/configurateur/estimation.pdf',
+  'POST /api/public/contact',
+  'GET /api/public/boutique',
+  'GET /api/public/boutique/images/:id',
+  'POST /api/public/boutique/panier',
+  'POST /api/paiement/stripe',
+  'GET /api/public/robots.txt',
+  'GET /api/public/sitemap.xml',
+  'POST /api/espace/inscription',
+  'POST /api/espace/connexion',
+  'POST /api/espace/deconnexion',
+  'GET /api/espace/session',
+]
 const UUID = '00000000-0000-4000-8000-000000000000'
 // Notifications signées d'un prestataire extérieur : pas de navigateur, donc pas d'en-tête Origin (voir le test dédié plus bas)
 const WEBHOOKS = ['POST /api/paiement/stripe']
-const routes = () =>
-  app.routeList.map((r) => ({ ...r, path: r.url.replace(/:[a-zA-Z]+/g, UUID), key: `${r.method} ${r.url}` }))
+const routes = () => app.routeList.map((r) => ({ ...r, path: r.url.replace(/:[a-zA-Z]+/g, UUID), key: `${r.method} ${r.url}` }))
 
 describe('Contrôle d’accès', () => {
   it('liste au moins les routes connues (garde-fou du test lui-même)', () => {

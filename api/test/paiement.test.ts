@@ -35,7 +35,8 @@ beforeEach(async () => {
   direction = await loginAs(app, 'chef')
   visitor = client(app)
   const prod = async (nom: string) => (await direction.post('/api/boutique/produits', { nom, categorie: 'Couvertine', description: `Description ${nom}` })).json().id as string
-  const variante = async (id: string, libelle: string, prixTtc: number, actif = true) => (await direction.post(`/api/boutique/produits/${id}/variantes`, { libelle, prixTtc, actif })).json().variante.id as string
+  const variante = async (id: string, libelle: string, prixTtc: number, actif = true) =>
+    (await direction.post(`/api/boutique/produits/${id}/variantes`, { libelle, prixTtc, actif })).json().variante.id as string
   const couvertine = await prod('Couvertine blanche')
   const v1 = await variante(couvertine, '270 mm · 1 m', 21)
   const v2 = await variante(couvertine, '320 mm · 3 m', 84)
@@ -55,7 +56,12 @@ const mailOn = () => {
   env.SMTP_HOST = 'smtp.test'
   env.MAIL_FROM = 'APS <contact@aps.test>'
   env.MAIL_ALERT_TO = 'direction@aps.test'
-  setTransport({ async sendMail(o) { mailSent.push(o); return {} } })
+  setTransport({
+    async sendMail(o) {
+      mailSent.push(o)
+      return {}
+    },
+  })
 }
 async function member(email = 'jean@example.com') {
   const c = espace()
@@ -63,7 +69,14 @@ async function member(email = 'jean@example.com') {
   expect(res.statusCode, res.body).toBe(201)
   return c
 }
-const panier = (over: Record<string, unknown> = {}) => ({ lignes: [{ variantId: ids.v1, quantite: 2 }, { variantId: ids.v2, quantite: 1 }], livraison: { mode: 'retrait' }, ...over })
+const panier = (over: Record<string, unknown> = {}) => ({
+  lignes: [
+    { variantId: ids.v1, quantite: 2 },
+    { variantId: ids.v2, quantite: 1 },
+  ],
+  livraison: { mode: 'retrait' },
+  ...over,
+})
 /** Paye un panier avec le faux prestataire et renvoie la commande créée. */
 async function pay(c: Client, body = panier()) {
   const res = await c.post('/api/espace/boutique/paiement', body)
@@ -83,8 +96,15 @@ describe('La boutique publique', () => {
     const { produits, paiement } = res.json()
     expect(paiement).toBe(true)
     expect(produits.map((p: { nom: string }) => p.nom)).toEqual(['Couvertine blanche'])
-    expect(produits[0]).toMatchObject({ categorie: 'Couvertine', description: 'Description Couvertine blanche', image: { alt: 'Couvertine', url: expect.stringMatching(/^\/api\/public\/boutique\/images\/[0-9a-f-]{36}\?v=\d+$/) } })
-    expect(produits[0].variantes.map((v: { libelle: string; prixTtc: number }) => [v.libelle, v.prixTtc])).toEqual([['270 mm · 1 m', 21], ['320 mm · 3 m', 84]])
+    expect(produits[0]).toMatchObject({
+      categorie: 'Couvertine',
+      description: 'Description Couvertine blanche',
+      image: { alt: 'Couvertine', url: expect.stringMatching(/^\/api\/public\/boutique\/images\/[0-9a-f-]{36}\?v=\d+$/) },
+    })
+    expect(produits[0].variantes.map((v: { libelle: string; prixTtc: number }) => [v.libelle, v.prixTtc])).toEqual([
+      ['270 mm · 1 m', 21],
+      ['320 mm · 3 m', 84],
+    ])
     expect(res.body).not.toMatch(/prixHt|actif|position|createdAt|prix_ht/)
   })
 
@@ -104,10 +124,22 @@ describe('La boutique publique', () => {
   })
 
   it('chiffre un panier avec les prix du serveur, et écarte ce qui n’est plus en vente', async () => {
-    const res = await visitor.post('/api/public/boutique/panier', panier({ lignes: [{ variantId: ids.v1, quantite: 2 }, { variantId: ids.v2, quantite: 1 }, { variantId: ids.vb, quantite: 1 }] }))
+    const res = await visitor.post(
+      '/api/public/boutique/panier',
+      panier({
+        lignes: [
+          { variantId: ids.v1, quantite: 2 },
+          { variantId: ids.v2, quantite: 1 },
+          { variantId: ids.vb, quantite: 1 },
+        ],
+      }),
+    )
     expect(res.statusCode, res.body).toBe(200)
     const b = res.json()
-    expect(b.lignes.map((l: { libelle: string; quantite: number; prixTtc: number; totalTtc: number }) => [l.libelle, l.quantite, l.prixTtc, l.totalTtc])).toEqual([['270 mm · 1 m', 2, 21, 42], ['320 mm · 3 m', 1, 84, 84]])
+    expect(b.lignes.map((l: { libelle: string; quantite: number; prixTtc: number; totalTtc: number }) => [l.libelle, l.quantite, l.prixTtc, l.totalTtc])).toEqual([
+      ['270 mm · 1 m', 2, 21, 42],
+      ['320 mm · 3 m', 1, 84, 84],
+    ])
     expect(b.indisponibles).toEqual([ids.vb])
     expect(b.totals).toMatchObject({ ht: 105, tva: 21, ttc: 126, livraisonPrix: 0, tauxTva: 20 })
     // Un prix envoyé par le navigateur est ignoré
@@ -147,14 +179,25 @@ describe('Payer son panier', () => {
     expect(url).toBe(`/paiement-simulation/${id}`)
     const [p] = await db.select().from(payments)
     expect(p).toMatchObject({ statut: 'attente', provider: 'simulation', montantTtc: 126, orderId: null })
-    expect(p!.panier.lignes.map((l) => [l.produit, l.libelle, l.quantite])).toEqual([['Couvertine blanche', '270 mm · 1 m', 2], ['Couvertine blanche', '320 mm · 3 m', 1]])
+    expect(p!.panier.lignes.map((l) => [l.produit, l.libelle, l.quantite])).toEqual([
+      ['Couvertine blanche', '270 mm · 1 m', 2],
+      ['Couvertine blanche', '320 mm · 3 m', 1],
+    ])
     expect(await db.select().from(orders)).toHaveLength(0)
     expect((await entries('boutique.checkout_started')).length).toBe(1)
   })
 
   it('refuse un panier dont un article n’est plus en vente, ou invalide', async () => {
     const c = await member()
-    const gone = await c.post('/api/espace/boutique/paiement', panier({ lignes: [{ variantId: ids.v1, quantite: 1 }, { variantId: ids.vb, quantite: 1 }] }))
+    const gone = await c.post(
+      '/api/espace/boutique/paiement',
+      panier({
+        lignes: [
+          { variantId: ids.v1, quantite: 1 },
+          { variantId: ids.vb, quantite: 1 },
+        ],
+      }),
+    )
     expect(gone.statusCode).toBe(409)
     expect(gone.json()).toMatchObject({ field: 'lignes', indisponibles: [ids.vb] })
     expect((await c.post('/api/espace/boutique/paiement', panier({ lignes: [] }))).statusCode).toBe(400)
@@ -169,10 +212,16 @@ describe('Payer son panier', () => {
     const [o] = await db.select().from(orders)
     expect(o).toMatchObject({ id: order.id, kind: 'boutique', statut: 'validee', ht: 105, tva: 21, ttc: 126, createdBy: null, livraisonMode: 'retrait' })
     expect(o!.datePrevue).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    expect((await db.select().from(orderEvents)).map((e) => [e.statut, e.userId])).toEqual([['recue', null], ['validee', null]])
+    expect((await db.select().from(orderEvents)).map((e) => [e.statut, e.userId])).toEqual([
+      ['recue', null],
+      ['validee', null],
+    ])
     const lines = await db.select().from(orderLines)
     expect(lines.map((l) => [l.modeleLabel, l.materialLabel, l.quantite, l.total, l.cotes.length, l.variantId])).toEqual(
-      expect.arrayContaining([['Couvertine blanche', '270 mm · 1 m', 2, 35, 0, ids.v1], ['Couvertine blanche', '320 mm · 3 m', 1, 70, 0, ids.v2]]),
+      expect.arrayContaining([
+        ['Couvertine blanche', '270 mm · 1 m', 2, 35, 0, ids.v1],
+        ['Couvertine blanche', '320 mm · 3 m', 1, 70, 0, ids.v2],
+      ]),
     )
     const [p] = await db.select().from(payments)
     expect(p).toMatchObject({ id: paymentId, statut: 'paye', orderId: order.id })
@@ -353,7 +402,12 @@ describe('Stripe', () => {
   const sign = (body: string, t = Math.floor(Date.now() / 1000), secret = SECRET) => `t=${t},v1=${createHmac('sha256', secret).update(`${t}.${body}`).digest('hex')}`
   const post = (body: object, header?: string) => {
     const raw = JSON.stringify(body)
-    return app.inject({ method: 'POST', url: '/api/paiement/stripe', headers: { host: 'atelier.test', 'content-type': 'application/json', ...(header === undefined ? { 'stripe-signature': sign(raw) } : header ? { 'stripe-signature': header } : {}) }, payload: raw })
+    return app.inject({
+      method: 'POST',
+      url: '/api/paiement/stripe',
+      headers: { host: 'atelier.test', 'content-type': 'application/json', ...(header === undefined ? { 'stripe-signature': sign(raw) } : header ? { 'stripe-signature': header } : {}) },
+      payload: raw,
+    })
   }
   const stripeOn = () => {
     env.PAYMENT_PROVIDER = 'stripe'
@@ -361,7 +415,9 @@ describe('Stripe', () => {
     env.STRIPE_WEBHOOK_SECRET = SECRET
   }
   const calls: { url: string; init: RequestInit }[] = []
-  const stubStripe = (reply: (url: string) => object | null = (url) => (url.includes('/checkout/sessions') ? { id: 'cs_test_1', url: 'https://checkout.stripe.com/c/pay/cs_test_1' } : { id: 're_1' })) => {
+  const stubStripe = (
+    reply: (url: string) => object | null = (url) => (url.includes('/checkout/sessions') ? { id: 'cs_test_1', url: 'https://checkout.stripe.com/c/pay/cs_test_1' } : { id: 're_1' }),
+  ) => {
     calls.length = 0
     vi.stubGlobal(
       'fetch',
@@ -472,7 +528,12 @@ describe('Stripe', () => {
 
   it('dit quand Stripe ne répond pas, sans détail technique, et abandonne le paiement', async () => {
     stripeOn()
-    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('ECONNREFUSED 10.0.0.1') }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('ECONNREFUSED 10.0.0.1')
+      }),
+    )
     const c = await member()
     const res = await c.post('/api/espace/boutique/paiement', panier())
     expect(res.statusCode).toBe(502)
@@ -503,7 +564,17 @@ describe('Commande sur mesure payée depuis le configurateur', () => {
     const [anthracite] = await db.insert(colors).values({ nom: 'Gris anthracite', reference: 'RAL 7016', hex: '#383e42' }).returning()
     sm = { alu: alu!.id, anthracite: anthracite!.id }
   })
-  const piece = () => ({ repere: 'Mur sud', modelId: M.couvertine, materialId: sm.alu, colorId: sm.anthracite, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 4, accessoires: [] })
+  const piece = () => ({
+    repere: 'Mur sud',
+    modelId: M.couvertine,
+    materialId: sm.alu,
+    colorId: sm.anthracite,
+    cotes: [20, 70, 300, 70, 20],
+    angles: [135, 90, 90, 135],
+    longueur: 3000,
+    quantite: 4,
+    accessoires: [],
+  })
   const commande = (over: Record<string, unknown> = {}) => ({ lignes: [piece()], livraison: { mode: 'retrait' }, notes: 'Pose en mars', ...over })
 
   it('exige un compte et un prestataire de paiement, et valide la saisie avec le champ concerné', async () => {
@@ -551,7 +622,7 @@ describe('Commande sur mesure payée depuis le configurateur', () => {
     expect(suivi.paiement).toMatchObject({ statut: 'paye' })
     expect(mailSent.map((m) => m.subject)).toEqual([expect.stringContaining('Commande sur mesure payée'), expect.stringContaining('est confirmée')])
     expect(mailSent[0]!.text).toContain('depuis le configurateur')
-    expect((await entries('boutique.payment_confirmed'))).toHaveLength(1)
+    expect(await entries('boutique.payment_confirmed')).toHaveLength(1)
   })
 
   it('un paiement abandonné ne crée rien, et la direction peut refuser et rembourser la commande payée', async () => {

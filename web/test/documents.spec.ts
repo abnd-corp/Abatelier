@@ -7,10 +7,12 @@ import { useAuthStore } from '@/stores/auth'
 import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
 
 // pdf.js ne sait pas dessiner dans jsdom : on simule le rendu et on note les appels
-const render = vi.hoisted(() => vi.fn(async (_data: ArrayBuffer, el: HTMLElement) => {
-  el.innerHTML = '<canvas role="img" aria-label="Aperçu, page 1 sur 1"></canvas>'
-  return 1
-}))
+const render = vi.hoisted(() =>
+  vi.fn(async (_data: ArrayBuffer, el: HTMLElement) => {
+    el.innerHTML = '<canvas role="img" aria-label="Aperçu, page 1 sur 1"></canvas>'
+    return 1
+  }),
+)
 vi.mock('@/lib/pdf-render', () => ({ renderPdf: render }))
 afterEach(() => render.mockClear())
 
@@ -194,7 +196,9 @@ describe('Modèles de documents', () => {
     expect(e('documents.company_updated', { changements: { siret: { avant: '', apres: '732 829 320 00074' } } })).toBe('A modifié l’identité de l’entreprise : SIRET vide → « 732 829 320 00074 »')
     expect(e('documents.numbering_updated', { type: 'facture', annee: 2026, avant: 1, apres: 128 })).toBe('A fixé le prochain numéro de facture 2026 : 1 → 128')
     expect(e('documents.logo_updated', { type: 'image/png', largeur: 200, hauteur: 80 })).toBe('A envoyé un nouveau logo (PNG, 200 × 80 px)')
-    expect(e('documents.template_updated', { changements: { mentionsLegales: { avant: '', apres: 'x'.repeat(80) } } })).toBe(`A modifié le modèle des devis et factures : mentions légales vide → « ${'x'.repeat(57)}… »`)
+    expect(e('documents.template_updated', { changements: { mentionsLegales: { avant: '', apres: 'x'.repeat(80) } } })).toBe(
+      `A modifié le modèle des devis et factures : mentions légales vide → « ${'x'.repeat(57)}… »`,
+    )
   })
 })
 

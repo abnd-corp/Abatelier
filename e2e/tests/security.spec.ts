@@ -62,7 +62,10 @@ test.describe('Sécurité dans le navigateur', () => {
     // Chromium garde une frame vide, Firefox n'en expose parfois aucune : on inspecte celles qui existent.
     await page.waitForTimeout(1500)
     const counts = await Promise.all(
-      page.frames().slice(1).map((f) => Promise.race([f.locator('#identifiant').count(), new Promise<number>((r) => setTimeout(() => r(0), 3000))])),
+      page
+        .frames()
+        .slice(1)
+        .map((f) => Promise.race([f.locator('#identifiant').count(), new Promise<number>((r) => setTimeout(() => r(0), 3000))])),
     )
     expect(counts.every((n) => n === 0)).toBe(true)
   })

@@ -40,7 +40,8 @@ const visibles = computed(() => {
 // Sélection pour agir sur plusieurs produits à la fois
 const choisis = ref<string[]>([])
 const tousChoisis = computed(() => visibles.value.length > 0 && visibles.value.every((p) => choisis.value.includes(p.id)))
-const toggleTous = () => (choisis.value = tousChoisis.value ? choisis.value.filter((id) => !visibles.value.some((p) => p.id === id)) : [...new Set([...choisis.value, ...visibles.value.map((p) => p.id)])])
+const toggleTous = () =>
+  (choisis.value = tousChoisis.value ? choisis.value.filter((id) => !visibles.value.some((p) => p.id === id)) : [...new Set([...choisis.value, ...visibles.value.map((p) => p.id)])])
 const confirmSuppr = ref(false)
 const notice = ref('')
 async function lot(action: 'mettre_en_ligne' | 'retirer' | 'supprimer') {
@@ -68,7 +69,10 @@ async function importer(ev: Event) {
   importing.value = true
   try {
     const body = JSON.parse(await file.text())
-    const r = await api<{ produitsCrees: number; produitsExistants: number; variantesCreees: number; variantesMisesAJour: number; ignorees: number }>('/boutique/import', { method: 'POST', body: { produits: Array.isArray(body) ? body : body.produits } })
+    const r = await api<{ produitsCrees: number; produitsExistants: number; variantesCreees: number; variantesMisesAJour: number; ignorees: number }>('/boutique/import', {
+      method: 'POST',
+      body: { produits: Array.isArray(body) ? body : body.produits },
+    })
     notice.value = `Import terminé : ${r.produitsCrees} produit${r.produitsCrees > 1 ? 's' : ''} créé${r.produitsCrees > 1 ? 's' : ''} (cachés du site), ${r.produitsExistants} déjà présent${r.produitsExistants > 1 ? 's' : ''}, ${r.variantesCreees} déclinaison${r.variantesCreees > 1 ? 's' : ''} ajoutée${r.variantesCreees > 1 ? 's' : ''}, ${r.variantesMisesAJour} prix mis à jour, ${r.ignorees} ignorée${r.ignorees > 1 ? 's' : ''} (indisponibles ou à 0 €).`
     await load()
   } catch (e) {
@@ -116,7 +120,17 @@ async function toggle(p: AdminProduit) {
     <form class="row" novalidate @submit.prevent="create">
       <div class="field">
         <label for="prod-nom">Nouveau produit</label>
-        <input id="prod-nom" v-model="nom" class="input" :class="{ invalid: nomError }" maxlength="120" placeholder="Ex. : Couvertine blanche RAL 9010" autocomplete="off" :aria-invalid="!!nomError" :aria-describedby="nomError ? 'prod-nom-e' : undefined" />
+        <input
+          id="prod-nom"
+          v-model="nom"
+          class="input"
+          :class="{ invalid: nomError }"
+          maxlength="120"
+          placeholder="Ex. : Couvertine blanche RAL 9010"
+          autocomplete="off"
+          :aria-invalid="!!nomError"
+          :aria-describedby="nomError ? 'prod-nom-e' : undefined"
+        />
         <span v-if="nomError" id="prod-nom-e" class="field-error">{{ nomError }}</span>
       </div>
       <button class="btn primary" type="submit" :disabled="creating"><AppIcon name="plus" :size="16" /> Créer le produit</button>
@@ -159,7 +173,9 @@ async function toggle(p: AdminProduit) {
     </div>
     <div v-else class="table-wrap">
       <table class="table fits-sm" :aria-busy="loading">
-        <caption class="sr-only">Produits de la boutique</caption>
+        <caption class="sr-only">
+          Produits de la boutique
+        </caption>
         <thead>
           <tr>
             <th class="check"><input type="checkbox" :checked="tousChoisis" aria-label="Choisir tous les produits affichés" @change="toggleTous" /></th>
@@ -184,12 +200,16 @@ async function toggle(p: AdminProduit) {
                 </span>
               </span>
             </td>
-            <td class="hide-sm">{{ p.actives }} en vente<span v-if="p.variantes > p.actives" class="sub">{{ p.variantes - p.actives }} retirée{{ p.variantes - p.actives > 1 ? 's' : '' }}</span></td>
+            <td class="hide-sm">
+              {{ p.actives }} en vente<span v-if="p.variantes > p.actives" class="sub">{{ p.variantes - p.actives }} retirée{{ p.variantes - p.actives > 1 ? 's' : '' }}</span>
+            </td>
             <td class="hide-sm n">{{ p.prixMinTtc === null ? '—' : `${eur(p.prixMinTtc)} TTC` }}</td>
             <td @click.stop>
               <span class="state">
                 <span class="pill" :class="p.actif ? 'ok' : 'neutral'">{{ p.actif ? 'En ligne' : 'Hors ligne' }}</span>
-                <button class="btn small" type="button" :aria-label="`${p.actif ? 'Retirer du site' : 'Mettre en ligne'} : ${p.nom}`" @click="toggle(p)">{{ p.actif ? 'Retirer' : 'Mettre en ligne' }}</button>
+                <button class="btn small" type="button" :aria-label="`${p.actif ? 'Retirer du site' : 'Mettre en ligne'} : ${p.nom}`" @click="toggle(p)">
+                  {{ p.actif ? 'Retirer' : 'Mettre en ligne' }}
+                </button>
               </span>
             </td>
           </tr>
@@ -197,7 +217,11 @@ async function toggle(p: AdminProduit) {
       </table>
     </div>
     <p v-if="produits.length && !visibles.length" class="muted foot">Aucun produit ne correspond.</p>
-    <p v-if="produits.length" class="muted foot">{{ enLigne }} produit{{ enLigne > 1 ? 's' : '' }} en ligne sur {{ produits.length }}<template v-if="visibles.length !== produits.length"> · {{ visibles.length }} affiché{{ visibles.length > 1 ? 's' : '' }}</template>.</p>
+    <p v-if="produits.length" class="muted foot">
+      {{ enLigne }} produit{{ enLigne > 1 ? 's' : '' }} en ligne sur {{ produits.length
+      }}<template v-if="visibles.length !== produits.length"> · {{ visibles.length }} affiché{{ visibles.length > 1 ? 's' : '' }}</template
+      >.
+    </p>
   </section>
 </template>
 

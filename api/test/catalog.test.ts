@@ -291,4 +291,3 @@ describe('Modèles de pièces', () => {
     expect((await direction.patch('/api/catalog/models/pas-un-id', { actif: false })).statusCode).toBe(404)
   })
 })
-

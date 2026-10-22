@@ -102,19 +102,99 @@ Droit français. Un consommateur peut recourir gratuitement à un médiateur de 
 export const FIELDS: Field[] = [
   // Accueil
   { key: 'accueil.titre', groupe: 'Accueil', label: 'Titre principal', max: 120, defaut: 'Pliage d’aluminium et d’acier sur mesure' },
-  { key: 'accueil.accroche', groupe: 'Accueil', label: 'Phrase sous le titre', long: true, max: 300, defaut: 'Couvertines, bavettes d’appui, bandeaux : fabriqués à vos dimensions dans notre atelier de Fraisses, près de Saint-Étienne.' },
-  { key: 'accueil.presentation', groupe: 'Accueil', label: 'Présentation de l’atelier', long: true, max: 1200, defaut: 'Nous fabriquons toutes sortes de pièces de tôlerie pliée, pour les professionnels du bâtiment (façadiers, étancheurs, couvreurs, maçons, architectes) comme pour les particuliers. Équipés de cisailles et de plieuses numériques de dernière génération, nous façonnons à la demande vos pièces en aluminium jusqu’à 3 mètres, avec un suivi personnalisé, efficace et rapide.' },
-  { key: 'accueil.pourquoi', groupe: 'Accueil', label: 'Pourquoi nous choisir (un point par ligne)', long: true, max: 800, defaut: 'Disponibilité et rapidité\nConseils et partage de savoir-faire\nDevis sur mesure\nTarifs compétitifs\nUn interlocuteur à l’écoute' },
+  {
+    key: 'accueil.accroche',
+    groupe: 'Accueil',
+    label: 'Phrase sous le titre',
+    long: true,
+    max: 300,
+    defaut: 'Couvertines, bavettes d’appui, bandeaux : fabriqués à vos dimensions dans notre atelier de Fraisses, près de Saint-Étienne.',
+  },
+  {
+    key: 'accueil.presentation',
+    groupe: 'Accueil',
+    label: 'Présentation de l’atelier',
+    long: true,
+    max: 1200,
+    defaut:
+      'Nous fabriquons toutes sortes de pièces de tôlerie pliée, pour les professionnels du bâtiment (façadiers, étancheurs, couvreurs, maçons, architectes) comme pour les particuliers. Équipés de cisailles et de plieuses numériques de dernière génération, nous façonnons à la demande vos pièces en aluminium jusqu’à 3 mètres, avec un suivi personnalisé, efficace et rapide.',
+  },
+  {
+    key: 'accueil.pourquoi',
+    groupe: 'Accueil',
+    label: 'Pourquoi nous choisir (un point par ligne)',
+    long: true,
+    max: 800,
+    defaut: 'Disponibilité et rapidité\nConseils et partage de savoir-faire\nDevis sur mesure\nTarifs compétitifs\nUn interlocuteur à l’écoute',
+  },
   // Pages produits
-  { key: 'pliage.intro', groupe: 'Pliage aluminium', label: 'Introduction', long: true, max: 1200, defaut: 'Pliage sur mesure d’aluminium, d’acier et d’acier galvanisé, pour protéger et habiller vos constructions : couvertines, bavettes d’appui de fenêtre, bandeaux, encadrements de porte.' },
-  { key: 'produit.couvertine', groupe: 'Pliage aluminium', label: 'Couvertine', long: true, max: 1200, defaut: 'La couvertine protège le dessus des murs de clôture, des acrotères et des toits-terrasses. Elle assure l’étanchéité et préserve la maçonnerie de la saleté, des intempéries et de la pollution. Fabriquée à vos dimensions jusqu’à 3 mètres, avec larmiers, elle se fixe par pattes ou par mastic-colle. Des accessoires complètent la finition : bouchons et éclisses de jonction.' },
-  { key: 'produit.bavette', groupe: 'Pliage aluminium', label: 'Bavette d’appui de fenêtre', long: true, max: 1200, defaut: 'La bavette d’appui évacue l’eau de pluie et protège le bas de la fenêtre. Avec ou sans rejingot, avec pente et larmier, elle se termine par des embouts latéraux. Vous choisissez les dimensions et le coloris.' },
-  { key: 'produit.bandeau', groupe: 'Pliage aluminium', label: 'Bandeau et planche de rive', long: true, max: 1200, defaut: 'Le bandeau habille et protège les rives de toiture et les débords de façade. Il se fait en L, en U ou avec retour, jusqu’à 3 mètres, avec des angles de bandeau assortis.' },
-  { key: 'pliage.formes', groupe: 'Pliage aluminium', label: 'Autres pliages (un par ligne)', long: true, max: 600, defaut: 'Z, L, U, oméga\nAngles et profils à plusieurs plis\nTôle plate découpée à la cisaille\nPièces personnalisées, dessinées dans le configurateur' },
+  {
+    key: 'pliage.intro',
+    groupe: 'Pliage aluminium',
+    label: 'Introduction',
+    long: true,
+    max: 1200,
+    defaut: 'Pliage sur mesure d’aluminium, d’acier et d’acier galvanisé, pour protéger et habiller vos constructions : couvertines, bavettes d’appui de fenêtre, bandeaux, encadrements de porte.',
+  },
+  {
+    key: 'produit.couvertine',
+    groupe: 'Pliage aluminium',
+    label: 'Couvertine',
+    long: true,
+    max: 1200,
+    defaut:
+      'La couvertine protège le dessus des murs de clôture, des acrotères et des toits-terrasses. Elle assure l’étanchéité et préserve la maçonnerie de la saleté, des intempéries et de la pollution. Fabriquée à vos dimensions jusqu’à 3 mètres, avec larmiers, elle se fixe par pattes ou par mastic-colle. Des accessoires complètent la finition : bouchons et éclisses de jonction.',
+  },
+  {
+    key: 'produit.bavette',
+    groupe: 'Pliage aluminium',
+    label: 'Bavette d’appui de fenêtre',
+    long: true,
+    max: 1200,
+    defaut:
+      'La bavette d’appui évacue l’eau de pluie et protège le bas de la fenêtre. Avec ou sans rejingot, avec pente et larmier, elle se termine par des embouts latéraux. Vous choisissez les dimensions et le coloris.',
+  },
+  {
+    key: 'produit.bandeau',
+    groupe: 'Pliage aluminium',
+    label: 'Bandeau et planche de rive',
+    long: true,
+    max: 1200,
+    defaut: 'Le bandeau habille et protège les rives de toiture et les débords de façade. Il se fait en L, en U ou avec retour, jusqu’à 3 mètres, avec des angles de bandeau assortis.',
+  },
+  {
+    key: 'pliage.formes',
+    groupe: 'Pliage aluminium',
+    label: 'Autres pliages (un par ligne)',
+    long: true,
+    max: 600,
+    defaut: 'Z, L, U, oméga\nAngles et profils à plusieurs plis\nTôle plate découpée à la cisaille\nPièces personnalisées, dessinées dans le configurateur',
+  },
   // Contact et pied de page
-  { key: 'contact.intro', groupe: 'Contact', label: 'Introduction de la page Contact', long: true, max: 600, defaut: 'Une question, une demande particulière ? Écrivez-nous : nous vous répondons rapidement. Pour un devis, le plus rapide est le configurateur.' },
-  { key: 'site.horaires', groupe: 'Contact', label: 'Horaires (une ligne par jour ou groupe de jours)', long: true, max: 400, defaut: 'Du lundi au jeudi : 7h30–12h et 13h30–16h\nLe vendredi : 7h30–12h' },
-  { key: 'site.description', groupe: 'Référencement', label: 'Description pour les moteurs de recherche', long: true, max: 200, defaut: 'Alu Pliage Service, pliage de tôle aluminium sur mesure à Fraisses, près de Saint-Étienne : couvertines, bavettes, bandeaux. Devis gratuit.' },
+  {
+    key: 'contact.intro',
+    groupe: 'Contact',
+    label: 'Introduction de la page Contact',
+    long: true,
+    max: 600,
+    defaut: 'Une question, une demande particulière ? Écrivez-nous : nous vous répondons rapidement. Pour un devis, le plus rapide est le configurateur.',
+  },
+  {
+    key: 'site.horaires',
+    groupe: 'Contact',
+    label: 'Horaires (une ligne par jour ou groupe de jours)',
+    long: true,
+    max: 400,
+    defaut: 'Du lundi au jeudi : 7h30–12h et 13h30–16h\nLe vendredi : 7h30–12h',
+  },
+  {
+    key: 'site.description',
+    groupe: 'Référencement',
+    label: 'Description pour les moteurs de recherche',
+    long: true,
+    max: 200,
+    defaut: 'Alu Pliage Service, pliage de tôle aluminium sur mesure à Fraisses, près de Saint-Étienne : couvertines, bavettes, bandeaux. Devis gratuit.',
+  },
   // Pages légales
   { key: 'legal.mentions', groupe: 'Pages légales', label: 'Mentions légales', long: true, max: 6000, defaut: MENTIONS },
   { key: 'legal.confidentialite', groupe: 'Pages légales', label: 'Politique de confidentialité', long: true, max: 8000, defaut: CONFIDENTIALITE },
@@ -147,7 +227,11 @@ export async function setContent(values: Record<string, string>) {
     const f = FIELD.get(key)!
     // Remettre le texte d'origine efface la ligne : on retrouve les futures améliorations des valeurs par défaut
     if (value === f.defaut) await db.delete(siteContent).where(eq(siteContent.key, key))
-    else await db.insert(siteContent).values({ key, value }).onConflictDoUpdate({ target: siteContent.key, set: { value, updatedAt: sql`now()` } })
+    else
+      await db
+        .insert(siteContent)
+        .values({ key, value })
+        .onConflictDoUpdate({ target: siteContent.key, set: { value, updatedAt: sql`now()` } })
   }
 }
 

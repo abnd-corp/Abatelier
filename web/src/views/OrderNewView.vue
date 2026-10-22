@@ -98,9 +98,7 @@ async function save() {
   </div>
 
   <p v-if="loadError" class="alert bad" role="alert">{{ loadError }}</p>
-  <p v-if="emptyCatalog" class="alert bad" role="alert">
-    Ajoutez d’abord au moins un modèle de pièce, une matière et un coloris actifs dans « Tarifs et catalogue ».
-  </p>
+  <p v-if="emptyCatalog" class="alert bad" role="alert">Ajoutez d’abord au moins un modèle de pièce, une matière et un coloris actifs dans « Tarifs et catalogue ».</p>
 
   <template v-else-if="catalog">
     <section v-if="!client" class="card pick" aria-labelledby="pick-title">
@@ -119,9 +117,7 @@ async function save() {
         </li>
       </ul>
       <p v-else-if="q.trim()" class="muted">Aucun client ne correspond.</p>
-      <p class="muted hint">
-        Client absent ? <RouterLink :to="{ name: 'client-new' }">Créez sa fiche</RouterLink>, puis revenez ici depuis sa fiche.
-      </p>
+      <p class="muted hint">Client absent ? <RouterLink :to="{ name: 'client-new' }">Créez sa fiche</RouterLink>, puis revenez ici depuis sa fiche.</p>
     </section>
 
     <template v-else-if="form">

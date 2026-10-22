@@ -51,17 +51,7 @@ async function submit() {
 
       <div class="field">
         <label for="identifiant">Identifiant</label>
-        <input
-          id="identifiant"
-          v-model="identifiant"
-          class="input"
-          name="username"
-          autocomplete="username"
-          autocapitalize="none"
-          spellcheck="false"
-          required
-          autofocus
-        />
+        <input id="identifiant" v-model="identifiant" class="input" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus />
       </div>
 
       <div class="field">
@@ -92,8 +82,7 @@ async function submit() {
   min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
-    max(16px, env(safe-area-inset-left));
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background-color: var(--bg);
   background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
   background-size: 24px 24px;

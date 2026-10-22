@@ -46,7 +46,11 @@ async function stripe(path: string, params: Record<string, string>, idempotencyK
   const data = (await res.json().catch(() => null)) as Record<string, any> | null
   if (!res.ok || !data) {
     console.error(`Stripe ${path} : ${res.status} ${data?.error?.message ?? ''}`)
-    throw new PaymentError(path.startsWith('/refunds') ? 'Le remboursement a été refusé par le service de paiement. Vérifiez-le dans votre tableau de bord Stripe.' : 'Le service de paiement a refusé la demande. Réessayez ou contactez-nous.')
+    throw new PaymentError(
+      path.startsWith('/refunds')
+        ? 'Le remboursement a été refusé par le service de paiement. Vérifiez-le dans votre tableau de bord Stripe.'
+        : 'Le service de paiement a refusé la demande. Réessayez ou contactez-nous.',
+    )
   }
   return data
 }
@@ -114,7 +118,9 @@ export function verifyStripeEvent(raw: Buffer, header: string | undefined, secre
     .filter((p) => p.startsWith('v1='))
     .map((p) => p.slice(3))
   if (!Number.isFinite(t) || !sigs.length || Math.abs(now / 1000 - t) > TOLERANCE_S) return null
-  const expected = createHmac('sha256', secret).update(`${t}.${raw.toString('utf8')}`).digest()
+  const expected = createHmac('sha256', secret)
+    .update(`${t}.${raw.toString('utf8')}`)
+    .digest()
   const ok = sigs.some((s) => {
     const got = Buffer.from(s, 'hex')
     return got.length === expected.length && timingSafeEqual(got, expected)

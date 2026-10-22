@@ -43,7 +43,11 @@ const schedule = (delay = 500) => {
   clearTimeout(timer)
   timer = setTimeout(refresh, delay)
 }
-watch(() => [props.company, props.template, props.logoVersion], () => schedule(), { deep: true })
+watch(
+  () => [props.company, props.template, props.logoVersion],
+  () => schedule(),
+  { deep: true },
+)
 watch(type, () => schedule(0))
 watch(pages, (el) => el && schedule(0), { immediate: true })
 

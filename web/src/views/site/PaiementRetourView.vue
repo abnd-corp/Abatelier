@@ -49,7 +49,10 @@ onBeforeUnmount(() => clearTimeout(timer))
       <template v-else-if="p.statut === 'paye' && p.commande">
         <AppIcon name="check" :size="36" class="ok" />
         <h1>Merci, votre commande est confirmée</h1>
-        <p>Nous avons bien reçu votre paiement de <b>{{ eur(p.montantTtc) }}</b> pour la commande <b>{{ p.commande.numero }}</b>. Un e-mail de confirmation vous est envoyé.</p>
+        <p>
+          Nous avons bien reçu votre paiement de <b>{{ eur(p.montantTtc) }}</b> pour la commande <b>{{ p.commande.numero }}</b
+          >. Un e-mail de confirmation vous est envoyé.
+        </p>
         <p class="muted">Nous vérifions que tout est réalisable. Si ce n’était pas le cas, nous vous préviendrions et vous rembourserions intégralement.</p>
         <p><RouterLink :to="{ name: 'espace-commande', params: { id: p.commande.id } }" class="s-btn primary">Suivre ma commande</RouterLink></p>
       </template>

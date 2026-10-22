@@ -121,7 +121,15 @@ const setAll = (reduced: boolean) => form.value.lignes.forEach((l) => (reduced ?
 const allReduced = computed(() => form.value.lignes.every((l) => reduites.has(l)))
 const resume = (l: LineForm, i: number) => {
   const p = priced(i)
-  return [modelOf(props.catalog, l.modelId)?.nom, l.repere, `${developpe(l.cotes).toLocaleString('fr-FR')} mm développés × ${l.longueur.toLocaleString('fr-FR')} mm`, `${l.quantite} pièce${l.quantite > 1 ? 's' : ''}`, p ? `${eur(p.total)} HT` : null].filter(Boolean).join(' · ')
+  return [
+    modelOf(props.catalog, l.modelId)?.nom,
+    l.repere,
+    `${developpe(l.cotes).toLocaleString('fr-FR')} mm développés × ${l.longueur.toLocaleString('fr-FR')} mm`,
+    `${l.quantite} pièce${l.quantite > 1 ? 's' : ''}`,
+    p ? `${eur(p.total)} HT` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 }
 const epaisseur = (id: string) => props.catalog.materials.find((m) => m.id === id)?.epaisseur ?? 1
 
@@ -152,147 +160,202 @@ defineExpose({ refresh })
           <h2>Pièce {{ i + 1 }}</h2>
           <p v-if="isReduced(l)" class="resume muted">{{ resume(l, i) }}</p>
           <div class="line-tools">
-            <button class="btn small icon" type="button" :aria-expanded="!isReduced(l)" :aria-label="`${isReduced(l) ? 'Développer' : 'Réduire'} la pièce ${i + 1}`" :title="isReduced(l) ? 'Développer' : 'Réduire'" @click="toggle(l)"><AppIcon :name="isReduced(l) ? 'chevron-down' : 'chevron-up'" :size="15" /></button>
+            <button
+              class="btn small icon"
+              type="button"
+              :aria-expanded="!isReduced(l)"
+              :aria-label="`${isReduced(l) ? 'Développer' : 'Réduire'} la pièce ${i + 1}`"
+              :title="isReduced(l) ? 'Développer' : 'Réduire'"
+              @click="toggle(l)"
+            >
+              <AppIcon :name="isReduced(l) ? 'chevron-down' : 'chevron-up'" :size="15" />
+            </button>
             <button class="btn small icon" type="button" :aria-label="`Dupliquer la pièce ${i + 1}`" title="Dupliquer" @click="duplicate(i)"><AppIcon name="copy" :size="15" /></button>
-            <button v-if="form.lignes.length > 1" class="btn small icon" type="button" :aria-label="`Retirer la pièce ${i + 1}`" title="Retirer" @click="removeLine(i)"><AppIcon name="trash" :size="15" /></button>
+            <button v-if="form.lignes.length > 1" class="btn small icon" type="button" :aria-label="`Retirer la pièce ${i + 1}`" title="Retirer" @click="removeLine(i)">
+              <AppIcon name="trash" :size="15" />
+            </button>
           </div>
         </div>
         <p v-if="lineErr(i)" class="alert bad" role="alert">{{ lineErr(i) }}</p>
 
         <div v-show="!isReduced(l)" class="line-body">
-        <div class="row">
-          <div class="field">
-            <label :for="`l${i}-modele`">Modèle</label>
-            <select :id="`l${i}-modele`" class="input" :value="l.modelId" :aria-invalid="bad(`lignes.${i}.modelId`)" @change="setModele(l, ($event.target as HTMLSelectElement).value)">
-              <option v-if="!modelOf(catalog, l.modelId)" value="" disabled>Modèle désactivé : choisissez-en un</option>
-              <option v-for="m in catalog.models" :key="m.id" :value="m.id">{{ m.nom }}</option>
-            </select>
-          </div>
-          <div class="field">
-            <label :for="`l${i}-repere`">Repère</label>
-            <input :id="`l${i}-repere`" v-model="l.repere" class="input" maxlength="60" placeholder="Mur sud, fenêtre cuisine…" autocomplete="off" />
-          </div>
-        </div>
-        <div v-if="standardOf(l)" class="row">
-          <div class="field">
-            <label :for="`l${i}-std-largeur`">{{ standardOf(l)!.label }} (taille standard)</label>
-            <select :id="`l${i}-std-largeur`" class="input" :value="standardOf(l)!.largeurs.includes(l.cotes[standardOf(l)!.cote]!) ? l.cotes[standardOf(l)!.cote] : ''" @change="l.cotes[standardOf(l)!.cote] = Number(($event.target as HTMLSelectElement).value)">
-              <option value="" disabled>Sur mesure ({{ l.cotes[standardOf(l)!.cote] }} mm)</option>
-              <option v-for="w in standardOf(l)!.largeurs" :key="w" :value="w">{{ w }} mm</option>
-            </select>
-          </div>
-          <div class="field">
-            <label :for="`l${i}-std-longueur`">Longueur (taille standard)</label>
-            <select :id="`l${i}-std-longueur`" class="input" :value="standardOf(l)!.longueurs.includes(l.longueur) ? l.longueur : ''" @change="l.longueur = Number(($event.target as HTMLSelectElement).value)">
-              <option value="" disabled>Sur mesure ({{ l.longueur }} mm)</option>
-              <option v-for="v in standardOf(l)!.longueurs" :key="v" :value="v">{{ metres(v) }}</option>
-            </select>
-          </div>
-        </div>
-        <div class="row">
-          <div class="field">
-            <label :for="`l${i}-matiere`">Matière</label>
-            <select :id="`l${i}-matiere`" v-model="l.materialId" class="input" :aria-invalid="bad(`lignes.${i}.materialId`)">
-              <option v-for="m in catalog.materials" :key="m.id" :value="m.id">{{ m.label }}</option>
-            </select>
-          </div>
-          <div class="field">
-            <label :for="`l${i}-coloris`">Coloris</label>
-            <span class="with-swatch">
-              <span class="swatch" :style="{ background: colorHex(l.colorId) }" aria-hidden="true" />
-              <select :id="`l${i}-coloris`" v-model="l.colorId" class="input" :aria-invalid="bad(`lignes.${i}.colorId`)">
-                <option v-for="c in catalog.colors" :key="c.id" :value="c.id">{{ c.label }}</option>
+          <div class="row">
+            <div class="field">
+              <label :for="`l${i}-modele`">Modèle</label>
+              <select :id="`l${i}-modele`" class="input" :value="l.modelId" :aria-invalid="bad(`lignes.${i}.modelId`)" @change="setModele(l, ($event.target as HTMLSelectElement).value)">
+                <option v-if="!modelOf(catalog, l.modelId)" value="" disabled>Modèle désactivé : choisissez-en un</option>
+                <option v-for="m in catalog.models" :key="m.id" :value="m.id">{{ m.nom }}</option>
               </select>
-            </span>
+            </div>
+            <div class="field">
+              <label :for="`l${i}-repere`">Repère</label>
+              <input :id="`l${i}-repere`" v-model="l.repere" class="input" maxlength="60" placeholder="Mur sud, fenêtre cuisine…" autocomplete="off" />
+            </div>
           </div>
-        </div>
+          <div v-if="standardOf(l)" class="row">
+            <div class="field">
+              <label :for="`l${i}-std-largeur`">{{ standardOf(l)!.label }} (taille standard)</label>
+              <select
+                :id="`l${i}-std-largeur`"
+                class="input"
+                :value="standardOf(l)!.largeurs.includes(l.cotes[standardOf(l)!.cote]!) ? l.cotes[standardOf(l)!.cote] : ''"
+                @change="l.cotes[standardOf(l)!.cote] = Number(($event.target as HTMLSelectElement).value)"
+              >
+                <option value="" disabled>Sur mesure ({{ l.cotes[standardOf(l)!.cote] }} mm)</option>
+                <option v-for="w in standardOf(l)!.largeurs" :key="w" :value="w">{{ w }} mm</option>
+              </select>
+            </div>
+            <div class="field">
+              <label :for="`l${i}-std-longueur`">Longueur (taille standard)</label>
+              <select
+                :id="`l${i}-std-longueur`"
+                class="input"
+                :value="standardOf(l)!.longueurs.includes(l.longueur) ? l.longueur : ''"
+                @change="l.longueur = Number(($event.target as HTMLSelectElement).value)"
+              >
+                <option value="" disabled>Sur mesure ({{ l.longueur }} mm)</option>
+                <option v-for="v in standardOf(l)!.longueurs" :key="v" :value="v">{{ metres(v) }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label :for="`l${i}-matiere`">Matière</label>
+              <select :id="`l${i}-matiere`" v-model="l.materialId" class="input" :aria-invalid="bad(`lignes.${i}.materialId`)">
+                <option v-for="m in catalog.materials" :key="m.id" :value="m.id">{{ m.label }}</option>
+              </select>
+            </div>
+            <div class="field">
+              <label :for="`l${i}-coloris`">Coloris</label>
+              <span class="with-swatch">
+                <span class="swatch" :style="{ background: colorHex(l.colorId) }" aria-hidden="true" />
+                <select :id="`l${i}-coloris`" v-model="l.colorId" class="input" :aria-invalid="bad(`lignes.${i}.colorId`)">
+                  <option v-for="c in catalog.colors" :key="c.id" :value="c.id">{{ c.label }}</option>
+                </select>
+              </span>
+            </div>
+          </div>
 
-        <div class="shape">
-          <div class="view">
-            <div class="switch" role="group" :aria-label="`Vue de la pièce ${i + 1}`">
-              <button type="button" class="chip" :aria-pressed="views[i] !== '3d'" @click="views[i] = '2d'">Profil</button>
-              <button type="button" class="chip" :aria-pressed="views[i] === '3d'" @click="views[i] = '3d'">3D</button>
+          <div class="shape">
+            <div class="view">
+              <div class="switch" role="group" :aria-label="`Vue de la pièce ${i + 1}`">
+                <button type="button" class="chip" :aria-pressed="views[i] !== '3d'" @click="views[i] = '2d'">Profil</button>
+                <button type="button" class="chip" :aria-pressed="views[i] === '3d'" @click="views[i] = '3d'">3D</button>
+              </div>
+              <div class="preview">
+                <Profile3D
+                  v-if="views[i] === '3d'"
+                  :cotes="l.cotes"
+                  :angles="l.angles"
+                  :cap="capOf(l)"
+                  :longueur="l.longueur"
+                  :epaisseur="epaisseur(l.materialId)"
+                  :color="colorHex(l.colorId)"
+                  :label="`Pièce ${i + 1} en 3D`"
+                />
+                <ProfileSketch v-else :cotes="l.cotes" :angles="l.angles" :cap="capOf(l)" :color="colorHex(l.colorId)" :label="`Profil de la pièce ${i + 1}`" />
+              </div>
             </div>
-            <div class="preview">
-              <Profile3D
-                v-if="views[i] === '3d'"
-                :cotes="l.cotes"
-                :angles="l.angles"
-                :cap="capOf(l)"
-                :longueur="l.longueur"
-                :epaisseur="epaisseur(l.materialId)"
-                :color="colorHex(l.colorId)"
-                :label="`Pièce ${i + 1} en 3D`"
-              />
-              <ProfileSketch v-else :cotes="l.cotes" :angles="l.angles" :cap="capOf(l)" :color="colorHex(l.colorId)" :label="`Profil de la pièce ${i + 1}`" />
+            <fieldset class="cotes">
+              <legend>Cotes extérieures et plis</legend>
+              <template v-for="(_, j) in l.cotes" :key="j">
+                <div class="cote">
+                  <label :for="`l${i}-cote${j}`"
+                    ><b>{{ letter(j) }}</b> {{ coteName(l, j) }}</label
+                  >
+                  <span class="unit">
+                    <input
+                      :id="`l${i}-cote${j}`"
+                      v-model.number="l.cotes[j]"
+                      class="input mono"
+                      type="number"
+                      inputmode="numeric"
+                      min="1"
+                      :aria-invalid="bad(`lignes.${i}.cotes.${j}`) || bad(`lignes.${i}.cotes`)"
+                    /><span>mm</span>
+                  </span>
+                </div>
+                <div v-if="j < l.angles.length" class="pli">
+                  <label :for="`l${i}-angle${j}`">Pli {{ j + 1 }}</label>
+                  <span class="unit">
+                    <input
+                      :id="`l${i}-angle${j}`"
+                      class="input mono"
+                      type="number"
+                      inputmode="numeric"
+                      :min="catalog.limits.pince ? 0 : catalog.limits.angleMin"
+                      :max="catalog.limits.angleMax"
+                      :value="isPince(l.angles[j]!) ? 0 : Math.abs(l.angles[j]!)"
+                      :aria-invalid="bad(`lignes.${i}.angles.${j}`) || bad(`lignes.${i}.angles`)"
+                      @input="setAngle(l, j, ($event.target as HTMLInputElement).value)"
+                    /><span>{{ isPince(l.angles[j]!) ? '° pince' : '°' }}</span>
+                  </span>
+                  <button
+                    class="btn small sens"
+                    type="button"
+                    :aria-label="`Inverser le sens du pli ${j + 1}`"
+                    :title="l.angles[j]! < 0 ? 'Pli vers le bas' : 'Pli vers le haut'"
+                    @click="l.angles[j] = -l.angles[j]!"
+                  >
+                    {{ l.angles[j]! < 0 ? '↓' : '↑' }}
+                  </button>
+                </div>
+              </template>
+              <div class="pli-tools">
+                <button class="btn small" type="button" :disabled="l.angles.length >= catalog.limits.plisMax" @click="addPli(l)"><AppIcon name="plus" :size="14" />Ajouter un pli</button>
+                <button class="btn small" type="button" :disabled="l.cotes.length < 2" @click="removePli(l)">Retirer le dernier pli</button>
+              </div>
+              <p class="muted hint">{{ angleHint }}</p>
+              <p class="muted hint">
+                Développé : <b class="mono">{{ developpe(l.cotes).toLocaleString('fr-FR') }} mm</b> sur {{ catalog.limits.largeurTole.toLocaleString('fr-FR') }} mm de tôle.
+              </p>
+            </fieldset>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label :for="`l${i}-longueur`">Longueur</label>
+              <span class="unit"
+                ><input :id="`l${i}-longueur`" v-model.number="l.longueur" class="input mono" type="number" inputmode="numeric" :aria-invalid="bad(`lignes.${i}.longueur`)" /><span>mm</span></span
+              >
+              <span class="muted hint">De {{ catalog.limits.longueurMin.toLocaleString('fr-FR') }} à {{ catalog.limits.longueurMax.toLocaleString('fr-FR') }} mm.</span>
+            </div>
+            <div class="field">
+              <label :for="`l${i}-quantite`">Quantité</label>
+              <span class="unit"
+                ><input
+                  :id="`l${i}-quantite`"
+                  class="input mono"
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  :value="l.quantite"
+                  :aria-invalid="bad(`lignes.${i}.quantite`)"
+                  @input="setQuantite(l, ($event.target as HTMLInputElement).value)"
+                /><span>pièces</span></span
+              >
             </div>
           </div>
-          <fieldset class="cotes">
-            <legend>Cotes extérieures et plis</legend>
-            <template v-for="(_, j) in l.cotes" :key="j">
-              <div class="cote">
-                <label :for="`l${i}-cote${j}`"><b>{{ letter(j) }}</b> {{ coteName(l, j) }}</label>
-                <span class="unit">
-                  <input :id="`l${i}-cote${j}`" v-model.number="l.cotes[j]" class="input mono" type="number" inputmode="numeric" min="1" :aria-invalid="bad(`lignes.${i}.cotes.${j}`) || bad(`lignes.${i}.cotes`)" /><span>mm</span>
-                </span>
-              </div>
-              <div v-if="j < l.angles.length" class="pli">
-                <label :for="`l${i}-angle${j}`">Pli {{ j + 1 }}</label>
-                <span class="unit">
-                  <input
-                    :id="`l${i}-angle${j}`"
-                    class="input mono"
-                    type="number"
-                    inputmode="numeric"
-                    :min="catalog.limits.pince ? 0 : catalog.limits.angleMin"
-                    :max="catalog.limits.angleMax"
-                    :value="isPince(l.angles[j]!) ? 0 : Math.abs(l.angles[j]!)"
-                    :aria-invalid="bad(`lignes.${i}.angles.${j}`) || bad(`lignes.${i}.angles`)"
-                    @input="setAngle(l, j, ($event.target as HTMLInputElement).value)"
-                  /><span>{{ isPince(l.angles[j]!) ? '° pince' : '°' }}</span>
-                </span>
-                <button class="btn small sens" type="button" :aria-label="`Inverser le sens du pli ${j + 1}`" :title="l.angles[j]! < 0 ? 'Pli vers le bas' : 'Pli vers le haut'" @click="l.angles[j] = -l.angles[j]!">
-                  {{ l.angles[j]! < 0 ? '↓' : '↑' }}
-                </button>
-              </div>
-            </template>
-            <div class="pli-tools">
-              <button class="btn small" type="button" :disabled="l.angles.length >= catalog.limits.plisMax" @click="addPli(l)"><AppIcon name="plus" :size="14" />Ajouter un pli</button>
-              <button class="btn small" type="button" :disabled="l.cotes.length < 2" @click="removePli(l)">Retirer le dernier pli</button>
+
+          <fieldset v-if="l.accessoires.length" class="accs">
+            <legend>Accessoires</legend>
+            <div v-for="(a, j) in l.accessoires" :key="a.accessoryId" class="acc">
+              <label :for="`l${i}-acc${j}`">
+                {{ accName(a.accessoryId)?.nom }}
+                <small class="muted">{{ eur(accName(a.accessoryId)?.prix ?? 0) }} HT {{ accName(a.accessoryId)?.unite === 'paire' ? 'la paire' : 'la pièce' }}</small>
+              </label>
+              <input :id="`l${i}-acc${j}`" v-model.number="a.quantite" class="input mono qty" type="number" inputmode="numeric" min="0" :aria-invalid="bad(`lignes.${i}.accessoires.${j}`)" />
             </div>
-            <p class="muted hint">{{ angleHint }}</p>
-            <p class="muted hint">Développé : <b class="mono">{{ developpe(l.cotes).toLocaleString('fr-FR') }} mm</b> sur {{ catalog.limits.largeurTole.toLocaleString('fr-FR') }} mm de tôle.</p>
           </fieldset>
-        </div>
+          <p v-else-if="accessoriesFor(catalog, l.modelId).length === 0" class="muted hint">Aucun accessoire pour ce modèle.</p>
 
-        <div class="row">
-          <div class="field">
-            <label :for="`l${i}-longueur`">Longueur</label>
-            <span class="unit"><input :id="`l${i}-longueur`" v-model.number="l.longueur" class="input mono" type="number" inputmode="numeric" :aria-invalid="bad(`lignes.${i}.longueur`)" /><span>mm</span></span>
-            <span class="muted hint">De {{ catalog.limits.longueurMin.toLocaleString('fr-FR') }} à {{ catalog.limits.longueurMax.toLocaleString('fr-FR') }} mm.</span>
-          </div>
-          <div class="field">
-            <label :for="`l${i}-quantite`">Quantité</label>
-            <span class="unit"><input :id="`l${i}-quantite`" class="input mono" type="number" inputmode="numeric" min="1" :value="l.quantite" :aria-invalid="bad(`lignes.${i}.quantite`)" @input="setQuantite(l, ($event.target as HTMLInputElement).value)" /><span>pièces</span></span>
-          </div>
-        </div>
-
-        <fieldset v-if="l.accessoires.length" class="accs">
-          <legend>Accessoires</legend>
-          <div v-for="(a, j) in l.accessoires" :key="a.accessoryId" class="acc">
-            <label :for="`l${i}-acc${j}`">
-              {{ accName(a.accessoryId)?.nom }}
-              <small class="muted">{{ eur(accName(a.accessoryId)?.prix ?? 0) }} HT {{ accName(a.accessoryId)?.unite === 'paire' ? 'la paire' : 'la pièce' }}</small>
-            </label>
-            <input :id="`l${i}-acc${j}`" v-model.number="a.quantite" class="input mono qty" type="number" inputmode="numeric" min="0" :aria-invalid="bad(`lignes.${i}.accessoires.${j}`)" />
-          </div>
-        </fieldset>
-        <p v-else-if="accessoriesFor(catalog, l.modelId).length === 0" class="muted hint">Aucun accessoire pour ce modèle.</p>
-
-        <p v-if="priced(i)" class="line-price">
-          <span>{{ eur(priced(i)!.prixUnitaire) }} la pièce<template v-if="priced(i)!.remiseQuantite"> · remise quantité {{ priced(i)!.remiseQuantite.toLocaleString('fr-FR') }} %</template> · mise en route {{ eur(priced(i)!.miseEnRoute) }}</span>
-          <b>{{ eur(priced(i)!.total) }} HT</b>
-        </p>
+          <p v-if="priced(i)" class="line-price">
+            <span
+              >{{ eur(priced(i)!.prixUnitaire) }} la pièce<template v-if="priced(i)!.remiseQuantite"> · remise quantité {{ priced(i)!.remiseQuantite.toLocaleString('fr-FR') }} %</template> · mise en
+              route {{ eur(priced(i)!.miseEnRoute) }}</span
+            >
+            <b>{{ eur(priced(i)!.total) }} HT</b>
+          </p>
         </div>
       </section>
 

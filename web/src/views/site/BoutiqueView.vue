@@ -27,13 +27,18 @@ const visibles = computed(() => (data.value?.produits ?? []).filter((p) => !cate
     <header class="top">
       <span class="eyebrow">Boutique</span>
       <h1>Nos articles en aluminium, prêts à commander</h1>
-      <p class="lead">Couvertines, bavettes, bandeaux et accessoires aux tailles courantes, avec leur prix. Pour une pièce à vos dimensions, <RouterLink :to="{ name: 'site-configurateur' }">utilisez le configurateur</RouterLink>.</p>
+      <p class="lead">
+        Couvertines, bavettes, bandeaux et accessoires aux tailles courantes, avec leur prix. Pour une pièce à vos dimensions,
+        <RouterLink :to="{ name: 'site-configurateur' }">utilisez le configurateur</RouterLink>.
+      </p>
     </header>
 
     <p v-if="error" class="alert bad" role="alert">{{ error }}</p>
     <p v-else-if="!data" class="muted" aria-busy="true">Chargement…</p>
     <template v-else>
-      <p v-if="!data.paiement" class="alert warn" role="status">Le paiement en ligne n’est pas encore ouvert. Vous pouvez préparer votre panier ; pour commander dès maintenant, <RouterLink :to="{ name: 'site-contact' }">contactez-nous</RouterLink>.</p>
+      <p v-if="!data.paiement" class="alert warn" role="status">
+        Le paiement en ligne n’est pas encore ouvert. Vous pouvez préparer votre panier ; pour commander dès maintenant, <RouterLink :to="{ name: 'site-contact' }">contactez-nous</RouterLink>.
+      </p>
       <div v-if="categories.length > 1" class="chips" role="group" aria-label="Catégories">
         <button type="button" class="chip" :aria-pressed="!categorie" @click="categorie = ''">Tout</button>
         <button v-for="c in categories" :key="c" type="button" class="chip" :aria-pressed="categorie === c" @click="categorie = c">{{ c }}</button>
@@ -54,7 +59,9 @@ const visibles = computed(() => (data.value?.produits ?? []).filter((p) => !cate
             <span class="body">
               <span v-if="p.categorie" class="cat">{{ p.categorie }}</span>
               <b>{{ p.nom }}</b>
-              <span class="prix">{{ p.variantes.length > 1 ? 'À partir de ' : '' }}<b>{{ eur(prixMin(p)) }}</b> TTC</span>
+              <span class="prix"
+                >{{ p.variantes.length > 1 ? 'À partir de ' : '' }}<b>{{ eur(prixMin(p)) }}</b> TTC</span
+              >
             </span>
           </RouterLink>
         </li>

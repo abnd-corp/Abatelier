@@ -103,7 +103,14 @@ export async function productionRoutes(app: FastifyInstance) {
     const options = (materialId: string | null, colorId: string | null): SheetOption[] =>
       stock
         .filter((r) => r.s.materialId === materialId && (r.s.colorId ?? null) === (colorId ?? null))
-        .map((r) => ({ id: r.s.id, largeur: r.s.largeur, longueur: r.s.longueur, chute: r.s.chute, quantite: r.s.quantite, libelle: `${materialLabel(r.m)} · ${r.c ? colorLabel(r.c) : 'brut'} · ${r.s.largeur.toLocaleString('fr-FR')} × ${r.s.longueur.toLocaleString('fr-FR')} mm${r.s.chute ? ' (chute)' : ''}` }))
+        .map((r) => ({
+          id: r.s.id,
+          largeur: r.s.largeur,
+          longueur: r.s.longueur,
+          chute: r.s.chute,
+          quantite: r.s.quantite,
+          libelle: `${materialLabel(r.m)} · ${r.c ? colorLabel(r.c) : 'brut'} · ${r.s.largeur.toLocaleString('fr-FR')} × ${r.s.longueur.toLocaleString('fr-FR')} mm${r.s.chute ? ' (chute)' : ''}`,
+        }))
     return {
       lignes: lignes.map((l) => {
         // Un article de la boutique n'a pas de pièce dessinée : rien à découper
@@ -127,11 +134,7 @@ export async function productionRoutes(app: FastifyInstance) {
       { accent: template.couleur, logo: company.logo },
     )
     await audit(req, 'order.sheet_printed', { targetType: 'order', targetId: o.id, details: { numero: o.numero, statut: o.statut } })
-    return reply
-      .header('Content-Type', 'application/pdf')
-      .header('Content-Disposition', `inline; filename="fiche-${o.numero}.pdf"`)
-      .header('Cache-Control', 'no-store')
-      .send(pdf)
+    return reply.header('Content-Type', 'application/pdf').header('Content-Disposition', `inline; filename="fiche-${o.numero}.pdf"`).header('Cache-Control', 'no-store').send(pdf)
   })
 
   app.post('/:id/status', async (req, reply) => {

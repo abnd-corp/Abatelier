@@ -60,7 +60,10 @@ export const siren = (siret: string | null | undefined) => (siret ?? '').replace
 
 /** Sépare « rue… \n 42490 Fraisses » en rue, code postal et ville. */
 export function splitAddress(adresse: string) {
-  const lines = adresse.split('\n').map((l) => l.trim()).filter(Boolean)
+  const lines = adresse
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
   const last = lines.at(-1) ?? ''
   const m = /^(\d{5})\s+(.+)$/.exec(last)
   return { rue: (m ? lines.slice(0, -1) : lines).join(', '), codePostal: m?.[1] ?? '', ville: m?.[2] ?? '' }
@@ -133,9 +136,10 @@ export function buildFacturxXml(i: FacturxInput): string {
         <ram:PayeePartyCreditorFinancialAccount><ram:IBANID>${esc(seller.iban.replace(/\s/g, ''))}</ram:IBANID></ram:PayeePartyCreditorFinancialAccount>${seller.bic ? `\n        <ram:PayeeSpecifiedCreditorFinancialInstitution><ram:BICID>${esc(seller.bic)}</ram:BICID></ram:PayeeSpecifiedCreditorFinancialInstitution>` : ''}
       </ram:SpecifiedTradeSettlementPaymentMeans>\n`
     : ''
-  const terms = i.type === 'facture' && (i.echeance || i.conditions)
-    ? `      <ram:SpecifiedTradePaymentTerms>${i.conditions ? `<ram:Description>${esc(i.conditions)}</ram:Description>` : ''}${i.echeance ? `<ram:DueDateDateTime>${date102(i.echeance)}</ram:DueDateDateTime>` : ''}</ram:SpecifiedTradePaymentTerms>\n`
-    : ''
+  const terms =
+    i.type === 'facture' && (i.echeance || i.conditions)
+      ? `      <ram:SpecifiedTradePaymentTerms>${i.conditions ? `<ram:Description>${esc(i.conditions)}</ram:Description>` : ''}${i.echeance ? `<ram:DueDateDateTime>${date102(i.echeance)}</ram:DueDateDateTime>` : ''}</ram:SpecifiedTradePaymentTerms>\n`
+      : ''
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">

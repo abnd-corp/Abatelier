@@ -247,7 +247,10 @@ describe('Date de sortie', () => {
     await admin.patch(`/api/employees/${id}`, { dateSortie: shift(5) })
     expect((await admin.get(`/api/employees/${id}`)).json().employee.account.disabledAt).toBeNull()
     // Le temps passe : la date est atteinte, la tâche horaire désactive le compte
-    await db.update(employees).set({ dateSortie: shift(0) }).where(eq(employees.id, id))
+    await db
+      .update(employees)
+      .set({ dateSortie: shift(0) })
+      .where(eq(employees.id, id))
     expect(await applyDepartures()).toBe(1)
     expect((await admin.get(`/api/employees/${id}`)).json().employee.account.disabledAt).not.toBeNull()
     expect(await applyDepartures()).toBe(0)
@@ -260,7 +263,10 @@ describe('Date de sortie', () => {
 
   it('deux applications simultanées ne désactivent et ne notent le compte qu’une fois', async () => {
     const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })).json()
-    await db.update(employees).set({ dateSortie: shift(0) }).where(eq(employees.id, id))
+    await db
+      .update(employees)
+      .set({ dateSortie: shift(0) })
+      .where(eq(employees.id, id))
     const counts = await Promise.all([applyDepartures(), applyDepartures(), applyDepartures()])
     expect(counts.reduce((a, b) => a + b, 0)).toBe(1)
     const entries = await db.select().from(auditLog).where(eq(auditLog.action, 'user.disabled'))

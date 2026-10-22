@@ -30,7 +30,10 @@ const LEGAL = [
 ] as const
 
 onMounted(() => loadSite())
-watch(() => route.fullPath, () => (open.value = false))
+watch(
+  () => route.fullPath,
+  () => (open.value = false),
+)
 watch(site, (d) => d && applyJsonLd(d.entreprise, splitAddress(d.entreprise.adresse)), { immediate: true })
 const onKey = (ev: KeyboardEvent) => ev.key === 'Escape' && (open.value = false)
 onMounted(() => window.addEventListener('keydown', onKey))
@@ -74,12 +77,19 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <section aria-labelledby="f-adr">
           <h2 id="f-adr">Nous trouver</h2>
           <p v-if="e">
-            <b>{{ e.nom }}</b><br />
+            <b>{{ e.nom }}</b
+            ><br />
             <template v-for="l in address" :key="l">{{ l }}<br /></template>
           </p>
-          <p v-if="e?.telephone"><AppIcon name="phone" :size="15" /> <a :href="`tel:${telHref(e.telephone)}`">{{ e.telephone }}</a></p>
-          <p v-if="e?.email"><AppIcon name="mail" :size="15" /> <a :href="`mailto:${e.email}`">{{ e.email }}</a></p>
-          <p v-if="e"><a :href="e.itineraire" target="_blank" rel="noopener noreferrer"><AppIcon name="map-pin" :size="15" /> Itinéraire</a></p>
+          <p v-if="e?.telephone">
+            <AppIcon name="phone" :size="15" /> <a :href="`tel:${telHref(e.telephone)}`">{{ e.telephone }}</a>
+          </p>
+          <p v-if="e?.email">
+            <AppIcon name="mail" :size="15" /> <a :href="`mailto:${e.email}`">{{ e.email }}</a>
+          </p>
+          <p v-if="e">
+            <a :href="e.itineraire" target="_blank" rel="noopener noreferrer"><AppIcon name="map-pin" :size="15" /> Itinéraire</a>
+          </p>
         </section>
         <section aria-labelledby="f-h">
           <h2 id="f-h">Horaires</h2>
@@ -88,11 +98,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <section aria-labelledby="f-l">
           <h2 id="f-l">Informations</h2>
           <ul>
-            <li v-for="l in LEGAL" :key="l.name"><RouterLink :to="{ name: l.name }">{{ l.label }}</RouterLink></li>
+            <li v-for="l in LEGAL" :key="l.name">
+              <RouterLink :to="{ name: l.name }">{{ l.label }}</RouterLink>
+            </li>
           </ul>
         </section>
       </div>
-      <p class="s-wrap s-copy">© {{ new Date().getFullYear() }} {{ e?.nom ?? 'Alu Pliage Service' }}<span v-if="e?.siret"> · SIRET {{ e.siret }}</span></p>
+      <p class="s-wrap s-copy">
+        © {{ new Date().getFullYear() }} {{ e?.nom ?? 'Alu Pliage Service' }}<span v-if="e?.siret"> · SIRET {{ e.siret }}</span>
+      </p>
     </footer>
   </div>
 </template>

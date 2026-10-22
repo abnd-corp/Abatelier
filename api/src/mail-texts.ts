@@ -42,7 +42,9 @@ export function defaultDocumentMail(doc: Doc, client: Pick<Client, 'prenom' | 'n
   const name = [client.prenom, client.nom].filter(Boolean).join(' ')
   const hello = name ? `Bonjour ${name},` : 'Bonjour,'
   const montant = eur(Math.abs(doc.ttc))
-  const virement = company.iban ? `\n\nPour un règlement par virement :\nIBAN : ${company.iban}${company.bic ? `\nBIC : ${company.bic}` : ''}\nMerci d’indiquer le numéro ${doc.numero} en référence.` : ''
+  const virement = company.iban
+    ? `\n\nPour un règlement par virement :\nIBAN : ${company.iban}${company.bic ? `\nBIC : ${company.bic}` : ''}\nMerci d’indiquer le numéro ${doc.numero} en référence.`
+    : ''
   const body = {
     devis: `Veuillez trouver ci-joint notre devis ${doc.numero} d’un montant de ${montant} TTC${doc.echeance ? `, valable jusqu’au ${day(doc.echeance)}` : ''}.\n\nPour l’accepter, répondez simplement à ce message. Nous lançons la fabrication dès votre accord.`,
     facture: `Veuillez trouver ci-joint notre facture ${doc.numero} d’un montant de ${montant} TTC${doc.echeance ? `, à régler avant le ${day(doc.echeance)}` : ''}.${virement}`,
@@ -77,6 +79,10 @@ export function espaceAnswerAlert(r: { client: string; devis: string; commande: 
   const verbe = r.reponse === 'accepte' ? 'accepté' : 'refusé'
   return {
     subject: `Devis ${r.devis} ${verbe} par ${r.client}`,
-    text: [`${r.client} a ${verbe} le devis ${r.devis} (${eur(r.ttc)} TTC) depuis son espace client.`, '', r.reponse === 'accepte' ? `La commande ${r.commande} attend votre validation : ${link}` : `Commande concernée : ${r.commande} : ${link}`].join('\n'),
+    text: [
+      `${r.client} a ${verbe} le devis ${r.devis} (${eur(r.ttc)} TTC) depuis son espace client.`,
+      '',
+      r.reponse === 'accepte' ? `La commande ${r.commande} attend votre validation : ${link}` : `Commande concernée : ${r.commande} : ${link}`,
+    ].join('\n'),
   }
 }

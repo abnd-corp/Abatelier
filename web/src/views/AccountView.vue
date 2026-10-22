@@ -107,11 +107,11 @@ onMounted(loadSessions)
         <PasswordInput id="pw-next" v-model="next" autocomplete="new-password" describedby="pw-rules" :invalid="pwError?.field === 'next'" />
         <div class="meter" :data-score="check.score" aria-hidden="true"><span v-for="i in 4" :key="i" :class="{ on: next && i <= Math.max(check.score, 1) }" /></div>
         <div id="pw-rules" class="rules">
-          <span class="strength">Robustesse : <b>{{ next ? check.label : '—' }}</b></span>
+          <span class="strength"
+            >Robustesse : <b>{{ next ? check.label : '—' }}</b></span
+          >
           <ul>
-            <li v-for="r in check.rules" :key="r.label" :class="{ ok: r.ok }">
-              <AppIcon :name="r.ok ? 'check' : 'plus'" :size="14" :class="{ x: !r.ok }" />{{ r.label }}
-            </li>
+            <li v-for="r in check.rules" :key="r.label" :class="{ ok: r.ok }"><AppIcon :name="r.ok ? 'check' : 'plus'" :size="14" :class="{ x: !r.ok }" />{{ r.label }}</li>
           </ul>
           <span class="muted tip">Astuce : une phrase de 4 ou 5 mots est facile à retenir et très robuste.</span>
         </div>

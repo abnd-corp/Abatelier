@@ -30,7 +30,7 @@ test.describe('Stock de feuilles', () => {
     await expect(atelier.getByLabel('Matière et épaisseur')).toBeVisible()
 
     // Saisie : erreur claire, puis une feuille entière et une chute (tailles propres à ce test, pour ne pas gêner les autres)
-    const l = 1240 + (uid.charCodeAt(uid.length - 1) % 9)
+    const l = 200 + Math.floor(Math.random() * 2700)
     await atelier.getByLabel('Matière et épaisseur').selectOption(matiere.id)
     await atelier.getByLabel('Coloris').selectOption(coloris.id)
     await atelier.getByLabel('Largeur (mm)').fill('10')
@@ -89,7 +89,11 @@ test.describe('Stock de feuilles', () => {
     const client = await (await admin.request.post('/api/clients', { data: { type: 'particulier', prenom: 'Stock', nom: `Test ${uid.slice(-5)}` }, headers: h })).json()
     const order = await (
       await admin.request.post('/api/orders', {
-        data: { clientId: client.id, lignes: [{ modelId: m.id, materialId: matiere.id, colorId: coloris.id, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 4, accessoires: [] }], livraison: { mode: 'retrait' } },
+        data: {
+          clientId: client.id,
+          lignes: [{ modelId: m.id, materialId: matiere.id, colorId: coloris.id, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 4, accessoires: [] }],
+          livraison: { mode: 'retrait' },
+        },
         headers: h,
       })
     ).json()

@@ -163,14 +163,7 @@ async function logout() {
           <AppIcon name="logout" :size="19" />
           <span class="label">Se déconnecter</span>
         </button>
-        <button
-          class="item collapse-btn"
-          type="button"
-          :aria-expanded="!collapsed"
-          aria-controls="menu"
-          :title="collapsed ? 'Agrandir le menu' : undefined"
-          @click="collapsed = !collapsed"
-        >
+        <button class="item collapse-btn" type="button" :aria-expanded="!collapsed" aria-controls="menu" :title="collapsed ? 'Agrandir le menu' : undefined" @click="collapsed = !collapsed">
           <AppIcon :name="collapsed ? 'chevrons-right' : 'chevrons-left'" :size="19" />
           <span class="label">{{ collapsed ? 'Agrandir le menu' : 'Réduire le menu' }}</span>
         </button>

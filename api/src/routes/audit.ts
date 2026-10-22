@@ -18,12 +18,7 @@ const TYPE_FILTERS: Record<string, SQL | undefined> = {
   all: undefined,
   login: or(like(auditLog.action, 'login.%'), eq(auditLog.action, 'logout')),
   failures: inArray(auditLog.action, ['login.failed', 'login.locked', 'login.disabled', 'password.change_failed']),
-  accounts: or(
-    like(auditLog.action, 'user.%'),
-    like(auditLog.action, 'employee.%'),
-    like(auditLog.action, 'password.%'),
-    like(auditLog.action, 'session.%'),
-  ),
+  accounts: or(like(auditLog.action, 'user.%'), like(auditLog.action, 'employee.%'), like(auditLog.action, 'password.%'), like(auditLog.action, 'session.%')),
   catalog: like(auditLog.action, 'catalog.%'),
   documents: or(like(auditLog.action, 'documents.%'), like(auditLog.action, 'billing.%')),
   clients: like(auditLog.action, 'client.%'),
@@ -68,9 +63,7 @@ export async function auditRoutes(app: FastifyInstance) {
 
     // Nom actuel des comptes visés (ex. « a désactivé Paul »)
     const targetIds = [...new Set(page.filter((r) => r.targetType === 'user' && r.targetId).map((r) => r.targetId!))]
-    const targets = targetIds.length
-      ? await db.select({ id: users.id, nom: users.nom }).from(users).where(inArray(users.id, targetIds))
-      : []
+    const targets = targetIds.length ? await db.select({ id: users.id, nom: users.nom }).from(users).where(inArray(users.id, targetIds)) : []
     const targetName = new Map(targets.map((t) => [t.id, t.nom]))
 
     return {

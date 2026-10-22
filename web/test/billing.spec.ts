@@ -212,9 +212,30 @@ describe('Fiche d’un document', () => {
 describe('Devis et factures sur la commande', () => {
   const ORDER = {
     order: {
-      brut: 400, tauxRemisePro: 0, remisePro: 0, complementMinimum: 0, livraisonPrix: 0, ht: 400, tauxTva: 20, tva: 80, ttc: 480, delaiJours: 5,
-      id: 'o1', numero: 'C-2026-0001', statut: 'validee', statutLabel: 'Validée', next: ['fabrication', 'annulee'], clientId: 'c1',
-      livraisonMode: 'retrait', livraisonAdresse: null, livraisonCodePostal: null, livraisonVille: null, distanceKm: null, notes: null, datePrevue: '2026-10-27', createdAt: '2026-10-19T08:00:00Z',
+      brut: 400,
+      tauxRemisePro: 0,
+      remisePro: 0,
+      complementMinimum: 0,
+      livraisonPrix: 0,
+      ht: 400,
+      tauxTva: 20,
+      tva: 80,
+      ttc: 480,
+      delaiJours: 5,
+      id: 'o1',
+      numero: 'C-2026-0001',
+      statut: 'validee',
+      statutLabel: 'Validée',
+      next: ['fabrication', 'annulee'],
+      clientId: 'c1',
+      livraisonMode: 'retrait',
+      livraisonAdresse: null,
+      livraisonCodePostal: null,
+      livraisonVille: null,
+      distanceKm: null,
+      notes: null,
+      datePrevue: '2026-10-27',
+      createdAt: '2026-10-19T08:00:00Z',
     },
     client: { id: 'c1', nom: 'Jean Dupont', type: 'particulier', telephone: null, email: null },
     lignes: [],
@@ -256,7 +277,18 @@ describe('Devis et factures sur la commande', () => {
 
 describe('Journal', () => {
   const entry = (action: string, details: Record<string, unknown>): AuditEntry => ({
-    id: 1, at: '2026-10-20T08:00:00Z', action, identifiant: 'chef', nom: 'Le Chef', userId: 'u1', targetType: 'billing', targetId: 'f1', targetName: null, ip: null, device: '', details,
+    id: 1,
+    at: '2026-10-20T08:00:00Z',
+    action,
+    identifiant: 'chef',
+    nom: 'Le Chef',
+    userId: 'u1',
+    targetType: 'billing',
+    targetId: 'f1',
+    targetName: null,
+    ip: null,
+    device: '',
+    details,
   })
   it('décrit les devis, factures, paiements et avoirs', () => {
     expect(norm(describeEntry(entry('billing.facture_created', { numero: 'F-2026-0001', client: 'Jean Dupont', commande: 'C-2026-0001', ttc: 480 })).text)).toBe(
@@ -265,8 +297,12 @@ describe('Journal', () => {
     expect(norm(describeEntry(entry('billing.paid', { numero: 'F-2026-0001', ttc: 480, mode: 'cheque', date: '2026-10-20' })).text)).toBe(
       'A enregistré le paiement de la facture F-2026-0001 (480,00 €, chèque, le 20/10/2026)',
     )
-    expect(describeEntry(entry('billing.exported', { type: 'ventes', du: '2026-01-01', au: '2026-10-20', lignes: 12 })).text).toBe('A exporté les ventes (factures et avoirs) du 01/01/2026 au 20/10/2026 pour le comptable (12 lignes)')
-    expect(describeEntry(entry('billing.exported', { type: 'encaissements', du: '2026-10-01', au: '2026-10-31', lignes: 1 })).text).toBe('A exporté les encaissements du 01/10/2026 au 31/10/2026 pour le comptable (1 ligne)')
+    expect(describeEntry(entry('billing.exported', { type: 'ventes', du: '2026-01-01', au: '2026-10-20', lignes: 12 })).text).toBe(
+      'A exporté les ventes (factures et avoirs) du 01/01/2026 au 20/10/2026 pour le comptable (12 lignes)',
+    )
+    expect(describeEntry(entry('billing.exported', { type: 'encaissements', du: '2026-10-01', au: '2026-10-31', lignes: 1 })).text).toBe(
+      'A exporté les encaissements du 01/10/2026 au 31/10/2026 pour le comptable (1 ligne)',
+    )
     expect(describeEntry(entry('billing.avoir_created', { numero: 'A-2026-0001', facture: 'F-2026-0001', client: 'Jean Dupont', motif: 'Erreur' }))).toEqual({
       text: 'A émis l’avoir A-2026-0001 qui annule la facture F-2026-0001 de Jean Dupont : Erreur',
       tone: 'bad',
@@ -311,13 +347,18 @@ describe('Export pour le comptable', () => {
     restore()
     expect(calls.some((c) => c.path.startsWith('/billing/export?type=encaissements'))).toBe(true)
     const before = (wrapper.get('#exp-du').element as HTMLInputElement).value
-    await wrapper.findAll('.presets .chip').find((b) => b.text() === 'Mois précédent')!.trigger('click')
+    await wrapper
+      .findAll('.presets .chip')
+      .find((b) => b.text() === 'Mois précédent')!
+      .trigger('click')
     expect((wrapper.get('#exp-du').element as HTMLInputElement).value).not.toBe(before)
     expect((wrapper.get('#exp-du').element as HTMLInputElement).value).toMatch(/-01$/)
   })
 
   it('affiche l’erreur du serveur sans télécharger', async () => {
-    const { wrapper, clicks, restore } = await open({ 'GET /billing/export?type=ventes&du=2026-12-31&au=2026-01-01': [400, { error: 'La date de fin doit être après la date de début.', field: 'au' }] })
+    const { wrapper, clicks, restore } = await open({
+      'GET /billing/export?type=ventes&du=2026-12-31&au=2026-01-01': [400, { error: 'La date de fin doit être après la date de début.', field: 'au' }],
+    })
     await wrapper.get('#exp-du').setValue('2026-12-31')
     await wrapper.get('#exp-au').setValue('2026-01-01')
     await wrapper.get('.export form').trigger('submit')
@@ -347,7 +388,10 @@ describe('Envoi par e-mail', () => {
     await wrapper.get('#mail-message').setValue('Bonjour, voici la facture à régler.')
     await wrapper.get('form.inline-form').trigger('submit')
     await flushPromises()
-    expect(calls.find((c) => c.method === 'POST')).toMatchObject({ path: '/billing/f1/email', body: { to: 'jean@example.com, compta@example.com', sujet: PROPOSAL.sujet, message: 'Bonjour, voici la facture à régler.' } })
+    expect(calls.find((c) => c.method === 'POST')).toMatchObject({
+      path: '/billing/f1/email',
+      body: { to: 'jean@example.com, compta@example.com', sujet: PROPOSAL.sujet, message: 'Bonjour, voici la facture à régler.' },
+    })
     expect(wrapper.text()).toContain('E-mail envoyé avec le PDF en pièce jointe.')
     expect(wrapper.find('form.inline-form').exists()).toBe(false)
   })
@@ -383,8 +427,23 @@ describe('Envoi par e-mail', () => {
   })
 
   it('décrit l’envoi et l’essai dans le journal', () => {
-    const e = (action: string, details: Record<string, unknown>): AuditEntry => ({ id: 1, at: '2026-10-20T08:00:00Z', action, identifiant: 'chef', nom: 'Le Chef', userId: 'u1', targetType: 'billing', targetId: 'f1', targetName: null, ip: null, device: '', details })
-    expect(describeEntry(e('billing.emailed', { numero: 'F-2026-0001', client: 'Jean Dupont', destinataires: 2 })).text).toBe('A envoyé par e-mail la facture F-2026-0001 à Jean Dupont (2 destinataires)')
+    const e = (action: string, details: Record<string, unknown>): AuditEntry => ({
+      id: 1,
+      at: '2026-10-20T08:00:00Z',
+      action,
+      identifiant: 'chef',
+      nom: 'Le Chef',
+      userId: 'u1',
+      targetType: 'billing',
+      targetId: 'f1',
+      targetName: null,
+      ip: null,
+      device: '',
+      details,
+    })
+    expect(describeEntry(e('billing.emailed', { numero: 'F-2026-0001', client: 'Jean Dupont', destinataires: 2 })).text).toBe(
+      'A envoyé par e-mail la facture F-2026-0001 à Jean Dupont (2 destinataires)',
+    )
     expect(describeEntry(e('billing.emailed', { numero: 'D-2026-0001', client: 'Jean Dupont', destinataires: 1 })).text).toBe('A envoyé par e-mail le devis D-2026-0001 à Jean Dupont (1 destinataire)')
     expect(describeEntry(e('mail.test', {})).text).toMatch(/essai/)
   })

@@ -52,7 +52,16 @@ async function add() {
   try {
     await api('/stock/feuilles', {
       method: 'POST',
-      body: { materialId: draft.materialId, colorId: draft.colorId || null, largeur: num(draft.largeur), longueur: num(draft.longueur), quantite: num(draft.quantite), seuil: num(draft.seuil), chute: draft.chute, note: draft.note },
+      body: {
+        materialId: draft.materialId,
+        colorId: draft.colorId || null,
+        largeur: num(draft.largeur),
+        longueur: num(draft.longueur),
+        quantite: num(draft.quantite),
+        seuil: num(draft.seuil),
+        chute: draft.chute,
+        note: draft.note,
+      },
     })
     info.value = 'Feuille ajoutée au stock.'
     Object.assign(draft, { quantite: '0', seuil: '0', note: '' })
@@ -72,7 +81,13 @@ const open = ref<string | null>(null)
 const move = reactive({ mode: 'entree' as Mode, valeur: '', motif: 'reception' as Motif, note: '', erreur: '', busy: false })
 function ouvrir(f: Feuille, mode: Mode) {
   open.value = open.value === f.id && move.mode === mode ? null : f.id
-  Object.assign(move, { mode, valeur: mode === 'inventaire' ? String(f.quantite) : '', motif: mode === 'entree' ? 'reception' : mode === 'sortie' ? 'fabrication' : 'inventaire', note: '', erreur: '' })
+  Object.assign(move, {
+    mode,
+    valeur: mode === 'inventaire' ? String(f.quantite) : '',
+    motif: mode === 'entree' ? 'reception' : mode === 'sortie' ? 'fabrication' : 'inventaire',
+    note: '',
+    erreur: '',
+  })
 }
 const motifs = computed(() => (move.mode === 'entree' ? MOTIFS_ENTREE : move.mode === 'sortie' ? MOTIFS_SORTIE : (['inventaire'] as Motif[])))
 
@@ -145,23 +160,46 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
   <p v-if="info" class="alert ok" role="status">{{ info }}</p>
 
   <dl class="totaux" aria-label="Résumé du stock">
-    <div><dt>Références</dt><dd>{{ fmt(totaux.references) }}</dd></div>
-    <div><dt>Feuilles</dt><dd>{{ fmt(totaux.feuilles) }}</dd></div>
-    <div><dt>Surface</dt><dd>{{ fmt(totaux.m2) }} m²</dd></div>
-    <div :class="{ alerte: totaux.bas }"><dt>Stock bas</dt><dd>{{ totaux.bas }}</dd></div>
+    <div>
+      <dt>Références</dt>
+      <dd>{{ fmt(totaux.references) }}</dd>
+    </div>
+    <div>
+      <dt>Feuilles</dt>
+      <dd>{{ fmt(totaux.feuilles) }}</dd>
+    </div>
+    <div>
+      <dt>Surface</dt>
+      <dd>{{ fmt(totaux.m2) }} m²</dd>
+    </div>
+    <div :class="{ alerte: totaux.bas }">
+      <dt>Stock bas</dt>
+      <dd>{{ totaux.bas }}</dd>
+    </div>
   </dl>
 
   <div class="bar">
-    <button class="btn primary" type="button" aria-controls="ajout" :aria-expanded="ajoutOuvert" @click="ajoutOuvert = !ajoutOuvert"><AppIcon :name="ajoutOuvert ? 'x' : 'plus'" :size="16" /> {{ ajoutOuvert ? 'Fermer le formulaire' : 'Ajouter une feuille' }}</button>
+    <button class="btn primary" type="button" aria-controls="ajout" :aria-expanded="ajoutOuvert" @click="ajoutOuvert = !ajoutOuvert">
+      <AppIcon :name="ajoutOuvert ? 'x' : 'plus'" :size="16" /> {{ ajoutOuvert ? 'Fermer le formulaire' : 'Ajouter une feuille' }}
+    </button>
   </div>
 
   <section v-if="ajoutOuvert" id="ajout" class="card new" aria-labelledby="ajout-titre">
     <h2 id="ajout-titre">Ajouter une feuille</h2>
-    <p class="muted hint">Une ligne par matière, épaisseur, coloris et format. La matière et son épaisseur viennent du catalogue de la direction ; si elle manque, demandez-lui de l’ajouter dans « Tarifs et catalogue ».</p>
+    <p class="muted hint">
+      Une ligne par matière, épaisseur, coloris et format. La matière et son épaisseur viennent du catalogue de la direction ; si elle manque, demandez-lui de l’ajouter dans « Tarifs et catalogue ».
+    </p>
     <form class="grid" novalidate @submit.prevent="add">
       <div class="field">
         <label for="s-matiere">Matière et épaisseur</label>
-        <select id="s-matiere" v-model="draft.materialId" class="input" :class="{ invalid: errors.materialId }" :aria-invalid="!!errors.materialId" :aria-describedby="errors.materialId ? 's-matiere-e' : undefined">
+        <select
+          id="s-matiere"
+          v-model="draft.materialId"
+          class="input"
+          :class="{ invalid: errors.materialId }"
+          :aria-invalid="!!errors.materialId"
+          :aria-describedby="errors.materialId ? 's-matiere-e' : undefined"
+        >
           <option value="" disabled>Choisir…</option>
           <option v-for="m in options.materials" :key="m.id" :value="m.id">{{ m.label }}</option>
         </select>
@@ -176,12 +214,28 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
       </div>
       <div class="field">
         <label for="s-largeur">Largeur (mm)</label>
-        <input id="s-largeur" v-model="draft.largeur" class="input mono" inputmode="numeric" :class="{ invalid: errors.largeur }" :aria-invalid="!!errors.largeur" :aria-describedby="errors.largeur ? 's-largeur-e' : undefined" />
+        <input
+          id="s-largeur"
+          v-model="draft.largeur"
+          class="input mono"
+          inputmode="numeric"
+          :class="{ invalid: errors.largeur }"
+          :aria-invalid="!!errors.largeur"
+          :aria-describedby="errors.largeur ? 's-largeur-e' : undefined"
+        />
         <span v-if="errors.largeur" id="s-largeur-e" class="field-error">{{ errors.largeur }}</span>
       </div>
       <div class="field">
         <label for="s-longueur">Longueur (mm)</label>
-        <input id="s-longueur" v-model="draft.longueur" class="input mono" inputmode="numeric" :class="{ invalid: errors.longueur }" :aria-invalid="!!errors.longueur" :aria-describedby="errors.longueur ? 's-longueur-e' : undefined" />
+        <input
+          id="s-longueur"
+          v-model="draft.longueur"
+          class="input mono"
+          inputmode="numeric"
+          :class="{ invalid: errors.longueur }"
+          :aria-invalid="!!errors.longueur"
+          :aria-describedby="errors.longueur ? 's-longueur-e' : undefined"
+        />
         <span v-if="errors.longueur" id="s-longueur-e" class="field-error">{{ errors.longueur }}</span>
       </div>
       <div class="field">
@@ -199,7 +253,9 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
         <input id="s-note" v-model="draft.note" class="input" maxlength="300" autocomplete="off" />
       </div>
       <label class="check"><input v-model="draft.chute" type="checkbox" /><span>C’est une chute (morceau récupéré d’une feuille entamée)</span></label>
-      <p class="actions"><button class="btn primary" type="submit" :disabled="adding"><AppIcon name="plus" :size="16" /> Ajouter au stock</button></p>
+      <p class="actions">
+        <button class="btn primary" type="submit" :disabled="adding"><AppIcon name="plus" :size="16" /> Ajouter au stock</button>
+      </p>
     </form>
   </section>
 
@@ -216,7 +272,9 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
     </div>
     <div v-else class="table-wrap">
       <table class="table" :aria-busy="loading">
-        <caption class="sr-only">Feuilles en stock</caption>
+        <caption class="sr-only">
+          Feuilles en stock
+        </caption>
         <thead>
           <tr>
             <th>Matière</th>
@@ -231,21 +289,37 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
         <tbody>
           <template v-for="f in visibles" :key="f.id">
             <tr>
-              <td>{{ f.matiere }} <span class="sub">{{ fmt(f.epaisseur) }} mm</span></td>
               <td>
-                <span v-if="f.coloris" class="with-swatch"><span class="swatch" :style="{ background: f.hex ?? undefined }" aria-hidden="true" /><span>{{ f.coloris }}<span class="sub">{{ f.reference }}</span></span></span>
+                {{ f.matiere }} <span class="sub">{{ fmt(f.epaisseur) }} mm</span>
+              </td>
+              <td>
+                <span v-if="f.coloris" class="with-swatch"
+                  ><span class="swatch" :style="{ background: f.hex ?? undefined }" aria-hidden="true" /><span
+                    >{{ f.coloris }}<span class="sub">{{ f.reference }}</span></span
+                  ></span
+                >
                 <span v-else class="muted">Brut</span>
               </td>
               <td class="mono fmt">{{ fmt(f.largeur) }} × {{ fmt(f.longueur) }} mm <span v-if="f.chute" class="pill accent">Chute</span></td>
-              <td class="n"><b class="mono">{{ f.quantite }}</b> <span v-if="f.bas" class="pill warn">Stock bas</span></td>
+              <td class="n">
+                <b class="mono">{{ f.quantite }}</b> <span v-if="f.bas" class="pill warn">Stock bas</span>
+              </td>
               <td class="hide-sm n"><input class="input compact seuil" inputmode="numeric" :aria-label="`Alerte stock bas de ${f.libelle}`" :value="f.seuil" @change="onSeuil(f, $event)" /></td>
               <td class="hide-sm"><input class="input compact note" :aria-label="`Note de ${f.libelle}`" :value="f.note" maxlength="300" @change="onNote(f, $event)" /></td>
               <td>
                 <span class="row-actions">
-                  <button class="btn small" type="button" :aria-expanded="open === f.id && move.mode === 'entree'" :aria-label="`Entrée de feuilles : ${f.libelle}`" @click="ouvrir(f, 'entree')">Entrée</button>
-                  <button class="btn small" type="button" :aria-expanded="open === f.id && move.mode === 'sortie'" :aria-label="`Sortie de feuilles : ${f.libelle}`" @click="ouvrir(f, 'sortie')">Sortie</button>
-                  <button class="btn small" type="button" :aria-expanded="open === f.id && move.mode === 'inventaire'" :aria-label="`Inventaire : ${f.libelle}`" @click="ouvrir(f, 'inventaire')">Compter</button>
-                  <button v-if="!f.quantite" class="btn small danger" type="button" :aria-label="`Supprimer la référence ${f.libelle}`" @click="supprimer(f)"><AppIcon name="trash" :size="14" /></button>
+                  <button class="btn small" type="button" :aria-expanded="open === f.id && move.mode === 'entree'" :aria-label="`Entrée de feuilles : ${f.libelle}`" @click="ouvrir(f, 'entree')">
+                    Entrée
+                  </button>
+                  <button class="btn small" type="button" :aria-expanded="open === f.id && move.mode === 'sortie'" :aria-label="`Sortie de feuilles : ${f.libelle}`" @click="ouvrir(f, 'sortie')">
+                    Sortie
+                  </button>
+                  <button class="btn small" type="button" :aria-expanded="open === f.id && move.mode === 'inventaire'" :aria-label="`Inventaire : ${f.libelle}`" @click="ouvrir(f, 'inventaire')">
+                    Compter
+                  </button>
+                  <button v-if="!f.quantite" class="btn small danger" type="button" :aria-label="`Supprimer la référence ${f.libelle}`" @click="supprimer(f)">
+                    <AppIcon name="trash" :size="14" />
+                  </button>
                 </span>
               </td>
             </tr>
@@ -258,7 +332,9 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
                   </div>
                   <div v-if="move.mode !== 'inventaire'" class="field">
                     <label :for="`mm-${f.id}`">Motif</label>
-                    <select :id="`mm-${f.id}`" v-model="move.motif" class="input"><option v-for="m in motifs" :key="m" :value="m">{{ MOTIFS[m] }}</option></select>
+                    <select :id="`mm-${f.id}`" v-model="move.motif" class="input">
+                      <option v-for="m in motifs" :key="m" :value="m">{{ MOTIFS[m] }}</option>
+                    </select>
                   </div>
                   <div class="field grow">
                     <label :for="`mn-${f.id}`">Note (n° de commande, fournisseur…)</label>
@@ -277,12 +353,23 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
   </section>
 
   <section v-if="mouvements.length" class="card hist" aria-labelledby="hist">
-    <h2 id="hist"><button class="fold" type="button" aria-controls="hist-liste" :aria-expanded="histOuvert" @click="histOuvert = !histOuvert"><AppIcon :name="histOuvert ? 'chevron-up' : 'chevron-down'" :size="16" /> Derniers mouvements <span class="muted">({{ mouvements.length }})</span></button></h2>
+    <h2 id="hist">
+      <button class="fold" type="button" aria-controls="hist-liste" :aria-expanded="histOuvert" @click="histOuvert = !histOuvert">
+        <AppIcon :name="histOuvert ? 'chevron-up' : 'chevron-down'" :size="16" /> Derniers mouvements <span class="muted">({{ mouvements.length }})</span>
+      </button>
+    </h2>
     <ul v-if="histOuvert" id="hist-liste">
       <li v-for="m in mouvements" :key="m.id">
         <b class="mono delta" :class="m.delta > 0 ? 'plus' : 'moins'">{{ m.delta > 0 ? '+' : '−' }}{{ Math.abs(m.delta) }}</b>
-        <span>{{ m.libelle }}<span class="sub">{{ MOTIFS[m.motif] }}<template v-if="m.note"> · {{ m.note }}</template> · reste {{ m.apres }}</span></span>
-        <span class="muted when">{{ jour(m.at) }} {{ heure(m.at) }}<template v-if="m.par"> · {{ m.par }}</template></span>
+        <span
+          >{{ m.libelle
+          }}<span class="sub"
+            >{{ MOTIFS[m.motif] }}<template v-if="m.note"> · {{ m.note }}</template> · reste {{ m.apres }}</span
+          ></span
+        >
+        <span class="muted when"
+          >{{ jour(m.at) }} {{ heure(m.at) }}<template v-if="m.par"> · {{ m.par }}</template></span
+        >
       </li>
     </ul>
   </section>

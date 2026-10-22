@@ -51,7 +51,19 @@ describe('Accès', () => {
     await createUser({ identifiant: 'paul', role: 'atelier' })
     for (const who of ['claire', 'paul']) {
       const c = await loginAs(app, who)
-      for (const [m, url] of [['get', '/api/boutique/produits'], ['post', '/api/boutique/produits'], ['get', `/api/boutique/produits/${id}`], ['patch', `/api/boutique/produits/${id}`], ['delete', `/api/boutique/produits/${id}`], ['put', `/api/boutique/produits/${id}/image`], ['post', `/api/boutique/produits/${id}/variantes`], ['post', '/api/boutique/import'], ['post', '/api/boutique/produits/lot'], ['post', `/api/boutique/produits/${id}/dupliquer`], ['post', `/api/boutique/produits/${id}/prix`]] as const) {
+      for (const [m, url] of [
+        ['get', '/api/boutique/produits'],
+        ['post', '/api/boutique/produits'],
+        ['get', `/api/boutique/produits/${id}`],
+        ['patch', `/api/boutique/produits/${id}`],
+        ['delete', `/api/boutique/produits/${id}`],
+        ['put', `/api/boutique/produits/${id}/image`],
+        ['post', `/api/boutique/produits/${id}/variantes`],
+        ['post', '/api/boutique/import'],
+        ['post', '/api/boutique/produits/lot'],
+        ['post', `/api/boutique/produits/${id}/dupliquer`],
+        ['post', `/api/boutique/produits/${id}/prix`],
+      ] as const) {
         const res = m === 'get' || m === 'delete' ? await c[m](url) : await c[m](url, {})
         expect(res.statusCode, `${who} ${m} ${url}`).toBe(403)
       }
@@ -266,14 +278,17 @@ describe('Copie, prix en lot et actions en lot', () => {
     const up = await direction.post(`/api/boutique/produits/${id}/prix`, { pourcent: 10 })
     expect(up.json()).toEqual({ variantes: 2 })
     let prix = (await direction.get(`/api/boutique/produits/${id}`)).json().variantes.map((v: { libelle: string; prixTtc: number }) => [v.libelle, v.prixTtc])
-    expect(prix).toEqual([['a', 92.4], ['b', 23.1]])
+    expect(prix).toEqual([
+      ['a', 92.4],
+      ['b', 23.1],
+    ])
     await direction.post(`/api/boutique/produits/${id}/prix`, { pourcent: -50 })
     prix = (await direction.get(`/api/boutique/produits/${id}`)).json().variantes.map((v: { prixTtc: number }) => v.prixTtc)
     // 11,55 € TTC n’existe pas en HT au centime : on prend le plus proche
     expect(prix).toEqual([46.2, 11.56])
     expect((await direction.post(`/api/boutique/produits/${id}/prix`, { pourcent: -95 })).statusCode).toBe(400)
     expect((await direction.post(`/api/boutique/produits/${id}/prix`, {})).statusCode).toBe(400)
-    expect((await entries('product.prices_adjusted'))).toHaveLength(2)
+    expect(await entries('product.prices_adjusted')).toHaveLength(2)
   })
 
   it('met en ligne, retire ou supprime plusieurs produits à la fois, sans mettre en ligne un produit vide', async () => {

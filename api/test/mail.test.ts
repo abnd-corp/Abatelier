@@ -49,7 +49,15 @@ function mailOn(over: { alertTo?: string } = {}) {
 }
 const entries = (action: string) => db.select().from(auditLog).where(eq(auditLog.action, action))
 const log = () => db.select().from(emailLog).orderBy(emailLog.at)
-const contact = (over: Record<string, unknown> = {}) => ({ nom: 'Jean Dupont', email: 'jean@example.com', objet: 'Couvertine 3 m', message: 'Bonjour, un devis svp.', consentement: true, telephone: '06 12 34 56 78', ...over })
+const contact = (over: Record<string, unknown> = {}) => ({
+  nom: 'Jean Dupont',
+  email: 'jean@example.com',
+  objet: 'Couvertine 3 m',
+  message: 'Bonjour, un devis svp.',
+  consentement: true,
+  telephone: '06 12 34 56 78',
+  ...over,
+})
 const pdf = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n')
 
 describe('Configuration', () => {
@@ -76,7 +84,20 @@ describe('Configuration', () => {
 
   it('utilise l’e-mail de l’entreprise quand aucune adresse d’alerte n’est fixée', async () => {
     mailOn()
-    await direction.patch('/api/documents/company', { raisonSociale: 'APS', formeJuridique: '', capital: '', adresse: '42490 Fraisses', telephone: '', email: 'contact@aps.test', siteWeb: '', siret: '', rcs: '', tvaIntra: '', iban: '', bic: '' })
+    await direction.patch('/api/documents/company', {
+      raisonSociale: 'APS',
+      formeJuridique: '',
+      capital: '',
+      adresse: '42490 Fraisses',
+      telephone: '',
+      email: 'contact@aps.test',
+      siteWeb: '',
+      siret: '',
+      rcs: '',
+      tvaIntra: '',
+      iban: '',
+      bic: '',
+    })
     expect((await direction.get('/api/mail/status')).json().alertes).toEqual(['contact@aps.test'])
   })
 })
@@ -174,11 +195,19 @@ describe('Envoi d’un devis ou d’une facture', () => {
     const [alu] = await db.insert(materials).values({ nom: 'Aluminium', epaisseur: 1.5, prixM2: 62, retourMin: 10 }).returning()
     const [anthracite] = await db.insert(colors).values({ nom: 'Gris anthracite', reference: 'RAL 7016', hex: '#383e42' }).returning()
     await db.insert(accessories).values({ nom: 'Bouchon', prix: 6.9, modeles: [M.couvertine] })
-    const dupont = (await direction.post('/api/clients', { type: 'particulier', prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' })).json().id
+    const dupont = (
+      await direction.post('/api/clients', { type: 'particulier', prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' })
+    ).json().id
     ids = { alu: alu!.id, anthracite: anthracite!.id, dupont }
   })
   const doc = async (kind: 'devis' | 'facture') => {
-    const o = (await direction.post('/api/orders', { clientId: ids.dupont, lignes: [{ modelId: M.couvertine, materialId: ids.alu, colorId: ids.anthracite, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 4, accessoires: [] }], livraison: { mode: 'retrait' } })).json()
+    const o = (
+      await direction.post('/api/orders', {
+        clientId: ids.dupont,
+        lignes: [{ modelId: M.couvertine, materialId: ids.alu, colorId: ids.anthracite, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 4, accessoires: [] }],
+        livraison: { mode: 'retrait' },
+      })
+    ).json()
     await direction.post(`/api/orders/${o.id}/status`, { statut: 'validee' })
     return (await direction.post(`/api/billing/orders/${o.id}/${kind}`)).json() as { id: string; numero: string }
   }
@@ -197,7 +226,20 @@ describe('Envoi d’un devis ou d’une facture', () => {
 
   it('met l’IBAN dans le message d’une facture quand il est renseigné', async () => {
     mailOn()
-    await direction.patch('/api/documents/company', { raisonSociale: 'APS', formeJuridique: '', capital: '', adresse: '42490 Fraisses', telephone: '', email: '', siteWeb: '', siret: '', rcs: '', tvaIntra: '', iban: 'FR76 3000 6000 0112 3456 7890 189', bic: 'AGRIFRPP' })
+    await direction.patch('/api/documents/company', {
+      raisonSociale: 'APS',
+      formeJuridique: '',
+      capital: '',
+      adresse: '42490 Fraisses',
+      telephone: '',
+      email: '',
+      siteWeb: '',
+      siret: '',
+      rcs: '',
+      tvaIntra: '',
+      iban: 'FR76 3000 6000 0112 3456 7890 189',
+      bic: 'AGRIFRPP',
+    })
     const f = await doc('facture')
     const res = (await direction.get(`/api/billing/${f.id}/email`)).json()
     expect(res.message).toContain('IBAN : FR76 3000 6000 0112 3456 7890 189')

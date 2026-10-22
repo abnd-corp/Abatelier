@@ -15,7 +15,12 @@ test.describe('Modèles de pièces', () => {
     await form.getByLabel('Modèle', { exact: true }).fill(nom)
     await form.getByRole('button', { name: 'Ajouter un pli' }).click()
     await form.getByRole('button', { name: 'Ajouter un pli' }).click()
-    const cotes = [['Retour', '30'], ['Pan', '150'], ['Pan', '150'], ['Retour', '30']]
+    const cotes = [
+      ['Retour', '30'],
+      ['Pan', '150'],
+      ['Pan', '150'],
+      ['Retour', '30'],
+    ]
     for (const [i, [label, v]] of cotes.entries()) {
       await form.getByLabel(`Nom de la cote ${'ABCD'[i]}`).fill(label!)
       await form.getByLabel(`Cote ${'ABCD'[i]}`, { exact: true }).fill(v!)

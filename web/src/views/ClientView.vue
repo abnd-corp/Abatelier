@@ -189,9 +189,7 @@ const telHref = (t: string) => `tel:${t.replace(/[^+\d]/g, '')}`
             </li>
             <li>
               <AppIcon name="map-pin" :size="17" class="muted" />
-              <span v-if="client.adresse || place(client)">
-                {{ client.adresse }}<br v-if="client.adresse && place(client)" />{{ place(client) }}
-              </span>
+              <span v-if="client.adresse || place(client)"> {{ client.adresse }}<br v-if="client.adresse && place(client)" />{{ place(client) }} </span>
               <span v-else class="muted">Pas d’adresse de facturation</span>
             </li>
           </ul>
@@ -216,7 +214,6 @@ const telHref = (t: string) => `tel:${t.replace(/[^+\d]/g, '')}`
             <dd>{{ ORIGINE_LABELS[client.origine] }}</dd>
           </dl>
         </section>
-
       </div>
 
       <div class="col">
@@ -269,7 +266,13 @@ const telHref = (t: string) => `tel:${t.replace(/[^+\d]/g, '')}`
           </ul>
           <p v-else-if="siteEditing === null" class="muted">Aucune adresse de chantier : les commandes seront livrées à l’adresse de facturation ou retirées à l’atelier.</p>
 
-          <form v-if="siteEditing !== null" class="site-form" novalidate :aria-label="siteEditing === 'new' ? 'Nouvelle adresse de chantier' : 'Modifier l’adresse de chantier'" @submit.prevent="saveSite">
+          <form
+            v-if="siteEditing !== null"
+            class="site-form"
+            novalidate
+            :aria-label="siteEditing === 'new' ? 'Nouvelle adresse de chantier' : 'Modifier l’adresse de chantier'"
+            @submit.prevent="saveSite"
+          >
             <p v-if="siteError && !['libelle', 'adresse', 'codePostal', 'ville'].includes(siteError.field ?? '')" class="alert bad" role="alert">{{ siteError.msg }}</p>
             <div class="field">
               <label for="s-libelle">Nom du chantier</label>
@@ -307,7 +310,9 @@ const telHref = (t: string) => `tel:${t.replace(/[^+\d]/g, '')}`
               <span class="dot" :data-tone="describe(a).tone" aria-hidden="true" />
               <div>
                 <span>{{ describe(a).text }}</span>
-                <span class="sub" :title="dateTime(a.at)">{{ relative(a.at) }}<template v-if="a.nom"> · par {{ a.nom }}</template></span>
+                <span class="sub" :title="dateTime(a.at)"
+                  >{{ relative(a.at) }}<template v-if="a.nom"> · par {{ a.nom }}</template></span
+                >
               </div>
             </li>
           </ol>

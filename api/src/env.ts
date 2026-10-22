@@ -70,7 +70,15 @@ const schema = z.object({
   GOOGLE_PLACES_API_KEY: z.string().trim().optional(),
 })
 
-const parsed = schema.safeParse({ ...process.env, DB_PASSWORD: secret('DB_PASSWORD'), ADMIN_PASSWORD: secret('ADMIN_PASSWORD'), GOOGLE_PLACES_API_KEY: secret('GOOGLE_PLACES_API_KEY'), SMTP_PASSWORD: secret('SMTP_PASSWORD'), STRIPE_SECRET_KEY: secret('STRIPE_SECRET_KEY'), STRIPE_WEBHOOK_SECRET: secret('STRIPE_WEBHOOK_SECRET') })
+const parsed = schema.safeParse({
+  ...process.env,
+  DB_PASSWORD: secret('DB_PASSWORD'),
+  ADMIN_PASSWORD: secret('ADMIN_PASSWORD'),
+  GOOGLE_PLACES_API_KEY: secret('GOOGLE_PLACES_API_KEY'),
+  SMTP_PASSWORD: secret('SMTP_PASSWORD'),
+  STRIPE_SECRET_KEY: secret('STRIPE_SECRET_KEY'),
+  STRIPE_WEBHOOK_SECRET: secret('STRIPE_WEBHOOK_SECRET'),
+})
 if (!parsed.success) {
   console.error('Configuration invalide :', z.prettifyError(parsed.error))
   process.exit(1)
@@ -93,7 +101,5 @@ if (!e.DATABASE_URL && !e.DB_PASSWORD) {
 
 export const env = {
   ...e,
-  databaseUrl:
-    e.DATABASE_URL ??
-    `postgres://${encodeURIComponent(e.DB_USER)}:${encodeURIComponent(e.DB_PASSWORD!)}@${e.DB_HOST}:${e.DB_PORT}/${e.DB_NAME}`,
+  databaseUrl: e.DATABASE_URL ?? `postgres://${encodeURIComponent(e.DB_USER)}:${encodeURIComponent(e.DB_PASSWORD!)}@${e.DB_HOST}:${e.DB_PORT}/${e.DB_NAME}`,
 }

@@ -72,7 +72,18 @@ export interface AdminVariante {
   actif: boolean
 }
 export interface AdminProduitDetail {
-  produit: { id: string; nom: string; categorie: string; description: string; actif: boolean; hasImage: boolean; version: number; imageAlt: string; imageLargeur: number | null; imageHauteur: number | null }
+  produit: {
+    id: string
+    nom: string
+    categorie: string
+    description: string
+    actif: boolean
+    hasImage: boolean
+    version: number
+    imageAlt: string
+    imageLargeur: number | null
+    imageHauteur: number | null
+  }
   variantes: AdminVariante[]
   tva: number
 }

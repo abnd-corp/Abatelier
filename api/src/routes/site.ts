@@ -63,7 +63,10 @@ export async function siteRoutes(app: FastifyInstance) {
     for (const [key, raw] of Object.entries(parsed.data.valeurs)) {
       const f = FIELD.get(key)
       if (!f) return reply.code(400).send({ error: `Champ inconnu : ${key}.`, field: key })
-      const v = raw.replace(/\r\n?/g, '\n').replace(/[ \t]+$/gm, '').trim()
+      const v = raw
+        .replace(/\r\n?/g, '\n')
+        .replace(/[ \t]+$/gm, '')
+        .trim()
       if (!v) return reply.code(400).send({ error: `« ${f.label} » ne peut pas être vide. Pour revenir au texte d’origine, utilisez « Rétablir ».`, field: key })
       if (v.length > f.max) return reply.code(400).send({ error: `« ${f.label} » : ${f.max} caractères maximum.`, field: key })
       values[key] = v
@@ -107,7 +110,10 @@ export async function siteRoutes(app: FastifyInstance) {
     if (img.width < 200 || img.height < 200) return reply.code(400).send({ error: 'Image trop petite : 200 × 200 pixels minimum.', field: 'photo' })
     const [total] = await db.select({ n: count() }).from(sitePhotos)
     if ((total?.n ?? 0) >= PHOTOS_TOTAL_MAX) return reply.code(409).send({ error: `${PHOTOS_TOTAL_MAX} photos maximum : supprimez-en avant d’en ajouter.` })
-    const [last] = await db.select({ p: max(sitePhotos.position) }).from(sitePhotos).where(eq(sitePhotos.emplacement, q.data.emplacement))
+    const [last] = await db
+      .select({ p: max(sitePhotos.position) })
+      .from(sitePhotos)
+      .where(eq(sitePhotos.emplacement, q.data.emplacement))
     const [row] = await db
       .insert(sitePhotos)
       .values({ emplacement: q.data.emplacement, alt: q.data.alt, type: img.type, largeur: img.width, hauteur: img.height, data: body, position: (last?.p ?? 0) + 1 })
@@ -117,7 +123,9 @@ export async function siteRoutes(app: FastifyInstance) {
   })
 
   async function findPhoto(id: string, reply: FastifyReply) {
-    const [p] = isUuid(id) ? await db.select({ id: sitePhotos.id, emplacement: sitePhotos.emplacement, alt: sitePhotos.alt, position: sitePhotos.position }).from(sitePhotos).where(eq(sitePhotos.id, id)) : []
+    const [p] = isUuid(id)
+      ? await db.select({ id: sitePhotos.id, emplacement: sitePhotos.emplacement, alt: sitePhotos.alt, position: sitePhotos.position }).from(sitePhotos).where(eq(sitePhotos.id, id))
+      : []
     if (!p) reply.code(404).send({ error: 'Photo introuvable.' })
     return p ?? null
   }
@@ -130,13 +138,23 @@ export async function siteRoutes(app: FastifyInstance) {
     const set: Partial<{ alt: string; emplacement: (typeof PHOTO_PLACES)[number]; position: number }> = {}
     if (parsed.data.alt !== undefined) set.alt = parsed.data.alt
     if (parsed.data.emplacement && parsed.data.emplacement !== p.emplacement) {
-      const [last] = await db.select({ p: max(sitePhotos.position) }).from(sitePhotos).where(eq(sitePhotos.emplacement, parsed.data.emplacement))
+      const [last] = await db
+        .select({ p: max(sitePhotos.position) })
+        .from(sitePhotos)
+        .where(eq(sitePhotos.emplacement, parsed.data.emplacement))
       set.emplacement = parsed.data.emplacement
       set.position = (last?.p ?? 0) + 1
     }
     if (Object.keys(set).length) {
       await db.update(sitePhotos).set(set).where(eq(sitePhotos.id, p.id))
-      await audit(req, 'site.photo_updated', { targetType: 'site_photo', targetId: p.id, details: { champs: [...(set.alt !== undefined ? ['description'] : []), ...(set.emplacement ? ['emplacement'] : [])], ...(set.emplacement ? { avant: p.emplacement, apres: set.emplacement } : {}) } })
+      await audit(req, 'site.photo_updated', {
+        targetType: 'site_photo',
+        targetId: p.id,
+        details: {
+          champs: [...(set.alt !== undefined ? ['description'] : []), ...(set.emplacement ? ['emplacement'] : [])],
+          ...(set.emplacement ? { avant: p.emplacement, apres: set.emplacement } : {}),
+        },
+      })
     }
     return { ok: true }
   })
@@ -212,7 +230,10 @@ export async function siteRoutes(app: FastifyInstance) {
     if (!c) return
     const parsed = handledBody.safeParse(req.body)
     if (!parsed.success) return invalid(reply, parsed.error)
-    await db.update(contactRequests).set({ traiteAt: parsed.data.traite ? new Date() : null, traitePar: parsed.data.traite ? req.user!.id : null }).where(eq(contactRequests.id, c.id))
+    await db
+      .update(contactRequests)
+      .set({ traiteAt: parsed.data.traite ? new Date() : null, traitePar: parsed.data.traite ? req.user!.id : null })
+      .where(eq(contactRequests.id, c.id))
     await audit(req, parsed.data.traite ? 'contact.handled' : 'contact.reopened', { targetType: 'contact', targetId: c.id, details: { objet: c.objet } })
     return { ok: true }
   })
@@ -223,18 +244,29 @@ export async function siteRoutes(app: FastifyInstance) {
     if (!c) return
     if (!c.configuration) return reply.code(409).send({ error: 'Cette demande ne vient pas du configurateur : il n’y a pas de pièces à commander.' })
     if (c.commandeId) return reply.code(409).send({ error: 'Une commande a déjà été créée pour cette demande.', commandeId: c.commandeId })
-    let [client] = await db.select().from(clients).where(sql`lower(${clients.email}) = ${c.email.toLowerCase()}`)
+    let [client] = await db
+      .select()
+      .from(clients)
+      .where(sql`lower(${clients.email}) = ${c.email.toLowerCase()}`)
     let created = false
     if (!client) {
       // « Jean Dupont » devient prénom et nom ; un seul mot est pris comme nom
       const [first, ...rest] = c.nom.trim().split(/\s+/)
       const [prenom, nom] = rest.length ? [first!, rest.join(' ')] : [null, first!]
-      ;[client] = await db.insert(clients).values({ type: 'particulier', origine: 'site', prenom, nom, email: c.email.toLowerCase(), telephone: c.telephone, adresse: c.adresse, codePostal: c.codePostal, ville: c.ville }).returning()
+      ;[client] = await db
+        .insert(clients)
+        .values({ type: 'particulier', origine: 'site', prenom, nom, email: c.email.toLowerCase(), telephone: c.telephone, adresse: c.adresse, codePostal: c.codePostal, ville: c.ville })
+        .returning()
       created = true
       await audit(req, 'client.created', { targetType: 'client', targetId: client!.id, details: { nom: c.nom, type: 'particulier', origine: 'site' } })
     }
     if (client!.archivedAt) return reply.code(409).send({ error: 'Ce client est archivé : sortez-le des archives, puis recommencez.' })
-    const body = orderBody.safeParse({ clientId: client!.id, lignes: c.configuration.lignes, livraison: c.configuration.livraison, notes: `Demande de devis du site : ${c.objet}${c.message ? `\n${c.message}` : ''}`.slice(0, 2000) })
+    const body = orderBody.safeParse({
+      clientId: client!.id,
+      lignes: c.configuration.lignes,
+      livraison: c.configuration.livraison,
+      notes: `Demande de devis du site : ${c.objet}${c.message ? `\n${c.message}` : ''}`.slice(0, 2000),
+    })
     if (!body.success) return reply.code(409).send({ error: 'Les pièces de cette demande ne passent plus les contrôles actuels (catalogue ou limites modifiés) : saisissez la commande à la main.' })
     const placed = await placeOrder(req, body.data)
     if ('error' in placed) return reply.code(placed.status).send({ error: placed.error })
@@ -252,5 +284,3 @@ export async function siteRoutes(app: FastifyInstance) {
     return { ok: true }
   })
 }
-
-

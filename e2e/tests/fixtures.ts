@@ -33,6 +33,7 @@ export async function uiLogin(page: Page, identifiant: string, password: string)
 
 export const test = base.extend<{ uid: string; adminPage: Page }>({
   // Identifiant unique par test : les tests tournent en parallèle sur la même base
+  // eslint-disable-next-line no-empty-pattern -- Playwright exige un objet déstructuré, même vide
   uid: async ({}, use, testInfo) => {
     await use(`e2e-${testInfo.project.name.slice(0, 2)}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`)
   },
@@ -77,11 +78,14 @@ export interface Mail {
 export async function waitForMail(request: APIRequestContext, fragment: string): Promise<Mail> {
   let found: { ID: string } | undefined
   await expect
-    .poll(async () => {
-      const res = await request.get(`${MAIL}/api/v1/search?query=${encodeURIComponent(`subject:"${fragment}"`)}`)
-      found = (await res.json()).messages?.[0]
-      return Boolean(found)
-    }, { message: `Aucun e-mail dont l'objet contient « ${fragment} »`, timeout: 10_000 })
+    .poll(
+      async () => {
+        const res = await request.get(`${MAIL}/api/v1/search?query=${encodeURIComponent(`subject:"${fragment}"`)}`)
+        found = (await res.json()).messages?.[0]
+        return Boolean(found)
+      },
+      { message: `Aucun e-mail dont l'objet contient « ${fragment} »`, timeout: 10_000 },
+    )
     .toBe(true)
   return (await request.get(`${MAIL}/api/v1/message/${found!.ID}`)).json()
 }

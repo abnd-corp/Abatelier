@@ -62,16 +62,6 @@ export function describeDevice(ua?: string | null) {
             : /^curl\//.test(ua)
               ? 'curl'
               : 'Navigateur'
-  const os = /iPhone|iPad/.test(ua)
-    ? 'iOS'
-    : /Android/.test(ua)
-      ? 'Android'
-      : /Windows/.test(ua)
-        ? 'Windows'
-        : /Mac OS X/.test(ua)
-          ? 'macOS'
-          : /Linux/.test(ua)
-            ? 'Linux'
-            : ''
+  const os = /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : ''
   return os ? `${browser} sur ${os}` : browser
 }

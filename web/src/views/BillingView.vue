@@ -148,7 +148,9 @@ const docWord = computed(() => ({ devis: ['devis', 'devis'], facture: ['facture'
         <p v-if="q.trim()">Aucun document ne correspond à « {{ q.trim() }} ».</p>
         <template v-else-if="!statut">
           <AppIcon name="receipt" :size="32" class="muted" />
-          <p><b>Aucun {{ docWord[0] }} pour l’instant.</b></p>
+          <p>
+            <b>Aucun {{ docWord[0] }} pour l’instant.</b>
+          </p>
           <p v-if="type === 'avoir'" class="muted">Un avoir s’établit depuis une facture, pour l’annuler.</p>
           <p v-else class="muted">Les {{ docWord[1] }} se font depuis la fiche d’une commande.</p>
           <RouterLink v-if="type !== 'avoir'" class="btn" :to="{ name: 'orders' }"><AppIcon name="box" />Voir les commandes</RouterLink>
@@ -173,7 +175,9 @@ const docWord = computed(() => ({ devis: ['devis', 'devis'], facture: ['facture'
                 <RouterLink :to="{ name: 'billing-doc', params: { id: d.id } }" class="name mono" @click.stop>{{ d.numero }}</RouterLink>
                 <span class="sub">{{ d.client }} · {{ formatDay(d.emisLe.slice(0, 10)) }}</span>
               </td>
-              <td><span class="pill" :class="statutOf(d.type, d.statut).tone">{{ statutOf(d.type, d.statut).label }}</span></td>
+              <td>
+                <span class="pill" :class="statutOf(d.type, d.statut).tone">{{ statutOf(d.type, d.statut).label }}</span>
+              </td>
               <td class="hide-sm">
                 <RouterLink :to="{ name: 'order', params: { id: d.orderId } }" class="mono" @click.stop>{{ d.orderNumero }}</RouterLink>
               </td>

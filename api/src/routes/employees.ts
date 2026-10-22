@@ -81,9 +81,7 @@ const accountColumns = {
 }
 
 const accountOf = (r: { accountId: string | null; identifiant: string | null; role: string | null; disabledAt: Date | null; mustChangePassword: boolean | null; lastLoginAt: Date | null }) =>
-  r.accountId
-    ? { id: r.accountId, identifiant: r.identifiant, role: r.role, disabledAt: r.disabledAt, mustChangePassword: r.mustChangePassword, lastLoginAt: r.lastLoginAt }
-    : null
+  r.accountId ? { id: r.accountId, identifiant: r.identifiant, role: r.role, disabledAt: r.disabledAt, mustChangePassword: r.mustChangePassword, lastLoginAt: r.lastLoginAt } : null
 
 async function findEmployee(id: string, reply: FastifyReply) {
   if (!z.uuid().safeParse(id).success) {
@@ -111,13 +109,7 @@ export async function employeeRoutes(app: FastifyInstance) {
     if (q) {
       const like = `%${q.replace(/[%_\\]/g, '\\$&')}%`
       filters.push(
-        or(
-          ilike(employees.prenom, like),
-          ilike(employees.nom, like),
-          ilike(employees.poste, like),
-          ilike(sql`${employees.prenom} || ' ' || ${employees.nom}`, like),
-          ilike(users.identifiant, like),
-        ),
+        or(ilike(employees.prenom, like), ilike(employees.nom, like), ilike(employees.poste, like), ilike(sql`${employees.prenom} || ' ' || ${employees.nom}`, like), ilike(users.identifiant, like)),
       )
     }
 
@@ -200,7 +192,6 @@ export async function employeeRoutes(app: FastifyInstance) {
     if (!e) return
 
     let account = null
-    let activity: unknown[] = []
     if (e.userId) {
       const [u] = await db
         .select({ ...accountColumns, activeSessions: count(sessions.id) })
@@ -233,7 +224,7 @@ export async function employeeRoutes(app: FastifyInstance) {
       .where(or(...conditions))
       .orderBy(desc(auditLog.id))
       .limit(15)
-    activity = rows.map(({ userAgent, ...r }) => ({ ...r, device: describeDevice(userAgent), targetName: fullName(e) }))
+    const activity = rows.map(({ userAgent, ...r }) => ({ ...r, device: describeDevice(userAgent), targetName: fullName(e) }))
 
     const { userId, ...employee } = e
     return { employee: { ...employee, hasAccount: userId !== null, account }, activity }
@@ -259,7 +250,10 @@ export async function employeeRoutes(app: FastifyInstance) {
 
     // Le nom affiché du compte suit celui de la fiche
     if (e.userId && (changed.includes('prenom') || changed.includes('nom'))) {
-      await db.update(users).set({ nom: fullName(merged) }).where(eq(users.id, e.userId))
+      await db
+        .update(users)
+        .set({ nom: fullName(merged) })
+        .where(eq(users.id, e.userId))
     }
 
     await audit(req, 'employee.updated', {

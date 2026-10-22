@@ -56,11 +56,17 @@ const atelier = session()
     { prenom: 'Hugo', nom: 'Faure', poste: 'Opérateur cisaille', contrat: 'apprentissage', dateEntree: '2025-09-01', compte: null },
   ]
   // Les comptes se créent avec un mot de passe provisoire : on le remplace par celui de la démo
-  const [admin] = await db.insert(users).values({ identifiant: 'demo-bootstrap', nom: 'Démo', role: 'direction', passwordHash: await hashPassword(PASSWORD) }).returning()
+  const [admin] = await db
+    .insert(users)
+    .values({ identifiant: 'demo-bootstrap', nom: 'Démo', role: 'direction', passwordHash: await hashPassword(PASSWORD) })
+    .returning()
   const boot = session()
   await boot.post('/api/auth/login', { identifiant: 'demo-bootstrap', password: PASSWORD })
   for (const e of equipe) await boot.post('/api/employees', e)
-  await db.update(users).set({ passwordHash: await hashPassword(PASSWORD), mustChangePassword: false }).where(inArray(users.identifiant, ['demo-direction', 'demo-rh', 'demo-atelier']))
+  await db
+    .update(users)
+    .set({ passwordHash: await hashPassword(PASSWORD), mustChangePassword: false })
+    .where(inArray(users.identifiant, ['demo-direction', 'demo-rh', 'demo-atelier']))
   await db.update(users).set({ disabledAt: new Date() }).where(eq(users.id, admin!.id))
   await boot.post('/api/auth/logout')
   await direction.post('/api/auth/login', { identifiant: 'demo-direction', password: PASSWORD })
@@ -82,19 +88,161 @@ function siret(n: number) {
 }
 
 const CLIENTS = [
-  { key: 'bonnet', type: 'professionnel', origine: 'telephone', raisonSociale: 'Façades Bonnet & Fils', siret: siret(1), prenom: 'Thierry', nom: 'Bonnet', email: 'contact@facades-bonnet.example.com', telephone: '04 77 00 10 01', adresse: '14 rue des Tisserands', codePostal: '42700', ville: 'Firminy', notes: 'Façadier, 3 équipes. Commande surtout des bandeaux et des couvertines blanc 9010.',
-    sites: [{ libelle: 'Résidence Les Terrasses', adresse: '8 allée des Cerisiers', codePostal: '42700', ville: 'Firminy' }, { libelle: 'Chantier mairie', adresse: '1 place de la République', codePostal: '42290', ville: 'Sorbiers' }] },
-  { key: 'forez', type: 'professionnel', origine: 'atelier', raisonSociale: 'Toitures du Forez', siret: siret(2), prenom: 'Laurent', nom: 'Chambon', email: 'devis@toitures-forez.example.com', telephone: '04 77 00 10 02', adresse: '3 chemin du Plan', codePostal: '42600', ville: 'Montbrison', notes: 'Couvreur. Veut toujours la livraison sur chantier.',
-    sites: [{ libelle: 'Maison Vernay', adresse: '22 rue du Stade', codePostal: '42600', ville: 'Savigneux' }] },
-  { key: 'gier', type: 'professionnel', origine: 'email', raisonSociale: 'Étanchéité du Gier', siret: siret(3), prenom: 'Mehdi', nom: 'Kaddour', email: 'm.kaddour@etancheite-gier.example.com', telephone: '04 77 00 10 03', adresse: 'ZI de la Varizelle', codePostal: '42800', ville: 'Rive-de-Gier', notes: null, sites: [] },
-  { key: 'perrin', type: 'professionnel', origine: 'telephone', raisonSociale: 'Maçonnerie Perrin', siret: siret(4), prenom: 'Alain', nom: 'Perrin', email: 'perrin.maconnerie@example.com', telephone: '04 77 00 10 04', adresse: '27 avenue Jean Jaurès', codePostal: '42400', ville: 'Saint-Chamond', notes: 'Paye toujours par chèque, à 30 jours.', sites: [] },
-  { key: 'vial', type: 'professionnel', origine: 'email', raisonSociale: 'Atelier d’architecture Vial', siret: siret(5), prenom: 'Élodie', nom: 'Vial', email: 'e.vial@architecture-vial.example.com', telephone: '04 77 00 10 05', adresse: '9 rue Gambetta', codePostal: '42000', ville: 'Saint-Étienne', notes: 'Architecte. Pièces sur plan, souvent en noir sablé.',
-    sites: [{ libelle: 'Médiathèque', adresse: '4 rue de la Bourse', codePostal: '42000', ville: 'Saint-Étienne' }] },
-  { key: 'dupin', type: 'professionnel', origine: 'atelier', raisonSociale: 'Charpentes Dupin', siret: siret(6), prenom: 'Bruno', nom: 'Dupin', email: 'bruno@charpentes-dupin.example.com', telephone: '04 77 00 10 06', adresse: '5 impasse des Forges', codePostal: '42230', ville: 'Roche-la-Molière', notes: null, sites: [] },
-  { key: 'chavanne', type: 'particulier', origine: 'email', prenom: 'Marie', nom: 'Chavanne', email: 'marie.chavanne@example.com', telephone: '06 00 00 20 01', adresse: '18 rue des Lilas', codePostal: '42160', ville: 'Andrézieux-Bouthéon', notes: null, sites: [] },
-  { key: 'moulin', type: 'particulier', origine: 'telephone', prenom: 'Julien', nom: 'Moulin', email: 'julien.moulin@example.com', telephone: '06 00 00 20 02', adresse: '42 cours Fauriel', codePostal: '42100', ville: 'Saint-Étienne', notes: 'Rénove sa maison, couvertine sur muret.', sites: [] },
-  { key: 'benali', type: 'particulier', origine: 'email', prenom: 'Nadia', nom: 'Benali', email: 'nadia.benali@example.com', telephone: '06 00 00 20 03', adresse: '7 rue du Pré', codePostal: '42500', ville: 'Le Chambon-Feugerolles', notes: null, sites: [] },
-  { key: 'gonon', type: 'particulier', origine: 'email', prenom: 'Pierre', nom: 'Gonon', email: 'pierre.gonon@example.com', telephone: '06 00 00 20 04', adresse: '11 chemin des Vignes', codePostal: '42290', ville: 'Sorbiers', notes: null, sites: [] },
+  {
+    key: 'bonnet',
+    type: 'professionnel',
+    origine: 'telephone',
+    raisonSociale: 'Façades Bonnet & Fils',
+    siret: siret(1),
+    prenom: 'Thierry',
+    nom: 'Bonnet',
+    email: 'contact@facades-bonnet.example.com',
+    telephone: '04 77 00 10 01',
+    adresse: '14 rue des Tisserands',
+    codePostal: '42700',
+    ville: 'Firminy',
+    notes: 'Façadier, 3 équipes. Commande surtout des bandeaux et des couvertines blanc 9010.',
+    sites: [
+      { libelle: 'Résidence Les Terrasses', adresse: '8 allée des Cerisiers', codePostal: '42700', ville: 'Firminy' },
+      { libelle: 'Chantier mairie', adresse: '1 place de la République', codePostal: '42290', ville: 'Sorbiers' },
+    ],
+  },
+  {
+    key: 'forez',
+    type: 'professionnel',
+    origine: 'atelier',
+    raisonSociale: 'Toitures du Forez',
+    siret: siret(2),
+    prenom: 'Laurent',
+    nom: 'Chambon',
+    email: 'devis@toitures-forez.example.com',
+    telephone: '04 77 00 10 02',
+    adresse: '3 chemin du Plan',
+    codePostal: '42600',
+    ville: 'Montbrison',
+    notes: 'Couvreur. Veut toujours la livraison sur chantier.',
+    sites: [{ libelle: 'Maison Vernay', adresse: '22 rue du Stade', codePostal: '42600', ville: 'Savigneux' }],
+  },
+  {
+    key: 'gier',
+    type: 'professionnel',
+    origine: 'email',
+    raisonSociale: 'Étanchéité du Gier',
+    siret: siret(3),
+    prenom: 'Mehdi',
+    nom: 'Kaddour',
+    email: 'm.kaddour@etancheite-gier.example.com',
+    telephone: '04 77 00 10 03',
+    adresse: 'ZI de la Varizelle',
+    codePostal: '42800',
+    ville: 'Rive-de-Gier',
+    notes: null,
+    sites: [],
+  },
+  {
+    key: 'perrin',
+    type: 'professionnel',
+    origine: 'telephone',
+    raisonSociale: 'Maçonnerie Perrin',
+    siret: siret(4),
+    prenom: 'Alain',
+    nom: 'Perrin',
+    email: 'perrin.maconnerie@example.com',
+    telephone: '04 77 00 10 04',
+    adresse: '27 avenue Jean Jaurès',
+    codePostal: '42400',
+    ville: 'Saint-Chamond',
+    notes: 'Paye toujours par chèque, à 30 jours.',
+    sites: [],
+  },
+  {
+    key: 'vial',
+    type: 'professionnel',
+    origine: 'email',
+    raisonSociale: 'Atelier d’architecture Vial',
+    siret: siret(5),
+    prenom: 'Élodie',
+    nom: 'Vial',
+    email: 'e.vial@architecture-vial.example.com',
+    telephone: '04 77 00 10 05',
+    adresse: '9 rue Gambetta',
+    codePostal: '42000',
+    ville: 'Saint-Étienne',
+    notes: 'Architecte. Pièces sur plan, souvent en noir sablé.',
+    sites: [{ libelle: 'Médiathèque', adresse: '4 rue de la Bourse', codePostal: '42000', ville: 'Saint-Étienne' }],
+  },
+  {
+    key: 'dupin',
+    type: 'professionnel',
+    origine: 'atelier',
+    raisonSociale: 'Charpentes Dupin',
+    siret: siret(6),
+    prenom: 'Bruno',
+    nom: 'Dupin',
+    email: 'bruno@charpentes-dupin.example.com',
+    telephone: '04 77 00 10 06',
+    adresse: '5 impasse des Forges',
+    codePostal: '42230',
+    ville: 'Roche-la-Molière',
+    notes: null,
+    sites: [],
+  },
+  {
+    key: 'chavanne',
+    type: 'particulier',
+    origine: 'email',
+    prenom: 'Marie',
+    nom: 'Chavanne',
+    email: 'marie.chavanne@example.com',
+    telephone: '06 00 00 20 01',
+    adresse: '18 rue des Lilas',
+    codePostal: '42160',
+    ville: 'Andrézieux-Bouthéon',
+    notes: null,
+    sites: [],
+  },
+  {
+    key: 'moulin',
+    type: 'particulier',
+    origine: 'telephone',
+    prenom: 'Julien',
+    nom: 'Moulin',
+    email: 'julien.moulin@example.com',
+    telephone: '06 00 00 20 02',
+    adresse: '42 cours Fauriel',
+    codePostal: '42100',
+    ville: 'Saint-Étienne',
+    notes: 'Rénove sa maison, couvertine sur muret.',
+    sites: [],
+  },
+  {
+    key: 'benali',
+    type: 'particulier',
+    origine: 'email',
+    prenom: 'Nadia',
+    nom: 'Benali',
+    email: 'nadia.benali@example.com',
+    telephone: '06 00 00 20 03',
+    adresse: '7 rue du Pré',
+    codePostal: '42500',
+    ville: 'Le Chambon-Feugerolles',
+    notes: null,
+    sites: [],
+  },
+  {
+    key: 'gonon',
+    type: 'particulier',
+    origine: 'email',
+    prenom: 'Pierre',
+    nom: 'Gonon',
+    email: 'pierre.gonon@example.com',
+    telephone: '06 00 00 20 04',
+    adresse: '11 chemin des Vignes',
+    codePostal: '42290',
+    ville: 'Sorbiers',
+    notes: null,
+    sites: [],
+  },
 ] as const
 
 const clientId: Record<string, string> = {}
@@ -141,26 +289,232 @@ type Scenario = { client: string; jours: number; etape: Etape; facturation: Fact
 
 const SCENARIOS: Scenario[] = [
   // Terminées et réglées (historique)
-  { client: 'bonnet', jours: 62, etape: 'livree', facturation: 'facture-payee', pieces: [{ modele: 'bandeau', ep: 1.5, coloris: 'RAL 9010', longueur: 3000, quantite: 24, repere: 'Bandeau façade nord', acc: [['angle', 6]] }, { modele: 'couvertine', ep: 1.5, coloris: 'RAL 9010', longueur: 3000, quantite: 12, acc: [['bouchon', 4], ['éclisse', 11]] }] },
-  { client: 'forez', jours: 55, etape: 'livree', facturation: 'facture-payee', notes: 'Livraison sur chantier le matin avant 8 h.', pieces: [{ modele: 'couvertine', ep: 1, coloris: 'RAL 7016', longueur: 2500, quantite: 16, acc: [['bouchon', 2], ['éclisse', 15]] }] },
-  { client: 'vial', jours: 48, etape: 'livree', facturation: 'facture-payee', pieces: [{ modele: 'bandeau', ep: 2, coloris: '2100', longueur: 3000, quantite: 18, repere: 'Bandeau médiathèque', acc: [['angle', 8]] }, { modele: 'bavette', ep: 1.5, coloris: '2100', longueur: 1400, quantite: 10, acc: [['embouts', 10]] }] },
-  { client: 'moulin', jours: 41, etape: 'livree', facturation: 'facture-payee', pieces: [{ modele: 'couvertine', ep: 1, coloris: 'RAL 7016', longueur: 3000, quantite: 4, repere: 'Muret jardin', acc: [['bouchon', 2], ['éclisse', 3]] }] },
+  {
+    client: 'bonnet',
+    jours: 62,
+    etape: 'livree',
+    facturation: 'facture-payee',
+    pieces: [
+      { modele: 'bandeau', ep: 1.5, coloris: 'RAL 9010', longueur: 3000, quantite: 24, repere: 'Bandeau façade nord', acc: [['angle', 6]] },
+      {
+        modele: 'couvertine',
+        ep: 1.5,
+        coloris: 'RAL 9010',
+        longueur: 3000,
+        quantite: 12,
+        acc: [
+          ['bouchon', 4],
+          ['éclisse', 11],
+        ],
+      },
+    ],
+  },
+  {
+    client: 'forez',
+    jours: 55,
+    etape: 'livree',
+    facturation: 'facture-payee',
+    notes: 'Livraison sur chantier le matin avant 8 h.',
+    pieces: [
+      {
+        modele: 'couvertine',
+        ep: 1,
+        coloris: 'RAL 7016',
+        longueur: 2500,
+        quantite: 16,
+        acc: [
+          ['bouchon', 2],
+          ['éclisse', 15],
+        ],
+      },
+    ],
+  },
+  {
+    client: 'vial',
+    jours: 48,
+    etape: 'livree',
+    facturation: 'facture-payee',
+    pieces: [
+      { modele: 'bandeau', ep: 2, coloris: '2100', longueur: 3000, quantite: 18, repere: 'Bandeau médiathèque', acc: [['angle', 8]] },
+      { modele: 'bavette', ep: 1.5, coloris: '2100', longueur: 1400, quantite: 10, acc: [['embouts', 10]] },
+    ],
+  },
+  {
+    client: 'moulin',
+    jours: 41,
+    etape: 'livree',
+    facturation: 'facture-payee',
+    pieces: [
+      {
+        modele: 'couvertine',
+        ep: 1,
+        coloris: 'RAL 7016',
+        longueur: 3000,
+        quantite: 4,
+        repere: 'Muret jardin',
+        acc: [
+          ['bouchon', 2],
+          ['éclisse', 3],
+        ],
+      },
+    ],
+  },
   // Facture payée plus tard, facture en retard
-  { client: 'perrin', jours: 58, etape: 'livree', facturation: 'facture-retard', pieces: [{ modele: 'bavette', ep: 1, coloris: 'RAL 9010', longueur: 1200, quantite: 14, repere: 'Fenêtres R+1', acc: [['embouts', 14]] }] },
-  { client: 'gier', jours: 35, etape: 'livree', facturation: 'facture-envoyee', pieces: [{ modele: 'couvertine', ep: 1.5, coloris: 'RAL 9006', longueur: 3000, quantite: 20, acc: [['bouchon', 4], ['éclisse', 18]] }] },
-  { client: 'chavanne', jours: 20, etape: 'livree', facturation: 'facture-payee', pieces: [{ modele: 'bavette', ep: 1, coloris: 'RAL 9010', longueur: 1000, quantite: 6, repere: 'Fenêtres façade sud', acc: [['embouts', 6]] }] },
+  {
+    client: 'perrin',
+    jours: 58,
+    etape: 'livree',
+    facturation: 'facture-retard',
+    pieces: [{ modele: 'bavette', ep: 1, coloris: 'RAL 9010', longueur: 1200, quantite: 14, repere: 'Fenêtres R+1', acc: [['embouts', 14]] }],
+  },
+  {
+    client: 'gier',
+    jours: 35,
+    etape: 'livree',
+    facturation: 'facture-envoyee',
+    pieces: [
+      {
+        modele: 'couvertine',
+        ep: 1.5,
+        coloris: 'RAL 9006',
+        longueur: 3000,
+        quantite: 20,
+        acc: [
+          ['bouchon', 4],
+          ['éclisse', 18],
+        ],
+      },
+    ],
+  },
+  {
+    client: 'chavanne',
+    jours: 20,
+    etape: 'livree',
+    facturation: 'facture-payee',
+    pieces: [{ modele: 'bavette', ep: 1, coloris: 'RAL 9010', longueur: 1000, quantite: 6, repere: 'Fenêtres façade sud', acc: [['embouts', 6]] }],
+  },
   // Une facture annulée par un avoir
   { client: 'dupin', jours: 30, etape: 'annulee', facturation: 'avoir', pieces: [{ modele: 'bandeau', ep: 1.5, coloris: 'Chêne', longueur: 3000, quantite: 8, acc: [['angle', 2]] }] },
   // En cours dans l'atelier
-  { client: 'bonnet', jours: 9, etape: 'fabrication', facturation: 'facture-emise', site: 'Résidence Les Terrasses', pieces: [{ modele: 'couvertine', ep: 1.5, coloris: 'RAL 9010', longueur: 3000, quantite: 30, repere: 'Acrotère bâtiment B', acc: [['bouchon', 4], ['éclisse', 28]] }, { modele: 'bandeau', ep: 1.5, coloris: 'RAL 9010', longueur: 3000, quantite: 10, acc: [['angle', 4]] }] },
-  { client: 'vial', jours: 6, etape: 'fabrication', facturation: 'devis-accepte', site: 'Médiathèque', pieces: [{ modele: 'couvertine', ep: 2, coloris: '2100', longueur: 3000, quantite: 14, acc: [['bouchon', 2], ['éclisse', 13]] }] },
-  { client: 'forez', jours: 8, etape: 'prete', facturation: 'facture-emise', site: 'Maison Vernay', pieces: [{ modele: 'bandeau', ep: 1, coloris: 'RAL 7016', longueur: 3000, quantite: 12, repere: 'Rives toit', acc: [['angle', 4]] }] },
-  { client: 'benali', jours: 5, etape: 'prete', facturation: 'devis-envoye', retrait: true, notes: 'Vient chercher en fin de semaine.', pieces: [{ modele: 'bavette', ep: 1, coloris: 'RAL 7016', longueur: 1100, quantite: 5, acc: [['embouts', 5]] }] },
+  {
+    client: 'bonnet',
+    jours: 9,
+    etape: 'fabrication',
+    facturation: 'facture-emise',
+    site: 'Résidence Les Terrasses',
+    pieces: [
+      {
+        modele: 'couvertine',
+        ep: 1.5,
+        coloris: 'RAL 9010',
+        longueur: 3000,
+        quantite: 30,
+        repere: 'Acrotère bâtiment B',
+        acc: [
+          ['bouchon', 4],
+          ['éclisse', 28],
+        ],
+      },
+      { modele: 'bandeau', ep: 1.5, coloris: 'RAL 9010', longueur: 3000, quantite: 10, acc: [['angle', 4]] },
+    ],
+  },
+  {
+    client: 'vial',
+    jours: 6,
+    etape: 'fabrication',
+    facturation: 'devis-accepte',
+    site: 'Médiathèque',
+    pieces: [
+      {
+        modele: 'couvertine',
+        ep: 2,
+        coloris: '2100',
+        longueur: 3000,
+        quantite: 14,
+        acc: [
+          ['bouchon', 2],
+          ['éclisse', 13],
+        ],
+      },
+    ],
+  },
+  {
+    client: 'forez',
+    jours: 8,
+    etape: 'prete',
+    facturation: 'facture-emise',
+    site: 'Maison Vernay',
+    pieces: [{ modele: 'bandeau', ep: 1, coloris: 'RAL 7016', longueur: 3000, quantite: 12, repere: 'Rives toit', acc: [['angle', 4]] }],
+  },
+  {
+    client: 'benali',
+    jours: 5,
+    etape: 'prete',
+    facturation: 'devis-envoye',
+    retrait: true,
+    notes: 'Vient chercher en fin de semaine.',
+    pieces: [{ modele: 'bavette', ep: 1, coloris: 'RAL 7016', longueur: 1100, quantite: 5, acc: [['embouts', 5]] }],
+  },
   // À valider ou à chiffrer
-  { client: 'perrin', jours: 3, etape: 'validee', facturation: 'devis-accepte', retrait: true, pieces: [{ modele: 'couvertine', ep: 1, coloris: 'RAL 9006', longueur: 2000, quantite: 8, acc: [['bouchon', 2], ['éclisse', 7]] }] },
-  { client: 'gonon', jours: 2, etape: 'recue', facturation: 'devis-envoye', retrait: true, notes: 'Commande passée depuis le site.', pieces: [{ modele: 'couvertine', ep: 1, coloris: 'RAL 7016', longueur: 3000, quantite: 3, repere: 'Muret entrée', acc: [['bouchon', 2], ['éclisse', 2]] }] },
-  { client: 'dupin', jours: 1, etape: 'recue', facturation: 'devis-emis', retrait: true, pieces: [{ modele: 'bandeau', ep: 1.5, coloris: 'RAL 9006', longueur: 3000, quantite: 16, acc: [['angle', 4]] }] },
-  { client: 'gier', jours: 12, etape: 'recue', facturation: 'devis-refuse', retrait: true, notes: 'A trouvé moins cher ailleurs.', pieces: [{ modele: 'bavette', ep: 1.5, coloris: 'RAL 9010', longueur: 1400, quantite: 20, acc: [['embouts', 20]] }] },
+  {
+    client: 'perrin',
+    jours: 3,
+    etape: 'validee',
+    facturation: 'devis-accepte',
+    retrait: true,
+    pieces: [
+      {
+        modele: 'couvertine',
+        ep: 1,
+        coloris: 'RAL 9006',
+        longueur: 2000,
+        quantite: 8,
+        acc: [
+          ['bouchon', 2],
+          ['éclisse', 7],
+        ],
+      },
+    ],
+  },
+  {
+    client: 'gonon',
+    jours: 2,
+    etape: 'recue',
+    facturation: 'devis-envoye',
+    retrait: true,
+    notes: 'Commande passée depuis le site.',
+    pieces: [
+      {
+        modele: 'couvertine',
+        ep: 1,
+        coloris: 'RAL 7016',
+        longueur: 3000,
+        quantite: 3,
+        repere: 'Muret entrée',
+        acc: [
+          ['bouchon', 2],
+          ['éclisse', 2],
+        ],
+      },
+    ],
+  },
+  {
+    client: 'dupin',
+    jours: 1,
+    etape: 'recue',
+    facturation: 'devis-emis',
+    retrait: true,
+    pieces: [{ modele: 'bandeau', ep: 1.5, coloris: 'RAL 9006', longueur: 3000, quantite: 16, acc: [['angle', 4]] }],
+  },
+  {
+    client: 'gier',
+    jours: 12,
+    etape: 'recue',
+    facturation: 'devis-refuse',
+    retrait: true,
+    notes: 'A trouvé moins cher ailleurs.',
+    pieces: [{ modele: 'bavette', ep: 1.5, coloris: 'RAL 9010', longueur: 1400, quantite: 20, acc: [['embouts', 20]] }],
+  },
 ]
 
 const CHAIN: Etape[] = ['validee', 'fabrication', 'prete', 'livree']
@@ -170,16 +524,18 @@ const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T12:00:00
 for (const s of SCENARIOS) {
   const c = CLIENTS.find((x) => x.key === s.client)!
   const site = s.site ? c.sites.find((x) => x.libelle === s.site) : undefined
-  const { id } = await direction.post('/api/orders', {
-    clientId: clientId[s.client],
-    lignes: s.pieces.map(ligne),
-    livraison: s.retrait || !site ? { mode: 'retrait' } : { mode: 'livraison', adresse: site.adresse, codePostal: site.codePostal, ville: site.ville },
-    notes: s.notes ?? null,
-  }).catch((e: Error) => {
-    // Calcul de la distance par l'IGN : sans réseau, on retombe sur un retrait à l'atelier
-    if (!/localisation/.test(e.message)) throw e
-    return direction.post('/api/orders', { clientId: clientId[s.client], lignes: s.pieces.map(ligne), livraison: { mode: 'retrait' }, notes: s.notes ?? null })
-  })
+  const { id } = await direction
+    .post('/api/orders', {
+      clientId: clientId[s.client],
+      lignes: s.pieces.map(ligne),
+      livraison: s.retrait || !site ? { mode: 'retrait' } : { mode: 'livraison', adresse: site.adresse, codePostal: site.codePostal, ville: site.ville },
+      notes: s.notes ?? null,
+    })
+    .catch((e: Error) => {
+      // Calcul de la distance par l'IGN : sans réseau, on retombe sur un retrait à l'atelier
+      if (!/localisation/.test(e.message)) throw e
+      return direction.post('/api/orders', { clientId: clientId[s.client], lignes: s.pieces.map(ligne), livraison: { mode: 'retrait' }, notes: s.notes ?? null })
+    })
 
   const billing = async (kind: 'devis' | 'facture') => (await direction.post(`/api/billing/orders/${id}/${kind}`)).id as string
   const docs: { id: string; kind: 'devis' | 'facture' | 'avoir'; apres: number }[] = [] // apres : nombre d'étapes déjà faites à l'émission
@@ -220,7 +576,9 @@ for (const s of SCENARIOS) {
   const age = (k: number) => Math.max(s.jours - k * GAP, 0)
   const events = await db.select({ id: orderEvents.id }).from(orderEvents).where(eq(orderEvents.orderId, id)).orderBy(orderEvents.id)
   for (const [k, e] of events.entries()) await db.execute(sql`update order_events set at = at - make_interval(days => ${age(k)}) where id = ${e.id}`)
-  await db.execute(sql`update orders set created_at = created_at - make_interval(days => ${age(0)}), updated_at = updated_at - make_interval(days => ${age(events.length - 1)}), date_prevue = case when date_prevue is null then null else (date_prevue - ${age(1)}::int) end where id = ${id}`)
+  await db.execute(
+    sql`update orders set created_at = created_at - make_interval(days => ${age(0)}), updated_at = updated_at - make_interval(days => ${age(events.length - 1)}), date_prevue = case when date_prevue is null then null else (date_prevue - ${age(1)}::int) end where id = ${id}`,
+  )
   const orderAudit = await db.select({ id: auditLog.id }).from(auditLog).where(eq(auditLog.targetId, id)).orderBy(auditLog.id)
   for (const [k, a] of orderAudit.entries()) await db.execute(sql`update audit_log set at = at - make_interval(days => ${age(k)}) where id = ${a.id}`)
 
@@ -229,7 +587,9 @@ for (const s of SCENARIOS) {
   try {
     for (const d of docs) {
       const jours = age(d.apres)
-      await db.execute(sql`update billing_documents set emis_le = emis_le - make_interval(days => ${jours}), echeance = (echeance - ${jours}::int), envoye_le = envoye_le - make_interval(days => ${jours}), reponse_le = reponse_le - make_interval(days => ${jours}), updated_at = updated_at - make_interval(days => ${jours}) where id = ${d.id}`)
+      await db.execute(
+        sql`update billing_documents set emis_le = emis_le - make_interval(days => ${jours}), echeance = (echeance - ${jours}::int), envoye_le = envoye_le - make_interval(days => ${jours}), reponse_le = reponse_le - make_interval(days => ${jours}), updated_at = updated_at - make_interval(days => ${jours}) where id = ${d.id}`,
+      )
       if (f === 'facture-payee' && d.kind === 'facture') {
         const emis = addDays(today, -jours)
         const paye = addDays(emis, 12) > today ? today : addDays(emis, 12)

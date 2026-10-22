@@ -29,7 +29,14 @@ beforeEach(async () => {
 
 const entries = (action: string) => db.select().from(auditLog).where(eq(auditLog.action, action))
 const pdf = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n')
-const contact = (over: Record<string, unknown> = {}) => ({ nom: 'Jean Dupont', email: 'Jean@Example.com', objet: 'Couvertine 3 m', message: 'Bonjour, je voudrais un devis.', consentement: true, ...over })
+const contact = (over: Record<string, unknown> = {}) => ({
+  nom: 'Jean Dupont',
+  email: 'Jean@Example.com',
+  objet: 'Couvertine 3 m',
+  message: 'Bonjour, je voudrais un devis.',
+  consentement: true,
+  ...over,
+})
 
 describe('Accès', () => {
   it('les routes de gestion sont réservées à la direction', async () => {
@@ -62,7 +69,20 @@ describe('Site public', () => {
   })
 
   it('remplace les champs de l’entreprise dans les pages légales', async () => {
-    await direction.patch('/api/documents/company', { raisonSociale: 'APS Test', formeJuridique: '', capital: '', adresse: 'ZA du Parc\n42490 Fraisses', telephone: '04 00 00 00 00', email: 'contact@aps.test', siteWeb: '', siret: '', rcs: '', tvaIntra: '', iban: '', bic: '' })
+    await direction.patch('/api/documents/company', {
+      raisonSociale: 'APS Test',
+      formeJuridique: '',
+      capital: '',
+      adresse: 'ZA du Parc\n42490 Fraisses',
+      telephone: '04 00 00 00 00',
+      email: 'contact@aps.test',
+      siteWeb: '',
+      siret: '',
+      rcs: '',
+      tvaIntra: '',
+      iban: '',
+      bic: '',
+    })
     const { contenu } = (await visitor.get('/api/public/site')).json()
     expect(contenu['legal.mentions']).toContain('APS Test')
     expect(contenu['legal.mentions']).toContain('ZA du Parc, 42490 Fraisses')
@@ -259,7 +279,14 @@ describe('Avis Google', () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify(place())))
     vi.stubGlobal('fetch', fetchMock)
     const res = await visitor.get('/api/public/avis')
-    expect(res.json()).toMatchObject({ configure: true, indisponible: false, note: 4.9, total: 23, lien: 'https://maps.google.com/?cid=1', avis: [{ auteur: 'Marie L.', note: 5, texte: 'Très bon travail.', quand: 'il y a 2 mois' }] })
+    expect(res.json()).toMatchObject({
+      configure: true,
+      indisponible: false,
+      note: 4.9,
+      total: 23,
+      lien: 'https://maps.google.com/?cid=1',
+      avis: [{ auteur: 'Marie L.', note: 5, texte: 'Très bon travail.', quand: 'il y a 2 mois' }],
+    })
     // La clé n'est jamais renvoyée au visiteur
     expect(res.body).not.toContain('cle-secrete')
     await visitor.get('/api/public/avis')
@@ -273,7 +300,10 @@ describe('Avis Google', () => {
     env.GOOGLE_PLACE_ID = 'ChIJtest'
     env.GOOGLE_PLACES_API_KEY = 'cle-secrete'
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 403 })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('{}', { status: 403 })),
+    )
     const res = await visitor.get('/api/public/avis')
     expect(res.statusCode).toBe(200)
     expect(res.json()).toMatchObject({ configure: true, indisponible: true, avis: [], lien: expect.stringContaining('ChIJtest') })
@@ -316,14 +346,18 @@ describe('Configurateur public', () => {
     ...over,
   })
   const config = (over: Record<string, unknown> = {}) => ({ lignes: [piece()], livraison: { mode: 'retrait' }, ...over })
-  const devis = (over: Record<string, unknown> = {}) => ({ ...config(), nom: 'Jean Dupont', email: 'Jean@Example.com', telephone: '06 12 34 56 78', codePostal: '42490', ville: 'Fraisses', message: 'Pour un muret.', consentement: true, ...over })
+  const devis = (over: Record<string, unknown> = {}) => ({
+    ...config(),
+    nom: 'Jean Dupont',
+    email: 'Jean@Example.com',
+    telephone: '06 12 34 56 78',
+    codePostal: '42490',
+    ville: 'Fraisses',
+    message: 'Pour un muret.',
+    consentement: true,
+    ...over,
+  })
   const mailSent: Parameters<Transport['sendMail']>[0][] = []
-  const mailOn = () => {
-    env.SMTP_HOST = 'smtp.test'
-    env.MAIL_FROM = 'APS <contact@aps.test>'
-    env.MAIL_ALERT_TO = 'direction@aps.test'
-    setTransport({ async sendMail(o) { mailSent.push(o); return {} } })
-  }
   afterEach(() => {
     setTransport(null)
     env.SMTP_HOST = undefined

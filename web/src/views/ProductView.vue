@@ -64,6 +64,10 @@ async function saveFiche() {
 
 // --- Copier le produit (autre coloris) et ajuster tous les prix ---
 const copie = reactive({ ouvert: false, nom: '', erreur: '', busy: false })
+function basculeCopie() {
+  copie.ouvert = !copie.ouvert
+  copie.nom = copie.nom || `${produit.value?.nom ?? ''} (copie)`
+}
 async function dupliquer() {
   copie.erreur = ''
   copie.busy = true
@@ -230,7 +234,7 @@ async function remove() {
         <span class="pill" :class="produit.actif ? 'ok' : 'neutral'">{{ produit.actif ? 'En ligne' : 'Hors ligne' }}</span>
         <button v-if="!produit.actif" class="btn primary" type="button" @click="setActif(true)">Mettre en ligne</button>
         <button v-else class="btn" type="button" @click="setActif(false)">Retirer du site</button>
-        <button class="btn" type="button" :aria-expanded="copie.ouvert" @click="copie.ouvert = !copie.ouvert; copie.nom = copie.nom || `${produit.nom} (copie)`"><AppIcon name="copy" :size="15" /> Copier ce produit</button>
+        <button class="btn" type="button" :aria-expanded="copie.ouvert" @click="basculeCopie"><AppIcon name="copy" :size="15" /> Copier ce produit</button>
       </div>
     </div>
 
@@ -259,14 +263,29 @@ async function remove() {
         <div class="field">
           <label for="f-categorie">Catégorie</label>
           <input id="f-categorie" v-model="form.categorie" class="input" maxlength="60" placeholder="Couvertine, bavette, bandeau, accessoire…" list="categories" />
-          <datalist id="categories"><option>Couvertine</option><option>Bavette</option><option>Bandeau</option><option>Accessoire</option></datalist>
+          <datalist id="categories">
+            <option>Couvertine</option>
+            <option>Bavette</option>
+            <option>Bandeau</option>
+            <option>Accessoire</option>
+          </datalist>
         </div>
         <div class="field">
           <label for="f-description">Description affichée sur le site</label>
-          <textarea id="f-description" v-model="form.description" class="input" rows="7" maxlength="4000" :class="{ invalid: errors.description }" placeholder="Matière, usage, ce qui est fourni, conseils de pose…" />
+          <textarea
+            id="f-description"
+            v-model="form.description"
+            class="input"
+            rows="7"
+            maxlength="4000"
+            :class="{ invalid: errors.description }"
+            placeholder="Matière, usage, ce qui est fourni, conseils de pose…"
+          />
           <span v-if="errors.description" class="field-error">{{ errors.description }}</span>
         </div>
-        <p><button class="btn primary" type="submit" :disabled="saving">{{ saving ? 'Enregistrement…' : 'Enregistrer la fiche' }}</button></p>
+        <p>
+          <button class="btn primary" type="submit" :disabled="saving">{{ saving ? 'Enregistrement…' : 'Enregistrer la fiche' }}</button>
+        </p>
       </form>
 
       <section class="card box" aria-labelledby="photo">
@@ -297,10 +316,14 @@ async function remove() {
 
     <section class="card box" aria-labelledby="variantes">
       <h2 id="variantes">Déclinaisons et prix</h2>
-      <p class="muted hint">Une déclinaison est une version du produit avec son prix : une taille, un coloris, une épaisseur… Le prix est celui que voit le client, TVA {{ data.tva.toLocaleString('fr-FR') }} % comprise.</p>
+      <p class="muted hint">
+        Une déclinaison est une version du produit avec son prix : une taille, un coloris, une épaisseur… Le prix est celui que voit le client, TVA {{ data.tva.toLocaleString('fr-FR') }} % comprise.
+      </p>
       <div class="table-wrap">
         <table class="table">
-          <caption class="sr-only">Déclinaisons du produit</caption>
+          <caption class="sr-only">
+            Déclinaisons du produit
+          </caption>
           <thead>
             <tr>
               <th>Libellé</th>
@@ -318,8 +341,16 @@ async function remove() {
                 <input :aria-label="`Prix TTC de ${v.libelle}`" class="input compact price" inputmode="decimal" :value="toMoneyField(v.prixTtc)" @change="onText(v, 'prixTtc', $event)" />
                 <span class="sub">{{ eur(v.prixHt) }} HT</span>
               </td>
-              <td><label class="check"><input type="checkbox" :checked="v.actif" :aria-label="`${v.libelle} en vente`" @change="patchVariant(v, { actif: ($event.target as HTMLInputElement).checked })" /><span>{{ v.actif ? 'Oui' : 'Non' }}</span></label></td>
-              <td><button class="btn small danger" type="button" :aria-label="`Supprimer la déclinaison ${v.libelle}`" @click="removeVariant(v)"><AppIcon name="trash" :size="14" /></button></td>
+              <td>
+                <label class="check"
+                  ><input type="checkbox" :checked="v.actif" :aria-label="`${v.libelle} en vente`" @change="patchVariant(v, { actif: ($event.target as HTMLInputElement).checked })" /><span>{{
+                    v.actif ? 'Oui' : 'Non'
+                  }}</span></label
+                >
+              </td>
+              <td>
+                <button class="btn small danger" type="button" :aria-label="`Supprimer la déclinaison ${v.libelle}`" @click="removeVariant(v)"><AppIcon name="trash" :size="14" /></button>
+              </td>
             </tr>
             <tr v-for="(msg, key) in rowErrors" :key="key">
               <td colspan="5" class="field-error" role="alert">{{ msg }}</td>
@@ -333,7 +364,15 @@ async function remove() {
       <form class="ajust" novalidate @submit.prevent="ajuster">
         <div class="field">
           <label for="ajust-pct">Ajuster tous les prix (%)</label>
-          <input id="ajust-pct" v-model="ajust.pourcent" class="input" inputmode="decimal" placeholder="+5 ou -3" :aria-invalid="!!ajust.erreur" :aria-describedby="ajust.erreur ? 'ajust-e' : 'ajust-h'" />
+          <input
+            id="ajust-pct"
+            v-model="ajust.pourcent"
+            class="input"
+            inputmode="decimal"
+            placeholder="+5 ou -3"
+            :aria-invalid="!!ajust.erreur"
+            :aria-describedby="ajust.erreur ? 'ajust-e' : 'ajust-h'"
+          />
           <span v-if="ajust.erreur" id="ajust-e" class="field-error" role="alert">{{ ajust.erreur }}</span>
           <span v-else id="ajust-h" class="muted hint">Applique la hausse ou la baisse à toutes les déclinaisons, au centime TTC près.</span>
         </div>
@@ -342,7 +381,16 @@ async function remove() {
       <form class="add" novalidate @submit.prevent="addVariant">
         <div class="field">
           <label for="v-libelle">Libellé *</label>
-          <input id="v-libelle" v-model="draft.libelle" class="input" :class="{ invalid: draftErrors.libelle }" maxlength="120" placeholder="320 mm · 1 mm · 3 m" :aria-invalid="!!draftErrors.libelle" :aria-describedby="draftErrors.libelle ? 'v-libelle-e' : undefined" />
+          <input
+            id="v-libelle"
+            v-model="draft.libelle"
+            class="input"
+            :class="{ invalid: draftErrors.libelle }"
+            maxlength="120"
+            placeholder="320 mm · 1 mm · 3 m"
+            :aria-invalid="!!draftErrors.libelle"
+            :aria-describedby="draftErrors.libelle ? 'v-libelle-e' : undefined"
+          />
           <span v-if="draftErrors.libelle" id="v-libelle-e" class="field-error">{{ draftErrors.libelle }}</span>
         </div>
         <div class="field">
@@ -351,7 +399,16 @@ async function remove() {
         </div>
         <div class="field">
           <label for="v-prixTtc">Prix TTC (€) *</label>
-          <input id="v-prixTtc" v-model="draft.prixTtc" class="input" inputmode="decimal" :class="{ invalid: draftErrors.prixTtc }" placeholder="84,00" :aria-invalid="!!draftErrors.prixTtc" :aria-describedby="draftErrors.prixTtc ? 'v-prix-e' : undefined" />
+          <input
+            id="v-prixTtc"
+            v-model="draft.prixTtc"
+            class="input"
+            inputmode="decimal"
+            :class="{ invalid: draftErrors.prixTtc }"
+            placeholder="84,00"
+            :aria-invalid="!!draftErrors.prixTtc"
+            :aria-describedby="draftErrors.prixTtc ? 'v-prix-e' : undefined"
+          />
           <span v-if="draftErrors.prixTtc" id="v-prix-e" class="field-error">{{ draftErrors.prixTtc }}</span>
         </div>
         <button class="btn primary" type="submit" :disabled="adding"><AppIcon name="plus" :size="16" /> Ajouter</button>

@@ -21,7 +21,9 @@ const eur = (n: unknown) => (typeof n === 'number' ? n.toLocaleString('fr-FR', {
 
 /** Texte cité, raccourci s'il est long (mentions légales…) ; « vide » s'il n'y a rien. */
 const quote = (v: unknown) => {
-  const s = String(v ?? '').replace(/\s+/g, ' ').trim()
+  const s = String(v ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
   return s ? `« ${s.length > 60 ? s.slice(0, 57) + '…' : s} »` : 'vide'
 }
 
@@ -107,10 +109,7 @@ const CATALOG_FIELDS: Record<string, { label: string; fmt: (v: unknown) => strin
   prefixeFacture: { label: 'préfixe des factures', fmt: (v) => quote(v) },
   remisesQuantite: {
     label: 'remises quantité',
-    fmt: (v) =>
-      Array.isArray(v) && v.length
-        ? v.map((p: { seuil: number; remise: number }) => `−${String(p.remise).replace('.', ',')} % dès ${p.seuil}`).join(', ')
-        : 'aucune',
+    fmt: (v) => (Array.isArray(v) && v.length ? v.map((p: { seuil: number; remise: number }) => `−${String(p.remise).replace('.', ',')} % dès ${p.seuil}`).join(', ') : 'aucune'),
   },
 }
 function changes(c: Record<string, { avant: unknown; apres: unknown }> | undefined) {
@@ -205,7 +204,10 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
     case 'client.site_removed':
       return { text: `A retiré le chantier « ${d.chantier} » de ${d.nom}`, tone: 'neutral' }
     case 'order.created':
-      return { text: `${d.origine === 'espace' ? 'Commande' : 'A enregistré la commande'} ${d.numero} de ${d.client} (${eur(d.ht)} HT)${d.origine === 'espace' ? ', demandée depuis l’espace client' : ''}`, tone: 'accent' }
+      return {
+        text: `${d.origine === 'espace' ? 'Commande' : 'A enregistré la commande'} ${d.numero} de ${d.client} (${eur(d.ht)} HT)${d.origine === 'espace' ? ', demandée depuis l’espace client' : ''}`,
+        tone: 'accent',
+      }
     case 'order.updated':
       return { text: `A modifié la commande ${d.numero} (${eur(d.avant)} → ${eur(d.apres)} HT)`, tone: 'neutral' }
     case 'order.status_changed':
@@ -216,7 +218,10 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
     case 'order.sheet_printed':
       return { text: `A imprimé la fiche de fabrication de la commande ${d.numero}`, tone: 'neutral' }
     case 'billing.devis_created':
-      return { text: `${d.origine === 'espace' ? 'Devis' : 'A émis le devis'} ${d.numero} pour ${d.client} (commande ${d.commande}, ${eur(d.ttc)} TTC)${d.origine === 'espace' ? ', remis dans l’espace client' : ''}`, tone: 'accent' }
+      return {
+        text: `${d.origine === 'espace' ? 'Devis' : 'A émis le devis'} ${d.numero} pour ${d.client} (commande ${d.commande}, ${eur(d.ttc)} TTC)${d.origine === 'espace' ? ', remis dans l’espace client' : ''}`,
+        tone: 'accent',
+      }
     case 'billing.facture_created':
       return { text: `A émis la facture ${d.numero} pour ${d.client} (commande ${d.commande}, ${eur(d.ttc)} TTC)`, tone: 'accent' }
     case 'billing.avoir_created':
@@ -228,9 +233,15 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
     case 'billing.paid':
       return { text: `A enregistré le paiement de la facture ${d.numero} (${eur(d.ttc)}, ${MODES[d.mode] ?? d.mode}, le ${day(d.date)})`, tone: 'accent' }
     case 'billing.exported':
-      return { text: `A exporté les ${d.type === 'ventes' ? 'ventes (factures et avoirs)' : 'encaissements'} du ${day(d.du)} au ${day(d.au)} pour le comptable (${d.lignes} ligne${Number(d.lignes) > 1 ? 's' : ''})`, tone: 'neutral' }
+      return {
+        text: `A exporté les ${d.type === 'ventes' ? 'ventes (factures et avoirs)' : 'encaissements'} du ${day(d.du)} au ${day(d.au)} pour le comptable (${d.lignes} ligne${Number(d.lignes) > 1 ? 's' : ''})`,
+        tone: 'neutral',
+      }
     case 'billing.emailed':
-      return { text: `A envoyé par e-mail ${String(d.numero).startsWith('D') ? 'le devis' : String(d.numero).startsWith('A') ? 'l’avoir' : 'la facture'} ${d.numero} à ${d.client} (${d.destinataires} destinataire${Number(d.destinataires) > 1 ? 's' : ''})`, tone: 'accent' }
+      return {
+        text: `A envoyé par e-mail ${String(d.numero).startsWith('D') ? 'le devis' : String(d.numero).startsWith('A') ? 'l’avoir' : 'la facture'} ${d.numero} à ${d.client} (${d.destinataires} destinataire${Number(d.destinataires) > 1 ? 's' : ''})`,
+        tone: 'accent',
+      }
     case 'mail.test':
       return { text: 'A envoyé un e-mail d’essai pour vérifier la messagerie', tone: 'neutral' }
     case 'billing.payment_cancelled':
@@ -284,17 +295,29 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
     case 'stock.sheet_updated':
       return { text: `A modifié la feuille ${d.libelle} (${(d.champs as string[]).join(', ')})`, tone: 'neutral' }
     case 'stock.moved':
-      return { text: `${d.motif === 'inventaire' ? 'Inventaire' : d.delta > 0 ? 'Entrée' : 'Sortie'} de ${Math.abs(d.delta)} feuille${Math.abs(d.delta) > 1 ? 's' : ''} : ${d.libelle} (reste ${d.apres})`, tone: d.delta > 0 ? 'accent' : 'neutral' }
+      return {
+        text: `${d.motif === 'inventaire' ? 'Inventaire' : d.delta > 0 ? 'Entrée' : 'Sortie'} de ${Math.abs(d.delta)} feuille${Math.abs(d.delta) > 1 ? 's' : ''} : ${d.libelle} (reste ${d.apres})`,
+        tone: d.delta > 0 ? 'accent' : 'neutral',
+      }
     case 'stock.sheet_deleted':
       return { text: `A supprimé du stock la référence ${d.libelle}`, tone: 'bad' }
     case 'product.imported':
-      return { text: `A importé un catalogue : ${d.produitsCrees} produit${d.produitsCrees > 1 ? 's' : ''} créé${d.produitsCrees > 1 ? 's' : ''} (cachés du site), ${d.variantesCreees} déclinaison${d.variantesCreees > 1 ? 's' : ''} ajoutée${d.variantesCreees > 1 ? 's' : ''}, ${d.variantesMisesAJour} prix mis à jour`, tone: 'accent' }
+      return {
+        text: `A importé un catalogue : ${d.produitsCrees} produit${d.produitsCrees > 1 ? 's' : ''} créé${d.produitsCrees > 1 ? 's' : ''} (cachés du site), ${d.variantesCreees} déclinaison${d.variantesCreees > 1 ? 's' : ''} ajoutée${d.variantesCreees > 1 ? 's' : ''}, ${d.variantesMisesAJour} prix mis à jour`,
+        tone: 'accent',
+      }
     case 'product.duplicated':
       return { text: `A copié le produit « ${d.source} » en « ${d.nom} »`, tone: 'accent' }
     case 'product.prices_adjusted':
-      return { text: `A ${d.pourcent > 0 ? 'augmenté' : 'baissé'} de ${Math.abs(d.pourcent).toLocaleString('fr-FR')} % les prix de « ${d.nom} » (${d.variantes} déclinaison${d.variantes > 1 ? 's' : ''})`, tone: 'neutral' }
+      return {
+        text: `A ${d.pourcent > 0 ? 'augmenté' : 'baissé'} de ${Math.abs(d.pourcent).toLocaleString('fr-FR')} % les prix de « ${d.nom} » (${d.variantes} déclinaison${d.variantes > 1 ? 's' : ''})`,
+        tone: 'neutral',
+      }
     case 'product.bulk':
-      return { text: `A ${d.action === 'mettre_en_ligne' ? 'mis en ligne' : d.action === 'retirer' ? 'retiré du site' : 'supprimé'} ${d.produits} produit${d.produits > 1 ? 's' : ''}`, tone: d.action === 'supprimer' ? 'bad' : 'neutral' }
+      return {
+        text: `A ${d.action === 'mettre_en_ligne' ? 'mis en ligne' : d.action === 'retirer' ? 'retiré du site' : 'supprimé'} ${d.produits} produit${d.produits > 1 ? 's' : ''}`,
+        tone: d.action === 'supprimer' ? 'bad' : 'neutral',
+      }
     case 'boutique.checkout_started':
       return { text: `Un client ouvre le paiement de ${eur(d.montant)} (${d.articles} article${d.articles > 1 ? 's' : ''})`, tone: 'neutral' }
     case 'boutique.payment_confirmed':
@@ -303,34 +326,6 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `Paiement de ${eur(d.montant)} abandonné ou échoué`, tone: 'bad' }
     case 'order.refused':
       return { text: `A refusé la commande ${d.numero} et remboursé ${eur(d.montant)} au client : ${d.motif}${d.avoir ? ` (avoir ${d.avoir})` : ''}`, tone: 'bad' }
-    case 'product.created':
-      return { text: `A créé le produit « ${d.nom} »`, tone: 'accent' }
-    case 'product.updated':
-      return { text: `A modifié le produit « ${d.nom} » (${(d.champs as string[]).join(', ')})`, tone: 'neutral' }
-    case 'product.activated':
-      return { text: `A mis le produit « ${d.nom} » en ligne sur le site`, tone: 'accent' }
-    case 'product.deactivated':
-      return { text: `A retiré le produit « ${d.nom} » du site`, tone: 'neutral' }
-    case 'product.deleted':
-      return { text: `A supprimé le produit « ${d.nom} »`, tone: 'bad' }
-    case 'product.image_updated':
-      return { text: `A changé la photo du produit « ${d.nom} » (${d.largeur} × ${d.hauteur})`, tone: 'neutral' }
-    case 'product.image_deleted':
-      return { text: `A retiré la photo du produit « ${d.nom} »`, tone: 'neutral' }
-    case 'product.variant_added':
-      return { text: `A ajouté la déclinaison « ${d.libelle} » (${eur(d.prixTtc)} TTC) à « ${d.nom} »`, tone: 'accent' }
-    case 'product.variant_updated':
-      return { text: `A modifié la déclinaison « ${d.libelle} » de « ${d.nom} »${d.prixTtc ? ` (prix ${eur(d.prixTtc.avant)} → ${eur(d.prixTtc.apres)} TTC)` : ''}${d.actif === false ? ' (retirée de la vente)' : d.actif === true ? ' (remise en vente)' : ''}`, tone: 'neutral' }
-    case 'product.variant_deleted':
-      return { text: `A supprimé la déclinaison « ${d.libelle} » de « ${d.nom} »`, tone: 'bad' }
-    case 'boutique.checkout_started':
-      return { text: `Un client ouvre le paiement de ${eur(d.montant)} (${d.articles} article${d.articles > 1 ? 's' : ''})`, tone: 'neutral' }
-    case 'boutique.payment_confirmed':
-      return { text: `Paiement de ${eur(d.montant)} reçu : commande ${d.numero} créée`, tone: 'accent' }
-    case 'boutique.payment_failed':
-      return { text: `Paiement de ${eur(d.montant)} abandonné ou expiré, aucune commande créée`, tone: 'neutral' }
-    case 'order.refused':
-      return { text: `A refusé la commande ${d.numero} et remboursé ${eur(d.montant)} au client (motif : ${d.motif})${d.avoir ? `, facture annulée par l’avoir ${d.avoir}` : ''}`, tone: 'bad' }
     case 'espace.registered':
       return { text: `Espace client créé : ${d.nom}`, tone: 'accent' }
     case 'espace.login':
@@ -344,7 +339,10 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
     case 'espace.account_closed':
       return { text: 'Un client a fermé son espace : sa fiche est anonymisée, ses factures sont conservées', tone: 'neutral' }
     case 'espace.devis_answered':
-      return { text: `Un client a ${d.reponse === 'accepte' ? 'accepté' : 'refusé'} le devis ${d.numero} (commande ${d.commande}) depuis son espace`, tone: d.reponse === 'accepte' ? 'accent' : 'neutral' }
+      return {
+        text: `Un client a ${d.reponse === 'accepte' ? 'accepté' : 'refusé'} le devis ${d.numero} (commande ${d.commande}) depuis son espace`,
+        tone: d.reponse === 'accepte' ? 'accent' : 'neutral',
+      }
     case 'user.enabled':
       return { text: `A réactivé le compte de ${cible}`, tone: 'accent' }
     case 'user.password_reset':

@@ -49,7 +49,12 @@ const emailBody = z.object({
     .min(1, 'Indiquez au moins une adresse e-mail.')
     .transform((s) => s.split(/[,;\s]+/).filter(Boolean))
     .pipe(z.array(z.email('Adresse e-mail invalide.')).min(1, 'Indiquez au moins une adresse e-mail.').max(3, '3 destinataires au maximum.')),
-  sujet: z.string().trim().min(1, 'Indiquez l’objet du message.').max(200, 'Objet : 200 caractères maximum.').refine((s) => !/[\r\n]/.test(s), 'L’objet tient sur une seule ligne.'),
+  sujet: z
+    .string()
+    .trim()
+    .min(1, 'Indiquez l’objet du message.')
+    .max(200, 'Objet : 200 caractères maximum.')
+    .refine((s) => !/[\r\n]/.test(s), 'L’objet tient sur une seule ligne.'),
   message: z.string().trim().min(1, 'Écrivez le message.').max(5000, 'Message : 5000 caractères maximum.'),
 })
 
@@ -160,7 +165,21 @@ export async function billingRoutes(app: FastifyInstance) {
     let rows: string[][]
     if (type === 'ventes') {
       const found = await db
-        .select({ numero: d.numero, type: d.type, emisLe: d.emisLe, echeance: d.echeance, ht: d.ht, taux: d.tauxTva, tva: d.tva, ttc: d.ttc, payeLe: d.payeLe, mode: d.modePaiement, statut: statutExpr, annule: facture.numero, ...base })
+        .select({
+          numero: d.numero,
+          type: d.type,
+          emisLe: d.emisLe,
+          echeance: d.echeance,
+          ht: d.ht,
+          taux: d.tauxTva,
+          tva: d.tva,
+          ttc: d.ttc,
+          payeLe: d.payeLe,
+          mode: d.modePaiement,
+          statut: statutExpr,
+          annule: facture.numero,
+          ...base,
+        })
         .from(d)
         .innerJoin(orders, eq(orders.id, d.orderId))
         .innerJoin(clients, eq(clients.id, d.clientId))
@@ -168,8 +187,42 @@ export async function billingRoutes(app: FastifyInstance) {
         .leftJoin(facture, eq(facture.id, d.factureId))
         .where(and(sql`${d.type} in ('facture', 'avoir')`, sql`(${d.emisLe} at time zone 'Europe/Paris')::date between ${du} and ${au}`))
         .orderBy(d.emisLe, d.numero)
-      header = ['Date', 'Type', 'Numéro', 'Facture annulée', 'Commande', 'Client', 'SIRET', 'TVA intracommunautaire', 'Total HT', 'Taux de TVA (%)', 'TVA', 'Total TTC', 'Échéance', 'Statut', 'Payée le', 'Mode de paiement']
-      rows = found.map((r) => [csvDate(r.emisLe), r.type === 'avoir' ? 'Avoir' : 'Facture', r.numero, csvText(r.annule), r.commande, csvText(r.client), csvText(r.siret), csvText(r.tvaClient), csvAmount(r.ht), csvAmount(r.taux), csvAmount(r.tva), csvAmount(r.ttc), csvDay(r.echeance), STATUT_LABELS_CSV[r.statut] ?? r.statut, csvDay(r.payeLe), r.mode ? (PAIEMENT_LABELS[r.mode] ?? r.mode) : ''])
+      header = [
+        'Date',
+        'Type',
+        'Numéro',
+        'Facture annulée',
+        'Commande',
+        'Client',
+        'SIRET',
+        'TVA intracommunautaire',
+        'Total HT',
+        'Taux de TVA (%)',
+        'TVA',
+        'Total TTC',
+        'Échéance',
+        'Statut',
+        'Payée le',
+        'Mode de paiement',
+      ]
+      rows = found.map((r) => [
+        csvDate(r.emisLe),
+        r.type === 'avoir' ? 'Avoir' : 'Facture',
+        r.numero,
+        csvText(r.annule),
+        r.commande,
+        csvText(r.client),
+        csvText(r.siret),
+        csvText(r.tvaClient),
+        csvAmount(r.ht),
+        csvAmount(r.taux),
+        csvAmount(r.tva),
+        csvAmount(r.ttc),
+        csvDay(r.echeance),
+        STATUT_LABELS_CSV[r.statut] ?? r.statut,
+        csvDay(r.payeLe),
+        r.mode ? (PAIEMENT_LABELS[r.mode] ?? r.mode) : '',
+      ])
     } else {
       const found = await db
         .select({ numero: d.numero, ht: d.ht, tva: d.tva, ttc: d.ttc, payeLe: d.payeLe, mode: d.modePaiement, ...base })
@@ -179,13 +232,20 @@ export async function billingRoutes(app: FastifyInstance) {
         .where(and(eq(d.type, 'facture'), sql`${d.payeLe} between ${du} and ${au}`))
         .orderBy(d.payeLe, d.numero)
       header = ['Date de paiement', 'Mode de paiement', 'Facture', 'Commande', 'Client', 'SIRET', 'Total HT', 'TVA', 'Montant encaissé TTC']
-      rows = found.map((r) => [csvDay(r.payeLe), r.mode ? (PAIEMENT_LABELS[r.mode] ?? r.mode) : '', r.numero, r.commande, csvText(r.client), csvText(r.siret), csvAmount(r.ht), csvAmount(r.tva), csvAmount(r.ttc)])
+      rows = found.map((r) => [
+        csvDay(r.payeLe),
+        r.mode ? (PAIEMENT_LABELS[r.mode] ?? r.mode) : '',
+        r.numero,
+        r.commande,
+        csvText(r.client),
+        csvText(r.siret),
+        csvAmount(r.ht),
+        csvAmount(r.tva),
+        csvAmount(r.ttc),
+      ])
     }
     await audit(req, 'billing.exported', { targetType: 'billing', details: { type, du, au, lignes: rows.length } })
-    return reply
-      .header('Content-Type', 'text/csv; charset=utf-8')
-      .header('Content-Disposition', `attachment; filename="${type}-${du}_${au}.csv"`)
-      .send(toCsv(header, rows))
+    return reply.header('Content-Type', 'text/csv; charset=utf-8').header('Content-Disposition', `attachment; filename="${type}-${du}_${au}.csv"`).send(toCsv(header, rows))
   })
 
   // Émettre un devis depuis une commande (autant de versions que nécessaire)
@@ -217,7 +277,10 @@ export async function billingRoutes(app: FastifyInstance) {
         details: { numero: doc.numero, commande: o.numero, client: doc.client, ttc: doc.ttc },
       })
       if (type === 'facture' && o.kind === 'boutique') {
-        const [pay] = await db.select().from(payments).where(and(eq(payments.orderId, o.id), eq(payments.statut, 'paye')))
+        const [pay] = await db
+          .select()
+          .from(payments)
+          .where(and(eq(payments.orderId, o.id), eq(payments.statut, 'paye')))
         if (pay?.paidAt) {
           const jour = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(pay.paidAt)
           await db.update(billingDocuments).set({ payeLe: jour, modePaiement: 'carte', updatedAt: new Date() }).where(eq(billingDocuments.id, doc.id))
@@ -352,7 +415,10 @@ export async function billingRoutes(app: FastifyInstance) {
     const doc = await findDoc((req.params as { id: string }).id, reply)
     if (!doc) return
     if (doc.type !== 'facture' || !doc.payeLe) return reply.code(409).send({ error: 'Aucun paiement enregistré sur ce document.' })
-    const [online] = await db.select({ id: payments.id }).from(payments).where(and(eq(payments.orderId, doc.orderId), eq(payments.statut, 'paye')))
+    const [online] = await db
+      .select({ id: payments.id })
+      .from(payments)
+      .where(and(eq(payments.orderId, doc.orderId), eq(payments.statut, 'paye')))
     if (online) return reply.code(409).send({ error: 'Ce paiement a été fait en ligne par le client : il ne s’annule pas ici. Pour rembourser, refusez la commande.' })
     await db.update(billingDocuments).set({ payeLe: null, modePaiement: null, updatedAt: new Date() }).where(eq(billingDocuments.id, doc.id))
     await audit(req, 'billing.payment_cancelled', { targetType: 'billing', targetId: doc.id, details: { numero: doc.numero, client: doc.clientNom, date: doc.payeLe, mode: doc.modePaiement } })
@@ -368,7 +434,11 @@ export async function billingRoutes(app: FastifyInstance) {
     if (!parsed.success) return invalid(reply, parsed.error)
     try {
       const avoir = await issueCreditNote(doc, parsed.data.motif, req.user!.id)
-      await audit(req, 'billing.avoir_created', { targetType: 'billing', targetId: avoir.id, details: { numero: avoir.numero, facture: doc.numero, client: doc.clientNom, ttc: -doc.ttc, motif: parsed.data.motif } })
+      await audit(req, 'billing.avoir_created', {
+        targetType: 'billing',
+        targetId: avoir.id,
+        details: { numero: avoir.numero, facture: doc.numero, client: doc.clientNom, ttc: -doc.ttc, motif: parsed.data.motif },
+      })
       return reply.code(201).send({ id: avoir.id, numero: avoir.numero })
     } catch (e) {
       if (isUniqueViolation(e)) return reply.code(409).send({ error: 'Cette facture est déjà annulée par un avoir.' })

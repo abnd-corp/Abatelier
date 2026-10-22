@@ -20,7 +20,15 @@ const base = (over: Partial<FacturxInput> = {}): FacturxInput => ({
   echeance: new Date('2026-11-19T10:00:00+02:00'),
   commande: 'C-2026-0001',
   livraison: null,
-  vendeur: { nom: 'Atelier Test', adresse: '12 rue de l’Atelier\n42000 Saint-Étienne', siret: '732 829 320 00074', tvaIntra: 'FR44 732829320', email: 'contact@aps.test', iban: 'FR76 3000 6000 0112 3456 7890 189', bic: 'AGRIFRPP' },
+  vendeur: {
+    nom: 'Atelier Test',
+    adresse: '12 rue de l’Atelier\n42000 Saint-Étienne',
+    siret: '732 829 320 00074',
+    tvaIntra: 'FR44 732829320',
+    email: 'contact@aps.test',
+    iban: 'FR76 3000 6000 0112 3456 7890 189',
+    bic: 'AGRIFRPP',
+  },
   acheteur: { nom: 'Toitures du Forez', adresse: '8 avenue de la Gare\n42700 Firminy', siret: '732 829 320 00074', email: 'compta@forez.test' },
   lignes,
   taux: 20,
@@ -122,15 +130,43 @@ describe('Factures émises par l’application', () => {
     const [alu] = await db.insert(materials).values({ nom: 'Aluminium', epaisseur: 1.5, prixM2: 62, retourMin: 10 }).returning()
     const [anthracite] = await db.insert(colors).values({ nom: 'Gris anthracite', reference: 'RAL 7016', hex: '#383e42' }).returning()
     await db.insert(accessories).values({ nom: 'Bouchon', prix: 6.9, modeles: [M.couvertine] })
-    await direction.patch('/api/documents/company', { raisonSociale: 'Atelier Test', formeJuridique: '', capital: '', adresse: '12 rue de l’Atelier\n42000 Saint-Étienne', telephone: '', email: 'contact@aps.test', siteWeb: '', siret: '732 829 320 00074', rcs: '', tvaIntra: 'FR44732829320', iban: 'FR76 3000 6000 0112 3456 7890 189', bic: 'AGRIFRPP' })
+    await direction.patch('/api/documents/company', {
+      raisonSociale: 'Atelier Test',
+      formeJuridique: '',
+      capital: '',
+      adresse: '12 rue de l’Atelier\n42000 Saint-Étienne',
+      telephone: '',
+      email: 'contact@aps.test',
+      siteWeb: '',
+      siret: '732 829 320 00074',
+      rcs: '',
+      tvaIntra: 'FR44732829320',
+      iban: 'FR76 3000 6000 0112 3456 7890 189',
+      bic: 'AGRIFRPP',
+    })
     const dupont = (await direction.post('/api/clients', { type: 'particulier', prenom: 'Jean', nom: 'Dupont', adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' })).json().id
-    const toitures = (await direction.post('/api/clients', { type: 'professionnel', raisonSociale: 'Toitures du Forez', siret: '732 829 320 00074', adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' })).json().id
+    const toitures = (
+      await direction.post('/api/clients', {
+        type: 'professionnel',
+        raisonSociale: 'Toitures du Forez',
+        siret: '732 829 320 00074',
+        adresse: '8 avenue de la Gare',
+        codePostal: '42700',
+        ville: 'Firminy',
+      })
+    ).json().id
     ids = { alu: alu!.id, anthracite: anthracite!.id, dupont, toitures }
   })
   afterEach(() => app.close())
 
   const issue = async (kind: 'devis' | 'facture', clientId = ids.toitures) => {
-    const o = (await direction.post('/api/orders', { clientId, lignes: [{ modelId: M.couvertine, materialId: ids.alu, colorId: ids.anthracite, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 4, accessoires: [] }], livraison: { mode: 'retrait' } })).json()
+    const o = (
+      await direction.post('/api/orders', {
+        clientId,
+        lignes: [{ modelId: M.couvertine, materialId: ids.alu, colorId: ids.anthracite, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 4, accessoires: [] }],
+        livraison: { mode: 'retrait' },
+      })
+    ).json()
     await direction.post(`/api/orders/${o.id}/status`, { statut: 'validee' })
     const res = await direction.post(`/api/billing/orders/${o.id}/${kind}`)
     expect(res.statusCode, res.body).toBe(201)
@@ -160,7 +196,10 @@ describe('Factures émises par l’application', () => {
   it.skipIf(!process.env.FACTURX_DUMP)('écrit les factures et avoirs réellement émis pour le validateur', async () => {
     const dir = process.env.FACTURX_DUMP!
     mkdirSync(dir, { recursive: true })
-    for (const [nom, clientId] of [['reel-pro', ids.toitures], ['reel-particulier', ids.dupont]] as const) {
+    for (const [nom, clientId] of [
+      ['reel-pro', ids.toitures],
+      ['reel-particulier', ids.dupont],
+    ] as const) {
       const f = await issue('facture', clientId)
       writeFileSync(`${dir}/${nom}-facture.pdf`, (await direction.get(`/api/billing/${f.id}/pdf`)).rawPayload)
       const a = (await direction.post(`/api/billing/${f.id}/avoir`, { motif: 'Essai' })).json()
@@ -208,7 +247,9 @@ describe('Factures émises par l’application', () => {
 
   it('la base fige aussi le XML : il ne se modifie plus', async () => {
     const f = await issue('facture')
-    await expect(db.update(billingDocuments).set({ facturxXml: '<x/>' }).where(eq(billingDocuments.id, f.id))).rejects.toMatchObject({ cause: { message: expect.stringMatching(/ne se modifie plus/) } })
+    await expect(db.update(billingDocuments).set({ facturxXml: '<x/>' }).where(eq(billingDocuments.id, f.id))).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/ne se modifie plus/) },
+    })
   })
 
   it('dit ce qui manque à l’entreprise pour émettre des factures électroniques conformes', async () => {
@@ -218,7 +259,13 @@ describe('Factures émises par l’application', () => {
   })
 
   it('prévient sur la commande de ce qui manque avant de facturer : entreprise et client', async () => {
-    const o = (await direction.post('/api/orders', { clientId: ids.toitures, lignes: [{ modelId: M.couvertine, materialId: ids.alu, colorId: ids.anthracite, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 1, accessoires: [] }], livraison: { mode: 'retrait' } })).json()
+    const o = (
+      await direction.post('/api/orders', {
+        clientId: ids.toitures,
+        lignes: [{ modelId: M.couvertine, materialId: ids.alu, colorId: ids.anthracite, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 1, accessoires: [] }],
+        livraison: { mode: 'retrait' },
+      })
+    ).json()
     // Le client pro n'a pas d'e-mail ; l'entreprise est complète
     expect((await direction.get(`/api/orders/${o.id}`)).json().facturx).toEqual({ manque: ['l’adresse e-mail du client'] })
     await direction.patch(`/api/clients/${ids.toitures}`, { email: 'compta@forez.test' })

@@ -114,7 +114,31 @@ const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
   <form class="settings" novalidate aria-label="Façonnage et conditions" @submit.prevent="save">
     <p v-if="loadError" class="alert bad" role="alert">{{ loadError }}</p>
     <p v-if="notice" class="alert ok" role="status">{{ notice }}</p>
-    <p v-if="error && !['prixPliMl', 'miseEnRoute', 'minimumCommande', 'remisePro', 'tva', 'delaiStandard', 'remisesQuantite', 'largeurTole', 'longueurMin', 'longueurMax', 'plisMax', 'angleMin', 'angleMax', 'pinceAutorisee'].includes(error.field ?? '')" class="alert bad" role="alert">{{ error.msg }}</p>
+    <p
+      v-if="
+        error &&
+        ![
+          'prixPliMl',
+          'miseEnRoute',
+          'minimumCommande',
+          'remisePro',
+          'tva',
+          'delaiStandard',
+          'remisesQuantite',
+          'largeurTole',
+          'longueurMin',
+          'longueurMax',
+          'plisMax',
+          'angleMin',
+          'angleMax',
+          'pinceAutorisee',
+        ].includes(error.field ?? '')
+      "
+      class="alert bad"
+      role="alert"
+    >
+      {{ error.msg }}
+    </p>
 
     <div v-if="original" class="groups">
       <fieldset class="card group">
@@ -152,7 +176,9 @@ const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
         </div>
         <div class="field">
           <label for="s-delai">Délai de fabrication standard</label>
-          <span class="unit"><input id="s-delai" v-model="form.delaiStandard" class="input mono" inputmode="numeric" :aria-invalid="!!err('delaiStandard') || undefined" /><span>jours ouvrés</span></span>
+          <span class="unit"
+            ><input id="s-delai" v-model="form.delaiStandard" class="input mono" inputmode="numeric" :aria-invalid="!!err('delaiStandard') || undefined" /><span>jours ouvrés</span></span
+          >
           <span v-if="err('delaiStandard')" class="field-error">{{ err('delaiStandard') }}</span>
         </div>
       </fieldset>
@@ -163,7 +189,9 @@ const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
         <ol v-if="form.remisesQuantite.length" class="tiers">
           <li v-for="(t, i) in form.remisesQuantite" :key="i">
             <span aria-hidden="true">Dès</span>
-            <span class="unit small"><input :id="`s-seuil-${i}`" v-model="t.seuil" class="input mono" inputmode="numeric" :aria-label="`Palier ${i + 1} : nombre de pièces`" /><span>pièces</span></span>
+            <span class="unit small"
+              ><input :id="`s-seuil-${i}`" v-model="t.seuil" class="input mono" inputmode="numeric" :aria-label="`Palier ${i + 1} : nombre de pièces`" /><span>pièces</span></span
+            >
             <span aria-hidden="true">→</span>
             <span class="unit tiny"><input :id="`s-remise-${i}`" v-model="t.remise" class="input mono" inputmode="decimal" :aria-label="`Palier ${i + 1} : remise`" /><span>%</span></span>
             <button class="btn small icon" type="button" :aria-label="`Supprimer le palier ${i + 1}`" @click="form.remisesQuantite.splice(i, 1)">

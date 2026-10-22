@@ -15,8 +15,18 @@ const FEUILLES_MAX = 500
 const DIM_MIN = 50
 const DIM_MAX = 6000
 
-const dim = (label: string) => z.number({ error: `${label} : nombre attendu.` }).int(`${label} : nombre entier de millimètres.`).min(DIM_MIN, `${label} : ${DIM_MIN} mm minimum.`).max(DIM_MAX, `${label} : ${DIM_MAX} mm maximum.`)
-const qty = (label: string, max = 100000) => z.number({ error: `${label} : nombre attendu.` }).int(`${label} : nombre entier.`).min(0, `${label} : ne peut pas être négatif.`).max(max, `${label} : ${max} maximum.`)
+const dim = (label: string) =>
+  z
+    .number({ error: `${label} : nombre attendu.` })
+    .int(`${label} : nombre entier de millimètres.`)
+    .min(DIM_MIN, `${label} : ${DIM_MIN} mm minimum.`)
+    .max(DIM_MAX, `${label} : ${DIM_MAX} mm maximum.`)
+const qty = (label: string, max = 100000) =>
+  z
+    .number({ error: `${label} : nombre attendu.` })
+    .int(`${label} : nombre entier.`)
+    .min(0, `${label} : ne peut pas être négatif.`)
+    .max(max, `${label} : ${max} maximum.`)
 const note = z.string().trim().max(300, 'Note : 300 caractères maximum.')
 
 const createBody = z.object({
@@ -29,7 +39,13 @@ const createBody = z.object({
   seuil: qty('Seuil d’alerte', 10000).default(0),
   note: note.default(''),
 })
-const patchBody = z.object({ largeur: dim('Largeur').optional(), longueur: dim('Longueur').optional(), chute: z.boolean().optional(), seuil: qty('Seuil d’alerte', 10000).optional(), note: note.optional() })
+const patchBody = z.object({
+  largeur: dim('Largeur').optional(),
+  longueur: dim('Longueur').optional(),
+  chute: z.boolean().optional(),
+  seuil: qty('Seuil d’alerte', 10000).optional(),
+  note: note.optional(),
+})
 const moveBody = z
   .object({
     delta: z.number({ error: 'Quantité : nombre attendu.' }).int('Quantité : nombre entier.').min(-100000).max(100000).optional(),
@@ -111,11 +127,15 @@ export async function stockRoutes(app: FastifyInstance) {
     const [largeur, longueur] = d.largeur <= d.longueur ? [d.largeur, d.longueur] : [d.longueur, d.largeur]
     try {
       const id = await db.transaction(async (tx) => {
-        const [s] = await tx.insert(sheetStock).values({ materialId: d.materialId, colorId: d.colorId ?? null, largeur, longueur, chute: d.chute, quantite: d.quantite, seuil: d.seuil, note: d.note }).returning({ id: sheetStock.id })
+        const [s] = await tx
+          .insert(sheetStock)
+          .values({ materialId: d.materialId, colorId: d.colorId ?? null, largeur, longueur, chute: d.chute, quantite: d.quantite, seuil: d.seuil, note: d.note })
+          .returning({ id: sheetStock.id })
         return s!.id
       })
       const r = (await base().where(eq(sheetStock.id, id)))[0]!
-      if (d.quantite > 0) await db.insert(sheetMovements).values({ sheetId: id, libelle: libelle(r), delta: d.quantite, apres: d.quantite, motif: 'reception', note: 'Première saisie', userId: req.user!.id })
+      if (d.quantite > 0)
+        await db.insert(sheetMovements).values({ sheetId: id, libelle: libelle(r), delta: d.quantite, apres: d.quantite, motif: 'reception', note: 'Première saisie', userId: req.user!.id })
       await audit(req, 'stock.sheet_created', { targetType: 'sheet', targetId: id, details: { libelle: libelle(r), quantite: d.quantite } })
       return reply.code(201).send({ feuille: out(r) })
     } catch (e) {
@@ -141,7 +161,10 @@ export async function stockRoutes(app: FastifyInstance) {
     if (d.note !== undefined && d.note !== r.note) set.note = d.note
     if (!Object.keys(set).length) return { ok: true }
     try {
-      await db.update(sheetStock).set({ ...set, updatedAt: new Date() }).where(eq(sheetStock.id, r.id))
+      await db
+        .update(sheetStock)
+        .set({ ...set, updatedAt: new Date() })
+        .where(eq(sheetStock.id, r.id))
     } catch (e) {
       if (isUniqueViolation(e)) return reply.code(409).send({ error: 'Une feuille de ce format existe déjà : regroupez-les en ajustant les quantités.', field: 'largeur' })
       throw e
@@ -182,7 +205,16 @@ export async function stockRoutes(app: FastifyInstance) {
   app.get('/mouvements', async (req) => {
     const q = z.object({ feuille: z.uuid().optional() }).safeParse(req.query)
     const rows = await db
-      .select({ id: sheetMovements.id, at: sheetMovements.createdAt, libelle: sheetMovements.libelle, delta: sheetMovements.delta, apres: sheetMovements.apres, motif: sheetMovements.motif, note: sheetMovements.note, par: users.nom })
+      .select({
+        id: sheetMovements.id,
+        at: sheetMovements.createdAt,
+        libelle: sheetMovements.libelle,
+        delta: sheetMovements.delta,
+        apres: sheetMovements.apres,
+        motif: sheetMovements.motif,
+        note: sheetMovements.note,
+        par: users.nom,
+      })
       .from(sheetMovements)
       .leftJoin(users, eq(users.id, sheetMovements.userId))
       .where(q.success && q.data.feuille ? eq(sheetMovements.sheetId, q.data.feuille) : undefined)

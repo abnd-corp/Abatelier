@@ -106,15 +106,30 @@ describe('Chiffrage', () => {
   it('accepte un pli dans l’autre sens (angle négatif), sans changer le prix', async () => {
     const res = await direction.post('/api/orders/quote', body({ lignes: [{ ...couvertine(), angles: [-135, 90, 90, -135] }] }))
     expect(res.json().lignes[0]).toMatchObject({ angles: [-135, 90, 90, -135], prixUnitaire: 100.08 })
-    expect((await direction.post('/api/orders/quote', body({ lignes: [{ ...couvertine(), angles: [0, 90, 90, 135] }] }))).json()).toMatchObject({ field: 'lignes.0.angles.0', error: 'Angle : 0° impossible.' })
+    expect((await direction.post('/api/orders/quote', body({ lignes: [{ ...couvertine(), angles: [0, 90, 90, 135] }] }))).json()).toMatchObject({
+      field: 'lignes.0.angles.0',
+      error: 'Angle : 0° impossible.',
+    })
   })
 
   it('part du modèle choisi, actif, et ne propose que ses accessoires', async () => {
     const res = await direction.post('/api/orders/quote', body())
     expect(res.json().lignes[0]).toMatchObject({ modelId: M.couvertine, modeleLabel: 'Couvertine', cap: -45 })
     const c = (await direction.get('/api/orders/catalog')).json()
-    expect(c.models[0]).toEqual({ id: M.couvertine, nom: 'Couvertine', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'], cap: -45, longueur: 3000, quantite: 4 })
-    expect((await direction.post('/api/orders/quote', body({ lignes: [{ ...couvertine(), modelId: M.bandeau }] }))).json()).toEqual({ error: 'Bouchon de couvertine : ne s’utilise pas avec ce modèle.', field: 'lignes.0.accessoires.0' })
+    expect(c.models[0]).toEqual({
+      id: M.couvertine,
+      nom: 'Couvertine',
+      cotes: [20, 70, 300, 70, 20],
+      angles: [-135, 90, 90, -135],
+      noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'],
+      cap: -45,
+      longueur: 3000,
+      quantite: 4,
+    })
+    expect((await direction.post('/api/orders/quote', body({ lignes: [{ ...couvertine(), modelId: M.bandeau }] }))).json()).toEqual({
+      error: 'Bouchon de couvertine : ne s’utilise pas avec ce modèle.',
+      field: 'lignes.0.accessoires.0',
+    })
     await direction.patch(`/api/catalog/models/${M.couvertine}`, { actif: false })
     expect((await direction.post('/api/orders/quote', body())).json()).toEqual({ error: 'Modèle inconnu ou désactivé.', field: 'lignes.0.modelId' })
     expect((await direction.get('/api/orders/catalog')).json().models.map((m: { nom: string }) => m.nom)).not.toContain('Couvertine')
@@ -179,8 +194,28 @@ describe('Chiffrage', () => {
   })
 
   it('applique la remise quantité du palier atteint', async () => {
-    expect(quantityDiscount({ remisesQuantite: [{ seuil: 20, remise: 5 }, { seuil: 50, remise: 10 }] }, 19)).toBe(0)
-    expect(quantityDiscount({ remisesQuantite: [{ seuil: 50, remise: 10 }, { seuil: 20, remise: 5 }] }, 60)).toBe(10)
+    expect(
+      quantityDiscount(
+        {
+          remisesQuantite: [
+            { seuil: 20, remise: 5 },
+            { seuil: 50, remise: 10 },
+          ],
+        },
+        19,
+      ),
+    ).toBe(0)
+    expect(
+      quantityDiscount(
+        {
+          remisesQuantite: [
+            { seuil: 50, remise: 10 },
+            { seuil: 20, remise: 5 },
+          ],
+        },
+        60,
+      ),
+    ).toBe(10)
     const { lignes } = (await direction.post('/api/orders/quote', body({ lignes: [{ ...couvertine(), quantite: 20 }] }))).json()
     expect(lignes[0]).toMatchObject({ remiseQuantite: 5, montantPieces: 1901.52 })
   })
@@ -236,7 +271,13 @@ describe('Commandes', () => {
     const detail = (await direction.get(`/api/orders/${a.id}`)).json()
     expect(detail.order).toMatchObject({ statut: 'recue', statutLabel: 'Reçue', next: ['validee', 'annulee'], ht: 432.12, ttc: 518.54, livraisonMode: 'retrait' })
     expect(detail.client).toMatchObject({ id: ids.dupont, nom: 'Jean Dupont', type: 'particulier' })
-    expect(detail.lignes[0]).toMatchObject({ position: 0, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], prixUnitaire: 100.08, accessoires: [{ nom: 'Bouchon de couvertine', prix: 6.9, quantite: 2 }] })
+    expect(detail.lignes[0]).toMatchObject({
+      position: 0,
+      cotes: [20, 70, 300, 70, 20],
+      angles: [135, 90, 90, 135],
+      prixUnitaire: 100.08,
+      accessoires: [{ nom: 'Bouchon de couvertine', prix: 6.9, quantite: 2 }],
+    })
     expect(detail.events).toEqual([expect.objectContaining({ statut: 'recue', note: null })])
   })
 
@@ -326,7 +367,12 @@ describe('Fabrication (atelier)', () => {
     const list = await atelier.get('/api/production')
     expect(list.json().orders).toEqual([expect.objectContaining({ id: validee.id, numero: validee.numero, statut: 'validee', livraisonMode: 'livraison', pieces: 4, lignes: 1, next: 'fabrication' })])
     const detail = await atelier.get(`/api/production/${validee.id}`)
-    expect(detail.json().lignes[0]).toMatchObject({ cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], colorLabel: 'Gris anthracite (RAL 7016)', accessoires: [{ nom: 'Bouchon de couvertine', unite: 'piece', quantite: 2 }] })
+    expect(detail.json().lignes[0]).toMatchObject({
+      cotes: [20, 70, 300, 70, 20],
+      angles: [135, 90, 90, 135],
+      colorLabel: 'Gris anthracite (RAL 7016)',
+      accessoires: [{ nom: 'Bouchon de couvertine', unite: 'piece', quantite: 2 }],
+    })
     for (const res of [list, detail]) {
       for (const secret of ['Toitures', 'Forez', 'Firminy', 'chemin', '"clientId"', '"ttc"', '"prix"', '"ht"', '"total"', '"prixUnitaire"']) expect(res.body, secret).not.toContain(secret)
     }
@@ -372,7 +418,17 @@ describe('Fiche de fabrication (PDF)', () => {
     expect(res.headers['cache-control']).toBe('no-store')
     expect(res.rawPayload.subarray(0, 5).toString()).toBe('%PDF-')
     const txt = pdfText(res.rawPayload)
-    for (const attendu of ['FICHE DE FABRICATION', `N° ${o.numero}`, 'Couvertine · Mur sud', '4 × 3 000 mm', 'Aluminium 1,5 mm · Gris anthracite (RAL 7016)', '480 mm', '2 × Bouchon de couvertine', 'Livraison sur chantier', 'Validée'])
+    for (const attendu of [
+      'FICHE DE FABRICATION',
+      `N° ${o.numero}`,
+      'Couvertine · Mur sud',
+      '4 × 3 000 mm',
+      'Aluminium 1,5 mm · Gris anthracite (RAL 7016)',
+      '480 mm',
+      '2 × Bouchon de couvertine',
+      'Livraison sur chantier',
+      'Validée',
+    ])
       expect(txt, attendu).toContain(attendu)
     for (const secret of ['Toitures', 'Forez', 'Firminy', 'chemin', 'Dupont', '€', 'HT', 'TTC']) expect(txt, secret).not.toContain(secret)
     const [entry] = await entries('order.sheet_printed')
@@ -393,15 +449,37 @@ describe('Fiche de fabrication (PDF)', () => {
   })
 
   it('regroupe les accessoires à préparer et tient sur plusieurs pages si besoin', async () => {
-    const line = { repere: null, modeleLabel: 'Autre profil', cap: 0, materialLabel: 'Aluminium 1,5 mm', colorLabel: 'Blanc', colorHex: '#ffffff', cotes: [60, 120], angles: [-90], longueur: 2000, quantite: 50 }
-    const lignes = Array.from({ length: 9 }, (_, i) => ({ ...line, repere: `Repère ${i + 1}`, accessoires: [{ nom: 'Éclisse', unite: 'piece' as const, quantite: 2 }, { nom: 'Angle', unite: 'paire' as const, quantite: i % 2 }] }))
+    const line = {
+      repere: null,
+      modeleLabel: 'Autre profil',
+      cap: 0,
+      materialLabel: 'Aluminium 1,5 mm',
+      colorLabel: 'Blanc',
+      colorHex: '#ffffff',
+      cotes: [60, 120],
+      angles: [-90],
+      longueur: 2000,
+      quantite: 50,
+    }
+    const lignes = Array.from({ length: 9 }, (_, i) => ({
+      ...line,
+      repere: `Repère ${i + 1}`,
+      accessoires: [
+        { nom: 'Éclisse', unite: 'piece' as const, quantite: 2 },
+        { nom: 'Angle', unite: 'paire' as const, quantite: i % 2 },
+      ],
+    }))
     expect(accessoryTotals(lignes)).toEqual([
       { nom: 'Éclisse', unite: 'piece', quantite: 18 },
       { nom: 'Angle', unite: 'paire', quantite: 4 },
     ])
-    const pdf = await renderProductionSheet({ numero: 'C-2026-0042', statutLabel: 'En fabrication', datePrevue: null, livraisonMode: 'retrait', imprimeLe: new Date(), lignes }, { accent: '#6b3fa0', logo: null })
+    const pdf = await renderProductionSheet(
+      { numero: 'C-2026-0042', statutLabel: 'En fabrication', datePrevue: null, livraisonMode: 'retrait', imprimeLe: new Date(), lignes },
+      { accent: '#6b3fa0', logo: null },
+    )
     expect((pdf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length).toBeGreaterThan(1)
     const txt = pdfText(pdf)
-    for (const attendu of ['Repère 9', '______ / 50', 'C-2026-0042 · suite', 'Non fixée', 'Retrait à l’atelier', '18 × Éclisse', '4 × Angle (paires)', 'Autre profil']) expect(txt, attendu).toContain(attendu)
+    for (const attendu of ['Repère 9', '______ / 50', 'C-2026-0042 · suite', 'Non fixée', 'Retrait à l’atelier', '18 × Éclisse', '4 × Angle (paires)', 'Autre profil'])
+      expect(txt, attendu).toContain(attendu)
   })
 })

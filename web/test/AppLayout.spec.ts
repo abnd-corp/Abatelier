@@ -13,8 +13,14 @@ async function setup(user: User, path = '/') {
   await router.isReady()
   const wrapper = mount(AppLayout, { global: { plugins: [pinia, router] } })
   const nav = () => wrapper.get('nav[aria-label="Navigation principale"]')
-  const links = () => nav().findAll('a').map((a) => a.text())
-  const sections = () => nav().findAll('.section-title').map((t) => t.text())
+  const links = () =>
+    nav()
+      .findAll('a')
+      .map((a) => a.text())
+  const sections = () =>
+    nav()
+      .findAll('.section-title')
+      .map((t) => t.text())
   return { wrapper, router, links, sections, nav }
 }
 
@@ -29,7 +35,20 @@ beforeEach(() => {
 describe('Menu latéral', () => {
   it('montre toutes les sections à la direction', async () => {
     const { links, sections } = await setup(ADMIN)
-    expect(links()).toEqual(['Tableau de bord', 'Commandes', 'Devis et factures', 'Clients', 'Fabrication', 'Tarifs et catalogue', 'Modèles de documents', 'Boutique', 'Site vitrine', 'Salariés', 'Comptes', 'Journal d’activité'])
+    expect(links()).toEqual([
+      'Tableau de bord',
+      'Commandes',
+      'Devis et factures',
+      'Clients',
+      'Fabrication',
+      'Tarifs et catalogue',
+      'Modèles de documents',
+      'Boutique',
+      'Site vitrine',
+      'Salariés',
+      'Comptes',
+      'Journal d’activité',
+    ])
     expect(sections()).toEqual(['Ventes', 'Atelier', 'Direction', 'Équipe', 'Administration'])
   })
 

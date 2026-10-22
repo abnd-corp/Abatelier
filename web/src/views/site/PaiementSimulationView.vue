@@ -47,7 +47,9 @@ async function issue(issue: 'paye' | 'echec') {
         <p class="muted">Ce paiement ne se règle pas ici.</p>
       </template>
       <template v-else-if="p">
-        <p class="montant">À payer : <b>{{ eur(p.montantTtc) }}</b> TTC</p>
+        <p class="montant">
+          À payer : <b>{{ eur(p.montantTtc) }}</b> TTC
+        </p>
         <p v-if="p.statut !== 'attente'" class="muted">Ce paiement est déjà réglé ou abandonné.</p>
         <p v-else class="actions">
           <button class="s-btn primary big" type="button" :disabled="busy" @click="issue('paye')">Simuler un paiement réussi</button>

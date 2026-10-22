@@ -132,9 +132,13 @@ describe('Entrées, sorties et inventaire', () => {
     const list = (await atelier.get('/api/stock/feuilles')).json()
     expect(list.feuilles[0].quantite).toBe(23)
     const h = (await atelier.get(`/api/stock/mouvements?feuille=${f.id}`)).json().mouvements
-    expect(h.map((m: { delta: number; apres: number; motif: string; par: string }) => [m.delta, m.apres, m.motif, m.par])).toEqual([[20, 23, 'reception', 'Plieur'], [-7, 3, 'fabrication', 'Plieur'], [10, 10, 'reception', 'Plieur']])
+    expect(h.map((m: { delta: number; apres: number; motif: string; par: string }) => [m.delta, m.apres, m.motif, m.par])).toEqual([
+      [20, 23, 'reception', 'Plieur'],
+      [-7, 3, 'fabrication', 'Plieur'],
+      [10, 10, 'reception', 'Plieur'],
+    ])
     expect(h[1].note).toBe('C-2026-0001')
-    expect((await entries('stock.moved'))).toHaveLength(2)
+    expect(await entries('stock.moved')).toHaveLength(2)
   })
 
   it('refuse de sortir plus de feuilles qu’il n’y en a, sans rien changer', async () => {
@@ -176,7 +180,7 @@ describe('Entrées, sorties et inventaire', () => {
     const mv = await db.select().from(sheetMovements)
     expect(mv).toHaveLength(2)
     expect(mv.every((m) => m.sheetId === null && m.libelle.includes('Aluminium'))).toBe(true)
-    expect((await entries('stock.sheet_deleted'))).toHaveLength(1)
+    expect(await entries('stock.sheet_deleted')).toHaveLength(1)
   })
 
   it('deux sorties simultanées ne passent pas sous zéro', async () => {
@@ -215,7 +219,17 @@ describe('Choix de la feuille', () => {
     const f = await add({ largeur: 1250, longueur: 3000, quantite: 6 })
     const chute = await add({ largeur: 450, longueur: 3000, quantite: 5, chute: true })
     await add({ colorId: ids.blanc, quantite: 9 })
-    const piece = { repere: 'Mur sud', modelId: M.couvertine, materialId: ids.alu, colorId: ids.anthracite, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 4, accessoires: [] }
+    const piece = {
+      repere: 'Mur sud',
+      modelId: M.couvertine,
+      materialId: ids.alu,
+      colorId: ids.anthracite,
+      cotes: [20, 70, 300, 70, 20],
+      angles: [135, 90, 90, 135],
+      longueur: 3000,
+      quantite: 4,
+      accessoires: [],
+    }
     const cmd = (await direction.post('/api/clients', { type: 'particulier', prenom: 'Jean', nom: 'Dupont' })).json().id
     const order = (await direction.post('/api/orders', { clientId: cmd, lignes: [piece], livraison: { mode: 'retrait' } })).json()
     await direction.post(`/api/orders/${order.id}/status`, { statut: 'validee' })

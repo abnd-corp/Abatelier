@@ -16,7 +16,17 @@ beforeEach(async () => {
   direction = await loginAs(app, 'chef')
 })
 
-const DUPONT = { type: 'particulier', prenom: 'Jean', nom: 'Dupont', email: 'Jean.Dupont@Exemple.fr', telephone: '06 12 34 56 78', adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses', origine: 'telephone' }
+const DUPONT = {
+  type: 'particulier',
+  prenom: 'Jean',
+  nom: 'Dupont',
+  email: 'Jean.Dupont@Exemple.fr',
+  telephone: '06 12 34 56 78',
+  adresse: '3 rue des Lilas',
+  codePostal: '42490',
+  ville: 'Fraisses',
+  origine: 'telephone',
+}
 const TOITURES = { type: 'professionnel', raisonSociale: 'Toitures du Forez', siret: '73282932000074', tvaIntra: 'fr 12 345678901', prenom: 'Luc', nom: 'Morel', ville: 'Firminy' }
 const CHANTIER = { libelle: 'Maison Rivière', adresse: '12 chemin du Bois', codePostal: '42700', ville: 'Firminy' }
 const UUID = '00000000-0000-4000-8000-000000000000'

@@ -11,7 +11,16 @@ import type { LigneFeuilles } from '@/lib/stock'
 
 // Fiche de fabrication : les pièces à plier, sans rien sur le client ni sur les prix
 interface Detail {
-  order: { id: string; numero: string; kind: 'sur_mesure' | 'boutique'; statut: OrderStatut; statutLabel: string; livraisonMode: 'retrait' | 'livraison'; datePrevue: string | null; next: OrderStatut | null }
+  order: {
+    id: string
+    numero: string
+    kind: 'sur_mesure' | 'boutique'
+    statut: OrderStatut
+    statutLabel: string
+    livraisonMode: 'retrait' | 'livraison'
+    datePrevue: string | null
+    next: OrderStatut | null
+  }
   lignes: {
     id: string
     repere: string | null
@@ -44,7 +53,9 @@ async function load() {
     detail.value = await api<Detail>(`/production/${id.value}`)
     ui.crumb = { for: route.fullPath, label: detail.value.order.numero }
     document.title = `${detail.value.order.numero} · Fabrication · Atelier · Alu Pliage Service`
-    api<{ lignes: LigneFeuilles[] }>(`/production/${id.value}/feuilles`).then((r) => (feuilles.value = r.lignes.filter((l) => l.besoin))).catch(() => {})
+    api<{ lignes: LigneFeuilles[] }>(`/production/${id.value}/feuilles`)
+      .then((r) => (feuilles.value = r.lignes.filter((l) => l.besoin)))
+      .catch(() => {})
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : 'Chargement impossible.'
   }
@@ -82,9 +93,14 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
       <span v-if="detail.order.kind === 'boutique'" class="pill accent">Boutique</span>
     </div>
     <p class="meta">
-      <span><AppIcon name="calendar" :size="16" /> Prévue le <b>{{ shortDay(detail.order.datePrevue) }}</b></span>
+      <span
+        ><AppIcon name="calendar" :size="16" /> Prévue le <b>{{ shortDay(detail.order.datePrevue) }}</b></span
+      >
       <span><AppIcon name="layers" :size="16" /> {{ total }} pièce{{ total > 1 ? 's' : '' }}</span>
-      <span><AppIcon :name="detail.order.livraisonMode === 'retrait' ? 'home' : 'truck'" :size="16" /> {{ detail.order.livraisonMode === 'retrait' ? 'Retrait à l’atelier' : 'Livraison sur chantier' }}</span>
+      <span
+        ><AppIcon :name="detail.order.livraisonMode === 'retrait' ? 'home' : 'truck'" :size="16" />
+        {{ detail.order.livraisonMode === 'retrait' ? 'Retrait à l’atelier' : 'Livraison sur chantier' }}</span
+      >
     </p>
     <div class="actions">
       <button v-if="detail.order.next" class="btn primary" type="button" :disabled="busy" @click="advance">{{ STEP_ACTIONS[detail.order.next] }}</button>
@@ -97,10 +113,19 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
 
     <section v-if="feuilles.length" class="card block" aria-labelledby="feuilles">
       <h2 id="feuilles">Feuilles à prendre</h2>
-      <p class="muted hint">Conseil d’après le stock de l’atelier : les chutes d’abord, puis la feuille qui perd le moins. À vous de confirmer sur place ; le stock se met à jour dans « Stock de feuilles ».</p>
+      <p class="muted hint">
+        Conseil d’après le stock de l’atelier : les chutes d’abord, puis la feuille qui perd le moins. À vous de confirmer sur place ; le stock se met à jour dans « Stock de feuilles ».
+      </p>
       <ul class="conseils">
         <li v-for="(l, i) in feuilles" :key="l.ligneId">
-          <h3>Pièce {{ i + 1 }}<template v-if="l.repere"> · {{ l.repere }}</template> <span class="muted">{{ l.modeleLabel }} · développé {{ l.besoin!.developpe.toLocaleString('fr-FR') }} mm × {{ l.besoin!.longueur.toLocaleString('fr-FR') }} mm · {{ l.besoin!.quantite }} pièce{{ l.besoin!.quantite > 1 ? 's' : '' }}</span></h3>
+          <h3>
+            Pièce {{ i + 1 }}<template v-if="l.repere"> · {{ l.repere }}</template>
+            <span class="muted"
+              >{{ l.modeleLabel }} · développé {{ l.besoin!.developpe.toLocaleString('fr-FR') }} mm × {{ l.besoin!.longueur.toLocaleString('fr-FR') }} mm · {{ l.besoin!.quantite }} pièce{{
+                l.besoin!.quantite > 1 ? 's' : ''
+              }}</span
+            >
+          </h3>
           <template v-if="l.conseils.length">
             <p class="best">
               Prendre <b>{{ l.conseils[0]!.feuilles }} feuille{{ l.conseils[0]!.feuilles > 1 ? 's' : '' }}</b> : {{ l.conseils[0]!.libelle }}
@@ -109,7 +134,12 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
               <span v-if="l.conseils[0]!.chute" class="pill neutral">Chute</span>
               <span v-if="l.conseils[0]!.feuilles > l.conseils[0]!.enStock" class="pill bad">Il n’y en a que {{ l.conseils[0]!.enStock }} en stock</span>
             </p>
-            <p v-if="l.conseils.length > 1" class="muted alt">Sinon : <template v-for="(c, j) in l.conseils.slice(1)" :key="c.sheetId">{{ j ? ' · ' : '' }}{{ c.feuilles }} × {{ c.libelle }} ({{ c.perte.toLocaleString('fr-FR') }} % de perte, {{ c.enStock }} en stock)</template></p>
+            <p v-if="l.conseils.length > 1" class="muted alt">
+              Sinon :
+              <template v-for="(c, j) in l.conseils.slice(1)" :key="c.sheetId"
+                >{{ j ? ' · ' : '' }}{{ c.feuilles }} × {{ c.libelle }} ({{ c.perte.toLocaleString('fr-FR') }} % de perte, {{ c.enStock }} en stock)</template
+              >
+            </p>
           </template>
           <p v-else class="alert warn" role="status">{{ l.raison }}</p>
         </li>
@@ -120,7 +150,10 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
       <h2>Historique</h2>
       <ol class="events">
         <li v-for="(e, i) in detail.events" :key="i">
-          <b>{{ statutOf(e.statut).label }}</b> <span class="muted">{{ dateTime(e.at) }}<template v-if="e.nom"> · {{ e.nom }}</template></span>
+          <b>{{ statutOf(e.statut).label }}</b>
+          <span class="muted"
+            >{{ dateTime(e.at) }}<template v-if="e.nom"> · {{ e.nom }}</template></span
+          >
         </li>
       </ol>
     </section>

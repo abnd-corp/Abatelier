@@ -36,17 +36,39 @@ describe('Gestion des comptes', () => {
   })
 
   it('ne propose que Direction et Atelier, mais garde le rôle RH d’un compte qui l’a déjà', async () => {
-    const withRh = { users: [...USERS.users, { id: 'r1', identifiant: 'claire', nom: 'Claire RH', role: 'rh', mustChangePassword: false, disabledAt: null, createdAt: now, lastLoginAt: now, activeSessions: 0 }] }
+    const withRh = {
+      users: [...USERS.users, { id: 'r1', identifiant: 'claire', nom: 'Claire RH', role: 'rh', mustChangePassword: false, disabledAt: null, createdAt: now, lastLoginAt: now, activeSessions: 0 }],
+    }
     const { wrapper, row } = await setup({ 'GET /users': [200, withRh] })
-    await wrapper.findAll('button').find((b) => b.text().includes('Ajouter un compte'))!.trigger('click')
-    expect(wrapper.get('#new-role').findAll('option').map((o) => o.attributes('value'))).toEqual(['atelier', 'direction'])
-    expect(row('Paul Martin').get('select').findAll('option').map((o) => o.attributes('value'))).toEqual(['atelier', 'direction'])
-    expect(row('Claire RH').get('select').findAll('option').map((o) => o.attributes('value'))).toEqual(['atelier', 'rh', 'direction'])
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Ajouter un compte'))!
+      .trigger('click')
+    expect(
+      wrapper
+        .get('#new-role')
+        .findAll('option')
+        .map((o) => o.attributes('value')),
+    ).toEqual(['atelier', 'direction'])
+    expect(
+      row('Paul Martin')
+        .get('select')
+        .findAll('option')
+        .map((o) => o.attributes('value')),
+    ).toEqual(['atelier', 'direction'])
+    expect(
+      row('Claire RH')
+        .get('select')
+        .findAll('option')
+        .map((o) => o.attributes('value')),
+    ).toEqual(['atelier', 'rh', 'direction'])
   })
 
   it('n’affiche ni désactivation ni réinitialisation sur son propre compte', async () => {
     const { row } = await setup()
-    const buttons = row('Le Chef').findAll('button').map((b) => b.text())
+    const buttons = row('Le Chef')
+      .findAll('button')
+      .map((b) => b.text())
     expect(buttons).not.toContain('Désactiver')
     expect(buttons).not.toContain('Nouveau mot de passe')
     expect(row('Le Chef').get('select').attributes('disabled')).toBeDefined()
@@ -54,7 +76,10 @@ describe('Gestion des comptes', () => {
 
   it('crée un compte et affiche le mot de passe temporaire une seule fois', async () => {
     const { wrapper, calls } = await setup({ 'POST /users': [201, { id: 'n1', tempPassword: 'aaaa-bbbb-cccc-dddd' }] })
-    await wrapper.findAll('button').find((b) => b.text().includes('Ajouter un compte'))!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Ajouter un compte'))!
+      .trigger('click')
     await wrapper.get('#new-nom').setValue('Jean Dupont')
     await wrapper.get('#new-identifiant').setValue('jean')
     await wrapper.get('#new-role').setValue('direction')
@@ -63,24 +88,39 @@ describe('Gestion des comptes', () => {
     expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ identifiant: 'jean', nom: 'Jean Dupont', role: 'direction' })
     expect(wrapper.text()).toContain('Mot de passe temporaire de Jean Dupont')
     expect(wrapper.get('.temp-pw code').text()).toBe('aaaa-bbbb-cccc-dddd')
-    await wrapper.findAll('button').find((b) => b.text() === 'J’ai noté')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'J’ai noté')!
+      .trigger('click')
     expect(wrapper.text()).not.toContain('aaaa-bbbb-cccc-dddd')
   })
 
   it('demande confirmation avant de désactiver', async () => {
     const { row, calls } = await setup({ 'POST /users/p1/disable': [200, { ok: true }] })
-    await row('Paul Martin').findAll('button').find((b) => b.text() === 'Désactiver')!.trigger('click')
+    await row('Paul Martin')
+      .findAll('button')
+      .find((b) => b.text() === 'Désactiver')!
+      .trigger('click')
     expect(calls.some((c) => c.path === '/users/p1/disable')).toBe(false)
     expect(row('Paul Martin').text()).toContain('déconnectée partout')
-    await row('Paul Martin').findAll('button').find((b) => b.text() === 'Confirmer')!.trigger('click')
+    await row('Paul Martin')
+      .findAll('button')
+      .find((b) => b.text() === 'Confirmer')!
+      .trigger('click')
     await flushPromises()
     expect(calls.some((c) => c.method === 'POST' && c.path === '/users/p1/disable')).toBe(true)
   })
 
   it('l’annulation n’envoie rien', async () => {
     const { row, calls } = await setup()
-    await row('Paul Martin').findAll('button').find((b) => b.text() === 'Désactiver')!.trigger('click')
-    await row('Paul Martin').findAll('button').find((b) => b.text() === 'Annuler')!.trigger('click')
+    await row('Paul Martin')
+      .findAll('button')
+      .find((b) => b.text() === 'Désactiver')!
+      .trigger('click')
+    await row('Paul Martin')
+      .findAll('button')
+      .find((b) => b.text() === 'Annuler')!
+      .trigger('click')
     expect(calls.filter((c) => c.method !== 'GET')).toEqual([])
   })
 

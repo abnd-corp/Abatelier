@@ -164,7 +164,22 @@ describe('Ajout d’un salarié', () => {
 describe('Fiche salarié', () => {
   const FICHE = (e: Employee = PAUL) => ({
     employee: e,
-    activity: [{ id: 1, at: new Date().toISOString(), action: 'login.success', identifiant: 'paul', nom: 'Paul Martin', userId: 'u1', targetType: null, targetId: null, targetName: 'Paul Martin', ip: null, device: 'Firefox sur Linux', details: {} }],
+    activity: [
+      {
+        id: 1,
+        at: new Date().toISOString(),
+        action: 'login.success',
+        identifiant: 'paul',
+        nom: 'Paul Martin',
+        userId: 'u1',
+        targetType: null,
+        targetId: null,
+        targetName: 'Paul Martin',
+        ip: null,
+        device: 'Firefox sur Linux',
+        details: {},
+      },
+    ],
   })
 
   it('affiche les informations, le compte et l’activité', async () => {
@@ -189,7 +204,10 @@ describe('Fiche salarié', () => {
     const wrapper = mount(EmployeeView, { global: { plugins: [pinia, router] } })
     await flushPromises()
     expect(wrapper.text()).toContain('aaaa-bbbb-cccc-dddd')
-    await wrapper.findAll('button').find((b) => b.text() === 'J’ai noté')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'J’ai noté')!
+      .trigger('click')
     expect(wrapper.text()).not.toContain('aaaa-bbbb-cccc-dddd')
     expect(useUiStore().tempPassword).toBeNull()
   })
@@ -199,7 +217,10 @@ describe('Fiche salarié', () => {
       'GET /employees/e1': [200, FICHE()],
       'PATCH /employees/e1': [200, { ok: true, accountDisabled: false }],
     })
-    await wrapper.findAll('button').find((b) => b.text().includes('Modifier la fiche'))!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Modifier la fiche'))!
+      .trigger('click')
     expect((wrapper.get('#f-poste').element as HTMLInputElement).value).toBe('Plieur')
     await wrapper.get('#f-poste').setValue('Chef d’atelier')
     await wrapper.get('form').trigger('submit')
@@ -213,7 +234,10 @@ describe('Fiche salarié', () => {
       'GET /employees/e1': [200, FICHE()],
       'PATCH /employees/e1': [200, { ok: true, accountDisabled: true }],
     })
-    await wrapper.findAll('button').find((b) => b.text().includes('Modifier la fiche'))!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Modifier la fiche'))!
+      .trigger('click')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(wrapper.text()).toContain('son compte a été désactivé')
@@ -225,7 +249,10 @@ describe('Fiche salarié', () => {
       'POST /employees/e2/account': [201, { id: 'u2', tempPassword: 'eeee-ffff-gggg-hhhh' }],
     })
     expect(wrapper.text()).toContain('n’a pas de compte')
-    await wrapper.findAll('button').find((b) => b.text().includes('Créer un compte de connexion'))!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Créer un compte de connexion'))!
+      .trigger('click')
     expect((wrapper.get('#new-identifiant').element as HTMLInputElement).value).toBe('marie')
     await wrapper.get('.account-form').trigger('submit')
     await flushPromises()
@@ -238,10 +265,16 @@ describe('Fiche salarié', () => {
       'GET /employees/e1': [200, FICHE()],
       'POST /users/u1/disable': [200, { ok: true }],
     })
-    await wrapper.findAll('button').find((b) => b.text() === 'Désactiver le compte')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Désactiver le compte')!
+      .trigger('click')
     expect(calls.some((c) => c.path === '/users/u1/disable')).toBe(false)
     expect(wrapper.text()).toContain('déconnectée partout')
-    await wrapper.findAll('button').find((b) => b.text() === 'Confirmer')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Confirmer')!
+      .trigger('click')
     await flushPromises()
     expect(calls.some((c) => c.method === 'POST' && c.path === '/users/u1/disable')).toBe(true)
   })

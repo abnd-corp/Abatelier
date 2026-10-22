@@ -45,9 +45,15 @@ const KINDS = { contact: 'Alerte de contact', document: 'Devis ou facture', test
     <template v-if="status">
       <section class="card box" aria-labelledby="mail-etat">
         <h2 id="mail-etat">Envoi d’e-mails</h2>
-        <p v-if="status.configure" class="alert ok" role="status"><AppIcon name="check" :size="16" /><span>Configuré : les messages partent de <b>{{ status.expediteur }}</b>.</span></p>
+        <p v-if="status.configure" class="alert ok" role="status">
+          <AppIcon name="check" :size="16" /><span
+            >Configuré : les messages partent de <b>{{ status.expediteur }}</b
+            >.</span
+          >
+        </p>
         <p v-else class="alert" role="status">
-          Pas encore configuré : l’application fonctionne, mais n’envoie aucun e-mail (pas d’alerte de contact, pas d’envoi de devis ni de facture). Il faut un service d’envoi et une adresse sur le nom de domaine de l’entreprise, voir le document des questions.
+          Pas encore configuré : l’application fonctionne, mais n’envoie aucun e-mail (pas d’alerte de contact, pas d’envoi de devis ni de facture). Il faut un service d’envoi et une adresse sur le
+          nom de domaine de l’entreprise, voir le document des questions.
         </p>
         <dl v-if="status.configure" class="facts">
           <div>
@@ -66,7 +72,9 @@ const KINDS = { contact: 'Alerte de contact', document: 'Devis ou facture', test
         </div>
         <p v-if="error" class="alert bad" role="alert">{{ error }}</p>
         <p v-if="ok" class="alert ok" role="status">{{ ok }}</p>
-        <p><button class="btn primary" type="submit" :disabled="busy || !to.trim()"><AppIcon name="mail" :size="16" />{{ busy ? 'Envoi…' : 'Envoyer l’essai' }}</button></p>
+        <p>
+          <button class="btn primary" type="submit" :disabled="busy || !to.trim()"><AppIcon name="mail" :size="16" />{{ busy ? 'Envoi…' : 'Envoyer l’essai' }}</button>
+        </p>
       </form>
 
       <section class="card box" aria-labelledby="mail-journal">

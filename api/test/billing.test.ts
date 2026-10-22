@@ -25,10 +25,20 @@ beforeEach(async () => {
   direction = await loginAs(app, 'chef')
   const [alu] = await db.insert(materials).values({ nom: 'Aluminium', epaisseur: 1.5, prixM2: 62, retourMin: 10 }).returning()
   const [anthracite] = await db.insert(colors).values({ nom: 'Gris anthracite', reference: 'RAL 7016', hex: '#383e42' }).returning()
-  const [bouchon] = await db.insert(accessories).values({ nom: 'Bouchon de couvertine', prix: 6.9, modeles: [M.couvertine] }).returning()
+  const [bouchon] = await db
+    .insert(accessories)
+    .values({ nom: 'Bouchon de couvertine', prix: 6.9, modeles: [M.couvertine] })
+    .returning()
   const dupont = (await direction.post('/api/clients', { type: 'particulier', prenom: 'Jean', nom: 'Dupont', adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' })).json().id
   const toitures = (
-    await direction.post('/api/clients', { type: 'professionnel', raisonSociale: 'Toitures du Forez', siret: '732 829 320 00074', adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' })
+    await direction.post('/api/clients', {
+      type: 'professionnel',
+      raisonSociale: 'Toitures du Forez',
+      siret: '732 829 320 00074',
+      adresse: '8 avenue de la Gare',
+      codePostal: '42700',
+      ville: 'Firminy',
+    })
   ).json().id
   ids = { alu: alu!.id, anthracite: anthracite!.id, bouchon: bouchon!.id, dupont, toitures }
 })
@@ -191,7 +201,12 @@ describe('Factures', () => {
   it('reste figée : la base refuse de modifier son contenu ou de la supprimer', async () => {
     const f = await created(await facture((await order({}, 'validee')).id))
     await expect(db.update(billingDocuments).set({ ht: 1 }).where(eq(billingDocuments.id, f.id))).rejects.toThrow()
-    await expect(db.update(billingDocuments).set({ pdf: Buffer.from('faux') }).where(eq(billingDocuments.id, f.id))).rejects.toThrow()
+    await expect(
+      db
+        .update(billingDocuments)
+        .set({ pdf: Buffer.from('faux') })
+        .where(eq(billingDocuments.id, f.id)),
+    ).rejects.toThrow()
     await expect(db.delete(billingDocuments).where(eq(billingDocuments.id, f.id))).rejects.toThrow()
     // Le suivi, lui, peut changer
     await db.update(billingDocuments).set({ envoyeLe: new Date() }).where(eq(billingDocuments.id, f.id))
@@ -296,7 +311,12 @@ describe('Export comptable', () => {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
   const exportCsv = (query: string, c = direction) => c.get(`/api/billing/export?${query}`)
   // Sépare un CSV en lignes de cellules (sans BOM)
-  const parse = (body: string) => body.replace(/^﻿/, '').trimEnd().split('\r\n').map((l) => l.split(';'))
+  const parse = (body: string) =>
+    body
+      .replace(/^﻿/, '')
+      .trimEnd()
+      .split('\r\n')
+      .map((l) => l.split(';'))
 
   it('exporte les factures et avoirs de la période, en CSV lisible par Excel', async () => {
     const o1 = await order({ clientId: ids.toitures }, 'validee')
@@ -313,7 +333,24 @@ describe('Export comptable', () => {
     expect(res.headers['content-disposition']).toBe(`attachment; filename="ventes-${YEAR}-01-01_${YEAR}-12-31.csv"`)
     expect(res.body.startsWith('﻿')).toBe(true)
     const [header, ...rows] = parse(res.body)
-    expect(header).toEqual(['Date', 'Type', 'Numéro', 'Facture annulée', 'Commande', 'Client', 'SIRET', 'TVA intracommunautaire', 'Total HT', 'Taux de TVA (%)', 'TVA', 'Total TTC', 'Échéance', 'Statut', 'Payée le', 'Mode de paiement'])
+    expect(header).toEqual([
+      'Date',
+      'Type',
+      'Numéro',
+      'Facture annulée',
+      'Commande',
+      'Client',
+      'SIRET',
+      'TVA intracommunautaire',
+      'Total HT',
+      'Taux de TVA (%)',
+      'TVA',
+      'Total TTC',
+      'Échéance',
+      'Statut',
+      'Payée le',
+      'Mode de paiement',
+    ])
     expect(rows.map((r) => r[2])).toEqual([f1.numero, f2.numero, a2.numero])
 
     const d1 = await detail(f1.id)
@@ -351,7 +388,9 @@ describe('Export comptable', () => {
   })
 
   it('neutralise les formules et protège les « ; » et guillemets des noms de clients', async () => {
-    const piege = (await direction.post('/api/clients', { type: 'professionnel', raisonSociale: '=HYPERLINK("http://pirate.example";"x")', adresse: '1 rue', codePostal: '42000', ville: 'Saint-Étienne' })).json().id
+    const piege = (
+      await direction.post('/api/clients', { type: 'professionnel', raisonSociale: '=HYPERLINK("http://pirate.example";"x")', adresse: '1 rue', codePostal: '42000', ville: 'Saint-Étienne' })
+    ).json().id
     await facture((await order({ clientId: piege }, 'validee')).id)
     const res = await exportCsv(`type=ventes&du=${today}&au=${today}`)
     expect(res.body).toContain('"\'=HYPERLINK(""http://pirate.example"";""x"")"')

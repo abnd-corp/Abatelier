@@ -8,15 +8,7 @@ import { hashPassword, verifyPassword } from '../auth/password.js'
 import { checkPasswordPolicy } from '../auth/password-policy.js'
 import { permissionsOf } from '../auth/permissions.js'
 import { requireAuth } from '../auth/plugin.js'
-import {
-  clearCookieOptions,
-  cookieOptions,
-  createSession,
-  deleteSession,
-  deleteUserSessions,
-  SESSION_COOKIE,
-  type SessionUser,
-} from '../auth/session.js'
+import { clearCookieOptions, cookieOptions, createSession, deleteSession, deleteUserSessions, SESSION_COOKIE, type SessionUser } from '../auth/session.js'
 import { clearFailures, failureDelayMs, getLock, lockedMessage, MAX_FAILURES, recordFailure } from '../auth/throttle.js'
 import { audit, describeDevice, userAgentOf } from '../audit.js'
 import { env } from '../env.js'
@@ -100,41 +92,33 @@ export async function authRoutes(app: FastifyInstance) {
   // pour ne pas afficher d'erreur 401 dans la console à chaque visite de la page de connexion.
   app.get('/session', async (req) => ({ user: req.user ? publicUser(req.user) : null }))
 
-  app.post(
-    '/password',
-    { preHandler: requireAuth, config: { allowWhilePasswordChange: true, rateLimit: { max: env.LOGIN_RATE_LIMIT, timeWindow: '1 minute' } } },
-    async (req, reply) => {
-      const parsed = passwordBody.safeParse(req.body)
-      if (!parsed.success) return reply.code(400).send({ error: 'Mot de passe actuel et nouveau mot de passe requis.' })
-      const { current, next } = parsed.data
-      const me = req.user!
+  app.post('/password', { preHandler: requireAuth, config: { allowWhilePasswordChange: true, rateLimit: { max: env.LOGIN_RATE_LIMIT, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const parsed = passwordBody.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ error: 'Mot de passe actuel et nouveau mot de passe requis.' })
+    const { current, next } = parsed.data
+    const me = req.user!
 
-      const [row] = await db.select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, me.id))
-      if (!(await verifyPassword(row?.passwordHash, current))) {
-        await audit(req, 'password.change_failed')
-        return reply.code(400).send({ error: 'Le mot de passe actuel est incorrect.', field: 'current' })
-      }
-      if (next === current) return reply.code(400).send({ error: 'Le nouveau mot de passe doit être différent de l’actuel.', field: 'next' })
-      const policyError = checkPasswordPolicy(next, { identifiant: me.identifiant, nom: me.nom })
-      if (policyError) return reply.code(400).send({ error: policyError, field: 'next' })
+    const [row] = await db.select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, me.id))
+    if (!(await verifyPassword(row?.passwordHash, current))) {
+      await audit(req, 'password.change_failed')
+      return reply.code(400).send({ error: 'Le mot de passe actuel est incorrect.', field: 'current' })
+    }
+    if (next === current) return reply.code(400).send({ error: 'Le nouveau mot de passe doit être différent de l’actuel.', field: 'next' })
+    const policyError = checkPasswordPolicy(next, { identifiant: me.identifiant, nom: me.nom })
+    if (policyError) return reply.code(400).send({ error: policyError, field: 'next' })
 
-      await db
-        .update(users)
-        .set({ passwordHash: await hashPassword(next), passwordChangedAt: new Date(), mustChangePassword: false })
-        .where(eq(users.id, me.id))
-      // Les autres appareils sont déconnectés : si quelqu'un connaissait l'ancien mot de passe, il perd l'accès
-      const closed = await deleteUserSessions(me.id, req.authSession!.id)
-      await audit(req, 'password.changed', { details: { autresSessionsFermees: closed } })
-      return { user: publicUser({ ...me, mustChangePassword: false }), closedSessions: closed }
-    },
-  )
+    await db
+      .update(users)
+      .set({ passwordHash: await hashPassword(next), passwordChangedAt: new Date(), mustChangePassword: false })
+      .where(eq(users.id, me.id))
+    // Les autres appareils sont déconnectés : si quelqu'un connaissait l'ancien mot de passe, il perd l'accès
+    const closed = await deleteUserSessions(me.id, req.authSession!.id)
+    await audit(req, 'password.changed', { details: { autresSessionsFermees: closed } })
+    return { user: publicUser({ ...me, mustChangePassword: false }), closedSessions: closed }
+  })
 
   app.get('/sessions', { preHandler: requireAuth, config: { allowWhilePasswordChange: true } }, async (req) => {
-    const rows = await db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.userId, req.user!.id))
-      .orderBy(desc(sessions.lastSeenAt))
+    const rows = await db.select().from(sessions).where(eq(sessions.userId, req.user!.id)).orderBy(desc(sessions.lastSeenAt))
     return {
       sessions: rows
         .filter((s) => s.expiresAt > new Date())

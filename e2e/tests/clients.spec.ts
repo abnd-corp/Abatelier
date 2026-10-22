@@ -84,7 +84,10 @@ test.describe('Clients', () => {
   })
 
   test('une adresse e-mail déjà connue renvoie vers la fiche existante', async ({ adminPage, baseURL, uid }) => {
-    const res = await adminPage.request.post('/api/clients', { data: { type: 'particulier', prenom: 'Jean', nom: `Dupont${uid.slice(-4)}`, email: `${uid}@exemple.fr` }, headers: { Origin: baseURL! } })
+    const res = await adminPage.request.post('/api/clients', {
+      data: { type: 'particulier', prenom: 'Jean', nom: `Dupont${uid.slice(-4)}`, email: `${uid}@exemple.fr` },
+      headers: { Origin: baseURL! },
+    })
     const { id } = await res.json()
     await adminPage.goto('/clients/nouveau')
     await adminPage.getByRole('textbox', { name: 'Nom', exact: true }).fill('Autre')

@@ -23,7 +23,10 @@ const isoDay = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe
  * pièces, remise quantité, accessoires, mise en route, remise pro, complément au minimum, livraison.
  */
 type DocOrder = Pick<Order, 'remisePro' | 'brut' | 'complementMinimum' | 'livraisonMode' | 'livraisonVille' | 'livraisonPrix' | 'distanceKm'>
-type DocOrderLine = Pick<OrderLine, 'cotes' | 'modeleLabel' | 'repere' | 'materialLabel' | 'colorLabel' | 'longueur' | 'quantite' | 'prixUnitaire' | 'montantPieces' | 'remiseQuantite' | 'accessoires' | 'miseEnRoute'>
+type DocOrderLine = Pick<
+  OrderLine,
+  'cotes' | 'modeleLabel' | 'repere' | 'materialLabel' | 'colorLabel' | 'longueur' | 'quantite' | 'prixUnitaire' | 'montantPieces' | 'remiseQuantite' | 'accessoires' | 'miseEnRoute'
+>
 
 export function documentLines(order: DocOrder, lines: DocOrderLine[]): BillingLine[] {
   const out: BillingLine[] = []
@@ -46,7 +49,12 @@ export function documentLines(order: DocOrder, lines: DocOrderLine[]): BillingLi
     if (ecart) out.push({ designation: `Remise quantité −${num(l.remiseQuantite)} %`, detail: l.modeleLabel, quantite: 1, prixUnitaire: ecart })
     for (const a of l.accessoires) {
       if (!a.quantite) continue
-      out.push({ designation: a.unite === 'paire' ? `${a.nom} (la paire)` : a.nom, detail: `Pour : ${[l.modeleLabel, l.repere].filter(Boolean).join(' · ')}`, quantite: a.quantite, prixUnitaire: a.prix })
+      out.push({
+        designation: a.unite === 'paire' ? `${a.nom} (la paire)` : a.nom,
+        detail: `Pour : ${[l.modeleLabel, l.repere].filter(Boolean).join(' · ')}`,
+        quantite: a.quantite,
+        prixUnitaire: a.prix,
+      })
     }
   }
   // Mise en route : une par pièce différente, regroupées
@@ -144,7 +152,9 @@ export async function issueFromOrder(type: Extract<BillingType, 'devis' | 'factu
   const echeance = addDays(now, type === 'devis' ? template.validiteDevis : template.echeanceFacture)
   const references = [
     `Commande : ${order.numero}`,
-    order.livraisonMode === 'retrait' ? 'Retrait à l’atelier' : `Livraison : ${[order.livraisonAdresse, [order.livraisonCodePostal, order.livraisonVille].filter(Boolean).join(' ')].filter(Boolean).join(', ')}`,
+    order.livraisonMode === 'retrait'
+      ? 'Retrait à l’atelier'
+      : `Livraison : ${[order.livraisonAdresse, [order.livraisonCodePostal, order.livraisonVille].filter(Boolean).join(' ')].filter(Boolean).join(', ')}`,
     ...(type === 'facture' && livree ? [`${order.livraisonMode === 'retrait' ? 'Retirée' : 'Livrée'} le ${day(livree)}`] : []),
   ]
   const nom = clientName(client!)
@@ -162,12 +172,46 @@ export async function issueFromOrder(type: Extract<BillingType, 'devis' | 'factu
     // Une facture est électronique (Factur-X) ; un devis reste un PDF ordinaire
     const xml =
       type === 'facture'
-        ? buildFacturxXml(facturxInput({ type: 'facture', numero: label, date: now, echeance, commande: order.numero, livraison: livree, livraisonAdresse: order.livraisonMode === 'livraison' ? [order.livraisonAdresse, [order.livraisonCodePostal, order.livraisonVille].filter(Boolean).join(' ')].filter(Boolean).join('\n') : undefined, company, template, client: client!, lignes, taux: order.tauxTva, totaux: t }))
+        ? buildFacturxXml(
+            facturxInput({
+              type: 'facture',
+              numero: label,
+              date: now,
+              echeance,
+              commande: order.numero,
+              livraison: livree,
+              livraisonAdresse:
+                order.livraisonMode === 'livraison' ? [order.livraisonAdresse, [order.livraisonCodePostal, order.livraisonVille].filter(Boolean).join(' ')].filter(Boolean).join('\n') : undefined,
+              company,
+              template,
+              client: client!,
+              lignes,
+              taux: order.tauxTva,
+              totaux: t,
+            }),
+          )
         : null
     const pdf = await renderDocument(company, template, company.logo, data, xml ? { xml } : undefined)
     const [doc] = await tx
       .insert(billingDocuments)
-      .values({ type, numero: label, orderId: order.id, clientId: client!.id, emisLe: now, echeance: isoDay(echeance), clientNom: nom, clientAdresse: adresse, lignes, ht: t.ht, tauxTva: order.tauxTva, tva: t.tva, ttc: t.ttc, pdf, facturxXml: xml, createdBy: userId })
+      .values({
+        type,
+        numero: label,
+        orderId: order.id,
+        clientId: client!.id,
+        emisLe: now,
+        echeance: isoDay(echeance),
+        clientNom: nom,
+        clientAdresse: adresse,
+        lignes,
+        ht: t.ht,
+        tauxTva: order.tauxTva,
+        tva: t.tva,
+        ttc: t.ttc,
+        pdf,
+        facturxXml: xml,
+        createdBy: userId,
+      })
       .returning({ id: billingDocuments.id, numero: billingDocuments.numero, ttc: billingDocuments.ttc })
     return { ...doc!, client: nom }
   })
@@ -204,20 +248,42 @@ export async function issueCreditNote(facture: typeof billingDocuments.$inferSel
         facture: { numero: facture.numero, date: facture.emisLe },
       }),
     )
-    const pdf = await renderDocument(company, template, company.logo, {
-      type: 'avoir',
-      numero: label,
-      date: now,
-      references: [`Commande : ${order!.numero}`],
-      client: { nom: facture.clientNom, adresse: facture.clientAdresse },
-      lignes,
-      tva: facture.tauxTva,
-      totaux,
-      avoir: { facture: facture.numero, factureDate: facture.emisLe, motif },
-    }, { xml })
+    const pdf = await renderDocument(
+      company,
+      template,
+      company.logo,
+      {
+        type: 'avoir',
+        numero: label,
+        date: now,
+        references: [`Commande : ${order!.numero}`],
+        client: { nom: facture.clientNom, adresse: facture.clientAdresse },
+        lignes,
+        tva: facture.tauxTva,
+        totaux,
+        avoir: { facture: facture.numero, factureDate: facture.emisLe, motif },
+      },
+      { xml },
+    )
     const [doc] = await tx
       .insert(billingDocuments)
-      .values({ type: 'avoir', numero: label, orderId: facture.orderId, clientId: facture.clientId, factureId: facture.id, emisLe: now, clientNom: facture.clientNom, clientAdresse: facture.clientAdresse, lignes, ...totaux, tauxTva: facture.tauxTva, pdf, facturxXml: xml, motif, createdBy: userId })
+      .values({
+        type: 'avoir',
+        numero: label,
+        orderId: facture.orderId,
+        clientId: facture.clientId,
+        factureId: facture.id,
+        emisLe: now,
+        clientNom: facture.clientNom,
+        clientAdresse: facture.clientAdresse,
+        lignes,
+        ...totaux,
+        tauxTva: facture.tauxTva,
+        pdf,
+        facturxXml: xml,
+        motif,
+        createdBy: userId,
+      })
       .returning({ id: billingDocuments.id, numero: billingDocuments.numero })
     return doc!
   })

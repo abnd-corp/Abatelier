@@ -32,7 +32,12 @@ test.describe('Site vitrine : visiteurs', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Pliage aluminium sur mesure' })).toBeVisible()
     await expect(page.locator('#couvertine')).toBeVisible()
 
-    for (const [lien, titre] of [['Mentions légales', 'Mentions légales'], ['Confidentialité', 'Politique de confidentialité'], ['Cookies', 'Cookies'], ['Conditions générales de vente', 'Conditions générales de vente']] as const) {
+    for (const [lien, titre] of [
+      ['Mentions légales', 'Mentions légales'],
+      ['Confidentialité', 'Politique de confidentialité'],
+      ['Cookies', 'Cookies'],
+      ['Conditions générales de vente', 'Conditions générales de vente'],
+    ] as const) {
       await page.getByRole('contentinfo').getByRole('link', { name: lien }).click()
       await expect(page.getByRole('heading', { level: 1, name: titre })).toBeVisible()
     }
@@ -317,7 +322,15 @@ test.describe('Configurateur : du visiteur à la commande', () => {
       await expect(page.getByRole('heading', { name: 'Pourquoi un espace client ?' })).toBeVisible()
       await expect(page.getByRole('heading', { name: /Ce que nous faisons de vos données/ })).toHaveCount(0)
       // Quatre raisons en quadrillage 2 × 2
-      const cartes = await page.getByRole('complementary').locator('li').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y) } }))
+      const cartes = await page
+        .getByRole('complementary')
+        .locator('li')
+        .evaluateAll((els) =>
+          els.map((e) => {
+            const r = e.getBoundingClientRect()
+            return { x: Math.round(r.x), y: Math.round(r.y) }
+          }),
+        )
       expect(cartes).toHaveLength(4)
       if ((page.viewportSize()?.width ?? 0) > 420) {
         expect(cartes[1]!.y).toBe(cartes[0]!.y)
@@ -360,14 +373,27 @@ test.describe('Configurateur : du visiteur à la commande', () => {
     const signup = async (suffix: string) => {
       const ctx = await browser.newContext()
       const page = await ctx.newPage()
-      const res = await page.request.post('/api/espace/inscription', { data: { nom: `Client ${uid.slice(-6)}${suffix}`, email: `${uid}${suffix}@exemple.fr`, password: PASSWORD, consentement: true }, headers: { Origin: baseURL! } })
+      const res = await page.request.post('/api/espace/inscription', {
+        data: { nom: `Client ${uid.slice(-6)}${suffix}`, email: `${uid}${suffix}@exemple.fr`, password: PASSWORD, consentement: true },
+        headers: { Origin: baseURL! },
+      })
       expect(res.status(), await res.text()).toBe(201)
       return page
     }
-    const config = (await (await (await browser.newContext()).request.get(`${baseURL}/api/public/configurateur`)).json()) as { models: { id: string; cotes: number[]; angles: number[]; longueur: number }[]; materials: { id: string }[]; colors: { id: string }[] }
+    const config = (await (await (await browser.newContext()).request.get(`${baseURL}/api/public/configurateur`)).json()) as {
+      models: { id: string; cotes: number[]; angles: number[]; longueur: number }[]
+      materials: { id: string }[]
+      colors: { id: string }[]
+    }
     const m = config.models[0]!
     const a = await signup('a')
-    const res = await a.request.post('/api/espace/devis', { data: { lignes: [{ modelId: m.id, materialId: config.materials[0]!.id, colorId: config.colors[0]!.id, cotes: m.cotes, angles: m.angles, longueur: m.longueur, quantite: 1, accessoires: [] }], livraison: { mode: 'retrait' } }, headers: { Origin: baseURL! } })
+    const res = await a.request.post('/api/espace/devis', {
+      data: {
+        lignes: [{ modelId: m.id, materialId: config.materials[0]!.id, colorId: config.colors[0]!.id, cotes: m.cotes, angles: m.angles, longueur: m.longueur, quantite: 1, accessoires: [] }],
+        livraison: { mode: 'retrait' },
+      },
+      headers: { Origin: baseURL! },
+    })
     expect(res.status(), await res.text()).toBe(201)
     const { id } = await res.json()
 
@@ -405,7 +431,10 @@ test.describe('Site vitrine : direction', () => {
     // Photo : envoyée réduite, affichée sur l'accueil
     await adminPage.goto('/site-vitrine?onglet=photos')
     await adminPage.getByLabel('Où l’afficher ?').selectOption('realisation')
-    await adminPage.getByLabel(/^Description/).first().fill(alt)
+    await adminPage
+      .getByLabel(/^Description/)
+      .first()
+      .fill(alt)
     await adminPage.locator('#p-file').setInputFiles({ name: 'chantier.png', mimeType: 'image/png', buffer: makePng(900, 600) })
     await adminPage.getByRole('button', { name: 'Envoyer' }).click()
     await expect(adminPage.getByText('1 photo ajoutée')).toBeVisible()
@@ -468,7 +497,18 @@ test.describe('Site vitrine : direction', () => {
 })
 
 test.describe('Site vitrine : écrans @responsive', () => {
-  for (const path of ['/', '/pliage-aluminium', '/configurateur', '/contact', '/mentions-legales', '/conditions-generales-de-vente', '/espace/connexion', '/espace/inscription', '/boutique', '/panier']) {
+  for (const path of [
+    '/',
+    '/pliage-aluminium',
+    '/configurateur',
+    '/contact',
+    '/mentions-legales',
+    '/conditions-generales-de-vente',
+    '/espace/connexion',
+    '/espace/inscription',
+    '/boutique',
+    '/panier',
+  ]) {
     test(`${path} : tient dans l’écran, sans défilement horizontal`, async ({ page }) => {
       await page.goto(path)
       await expect(page.getByRole('heading', { level: 1 })).toBeInViewport()

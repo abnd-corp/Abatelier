@@ -38,8 +38,7 @@ async function request(path: string, options: Options): Promise<Response> {
   }
   if (!res.ok) {
     const data = await res.json().catch(() => null)
-    const message =
-      data?.error ?? (res.status === 429 ? 'Trop de tentatives. Réessayez dans une minute.' : 'Le serveur a rencontré un problème. Réessayez.')
+    const message = data?.error ?? (res.status === 429 ? 'Trop de tentatives. Réessayez dans une minute.' : 'Le serveur a rencontré un problème. Réessayez.')
     const err = new ApiError(res.status, message, data?.code, data?.field, data ?? undefined)
     if (res.status === 401 && path.startsWith('/espace')) {
       if (path !== '/espace/connexion') apiEvents.onEspaceUnauthorized()

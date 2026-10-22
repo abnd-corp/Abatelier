@@ -122,12 +122,16 @@ async function remove(p: PhotoAdmin) {
         <input id="p-file" ref="input" type="file" class="input" accept="image/jpeg,image/png" multiple />
         <span class="muted hint">JPEG ou PNG. Les photos sont réduites automatiquement (1600 px) avant l’envoi.</span>
       </div>
-      <p><button class="btn primary" type="submit" :disabled="uploading"><AppIcon name="upload" :size="16" />{{ uploading ? 'Envoi…' : 'Envoyer' }}</button></p>
+      <p>
+        <button class="btn primary" type="submit" :disabled="uploading"><AppIcon name="upload" :size="16" />{{ uploading ? 'Envoi…' : 'Envoyer' }}</button>
+      </p>
     </form>
 
     <p v-if="loading" class="muted" aria-busy="true">Chargement…</p>
     <section v-for="g in groups" :key="g.value" class="card group" :aria-labelledby="`g-${g.value}`">
-      <h2 :id="`g-${g.value}`">{{ g.label }} <span class="pill neutral">{{ g.items.length }}</span></h2>
+      <h2 :id="`g-${g.value}`">
+        {{ g.label }} <span class="pill neutral">{{ g.items.length }}</span>
+      </h2>
       <p v-if="!g.items.length" class="muted">Aucune photo.</p>
       <ul class="grid">
         <li v-for="(p, i) in g.items" :key="p.id" class="ph">
@@ -136,11 +140,15 @@ async function remove(p: PhotoAdmin) {
           <input :id="`alt-${p.id}`" class="input compact" :value="p.alt" maxlength="160" placeholder="Description" @change="saveAlt(p, $event)" />
           <div class="tools">
             <button type="button" class="btn small" :disabled="i === 0" :aria-label="'Monter la photo ' + (i + 1)" @click="shift(p, 'haut')"><AppIcon name="arrow-up" :size="14" /></button>
-            <button type="button" class="btn small" :disabled="i === g.items.length - 1" :aria-label="'Descendre la photo ' + (i + 1)" @click="shift(p, 'bas')"><AppIcon name="arrow-down" :size="14" /></button>
+            <button type="button" class="btn small" :disabled="i === g.items.length - 1" :aria-label="'Descendre la photo ' + (i + 1)" @click="shift(p, 'bas')">
+              <AppIcon name="arrow-down" :size="14" />
+            </button>
             <select class="input compact" :aria-label="'Déplacer la photo ' + (i + 1) + ' vers'" :value="p.emplacement" @change="moveTo(p, ($event.target as HTMLSelectElement).value as Emplacement)">
               <option v-for="e in EMPLACEMENTS" :key="e.value" :value="e.value">{{ e.label }}</option>
             </select>
-            <button v-if="confirmDelete !== p.id" type="button" class="btn small danger" :aria-label="'Supprimer la photo ' + (i + 1)" @click="confirmDelete = p.id"><AppIcon name="trash" :size="14" /></button>
+            <button v-if="confirmDelete !== p.id" type="button" class="btn small danger" :aria-label="'Supprimer la photo ' + (i + 1)" @click="confirmDelete = p.id">
+              <AppIcon name="trash" :size="14" />
+            </button>
             <template v-else>
               <button type="button" class="btn small danger" @click="remove(p)">Supprimer</button>
               <button type="button" class="btn small" @click="confirmDelete = null">Non</button>

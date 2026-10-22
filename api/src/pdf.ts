@@ -79,12 +79,66 @@ export function totals(lignes: DocLine[], tva: number) {
 /** Logo de l'appli (voir web/src/components/BrandMark.vue), dessiné en vectoriel. */
 export function drawBrandMark(doc: PDFKit.PDFDocument, x: number, y: number, height: number) {
   const s = height / 234
-  doc.save().translate(x - 8 * s, y - 18 * s).scale(s)
+  doc
+    .save()
+    .translate(x - 8 * s, y - 18 * s)
+    .scale(s)
   const shapes: { points: [number, number][]; y1: number; y2: number; stops: [number, string][] }[] = [
-    { points: [[97, 62], [125, 120], [70, 246], [14, 246]], y1: 62, y2: 246, stops: [[0, '#4a1873'], [1, '#b768cf']] },
-    { points: [[165.5, 62.5], [253.5, 246], [200, 246], [137.5, 122]], y1: 62, y2: 246, stops: [[0, '#2d4d90'], [0.35, '#6f93c7'], [1, '#c4d9f1']] },
-    { points: [[91.5, 26], [171.5, 26], [132.5, 107.5]], y1: 26, y2: 108, stops: [[0, '#c7a3e6'], [1, '#a191dc']] },
-    { points: [[131.5, 133], [162, 198], [102, 198]], y1: 133, y2: 198, stops: [[0, '#6c42a6'], [1, '#ad8ade']] },
+    {
+      points: [
+        [97, 62],
+        [125, 120],
+        [70, 246],
+        [14, 246],
+      ],
+      y1: 62,
+      y2: 246,
+      stops: [
+        [0, '#4a1873'],
+        [1, '#b768cf'],
+      ],
+    },
+    {
+      points: [
+        [165.5, 62.5],
+        [253.5, 246],
+        [200, 246],
+        [137.5, 122],
+      ],
+      y1: 62,
+      y2: 246,
+      stops: [
+        [0, '#2d4d90'],
+        [0.35, '#6f93c7'],
+        [1, '#c4d9f1'],
+      ],
+    },
+    {
+      points: [
+        [91.5, 26],
+        [171.5, 26],
+        [132.5, 107.5],
+      ],
+      y1: 26,
+      y2: 108,
+      stops: [
+        [0, '#c7a3e6'],
+        [1, '#a191dc'],
+      ],
+    },
+    {
+      points: [
+        [131.5, 133],
+        [162, 198],
+        [102, 198],
+      ],
+      y1: 133,
+      y2: 198,
+      stops: [
+        [0, '#6c42a6'],
+        [1, '#ad8ade'],
+      ],
+    },
   ]
   for (const sh of shapes) {
     const g = doc.linearGradient(0, sh.y1, 0, sh.y2)
@@ -104,7 +158,11 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
     size: 'A4',
     margin: PAGE.m,
     bufferPages: true,
-    info: { Title: clean(data.estimation ? 'Estimation' : `${TITRES[data.type]} ${data.numero}`), Author: clean(company.raisonSociale), ...(facturx ? { Creator: 'Patalu', Producer: 'Patalu', CreationDate: data.date } : {}) },
+    info: {
+      Title: clean(data.estimation ? 'Estimation' : `${TITRES[data.type]} ${data.numero}`),
+      Author: clean(company.raisonSociale),
+      ...(facturx ? { Creator: 'Patalu', Producer: 'Patalu', CreationDate: data.date } : {}),
+    },
     ...(facturx ? { pdfVersion: '1.7' as const, subset: 'PDF/A-3b' as const } : {}),
   })
   const F = facturx ? { r: 'Inter', b: 'Inter-Bold' } : { r: 'Helvetica', b: 'Helvetica-Bold' }
@@ -155,7 +213,11 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
   if (!data.estimation) text(`N° ${data.numero}`, colX, doc.y + 2, { width: colW, align: 'right' })
   doc.font(F.r).fontSize(9.5)
   const limite = data.echeance ?? addDays(data.date, isDevis ? template.validiteDevis : template.echeanceFacture)
-  const dates = [`Date : ${day(data.date)}`, isAvoir ? `Facture : ${data.avoir?.facture ?? ''}` : data.estimation ? 'Prix indicatif, non contractuel' : `${isDevis ? 'Valable jusqu’au' : 'Échéance'} : ${day(limite)}`, ...(data.references ?? [])]
+  const dates = [
+    `Date : ${day(data.date)}`,
+    isAvoir ? `Facture : ${data.avoir?.facture ?? ''}` : data.estimation ? 'Prix indicatif, non contractuel' : `${isDevis ? 'Valable jusqu’au' : 'Échéance'} : ${day(limite)}`,
+    ...(data.references ?? []),
+  ]
   text(dates.join('\n'), colX, doc.y + 2, { width: colW, align: 'right', lineGap: 1 })
 
   // Bloc client, sous les références
@@ -268,10 +330,7 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
     section('Annulation', `Cet avoir annule la facture ${data.avoir.facture} du ${day(data.avoir.factureDate)}.`)
     section('Motif', data.avoir.motif)
   } else {
-    section(
-      isDevis ? 'Validité' : 'Échéance',
-      isDevis ? `Ce devis est valable ${jours} jours, jusqu’au ${day(limite)}.` : `Paiement au plus tard le ${day(limite)} (${jours} jours).`,
-    )
+    section(isDevis ? 'Validité' : 'Échéance', isDevis ? `Ce devis est valable ${jours} jours, jusqu’au ${day(limite)}.` : `Paiement au plus tard le ${day(limite)} (${jours} jours).`)
     section('Conditions de paiement', template.conditionsPaiement)
     if (!isDevis && company.iban) section('Règlement par virement', [`IBAN : ${company.iban}`, company.bic && `BIC : ${company.bic}`].filter(Boolean).join('   ·   '))
     section('À noter', isDevis ? template.noteDevis : template.noteFacture)
@@ -280,7 +339,11 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
   if (isDevis) {
     ensure(92)
     const w = 240
-    doc.roundedRect(RIGHT - w, y, w, 80, 6).lineWidth(0.8).strokeColor(LINE).stroke()
+    doc
+      .roundedRect(RIGHT - w, y, w, 80, 6)
+      .lineWidth(0.8)
+      .strokeColor(LINE)
+      .stroke()
     doc.font(F.b).fontSize(9).fillColor(INK)
     text('Bon pour accord', RIGHT - w + 12, y + 10)
     doc.font(F.r).fontSize(8).fillColor(MUTED)
@@ -315,7 +378,13 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
     const margin = doc.page.margins.bottom
     doc.page.margins.bottom = 0
     if (data.apercu) {
-      doc.save().rotate(-32, { origin: [PAGE.w / 2, PAGE.h / 2] }).fillOpacity(0.07).fillColor(accent).font(F.b).fontSize(110)
+      doc
+        .save()
+        .rotate(-32, { origin: [PAGE.w / 2, PAGE.h / 2] })
+        .fillOpacity(0.07)
+        .fillColor(accent)
+        .font(F.b)
+        .fontSize(110)
       doc.text('APERÇU', 0, PAGE.h / 2 - 55, { width: PAGE.w, align: 'center', lineBreak: false })
       doc.restore()
     }
@@ -330,7 +399,14 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
 
   if (facturx) {
     // Le XML est joint au PDF (« Alternative » : il dit la même chose que la page) et déclaré dans les métadonnées XMP
-    doc.file(Buffer.from(facturx.xml, 'utf8'), { name: FACTURX_FILENAME, type: 'text/xml', description: 'Factur-X', relationship: 'Alternative', creationDate: data.date, modifiedDate: data.date } as Parameters<typeof doc.file>[1])
+    doc.file(Buffer.from(facturx.xml, 'utf8'), {
+      name: FACTURX_FILENAME,
+      type: 'text/xml',
+      description: 'Factur-X',
+      relationship: 'Alternative',
+      creationDate: data.date,
+      modifiedDate: data.date,
+    } as Parameters<typeof doc.file>[1])
     doc.appendXML(FACTURX_XMP)
   }
   doc.end()

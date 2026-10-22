@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import CatalogView from '@/views/CatalogView.vue'
-import { eur, km, mm, pct, qtyRule, suggestedQty, toField, type Accessory, type Color, type DeliveryEstimate, type DeliverySettings, type Material, type PieceModel, type PricingSettings } from '@/lib/catalog'
+import {
+  eur,
+  km,
+  mm,
+  pct,
+  qtyRule,
+  suggestedQty,
+  toField,
+  type Accessory,
+  type Color,
+  type DeliveryEstimate,
+  type DeliverySettings,
+  type Material,
+  type PieceModel,
+  type PricingSettings,
+} from '@/lib/catalog'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 import { useAuthStore } from '@/stores/auth'
 import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
@@ -62,8 +77,30 @@ const SETTINGS: PricingSettings = {
 
 // Les identifiants des modèles reprennent leur nom, pour la lisibilité des tests
 const PIECES: PieceModel[] = [
-  { id: 'couvertine', nom: 'Couvertine', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'], cap: -45, longueur: 3000, quantite: 4, actif: true, position: 1 },
-  { id: 'bavette', nom: 'Bavette d’appui', cotes: [30, 220, 45, 15], angles: [-95, 95, 135], noms: ['Rejingot', 'Dessus', 'Nez', 'Retour'], cap: 90, longueur: 1400, quantite: 2, actif: true, position: 2 },
+  {
+    id: 'couvertine',
+    nom: 'Couvertine',
+    cotes: [20, 70, 300, 70, 20],
+    angles: [-135, 90, 90, -135],
+    noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'],
+    cap: -45,
+    longueur: 3000,
+    quantite: 4,
+    actif: true,
+    position: 1,
+  },
+  {
+    id: 'bavette',
+    nom: 'Bavette d’appui',
+    cotes: [30, 220, 45, 15],
+    angles: [-95, 95, 135],
+    noms: ['Rejingot', 'Dessus', 'Nez', 'Retour'],
+    cap: 90,
+    longueur: 1400,
+    quantite: 2,
+    actif: true,
+    position: 2,
+  },
   { id: 'bandeau', nom: 'Bandeau', cotes: [40, 150], angles: [-90], noms: ['Retour', 'Face'], cap: 180, longueur: 3000, quantite: 6, actif: true, position: 3 },
   { id: 'solin', nom: 'Solin', cotes: [80, 60], angles: [90], noms: ['', ''], cap: 0, longueur: 2000, quantite: 1, actif: false, position: 4 },
 ]
@@ -128,7 +165,10 @@ describe('Page Tarifs et catalogue', () => {
       'POST /catalog/materials': [201, { material: { ...MATS[0], id: 'm9', epaisseur: 3, prixM2: 95.5 } }],
     })
     const p = panel('matieres')
-    await p.findAll('button').find((b) => b.text().includes('Ajouter une matière'))!.trigger('click')
+    await p
+      .findAll('button')
+      .find((b) => b.text().includes('Ajouter une matière'))!
+      .trigger('click')
     await p.get('#m-epaisseur').setValue('3')
     await p.get('#m-prix').setValue('95,50')
     await p.get('form').trigger('submit')
@@ -153,7 +193,11 @@ describe('Page Tarifs et catalogue', () => {
 
   it('désactive une matière en un clic', async () => {
     const { panel, calls } = await setup('/catalogue', { 'PATCH /catalog/materials/m1': [200, { material: { ...MATS[0], actif: false } }] })
-    await panel('matieres').findAll('tbody tr')[0]!.findAll('button').find((b) => b.text() === 'Désactiver')!.trigger('click')
+    await panel('matieres')
+      .findAll('tbody tr')[0]!
+      .findAll('button')
+      .find((b) => b.text() === 'Désactiver')!
+      .trigger('click')
     await flushPromises()
     expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ actif: false })
     expect(panel('matieres').text()).toContain('ne sera plus proposé')
@@ -189,7 +233,10 @@ describe('Page Tarifs et catalogue', () => {
     })
     await wrapper.get('#tab-coloris').trigger('click')
     const p = panel('coloris')
-    await p.findAll('button').find((b) => b.text().includes('Ajouter un coloris'))!.trigger('click')
+    await p
+      .findAll('button')
+      .find((b) => b.text().includes('Ajouter un coloris'))!
+      .trigger('click')
     await p.get('#c-reference').setValue('RAL 3004')
     await p.get('#c-nom').setValue('Rouge pourpre')
     await p.get('#c-hex').setValue('#6d1a2a')
@@ -220,14 +267,20 @@ describe('Façonnage et conditions', () => {
     await p.get('#s-pli').setValue('1,10')
     expect(save(p).attributes('disabled')).toBeUndefined()
     expect(p.text()).toContain('Modifications non enregistrées')
-    await p.findAll('button').find((b) => b.text() === 'Annuler les modifications')!.trigger('click')
+    await p
+      .findAll('button')
+      .find((b) => b.text() === 'Annuler les modifications')!
+      .trigger('click')
     expect((p.get('#s-pli').element as HTMLInputElement).value).toBe('0,90')
     expect(save(p).attributes('disabled')).toBeDefined()
   })
 
   it('ajoute et supprime des paliers de remise, puis envoie tout', async () => {
     const { p, calls } = await open({ 'PATCH /catalog/settings': [200, { settings: { ...SETTINGS, remisesQuantite: [{ seuil: 20, remise: 5 }] } }] })
-    await p.findAll('button').find((b) => b.text().includes('Ajouter un palier'))!.trigger('click')
+    await p
+      .findAll('button')
+      .find((b) => b.text().includes('Ajouter un palier'))!
+      .trigger('click')
     expect(p.findAll('.tiers li')).toHaveLength(3)
     expect((p.get('#s-seuil-2').element as HTMLInputElement).value).toBe('100')
     await p.get('button[aria-label="Supprimer le palier 2"]').trigger('click')
@@ -429,7 +482,11 @@ describe('Accessoires', () => {
 
   it('désactive un accessoire', async () => {
     const { p, calls } = await open({ 'PATCH /catalog/accessories/a2': [200, { accessory: { ...ACCS[1], actif: false } }] })
-    await p.findAll('tbody tr')[1]!.findAll('button').find((b) => b.text() === 'Désactiver')!.trigger('click')
+    await p
+      .findAll('tbody tr')[1]!
+      .findAll('button')
+      .find((b) => b.text() === 'Désactiver')!
+      .trigger('click')
     await flushPromises()
     expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ actif: false })
     expect(p.text()).toContain('Éclisse de jonction désactivé')

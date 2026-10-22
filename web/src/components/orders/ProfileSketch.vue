@@ -122,7 +122,8 @@ const aria = computed(() => props.label || `Profil, développé ${fmt(developpe(
         <text :x="a.x" :y="a.y" class="angle" :font-size="drawing.fs * 0.9" :stroke-width="drawing.sw">{{ a.v }}</text>
       </template>
       <text v-for="c in drawing.cotes" :key="c.l" :x="c.x" :y="c.y" class="cote" :font-size="drawing.fs" :stroke-width="drawing.sw">
-        <tspan class="l">{{ c.l }}</tspan> {{ c.v }}
+        <tspan class="l">{{ c.l }}</tspan>
+        {{ c.v }}
       </text>
       <circle :cx="drawing.start[0]" :cy="drawing.start[1]" :r="drawing.r" class="end" />
     </template>

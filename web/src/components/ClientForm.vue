@@ -60,7 +60,16 @@ const errorFor = (field: string, error?: { field?: string; msg: string } | null)
       <div class="row">
         <div class="field">
           <label for="c-tel">Téléphone</label>
-          <input id="c-tel" v-model="model.telephone" class="input" type="tel" inputmode="tel" autocomplete="off" placeholder="06 12 34 56 78" :aria-invalid="!!errorFor('telephone', error) || undefined" />
+          <input
+            id="c-tel"
+            v-model="model.telephone"
+            class="input"
+            type="tel"
+            inputmode="tel"
+            autocomplete="off"
+            placeholder="06 12 34 56 78"
+            :aria-invalid="!!errorFor('telephone', error) || undefined"
+          />
           <span v-if="errorFor('telephone', error)" class="field-error">{{ errorFor('telephone', error) }}</span>
         </div>
         <div class="field">
@@ -98,7 +107,15 @@ const errorFor = (field: string, error?: { field?: string; msg: string } | null)
       <legend>Notes internes</legend>
       <div class="field">
         <label for="c-notes" class="sr-only">Notes internes</label>
-        <textarea id="c-notes" v-model="model.notes" class="input" rows="3" placeholder="Habitudes, conditions particulières, accès au chantier…" aria-describedby="h-c-notes" :aria-invalid="!!errorFor('notes', error) || undefined" />
+        <textarea
+          id="c-notes"
+          v-model="model.notes"
+          class="input"
+          rows="3"
+          placeholder="Habitudes, conditions particulières, accès au chantier…"
+          aria-describedby="h-c-notes"
+          :aria-invalid="!!errorFor('notes', error) || undefined"
+        />
         <span id="h-c-notes" class="hint muted">Jamais visibles par le client.</span>
         <span v-if="errorFor('notes', error)" class="field-error">{{ errorFor('notes', error) }}</span>
       </div>

@@ -67,8 +67,7 @@ export const toFields = (c: Client): ClientFields => {
 }
 
 /** Nom affiché : raison sociale d'un professionnel, « Prénom Nom » d'un particulier (comme l'API). */
-export const clientName = (c: Pick<ClientFields, 'type' | 'raisonSociale' | 'prenom' | 'nom'>) =>
-  c.type === 'professionnel' ? (c.raisonSociale ?? '') : [c.prenom, c.nom].filter(Boolean).join(' ')
+export const clientName = (c: Pick<ClientFields, 'type' | 'raisonSociale' | 'prenom' | 'nom'>) => (c.type === 'professionnel' ? (c.raisonSociale ?? '') : [c.prenom, c.nom].filter(Boolean).join(' '))
 
 /** Contact d'un professionnel (« Luc Morel »), vide pour un particulier. */
 export const contactName = (c: Pick<ClientFields, 'type' | 'prenom' | 'nom'>) => (c.type === 'professionnel' ? [c.prenom, c.nom].filter(Boolean).join(' ') : '')

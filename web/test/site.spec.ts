@@ -19,7 +19,15 @@ import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
 vi.mock('@/lib/image', () => ({ resizePhoto: vi.fn(async () => new Blob(['jpeg'], { type: 'image/jpeg' })) }))
 
 const SITE: SiteData = {
-  entreprise: { nom: 'Alu Pliage Service', adresse: 'ZA du Parc\n42490 Fraisses', telephone: '06 10 74 86 83', email: 'contact@aps.test', siret: '503 622 433 00061', logo: false, itineraire: 'https://www.google.com/maps/place/?q=place_id:X' },
+  entreprise: {
+    nom: 'Alu Pliage Service',
+    adresse: 'ZA du Parc\n42490 Fraisses',
+    telephone: '06 10 74 86 83',
+    email: 'contact@aps.test',
+    siret: '503 622 433 00061',
+    logo: false,
+    itineraire: 'https://www.google.com/maps/place/?q=place_id:X',
+  },
   contenu: {
     'accueil.titre': 'Pliage d’aluminium sur mesure',
     'accueil.accroche': 'Fabriqué à vos dimensions.',
@@ -147,7 +155,10 @@ describe('Avis Google', () => {
   })
 
   it('sans clé ou sans réponse de Google : seulement le lien vers la fiche, aucun faux avis', async () => {
-    for (const data of [{ ...AVIS, configure: false, avis: [], note: null, total: 0 }, { ...AVIS, indisponible: true, avis: [], note: null, total: 0 }]) {
+    for (const data of [
+      { ...AVIS, configure: false, avis: [], note: null, total: 0 },
+      { ...AVIS, indisponible: true, avis: [], note: null, total: 0 },
+    ]) {
       const { wrapper } = await mountAt(SiteReviews, '/', { 'GET /public/avis': [200, data] })
       expect(wrapper.find('.review').exists()).toBe(false)
       expect(wrapper.text()).not.toContain('4,9')
@@ -274,7 +285,21 @@ describe('Formulaire de contact', () => {
 })
 
 describe('Administration du site', () => {
-  const DEMANDE = { id: 'd1', createdAt: '2026-10-20T08:00:00Z', nom: 'Jean Dupont', email: 'jean@example.com', telephone: '06 12 34 56 78', adresse: null, codePostal: '42490', ville: 'Fraisses', objet: 'Couvertine 3 m', message: 'Bonjour, un devis svp.', fichierNom: 'plan.pdf', fichierType: 'application/pdf', traiteAt: null }
+  const DEMANDE = {
+    id: 'd1',
+    createdAt: '2026-10-20T08:00:00Z',
+    nom: 'Jean Dupont',
+    email: 'jean@example.com',
+    telephone: '06 12 34 56 78',
+    adresse: null,
+    codePostal: '42490',
+    ville: 'Fraisses',
+    objet: 'Couvertine 3 m',
+    message: 'Bonjour, un devis svp.',
+    fichierNom: 'plan.pdf',
+    fichierType: 'application/pdf',
+    traiteAt: null,
+  }
   const CHAMPS = [
     { key: 'accueil.titre', groupe: 'Accueil', label: 'Titre principal', max: 120, defaut: 'Pliage', valeur: 'Pliage', modifie: false },
     { key: 'legal.cgv', groupe: 'Pages légales', label: 'Conditions générales de vente', long: true, max: 12000, defaut: 'CGV À COMPLÉTER', valeur: 'CGV À COMPLÉTER', modifie: false },
@@ -298,7 +323,10 @@ describe('Administration du site', () => {
   const btn = (w: ReturnType<typeof mount>, text: string) => w.findAll('button').find((b) => b.text().includes(text))
 
   it('liste les demandes à traiter, montre le détail et le plan joint, puis marque comme traitée', async () => {
-    const { wrapper, calls } = await mountAdmin('/site-vitrine', { 'GET /site/contacts?filtre=a_traiter': [200, { demandes: [DEMANDE], aTraiter: 1 }], 'POST /site/contacts/d1/traite': [200, { ok: true }] })
+    const { wrapper, calls } = await mountAdmin('/site-vitrine', {
+      'GET /site/contacts?filtre=a_traiter': [200, { demandes: [DEMANDE], aTraiter: 1 }],
+      'POST /site/contacts/d1/traite': [200, { ok: true }],
+    })
     expect(wrapper.get('[role="tab"][aria-selected="true"]').text()).toContain('Demandes reçues')
     expect(wrapper.get('.badge').text()).toBe('1')
     await wrapper.get('.summary').trigger('click')
@@ -311,7 +339,10 @@ describe('Administration du site', () => {
   })
 
   it('demande confirmation avant de supprimer une demande', async () => {
-    const { wrapper, calls } = await mountAdmin('/site-vitrine', { 'GET /site/contacts?filtre=a_traiter': [200, { demandes: [DEMANDE], aTraiter: 1 }], 'DELETE /site/contacts/d1': [200, { ok: true }] })
+    const { wrapper, calls } = await mountAdmin('/site-vitrine', {
+      'GET /site/contacts?filtre=a_traiter': [200, { demandes: [DEMANDE], aTraiter: 1 }],
+      'DELETE /site/contacts/d1': [200, { ok: true }],
+    })
     await wrapper.get('.summary').trigger('click')
     await btn(wrapper, 'Supprimer')!.trigger('click')
     expect(sent(calls)).toEqual([])
@@ -336,7 +367,10 @@ describe('Administration du site', () => {
   })
 
   it('affiche l’erreur du serveur sur un texte refusé', async () => {
-    const { wrapper } = await mountAdmin('/site-vitrine?onglet=textes', { 'GET /site/content': [200, { champs: CHAMPS }], 'PATCH /site/content': [400, { error: '« Titre principal » : 120 caractères maximum.', field: 'accueil.titre' }] })
+    const { wrapper } = await mountAdmin('/site-vitrine?onglet=textes', {
+      'GET /site/content': [200, { champs: CHAMPS }],
+      'PATCH /site/content': [400, { error: '« Titre principal » : 120 caractères maximum.', field: 'accueil.titre' }],
+    })
     await wrapper.get('#f-accueil\\.titre').setValue('x')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
@@ -345,7 +379,10 @@ describe('Administration du site', () => {
   })
 
   it('envoie les photos réduites à l’emplacement choisi, avec leur description', async () => {
-    const { wrapper, calls } = await mountAdmin('/site-vitrine?onglet=photos', { 'GET /site/photos': [200, { photos: PHOTOS }], 'POST /site/photos?emplacement=couvertine&alt=Couvertine%20blanche': [201, { id: 'z' }] })
+    const { wrapper, calls } = await mountAdmin('/site-vitrine?onglet=photos', {
+      'GET /site/photos': [200, { photos: PHOTOS }],
+      'POST /site/photos?emplacement=couvertine&alt=Couvertine%20blanche': [201, { id: 'z' }],
+    })
     await wrapper.get('#p-place').setValue('couvertine')
     await wrapper.get('#p-alt').setValue('Couvertine blanche')
     Object.defineProperty(wrapper.get('#p-file').element, 'files', { value: [new File(['x'], 'IMG_1.png', { type: 'image/png' })], configurable: true })
@@ -380,7 +417,20 @@ describe('Administration du site', () => {
 })
 
 describe('Journal : actions du site', () => {
-  const entry = (action: string, details: Record<string, unknown> = {}): AuditEntry => ({ id: 1, at: '2026-10-20T08:00:00Z', action, identifiant: null, nom: null, userId: null, targetType: null, targetId: null, targetName: null, ip: null, device: '', details })
+  const entry = (action: string, details: Record<string, unknown> = {}): AuditEntry => ({
+    id: 1,
+    at: '2026-10-20T08:00:00Z',
+    action,
+    identifiant: null,
+    nom: null,
+    userId: null,
+    targetType: null,
+    targetId: null,
+    targetName: null,
+    ip: null,
+    device: '',
+    details,
+  })
   it.each([
     ['site.content_updated', { champs: ['Titre principal', 'Horaires'] }, /Titre principal, Horaires/],
     ['site.content_reset', { champ: 'Titre principal' }, /rétabli/],
@@ -443,7 +493,10 @@ describe('Onglet E-mails', () => {
   })
 
   it('montre l’erreur quand l’essai échoue', async () => {
-    const { wrapper } = await mountMail({ 'GET /mail/status': [200, STATUS], 'POST /mail/test': [502, { error: 'Le message d’essai n’est pas parti : identifiants refusés par le serveur de messagerie.' }] })
+    const { wrapper } = await mountMail({
+      'GET /mail/status': [200, STATUS],
+      'POST /mail/test': [502, { error: 'Le message d’essai n’est pas parti : identifiants refusés par le serveur de messagerie.' }],
+    })
     await wrapper.get('#mail-test').setValue('moi@example.com')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
@@ -460,17 +513,60 @@ describe('Onglet E-mails', () => {
 
 describe('Configurateur public', () => {
   const CATALOG: OrderCatalog = {
-    models: [{ id: 'couvertine', nom: 'Couvertine', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'], cap: -45, longueur: 3000, quantite: 4 }],
+    models: [
+      {
+        id: 'couvertine',
+        nom: 'Couvertine',
+        cotes: [20, 70, 300, 70, 20],
+        angles: [-135, 90, 90, -135],
+        noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'],
+        cap: -45,
+        longueur: 3000,
+        quantite: 4,
+      },
+    ],
     materials: [{ id: 'm1', label: 'Aluminium 1,5 mm', epaisseur: 1.5, retourMin: 10 }],
     colors: [{ id: 'k1', label: 'Gris anthracite (RAL 7016)', hex: '#383e42' }],
     accessories: [],
     limits: { largeurTole: 1250, longueurMin: 200, longueurMax: 3000, plisMax: 8, angleMin: 30, angleMax: 175, pince: true },
     retrait: true,
   }
-  const TOTALS: Totals = { brut: 432.12, tauxRemisePro: 0, remisePro: 0, complementMinimum: 0, livraisonPrix: 0, livraisonOfferte: false, ht: 432.12, tauxTva: 20, tva: 86.42, ttc: 518.54, delaiJours: 5 } as Totals
-  const LINE = { repere: null, modelId: 'couvertine', modeleLabel: 'Couvertine', cap: -45, materialLabel: 'Aluminium 1,5 mm', colorLabel: 'Gris anthracite (RAL 7016)', colorHex: '#383e42', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], longueur: 3000, quantite: 4, accessoires: [], prixUnitaire: 100.08, remiseQuantite: 0, montantPieces: 400.32, montantAccessoires: 0, miseEnRoute: 18, total: 432.12 }
+  const TOTALS: Totals = {
+    brut: 432.12,
+    tauxRemisePro: 0,
+    remisePro: 0,
+    complementMinimum: 0,
+    livraisonPrix: 0,
+    livraisonOfferte: false,
+    ht: 432.12,
+    tauxTva: 20,
+    tva: 86.42,
+    ttc: 518.54,
+    delaiJours: 5,
+  } as Totals
+  const LINE = {
+    repere: null,
+    modelId: 'couvertine',
+    modeleLabel: 'Couvertine',
+    cap: -45,
+    materialLabel: 'Aluminium 1,5 mm',
+    colorLabel: 'Gris anthracite (RAL 7016)',
+    colorHex: '#383e42',
+    cotes: [20, 70, 300, 70, 20],
+    angles: [-135, 90, 90, -135],
+    longueur: 3000,
+    quantite: 4,
+    accessoires: [],
+    prixUnitaire: 100.08,
+    remiseQuantite: 0,
+    montantPieces: 400.32,
+    montantAccessoires: 0,
+    miseEnRoute: 18,
+    total: 432.12,
+  }
   const QUOTE = { lignes: [LINE], totals: TOTALS, distanceKm: null }
-  const routes = (extra: Parameters<typeof mockApi>[0] = {}) => ({ 'GET /public/configurateur': [200, CATALOG], 'POST /public/configurateur/chiffrage': [200, QUOTE], ...extra }) as Parameters<typeof mockApi>[0]
+  const routes = (extra: Parameters<typeof mockApi>[0] = {}) =>
+    ({ 'GET /public/configurateur': [200, CATALOG], 'POST /public/configurateur/chiffrage': [200, QUOTE], ...extra }) as Parameters<typeof mockApi>[0]
 
   const mountConfig = async (extra: Parameters<typeof mockApi>[0] = {}) => {
     const calls = mockApi(routes(extra))
@@ -637,7 +733,23 @@ describe('Configurateur public', () => {
   })
 
   describe('côté direction', () => {
-    const DEMANDE = { id: 'd1', createdAt: '2026-10-20T08:00:00Z', nom: 'Jean Dupont', email: 'jean@example.com', telephone: null, adresse: null, codePostal: '42490', ville: 'Fraisses', objet: 'Demande de devis : 4 pièces, 518,54 € TTC', message: 'Pour un muret.', fichierNom: null, fichierType: null, configuration: { resume: ['4 × Couvertine · Aluminium 1,5 mm · Gris anthracite (RAL 7016) · longueur 3 000 mm'], ht: 432.12, ttc: 518.54 }, commandeId: null, traiteAt: null }
+    const DEMANDE = {
+      id: 'd1',
+      createdAt: '2026-10-20T08:00:00Z',
+      nom: 'Jean Dupont',
+      email: 'jean@example.com',
+      telephone: null,
+      adresse: null,
+      codePostal: '42490',
+      ville: 'Fraisses',
+      objet: 'Demande de devis : 4 pièces, 518,54 € TTC',
+      message: 'Pour un muret.',
+      fichierNom: null,
+      fichierType: null,
+      configuration: { resume: ['4 × Couvertine · Aluminium 1,5 mm · Gris anthracite (RAL 7016) · longueur 3 000 mm'], ht: 432.12, ttc: 518.54 },
+      commandeId: null,
+      traiteAt: null,
+    }
     const mountList = async (demande: object, extra: Parameters<typeof mockApi>[0] = {}) => {
       const calls = mockApi({ 'GET /site/contacts?filtre=a_traiter': [200, { demandes: [demande], aTraiter: 1 }], ...extra })
       const pinia = freshPinia()
@@ -656,7 +768,10 @@ describe('Configurateur public', () => {
       expect(wrapper.text()).toContain('Pièces choisies dans le configurateur')
       expect(wrapper.text()).toContain('4 × Couvertine')
       expect(wrapper.text().replace(/[\u202f\u00a0]/g, ' ')).toContain('518,54 € TTC')
-      await wrapper.findAll('button').find((b) => b.text().includes('Créer la commande'))!.trigger('click')
+      await wrapper
+        .findAll('button')
+        .find((b) => b.text().includes('Créer la commande'))!
+        .trigger('click')
       await flushPromises()
       expect(calls.find((c) => c.method === 'POST')!.path).toBe('/site/contacts/d1/commande')
       expect(router.currentRoute.value.path).toBe('/commandes/o9')
@@ -667,7 +782,10 @@ describe('Configurateur public', () => {
       expect(done.wrapper.find('a[href="/commandes/o9"]').text()).toContain('Voir la commande')
       expect(done.wrapper.text()).not.toContain('Créer la commande')
       const fail = await mountList(DEMANDE, { 'POST /site/contacts/d1/commande': [409, { error: 'Les pièces de cette demande ne passent plus les contrôles actuels.' }] })
-      await fail.wrapper.findAll('button').find((b) => b.text().includes('Créer la commande'))!.trigger('click')
+      await fail.wrapper
+        .findAll('button')
+        .find((b) => b.text().includes('Créer la commande'))!
+        .trigger('click')
       await flushPromises()
       expect(fail.wrapper.get('[role="alert"]').text()).toContain('ne passent plus')
     })
@@ -678,7 +796,20 @@ describe('Configurateur public', () => {
     })
 
     it('décrit la création de commande dans le journal', () => {
-      const d = describeEntry({ id: 1, at: '2026-10-20T08:00:00Z', action: 'contact.order_created', identifiant: 'chef', nom: 'Le Chef', userId: 'u', targetType: null, targetId: null, targetName: null, ip: null, device: '', details: { objet: 'Demande de devis', commande: 'C-2026-0009', clientCree: true } })
+      const d = describeEntry({
+        id: 1,
+        at: '2026-10-20T08:00:00Z',
+        action: 'contact.order_created',
+        identifiant: 'chef',
+        nom: 'Le Chef',
+        userId: 'u',
+        targetType: null,
+        targetId: null,
+        targetName: null,
+        ip: null,
+        device: '',
+        details: { objet: 'Demande de devis', commande: 'C-2026-0009', clientCree: true },
+      })
       expect(d.text).toBe('A créé la commande C-2026-0009 à partir de la demande « Demande de devis » (nouvelle fiche client)')
     })
   })

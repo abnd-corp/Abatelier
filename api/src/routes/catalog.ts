@@ -45,9 +45,17 @@ const accessoryFields = {
 
 const modelFields = {
   nom: z.string().trim().min(1, 'Le nom du modèle est requis.').max(60, 'Nom : 60 caractères maximum.'),
-  cotes: z.array(integer(1, 2000, 'Cote', 'mm'), { error: 'Cotes invalides.' }).min(1, 'Au moins une cote.').max(20, '20 cotes maximum.'),
+  cotes: z
+    .array(integer(1, 2000, 'Cote', 'mm'), { error: 'Cotes invalides.' })
+    .min(1, 'Au moins une cote.')
+    .max(20, '20 cotes maximum.'),
   // Angle intérieur signé ; ±1 pour une pince
-  angles: z.array(integer(-179, 179, 'Angle', '°').refine((a) => a !== 0, 'Angle : 0° impossible.'), { error: 'Angles invalides.' }).max(19),
+  angles: z
+    .array(
+      integer(-179, 179, 'Angle', '°').refine((a) => a !== 0, 'Angle : 0° impossible.'),
+      { error: 'Angles invalides.' },
+    )
+    .max(19),
   noms: z.array(z.string().trim().max(30, 'Nom de cote : 30 caractères maximum.'), { error: 'Noms de cotes invalides.' }).max(20),
   cap: integer(-180, 180, 'Orientation', '°'),
   longueur: integer(1, 20000, 'Longueur proposée', 'mm'),

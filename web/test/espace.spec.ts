@@ -26,8 +26,30 @@ async function mountAt(component: object, path: string, routes: Parameters<typeo
 const button = (w: ReturnType<typeof mount>, text: string) => w.findAll('button').find((b) => b.text().includes(text))!
 
 const SUMMARY: EspaceOrderSummary[] = [
-  { id: 'o1', numero: 'C-2026-0002', kind: 'sur_mesure' as const, statut: 'recue', statutLabel: 'Reçue', ttc: 518.54, createdAt: '2026-10-20T08:00:00Z', datePrevue: null, devis: { id: 'd1', numero: 'D-2026-0002', statut: 'emis' }, facture: null },
-  { id: 'o2', numero: 'C-2026-0001', kind: 'sur_mesure' as const, statut: 'fabrication', statutLabel: 'En fabrication', ttc: 120, createdAt: '2026-10-10T08:00:00Z', datePrevue: '2026-10-28', devis: { id: 'd0', numero: 'D-2026-0001', statut: 'accepte' }, facture: null },
+  {
+    id: 'o1',
+    numero: 'C-2026-0002',
+    kind: 'sur_mesure' as const,
+    statut: 'recue',
+    statutLabel: 'Reçue',
+    ttc: 518.54,
+    createdAt: '2026-10-20T08:00:00Z',
+    datePrevue: null,
+    devis: { id: 'd1', numero: 'D-2026-0002', statut: 'emis' },
+    facture: null,
+  },
+  {
+    id: 'o2',
+    numero: 'C-2026-0001',
+    kind: 'sur_mesure' as const,
+    statut: 'fabrication',
+    statutLabel: 'En fabrication',
+    ttc: 120,
+    createdAt: '2026-10-10T08:00:00Z',
+    datePrevue: '2026-10-28',
+    devis: { id: 'd0', numero: 'D-2026-0001', statut: 'accepte' },
+    facture: null,
+  },
 ]
 
 const ORDER = (over: Partial<EspaceOrder['commande']> = {}, extra: Partial<EspaceOrder> = {}): EspaceOrder => ({
@@ -72,7 +94,8 @@ describe('Outils de l’espace client', () => {
     expect(retourEspace('/espace/commandes/o1')).toBe('/espace/commandes/o1')
     expect(retourEspace('/configurateur')).toBe('/configurateur')
     expect(retourEspace('/boutique/abc')).toBe('/boutique/abc')
-    for (const bad of ['//pirate.example', 'https://pirate.example', '/tableau-de-bord', '/espace/../x/\\evil', undefined, 42, '/\\pirate']) expect(retourEspace(bad === '/espace/../x/\\evil' ? '/\\x' : bad)).toBe('/espace')
+    for (const bad of ['//pirate.example', 'https://pirate.example', '/tableau-de-bord', '/espace/../x/\\evil', undefined, 42, '/\\pirate'])
+      expect(retourEspace(bad === '/espace/../x/\\evil' ? '/\\x' : bad)).toBe('/espace')
   })
 
   it('traduit l’état d’un devis ou d’une facture pour le client', () => {
@@ -121,7 +144,13 @@ describe('Avantages et données', () => {
 
 describe('Connexion et création de l’espace client', () => {
   it('se connecte puis revient à la page demandée', async () => {
-    const { wrapper, router, calls } = await mountAt(EspaceAuthView, '/espace/connexion?redirect=%2Fespace%2Fcommandes%2Fo1', { 'POST /espace/connexion': [200, { compte: COMPTE }] }, { mode: 'connexion' }, false)
+    const { wrapper, router, calls } = await mountAt(
+      EspaceAuthView,
+      '/espace/connexion?redirect=%2Fespace%2Fcommandes%2Fo1',
+      { 'POST /espace/connexion': [200, { compte: COMPTE }] },
+      { mode: 'connexion' },
+      false,
+    )
     expect(wrapper.get('h1').text()).toBe('Me connecter')
     expect(wrapper.find('#auth-nom').exists()).toBe(false)
     await wrapper.get('#auth-email').setValue('jean@example.com')
@@ -161,12 +190,26 @@ describe('Connexion et création de l’espace client', () => {
     await wrapper.get('#auth-consentement').setValue(true)
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(calls.find((c) => c.path === '/espace/inscription')!.body).toEqual({ prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: '06 12 34 56 78', password: 'Plieuse-numerique-2026', consentement: true, site: '' })
+    expect(calls.find((c) => c.path === '/espace/inscription')!.body).toEqual({
+      prenom: 'Jean',
+      nom: 'Dupont',
+      email: 'jean@example.com',
+      telephone: '06 12 34 56 78',
+      password: 'Plieuse-numerique-2026',
+      consentement: true,
+      site: '',
+    })
     expect(router.currentRoute.value.fullPath).toBe('/espace')
   })
 
   it('affiche chaque erreur sous son champ et met le focus sur le premier', async () => {
-    const { wrapper } = await mountAt(EspaceAuthView, '/espace/inscription', { 'POST /espace/inscription': [400, { error: 'Le mot de passe doit faire au moins 12 caractères.', field: 'password' }] }, { mode: 'inscription' }, false)
+    const { wrapper } = await mountAt(
+      EspaceAuthView,
+      '/espace/inscription',
+      { 'POST /espace/inscription': [400, { error: 'Le mot de passe doit faire au moins 12 caractères.', field: 'password' }] },
+      { mode: 'inscription' },
+      false,
+    )
     await wrapper.get('#auth-password').setValue('court')
     // Le mot de passe saisi guide l'utilisateur
     expect(wrapper.get('#auth-h-password').text()).toContain('Solidité : Trop faible')
@@ -248,11 +291,21 @@ describe('Fermer mon espace', () => {
 })
 
 describe('Ma commande', () => {
-  const mountOrder = (data: EspaceOrder, extra: Parameters<typeof mockApi>[0] = {}) => mountAt(EspaceOrderView, '/espace/commandes/o1', { 'GET /espace/commandes/o1': [200, data], ...extra }, { id: 'o1' })
+  const mountOrder = (data: EspaceOrder, extra: Parameters<typeof mockApi>[0] = {}) =>
+    mountAt(EspaceOrderView, '/espace/commandes/o1', { 'GET /espace/commandes/o1': [200, data], ...extra }, { id: 'o1' })
 
   it('montre le suivi : étape en cours, étapes passées datées, étapes à venir', async () => {
     const { wrapper } = await mountOrder(
-      ORDER({ statut: 'fabrication', statutLabel: 'En fabrication', datePrevue: '2026-10-28' }, { etapes: [{ statut: 'recue', label: 'Reçue', at: '2026-10-20T08:00:00Z' }, { statut: 'validee', label: 'Validée', at: '2026-10-21T08:00:00Z' }, { statut: 'fabrication', label: 'En fabrication', at: '2026-10-22T08:00:00Z' }] }),
+      ORDER(
+        { statut: 'fabrication', statutLabel: 'En fabrication', datePrevue: '2026-10-28' },
+        {
+          etapes: [
+            { statut: 'recue', label: 'Reçue', at: '2026-10-20T08:00:00Z' },
+            { statut: 'validee', label: 'Validée', at: '2026-10-21T08:00:00Z' },
+            { statut: 'fabrication', label: 'En fabrication', at: '2026-10-22T08:00:00Z' },
+          ],
+        },
+      ),
     )
     const steps = wrapper.findAll('ol.steps > li')
     expect(steps.map((s) => s.classes().filter((c) => ['done', 'now', 'todo'].includes(c))[0])).toEqual(['done', 'done', 'now', 'todo', 'todo'])
@@ -264,7 +317,17 @@ describe('Ma commande', () => {
   })
 
   it('une commande annulée sort du parcours, une commande livrée est entièrement cochée', async () => {
-    const cancelled = await mountOrder(ORDER({ statut: 'annulee', statutLabel: 'Annulée' }, { etapes: [{ statut: 'recue', label: 'Reçue', at: '2026-10-20T08:00:00Z' }, { statut: 'annulee', label: 'Annulée', at: '2026-10-21T08:00:00Z' }] }))
+    const cancelled = await mountOrder(
+      ORDER(
+        { statut: 'annulee', statutLabel: 'Annulée' },
+        {
+          etapes: [
+            { statut: 'recue', label: 'Reçue', at: '2026-10-20T08:00:00Z' },
+            { statut: 'annulee', label: 'Annulée', at: '2026-10-21T08:00:00Z' },
+          ],
+        },
+      ),
+    )
     expect(cancelled.wrapper.find('ol.steps').exists()).toBe(false)
     expect(cancelled.wrapper.text()).toContain('Cette commande a été annulée le 21 octobre 2026')
     expect(cancelled.wrapper.text()).not.toContain('Accepter le devis')
@@ -322,7 +385,11 @@ describe('Ma commande', () => {
   })
 
   it('n’offre plus de réponse quand le devis est déjà accepté, refusé ou expiré', async () => {
-    for (const [statut, label] of [['accepte', 'Devis accepté'], ['refuse', 'Devis refusé'], ['expire', 'Devis expiré']] as const) {
+    for (const [statut, label] of [
+      ['accepte', 'Devis accepté'],
+      ['refuse', 'Devis refusé'],
+      ['expire', 'Devis expiré'],
+    ] as const) {
       const doc = { ...ORDER().documents[0]!, statut, reponse: statut === 'expire' ? null : (statut as 'accepte' | 'refuse') }
       const { wrapper } = await mountOrder(ORDER({}, { documents: [doc] }))
       expect(wrapper.get('#devis').text()).toContain(label)
@@ -341,7 +408,17 @@ describe('Ma commande', () => {
   it('dit que le devis est en préparation quand il n’existe pas encore, et liste les factures', async () => {
     const none = await mountOrder(ORDER({}, { documents: [] }))
     expect(none.wrapper.text()).toContain('en cours de préparation')
-    const fact = { id: 'f1', type: 'facture' as const, numero: 'F-2026-0001', emisLe: '2026-10-25T08:00:00Z', echeance: '2026-11-25', ttc: 518.54, reponse: null, payeLe: null, statut: 'emise' as const }
+    const fact = {
+      id: 'f1',
+      type: 'facture' as const,
+      numero: 'F-2026-0001',
+      emisLe: '2026-10-25T08:00:00Z',
+      echeance: '2026-11-25',
+      ttc: 518.54,
+      reponse: null,
+      payeLe: null,
+      statut: 'emise' as const,
+    }
     const { wrapper } = await mountOrder(ORDER({}, { documents: [ORDER().documents[0]!, fact] }))
     const docs = wrapper.get('ul.docs')
     expect(docs.text()).toContain('F-2026-0001')

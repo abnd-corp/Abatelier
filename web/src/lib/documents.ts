@@ -52,17 +52,7 @@ export interface DocumentSettings {
 }
 
 export const COMPANY_FIELDS = ['raisonSociale', 'formeJuridique', 'capital', 'adresse', 'telephone', 'email', 'siteWeb', 'siret', 'rcs', 'tvaIntra', 'iban', 'bic'] as const
-export const TEMPLATE_FIELDS = [
-  'couleur',
-  'entete',
-  'conditionsPaiement',
-  'validiteDevis',
-  'echeanceFacture',
-  'noteDevis',
-  'noteFacture',
-  'mentionsLegales',
-  'piedDePage',
-] as const
+export const TEMPLATE_FIELDS = ['couleur', 'entete', 'conditionsPaiement', 'validiteDevis', 'echeanceFacture', 'noteDevis', 'noteFacture', 'mentionsLegales', 'piedDePage'] as const
 
 // Préfixes fixes, comme dans l'API
 export const PREFIXES: Record<DocumentType, string> = { devis: 'D', facture: 'F' }
@@ -80,7 +70,10 @@ export function facturxMissing(c: Pick<Company, 'siret' | 'tvaIntra' | 'adresse'
   const out: string[] = []
   if (c.siret.replace(/\D/g, '').length !== 14) out.push('le SIRET')
   if (!c.tvaIntra.trim()) out.push('le numéro de TVA intracommunautaire')
-  const lines = c.adresse.split('\n').map((l) => l.trim()).filter(Boolean)
+  const lines = c.adresse
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
   if (lines.length < 2 || !/^\d{5}\s+\S/.test(lines.at(-1) ?? '')) out.push('l’adresse complète (rue, code postal et ville)')
   return out
 }

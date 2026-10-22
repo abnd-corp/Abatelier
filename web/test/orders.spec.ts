@@ -19,7 +19,16 @@ const wait = (ms = 400) => new Promise((r) => setTimeout(r, ms))
 
 // Les identifiants des modèles reprennent leur nom, pour la lisibilité des tests
 const MODELS = [
-  { id: 'couvertine', nom: 'Couvertine', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'], cap: -45, longueur: 3000, quantite: 4 },
+  {
+    id: 'couvertine',
+    nom: 'Couvertine',
+    cotes: [20, 70, 300, 70, 20],
+    angles: [-135, 90, 90, -135],
+    noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'],
+    cap: -45,
+    longueur: 3000,
+    quantite: 4,
+  },
   { id: 'bavette', nom: 'Bavette d’appui', cotes: [30, 220, 45, 15], angles: [-95, 95, 135], noms: ['Rejingot', 'Dessus', 'Nez', 'Retour'], cap: 90, longueur: 1400, quantite: 2 },
   { id: 'bandeau', nom: 'Bandeau', cotes: [40, 150], angles: [-90], noms: ['Retour', 'Face'], cap: 180, longueur: 3000, quantite: 6 },
 ]
@@ -194,7 +203,20 @@ describe('Outils commandes', () => {
 })
 
 describe('Liste des commandes', () => {
-  const SUMMARY: OrderSummary = { id: 'o1', numero: 'C-2026-0001', statut: 'fabrication', clientId: 'c1', client: 'Jean Dupont', livraisonMode: 'livraison', livraisonVille: 'Firminy', ht: 432.12, ttc: 518.54, datePrevue: '2026-10-26', createdAt: '2026-10-19T08:00:00Z', pieces: 4 }
+  const SUMMARY: OrderSummary = {
+    id: 'o1',
+    numero: 'C-2026-0001',
+    statut: 'fabrication',
+    clientId: 'c1',
+    client: 'Jean Dupont',
+    livraisonMode: 'livraison',
+    livraisonVille: 'Firminy',
+    ht: 432.12,
+    ttc: 518.54,
+    datePrevue: '2026-10-26',
+    createdAt: '2026-10-19T08:00:00Z',
+    pieces: 4,
+  }
   const LIST = { orders: [SUMMARY], totals: { recue: 1, validee: 2, fabrication: 1, prete: 0, livree: 5, annulee: 1 } }
 
   it('affiche numéro, client, étape, date prévue et montant, avec les totaux par étape', async () => {
@@ -327,7 +349,11 @@ describe('Nouvelle commande', () => {
     const { wrapper } = await mountAt(OrderNewView, '/commandes/nouvelle?client=c1', routes())
     // Couvertine : 270 ou 320, longueurs de 1 à 3 m ; la valeur de départ (300) est « sur mesure »
     const largeur = () => wrapper.get('#l0-std-largeur')
-    expect(largeur().findAll('option').map((o) => o.text())).toEqual(['Sur mesure (300 mm)', '270 mm', '320 mm'])
+    expect(
+      largeur()
+        .findAll('option')
+        .map((o) => o.text()),
+    ).toEqual(['Sur mesure (300 mm)', '270 mm', '320 mm'])
     expect((largeur().element as HTMLSelectElement).value).toBe('')
     await largeur().setValue('320')
     expect((wrapper.get('#l0-cote2').element as HTMLInputElement).value).toBe('320')
@@ -346,7 +372,13 @@ describe('Nouvelle commande', () => {
     expect(bav[1]!.text()).toBe('150 mm')
     expect(bav.at(-1)!.text()).toBe('500 mm')
     await wrapper.get('#l1-modele').setValue('bandeau')
-    expect(wrapper.get('#l1-std-largeur').findAll('option').map((o) => o.text()).slice(1)).toEqual(['200 mm', '225 mm', '250 mm', '275 mm', '300 mm', '325 mm', '350 mm'])
+    expect(
+      wrapper
+        .get('#l1-std-largeur')
+        .findAll('option')
+        .map((o) => o.text())
+        .slice(1),
+    ).toEqual(['200 mm', '225 mm', '250 mm', '275 mm', '300 mm', '325 mm', '350 mm'])
     expect(norm(wrapper.get('#l1-std-longueur').text())).toContain('1,2 m')
     expect(norm(wrapper.get('#l1-std-longueur').text())).toContain('1,5 m')
     // Modèle libre : pas de tailles standard
@@ -470,10 +502,27 @@ describe('Atelier', () => {
       lignes: [{ ...LINE, id: 'l1', accessoires: [] }],
       events: ORDER.events,
     }
-    const conseil = { sheetId: 's1', libelle: 'Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 1 250 × 3 000 mm', chute: false, parFeuille: 2, feuilles: 2, disposition: { sensLongueur: true, colonnes: 2, rangees: 1 }, perte: 32.8, enStock: 6 }
+    const conseil = {
+      sheetId: 's1',
+      libelle: 'Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 1 250 × 3 000 mm',
+      chute: false,
+      parFeuille: 2,
+      feuilles: 2,
+      disposition: { sensLongueur: true, colonnes: 2, rangees: 1 },
+      perte: 32.8,
+      enStock: 6,
+    }
     const alt = { ...conseil, sheetId: 's2', libelle: 'Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 450 × 3 000 mm (chute)', chute: true, parFeuille: 1, feuilles: 4, perte: 6.7, enStock: 5 }
     const ligne = { ligneId: 'l1', repere: 'Mur sud', modeleLabel: 'Couvertine', besoin: { developpe: 480, longueur: 3000, quantite: 4 }, conseils: [conseil, alt], raison: null }
-    const { wrapper } = await mountAt(ProductionOrderView, '/fabrication/o1', { 'GET /production/o1': [200, detail], 'GET /production/o1/feuilles': [200, { lignes: [ligne, { ligneId: 'l2', repere: null, modeleLabel: 'Bouchon', besoin: null, conseils: [], raison: 'Article standard' }] }] }, ATELIER)
+    const { wrapper } = await mountAt(
+      ProductionOrderView,
+      '/fabrication/o1',
+      {
+        'GET /production/o1': [200, detail],
+        'GET /production/o1/feuilles': [200, { lignes: [ligne, { ligneId: 'l2', repere: null, modeleLabel: 'Bouchon', besoin: null, conseils: [], raison: 'Article standard' }] }],
+      },
+      ATELIER,
+    )
     const panel = wrapper.get('[aria-labelledby="feuilles"]')
     expect(norm(panel.text())).toContain('Prendre 2 feuilles : Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 1 250 × 3 000 mm')
     expect(panel.text()).toContain('2 pièces par feuille')
@@ -482,7 +531,12 @@ describe('Atelier', () => {
     // Un article standard n'a pas de conseil
     expect(panel.findAll('li')).toHaveLength(1)
     expect(norm(panel.text())).not.toContain('€')
-    const vide = await mountAt(ProductionOrderView, '/fabrication/o1', { 'GET /production/o1': [200, detail], 'GET /production/o1/feuilles': [200, { lignes: [{ ...ligne, conseils: [], raison: 'Aucune feuille en stock pour cette matière et ce coloris.' }] }] }, ATELIER)
+    const vide = await mountAt(
+      ProductionOrderView,
+      '/fabrication/o1',
+      { 'GET /production/o1': [200, detail], 'GET /production/o1/feuilles': [200, { lignes: [{ ...ligne, conseils: [], raison: 'Aucune feuille en stock pour cette matière et ce coloris.' }] }] },
+      ATELIER,
+    )
     expect(vide.wrapper.get('[aria-labelledby="feuilles"]').text()).toContain('Aucune feuille en stock')
     const rien = await mountAt(ProductionOrderView, '/fabrication/o1', { 'GET /production/o1': [200, detail] }, ATELIER)
     expect(rien.wrapper.find('[aria-labelledby="feuilles"]').exists()).toBe(false)

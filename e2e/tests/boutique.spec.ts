@@ -4,7 +4,7 @@ import { ADMIN, apiLogin, expect, makePng, test, waitForMail } from './fixtures'
 const PASSWORD = 'Plieuse-numerique-2026'
 
 test.describe('Boutique : de la fiche produit au remboursement', () => {
-  test('la direction met un produit en ligne, un client le paie, la direction refuse et rembourse', async ({ page, browser, baseURL, uid, adminPage }) => {
+  test('la direction met un produit en ligne, un client le paie, la direction refuse et rembourse', async ({ page, browser, uid, adminPage }) => {
     const nom = `Couvertine e2e ${uid.slice(-8)}`
     const client = `Client ${uid.slice(-6)}`
     const email = `${uid}@exemple.fr`
@@ -89,7 +89,10 @@ test.describe('Boutique : de la fiche produit au remboursement', () => {
     await expect(visitor.locator('dl.totals')).toContainText('Total TTC168,00')
 
     // --- Paiement, déjà connecté ---
-    await visitor.locator('#paiement').getByRole('button', { name: /^Payer 168,00/ }).click()
+    await visitor
+      .locator('#paiement')
+      .getByRole('button', { name: /^Payer 168,00/ })
+      .click()
 
     await expect(visitor).toHaveURL(/\/paiement-simulation\/[0-9a-f-]{36}$/)
     await expect(visitor.getByText('aucune carte n’est demandée')).toBeVisible()
@@ -97,7 +100,12 @@ test.describe('Boutique : de la fiche produit au remboursement', () => {
     // Une commande n'existe pas tant que le paiement n'est pas confirmé
     await visitor.getByRole('button', { name: 'Simuler un paiement réussi' }).click()
     await expect(visitor.getByRole('heading', { name: 'Merci, votre commande est confirmée' })).toBeVisible()
-    const numero = (await visitor.getByText(/C-\d{4}-\d{4}/).first().innerText()).match(/C-\d{4}-\d{4}/)![0]
+    const numero = (
+      await visitor
+        .getByText(/C-\d{4}-\d{4}/)
+        .first()
+        .innerText()
+    ).match(/C-\d{4}-\d{4}/)![0]
     // Panier vidé
     await expect(visitor.getByRole('link', { name: 'Mon panier, vide' })).toBeVisible()
 
@@ -168,7 +176,9 @@ test.describe('Boutique : de la fiche produit au remboursement', () => {
     await expect(visitor.getByText('Votre panier est vide')).toBeVisible()
 
     // Le visiteur ne peut pas ouvrir de paiement sans compte, ni gérer les produits
-    expect((await visitor.request.post('/api/espace/boutique/paiement', { data: { lignes: [{ variantId: v.variante.id, quantite: 1 }], livraison: { mode: 'retrait' } }, headers: h })).status()).toBe(401)
+    expect((await visitor.request.post('/api/espace/boutique/paiement', { data: { lignes: [{ variantId: v.variante.id, quantite: 1 }], livraison: { mode: 'retrait' } }, headers: h })).status()).toBe(
+      401,
+    )
     expect((await visitor.request.get('/api/boutique/produits')).status()).toBe(401)
     await visitor.goto('/produits')
     await expect(visitor).toHaveURL(/\/connexion/)
@@ -178,7 +188,14 @@ test.describe('Boutique : de la fiche produit au remboursement', () => {
   test('la direction importe un catalogue, le filtre, copie un produit, ajuste les prix et met tout en ligne d’un coup', async ({ adminPage, browser, uid }) => {
     const tag = uid.slice(-6).toUpperCase()
     const catalogue = [
-      { nom: `BANDEAUX EN « L » BLANC ${tag}`, categorie: ['BANDEAU'], variations: [{ attrs: { 'Épaisseur Alu': '1 mm', 'HAUTEUR DE BANDEAU': '200' }, prix: 26.5, achetable: true }, { attrs: { 'Épaisseur Alu': '1 mm', 'HAUTEUR DE BANDEAU': '225' }, prix: 0, achetable: true }] },
+      {
+        nom: `BANDEAUX EN « L » BLANC ${tag}`,
+        categorie: ['BANDEAU'],
+        variations: [
+          { attrs: { 'Épaisseur Alu': '1 mm', 'HAUTEUR DE BANDEAU': '200' }, prix: 26.5, achetable: true },
+          { attrs: { 'Épaisseur Alu': '1 mm', 'HAUTEUR DE BANDEAU': '225' }, prix: 0, achetable: true },
+        ],
+      },
       { nom: `BOUCHON DE COUVERTINE ${tag}`, categorie: ['ACCESSOIRE COUVERTINE'], variations: [{ attrs: { Quantité: 'Par 2' }, prix: 12, achetable: true }] },
     ]
     await adminPage.goto('/produits')
@@ -216,8 +233,8 @@ test.describe('Boutique : de la fiche produit au remboursement', () => {
     await expect(adminPage.getByRole('status')).toContainText('3 produits mis en ligne')
     const visitor = await browser.newPage()
     await visitor.goto('/boutique')
-    await expect(visitor.getByRole('link', { name: new RegExp(`Bandeaux en « L » gris ${tag}`, "i") })).toBeVisible()
-    await expect(visitor.getByRole('link', { name: new RegExp(`Bouchon de couvertine ${tag}`, "i") })).toBeVisible()
+    await expect(visitor.getByRole('link', { name: new RegExp(`Bandeaux en « L » gris ${tag}`, 'i') })).toBeVisible()
+    await expect(visitor.getByRole('link', { name: new RegExp(`Bouchon de couvertine ${tag}`, 'i') })).toBeVisible()
 
     // Nettoyage en lot, avec confirmation
     await adminPage.getByLabel('Choisir tous les produits affichés').check()

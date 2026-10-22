@@ -135,11 +135,16 @@ const reasons = computed(() => {
     <header class="top">
       <span class="eyebrow">Configurateur de pliage</span>
       <h1>Dessinez votre pièce, voyez le prix</h1>
-      <p class="lead">Choisissez le modèle, les cotes, la matière et le coloris : le prix se met à jour à chaque changement, sans compte. Téléchargez le devis en PDF. Avec votre espace client, enregistrez-le ou passez directement la commande.</p>
+      <p class="lead">
+        Choisissez le modèle, les cotes, la matière et le coloris : le prix se met à jour à chaque changement, sans compte. Téléchargez le devis en PDF. Avec votre espace client, enregistrez-le ou
+        passez directement la commande.
+      </p>
     </header>
 
     <p v-if="loadError" class="alert bad" role="alert">{{ loadError }}</p>
-    <p v-else-if="emptyCatalog" class="alert bad" role="alert">Le configurateur n’est pas disponible pour l’instant. <RouterLink :to="{ name: 'site-contact' }">Contactez-nous</RouterLink> pour votre devis.</p>
+    <p v-else-if="emptyCatalog" class="alert bad" role="alert">
+      Le configurateur n’est pas disponible pour l’instant. <RouterLink :to="{ name: 'site-contact' }">Contactez-nous</RouterLink> pour votre devis.
+    </p>
     <p v-else-if="!catalog" class="muted" aria-busy="true">Chargement…</p>
 
     <template v-if="catalog && form && !emptyCatalog">
@@ -151,9 +156,15 @@ const reasons = computed(() => {
           <textarea id="d-precision" v-model="precision" class="input" rows="2" maxlength="2000" placeholder="Date souhaitée, pose, remarque sur le chantier…" />
         </div>
         <div class="actions">
-          <button class="s-btn" type="button" :disabled="!priced || !!busy" aria-describedby="cfg-why" @click="telecharger">{{ busy === 'telecharger' ? 'Préparation du PDF…' : 'Télécharger le devis' }}</button>
-          <button class="s-btn" type="button" :disabled="!priced || !connecte || !!busy" aria-describedby="cfg-why" @click="enregistrer">{{ busy === 'enregistrer' ? 'Enregistrement…' : 'Enregistrer le devis' }}</button>
-          <button class="s-btn primary" type="button" :disabled="!priced || !connecte || !!busy" aria-describedby="cfg-why" @click="commander">{{ busy === 'commander' ? 'Ouverture du paiement…' : 'Passer la commande' }}</button>
+          <button class="s-btn" type="button" :disabled="!priced || !!busy" aria-describedby="cfg-why" @click="telecharger">
+            {{ busy === 'telecharger' ? 'Préparation du PDF…' : 'Télécharger le devis' }}
+          </button>
+          <button class="s-btn" type="button" :disabled="!priced || !connecte || !!busy" aria-describedby="cfg-why" @click="enregistrer">
+            {{ busy === 'enregistrer' ? 'Enregistrement…' : 'Enregistrer le devis' }}
+          </button>
+          <button class="s-btn primary" type="button" :disabled="!priced || !connecte || !!busy" aria-describedby="cfg-why" @click="commander">
+            {{ busy === 'commander' ? 'Ouverture du paiement…' : 'Passer la commande' }}
+          </button>
         </div>
         <div id="cfg-why" class="why muted" aria-live="polite">
           <p v-for="r in reasons" :key="r">{{ r }}</p>
@@ -162,7 +173,9 @@ const reasons = computed(() => {
             <RouterLink :to="{ name: 'espace-connexion', query: redirect }">Me connecter</RouterLink> ·
             <RouterLink :to="{ name: 'espace-inscription', query: redirect }">Créer mon espace</RouterLink>
           </p>
-          <p v-else-if="connecte">Le devis enregistré est numéroté et rangé dans <RouterLink :to="{ name: 'espace' }">votre espace client</RouterLink>. La commande se paie en ligne et part directement en fabrication.</p>
+          <p v-else-if="connecte">
+            Le devis enregistré est numéroté et rangé dans <RouterLink :to="{ name: 'espace' }">votre espace client</RouterLink>. La commande se paie en ligne et part directement en fabrication.
+          </p>
         </div>
       </OrderEditor>
     </template>

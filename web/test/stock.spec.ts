@@ -7,10 +7,50 @@ import { useAuthStore } from '@/stores/auth'
 import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
 
 const norm = (t: string) => t.replace(/[\u202f\u00a0]/g, ' ')
-const F1: Feuille = { id: 'f1', materialId: 'm1', matiere: 'Aluminium', epaisseur: 1.5, colorId: 'c1', coloris: 'Gris anthracite', reference: 'RAL 7016', hex: '#383e42', largeur: 1250, longueur: 3000, chute: false, quantite: 10, seuil: 4, note: 'Palette 2', libelle: 'Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 1 250 × 3 000 mm', bas: false }
-const F2: Feuille = { ...F1, id: 'f2', materialId: 'm2', epaisseur: 1, colorId: null, coloris: null, reference: null, hex: null, largeur: 450, longueur: 3000, chute: true, quantite: 2, seuil: 3, note: '', libelle: 'Aluminium 1 mm · brut · 450 × 3 000 mm (chute)', bas: true }
+const F1: Feuille = {
+  id: 'f1',
+  materialId: 'm1',
+  matiere: 'Aluminium',
+  epaisseur: 1.5,
+  colorId: 'c1',
+  coloris: 'Gris anthracite',
+  reference: 'RAL 7016',
+  hex: '#383e42',
+  largeur: 1250,
+  longueur: 3000,
+  chute: false,
+  quantite: 10,
+  seuil: 4,
+  note: 'Palette 2',
+  libelle: 'Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 1 250 × 3 000 mm',
+  bas: false,
+}
+const F2: Feuille = {
+  ...F1,
+  id: 'f2',
+  materialId: 'm2',
+  epaisseur: 1,
+  colorId: null,
+  coloris: null,
+  reference: null,
+  hex: null,
+  largeur: 450,
+  longueur: 3000,
+  chute: true,
+  quantite: 2,
+  seuil: 3,
+  note: '',
+  libelle: 'Aluminium 1 mm · brut · 450 × 3 000 mm (chute)',
+  bas: true,
+}
 const MV: Mouvement = { id: 'x1', at: '2026-10-22T08:30:00Z', libelle: F1.libelle, delta: -3, apres: 7, motif: 'fabrication', note: 'C-2026-0004', par: 'Plieur' }
-const OPTIONS = { materials: [{ id: 'm1', label: 'Aluminium 1,5 mm' }, { id: 'm2', label: 'Aluminium 1 mm' }], colors: [{ id: 'c1', label: 'Gris anthracite (RAL 7016)', hex: '#383e42' }] }
+const OPTIONS = {
+  materials: [
+    { id: 'm1', label: 'Aluminium 1,5 mm' },
+    { id: 'm2', label: 'Aluminium 1 mm' },
+  ],
+  colors: [{ id: 'c1', label: 'Gris anthracite (RAL 7016)', hex: '#383e42' }],
+}
 const ouvrirAjout = (w: ReturnType<typeof mount>) => w.get('button[aria-controls="ajout"]').trigger('click')
 const LIST = { feuilles: [F1, F2], totaux: { references: 2, feuilles: 12, m2: 38.4, bas: 1 } }
 
@@ -51,7 +91,10 @@ describe('Stock de feuilles', () => {
 
   it('filtre par matière', async () => {
     const { wrapper } = await mountStock()
-    await wrapper.findAll('.chip').find((c) => c.text() === 'Aluminium 1 mm')!.trigger('click')
+    await wrapper
+      .findAll('.chip')
+      .find((c) => c.text() === 'Aluminium 1 mm')!
+      .trigger('click')
     expect(wrapper.findAll('tbody tr')).toHaveLength(1)
     expect(wrapper.findAll('tbody tr')[0]!.text()).toContain('Brut')
   })
@@ -130,7 +173,11 @@ describe('Stock de feuilles', () => {
 
   it('ne propose de supprimer qu’une référence vide, modifie le seuil et la note, et montre l’historique', async () => {
     const vide = { ...F2, id: 'f3', quantite: 0, bas: false, libelle: 'Aluminium 1 mm · brut · 450 × 3 000 mm' }
-    const { wrapper, calls } = await mountStock({ 'GET /stock/feuilles': [200, { ...LIST, feuilles: [F1, vide] }], 'DELETE /stock/feuilles/f3': [200, { ok: true }], 'PATCH /stock/feuilles/f1': [200, { ok: true }] })
+    const { wrapper, calls } = await mountStock({
+      'GET /stock/feuilles': [200, { ...LIST, feuilles: [F1, vide] }],
+      'DELETE /stock/feuilles/f3': [200, { ok: true }],
+      'PATCH /stock/feuilles/f1': [200, { ok: true }],
+    })
     expect(wrapper.find(`button[aria-label^="Supprimer la référence ${F1.libelle}"]`).exists()).toBe(false)
     await wrapper.get('button[aria-label^="Supprimer la référence"]').trigger('click')
     await flushPromises()
@@ -154,7 +201,8 @@ describe('Stock de feuilles', () => {
   })
 
   it('décrit le stock dans le journal', () => {
-    const e = (action: string, details: object): string => describeEntry({ id: 1, at: '2026-10-22T08:00:00Z', action, actor: 'Chef', targetType: null, targetId: null, ip: null, details } as unknown as AuditEntry).text
+    const e = (action: string, details: object): string =>
+      describeEntry({ id: 1, at: '2026-10-22T08:00:00Z', action, actor: 'Chef', targetType: null, targetId: null, ip: null, details } as unknown as AuditEntry).text
     expect(norm(e('stock.sheet_created', { libelle: 'Alu 1,5 mm · brut · 1 250 × 3 000 mm', quantite: 10 }))).toBe('A ajouté au stock la feuille Alu 1,5 mm · brut · 1 250 × 3 000 mm (10)')
     expect(e('stock.moved', { libelle: 'X', delta: -3, apres: 7, motif: 'fabrication' })).toBe('Sortie de 3 feuilles : X (reste 7)')
     expect(e('stock.moved', { libelle: 'X', delta: 2, apres: 9, motif: 'inventaire' })).toBe('Inventaire de 2 feuilles : X (reste 9)')

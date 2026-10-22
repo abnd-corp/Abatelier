@@ -24,8 +24,25 @@ const COMPTE = { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telep
 const BOUTIQUE: BoutiqueData = {
   paiement: true,
   produits: [
-    { id: P1, nom: 'Couvertine blanche RAL 9010', categorie: 'Couvertine', description: 'Couvertine en aluminium laqué.\n\nLivrée sans visserie.', image: null, variantes: [{ id: V1, libelle: '270 mm · 1 m', reference: 'CV-270-1', prixTtc: 21 }, { id: V2, libelle: '320 mm · 3 m', reference: '', prixTtc: 84 }] },
-    { id: '44444444-4444-4444-8444-444444444444', nom: 'Bavette grise', categorie: 'Bavette', description: '', image: { url: '/api/public/boutique/images/x?v=1', alt: 'Bavette grise posée' }, variantes: [{ id: '55555555-5555-4555-8555-555555555555', libelle: '150 mm', reference: '', prixTtc: 15 }] },
+    {
+      id: P1,
+      nom: 'Couvertine blanche RAL 9010',
+      categorie: 'Couvertine',
+      description: 'Couvertine en aluminium laqué.\n\nLivrée sans visserie.',
+      image: null,
+      variantes: [
+        { id: V1, libelle: '270 mm · 1 m', reference: 'CV-270-1', prixTtc: 21 },
+        { id: V2, libelle: '320 mm · 3 m', reference: '', prixTtc: 84 },
+      ],
+    },
+    {
+      id: '44444444-4444-4444-8444-444444444444',
+      nom: 'Bavette grise',
+      categorie: 'Bavette',
+      description: '',
+      image: { url: '/api/public/boutique/images/x?v=1', alt: 'Bavette grise posée' },
+      variantes: [{ id: '55555555-5555-4555-8555-555555555555', libelle: '150 mm', reference: '', prixTtc: 15 }],
+    },
   ],
 }
 
@@ -54,7 +71,10 @@ describe('Panier (stockage local)', () => {
     p.add(V1)
     p.add(V1, 2)
     p.add(V2, 5)
-    expect(p.lignes).toEqual([{ variantId: V1, quantite: 3 }, { variantId: V2, quantite: 5 }])
+    expect(p.lignes).toEqual([
+      { variantId: V1, quantite: 3 },
+      { variantId: V2, quantite: 5 },
+    ])
     expect(p.count).toBe(8)
     p.setQuantite(V1, 0)
     expect(p.lignes[0]!.quantite).toBe(1)
@@ -68,7 +88,15 @@ describe('Panier (stockage local)', () => {
   })
 
   it('relit un panier enregistré, et ignore un contenu abîmé ou étranger', () => {
-    localStorage.setItem('aps-panier', JSON.stringify([{ variantId: V1, quantite: 2 }, { variantId: 'pas-un-uuid', quantite: 1 }, { variantId: V2, quantite: -3 }, { variantId: V2, quantite: 'beaucoup' }]))
+    localStorage.setItem(
+      'aps-panier',
+      JSON.stringify([
+        { variantId: V1, quantite: 2 },
+        { variantId: 'pas-un-uuid', quantite: 1 },
+        { variantId: V2, quantite: -3 },
+        { variantId: V2, quantite: 'beaucoup' },
+      ]),
+    )
     freshPinia()
     expect(usePanierStore().lignes).toEqual([{ variantId: V1, quantite: 2 }])
     localStorage.setItem('aps-panier', '{pas du json')
@@ -93,7 +121,10 @@ describe('La boutique du site', () => {
     expect(cards[1]!.get('img').attributes('alt')).toBe('Bavette grise posée')
     expect(cards[1]!.text()).not.toContain('Insérez une photo')
     expect(prixMin(BOUTIQUE.produits[0]!)).toBe(21)
-    await wrapper.findAll('.chip').find((c) => c.text() === 'Bavette')!.trigger('click')
+    await wrapper
+      .findAll('.chip')
+      .find((c) => c.text() === 'Bavette')!
+      .trigger('click')
     expect(wrapper.findAll('ul.grid > li')).toHaveLength(1)
   })
 
@@ -126,8 +157,11 @@ describe('La boutique du site', () => {
   })
 
   it('décrit l’import, la copie, les prix en lot et les actions en lot dans le journal', () => {
-    const e = (action: string, details: object): string => describeEntry({ id: 1, at: '2026-10-22T08:00:00Z', action, actor: 'Chef', targetType: null, targetId: null, ip: null, details } as unknown as AuditEntry).text
-    expect(norm(e('product.imported', { produitsCrees: 2, variantesCreees: 10, variantesMisesAJour: 3 }))).toBe('A importé un catalogue : 2 produits créés (cachés du site), 10 déclinaisons ajoutées, 3 prix mis à jour')
+    const e = (action: string, details: object): string =>
+      describeEntry({ id: 1, at: '2026-10-22T08:00:00Z', action, actor: 'Chef', targetType: null, targetId: null, ip: null, details } as unknown as AuditEntry).text
+    expect(norm(e('product.imported', { produitsCrees: 2, variantesCreees: 10, variantesMisesAJour: 3 }))).toBe(
+      'A importé un catalogue : 2 produits créés (cachés du site), 10 déclinaisons ajoutées, 3 prix mis à jour',
+    )
     expect(e('product.duplicated', { source: 'A', nom: 'B' })).toBe('A copié le produit « A » en « B »')
     expect(e('product.prices_adjusted', { nom: 'A', pourcent: -5, variantes: 3 })).toBe('A baissé de 5 % les prix de « A » (3 déclinaisons)')
     expect(e('product.bulk', { action: 'supprimer', produits: 2 })).toBe('A supprimé 2 produits')
@@ -163,9 +197,16 @@ describe('Le panier', () => {
     distanceKm: null,
     paiement: true,
   }
-  const routes = (extra: Parameters<typeof mockApi>[0] = {}) => ({ 'GET /public/boutique': [200, BOUTIQUE], 'GET /espace/session': [200, { compte: null }], 'POST /public/boutique/panier': [200, PRIX], ...extra }) as Parameters<typeof mockApi>[0]
+  const routes = (extra: Parameters<typeof mockApi>[0] = {}) =>
+    ({ 'GET /public/boutique': [200, BOUTIQUE], 'GET /espace/session': [200, { compte: null }], 'POST /public/boutique/panier': [200, PRIX], ...extra }) as Parameters<typeof mockApi>[0]
   const mountCart = async (extra: Parameters<typeof mockApi>[0] = {}, opts: { compte?: boolean } = {}) => {
-    localStorage.setItem('aps-panier', JSON.stringify([{ variantId: V1, quantite: 2 }, { variantId: V2, quantite: 1 }]))
+    localStorage.setItem(
+      'aps-panier',
+      JSON.stringify([
+        { variantId: V1, quantite: 2 },
+        { variantId: V2, quantite: 1 },
+      ]),
+    )
     const r = await mountAt(PanierView, '/panier', routes(extra), {}, opts)
     await new Promise((res) => setTimeout(res, 50))
     await flushPromises()
@@ -181,7 +222,13 @@ describe('Le panier', () => {
   it('chiffre avec le serveur (jamais de prix envoyé) et montre les lignes et le total TTC', async () => {
     const { wrapper, calls } = await mountCart()
     const post = calls.find((c) => c.path === '/public/boutique/panier')!
-    expect(post.body).toEqual({ lignes: [{ variantId: V1, quantite: 2 }, { variantId: V2, quantite: 1 }], livraison: { mode: 'retrait' } })
+    expect(post.body).toEqual({
+      lignes: [
+        { variantId: V1, quantite: 2 },
+        { variantId: V2, quantite: 1 },
+      ],
+      livraison: { mode: 'retrait' },
+    })
     const rows = wrapper.findAll('ul.lignes > li')
     expect(rows).toHaveLength(2)
     expect(norm(rows[0]!.text())).toContain('270 mm · 1 m')
@@ -227,7 +274,13 @@ describe('Le panier', () => {
     const order = calls.map((c) => c.path)
     expect(order.indexOf('/espace/inscription')).toBeLessThan(order.indexOf('/espace/boutique/paiement'))
     const pay = calls.find((c) => c.path === '/espace/boutique/paiement')!
-    expect(pay.body).toEqual({ lignes: [{ variantId: V1, quantite: 2 }, { variantId: V2, quantite: 1 }], livraison: { mode: 'retrait' } })
+    expect(pay.body).toEqual({
+      lignes: [
+        { variantId: V1, quantite: 2 },
+        { variantId: V2, quantite: 1 },
+      ],
+      livraison: { mode: 'retrait' },
+    })
     expect(JSON.stringify(pay.body)).not.toMatch(/prix|ttc|126/i)
     expect(router.currentRoute.value.fullPath).toBe('/paiement-simulation/p1')
   })
@@ -266,7 +319,13 @@ describe('Le panier', () => {
 
 describe('Après le paiement', () => {
   const retour = (statut: string, commande: { id: string; numero: string } | null = null) =>
-    mountAt(PaiementRetourView, '/boutique/commande/p1', { 'GET /espace/boutique/paiements/p1': [200, { id: 'p1', statut, montantTtc: 126, commande, simulation: true }] }, { id: 'p1' }, { compte: true })
+    mountAt(
+      PaiementRetourView,
+      '/boutique/commande/p1',
+      { 'GET /espace/boutique/paiements/p1': [200, { id: 'p1', statut, montantTtc: 126, commande, simulation: true }] },
+      { id: 'p1' },
+      { compte: true },
+    )
 
   it('confirme la commande payée et vide le panier', async () => {
     localStorage.setItem('aps-panier', JSON.stringify([{ variantId: V1, quantite: 2 }]))
@@ -316,7 +375,10 @@ describe('Après le paiement', () => {
   })
 
   it('la page de démonstration paie ou fait échouer, puis revient au suivi', async () => {
-    const calls = mockApi({ 'GET /espace/boutique/paiements/p1': [200, { id: 'p1', statut: 'attente', montantTtc: 126, commande: null, simulation: true }], 'POST /espace/boutique/paiements/p1/simulation': [200, { statut: 'paye' }] })
+    const calls = mockApi({
+      'GET /espace/boutique/paiements/p1': [200, { id: 'p1', statut: 'attente', montantTtc: 126, commande: null, simulation: true }],
+      'POST /espace/boutique/paiements/p1/simulation': [200, { statut: 'paye' }],
+    })
     const pinia = freshPinia()
     const router = makeRouter()
     await router.push('/paiement-simulation/p1')
@@ -363,16 +425,28 @@ describe('Gestion des produits', () => {
   })
 
   it('cherche par nom, filtre par catégorie, et agit sur plusieurs produits à la fois', async () => {
-    const { wrapper, calls } = await mountAt(ProductsView, '/produits', { 'GET /boutique/produits': [200, { produits: LIST, tva: 20 }], 'POST /boutique/produits/lot': [200, { produits: 2 }] }, {}, { admin: true })
+    const { wrapper, calls } = await mountAt(
+      ProductsView,
+      '/produits',
+      { 'GET /boutique/produits': [200, { produits: LIST, tva: 20 }], 'POST /boutique/produits/lot': [200, { produits: 2 }] },
+      {},
+      { admin: true },
+    )
     await wrapper.get('#prod-q').setValue('bavette')
     expect(wrapper.findAll('tbody tr')).toHaveLength(1)
     expect(wrapper.text()).toContain('1 affiché')
     await wrapper.get('#prod-q').setValue('xyz')
     expect(wrapper.text()).toContain('Aucun produit ne correspond')
     await wrapper.get('#prod-q').setValue('')
-    await wrapper.findAll('.chip').find((c) => c.text() === 'Couvertine')!.trigger('click')
+    await wrapper
+      .findAll('.chip')
+      .find((c) => c.text() === 'Couvertine')!
+      .trigger('click')
     expect(wrapper.findAll('tbody tr')).toHaveLength(1)
-    await wrapper.findAll('.chip').find((c) => c.text() === 'Toutes')!.trigger('click')
+    await wrapper
+      .findAll('.chip')
+      .find((c) => c.text() === 'Toutes')!
+      .trigger('click')
     expect(wrapper.find('.bulk').exists()).toBe(false)
     await wrapper.get('thead input[type="checkbox"]').setValue(true)
     expect(wrapper.get('.bulk').text()).toContain('2 produits choisis')
@@ -383,7 +457,16 @@ describe('Gestion des produits', () => {
   })
 
   it('demande confirmation avant de supprimer en lot, et dit pourquoi une mise en ligne est refusée', async () => {
-    const { wrapper, calls } = await mountAt(ProductsView, '/produits', { 'GET /boutique/produits': [200, { produits: LIST, tva: 20 }], 'POST /boutique/produits/lot': [409, { error: 'Sans déclinaison active, impossible de mettre en ligne : Bavette en préparation.' }] }, {}, { admin: true })
+    const { wrapper, calls } = await mountAt(
+      ProductsView,
+      '/produits',
+      {
+        'GET /boutique/produits': [200, { produits: LIST, tva: 20 }],
+        'POST /boutique/produits/lot': [409, { error: 'Sans déclinaison active, impossible de mettre en ligne : Bavette en préparation.' }],
+      },
+      {},
+      { admin: true },
+    )
     await wrapper.get('tbody tr:nth-child(2) input[type="checkbox"]').setValue(true)
     await button(wrapper, 'Supprimer…').trigger('click')
     expect(calls.filter((c) => c.path === '/boutique/produits/lot')).toHaveLength(0)
@@ -395,7 +478,16 @@ describe('Gestion des produits', () => {
   })
 
   it('importe un catalogue JSON et donne le bilan', async () => {
-    const { wrapper, calls } = await mountAt(ProductsView, '/produits', { 'GET /boutique/produits': [200, { produits: [], tva: 20 }], 'POST /boutique/import': [200, { produitsCrees: 2, produitsExistants: 1, variantesCreees: 10, variantesMisesAJour: 3, ignorees: 4 }] }, {}, { admin: true })
+    const { wrapper, calls } = await mountAt(
+      ProductsView,
+      '/produits',
+      {
+        'GET /boutique/produits': [200, { produits: [], tva: 20 }],
+        'POST /boutique/import': [200, { produitsCrees: 2, produitsExistants: 1, variantesCreees: 10, variantesMisesAJour: 3, ignorees: 4 }],
+      },
+      {},
+      { admin: true },
+    )
     const file = new File([JSON.stringify([{ nom: 'A', variations: [] }])], 'catalogue.json', { type: 'application/json' })
     const input = wrapper.get('#prod-import')
     Object.defineProperty(input.element, 'files', { value: [file] })
@@ -419,7 +511,13 @@ describe('Gestion des produits', () => {
     await flushPromises()
     expect(ok.calls.find((c) => c.method === 'POST')!.body).toEqual({ nom: 'Chapeau de pilier' })
     expect(ok.router.currentRoute.value.fullPath).toBe('/produits/new1')
-    const bad = await mountAt(ProductsView, '/produits', { 'GET /boutique/produits': [200, { produits: [], tva: 20 }], 'POST /boutique/produits': [400, { error: 'Le nom du produit est requis.', field: 'nom' }] }, {}, { admin: true })
+    const bad = await mountAt(
+      ProductsView,
+      '/produits',
+      { 'GET /boutique/produits': [200, { produits: [], tva: 20 }], 'POST /boutique/produits': [400, { error: 'Le nom du produit est requis.', field: 'nom' }] },
+      {},
+      { admin: true },
+    )
     await bad.wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(bad.wrapper.get('#prod-nom-e').text()).toBe('Le nom du produit est requis.')
@@ -429,7 +527,11 @@ describe('Gestion des produits', () => {
     const { wrapper, calls } = await mountAt(
       ProductsView,
       '/produits',
-      { 'GET /boutique/produits': [200, { produits: LIST, tva: 20 }], 'PATCH /boutique/produits/p2': [409, { error: 'Ajoutez au moins une déclinaison active (avec son prix) avant de mettre ce produit en ligne.', field: 'actif' }], [`PATCH /boutique/produits/${P1}`]: [200, { ok: true }] },
+      {
+        'GET /boutique/produits': [200, { produits: LIST, tva: 20 }],
+        'PATCH /boutique/produits/p2': [409, { error: 'Ajoutez au moins une déclinaison active (avec son prix) avant de mettre ce produit en ligne.', field: 'actif' }],
+        [`PATCH /boutique/produits/${P1}`]: [200, { ok: true }],
+      },
       {},
       { admin: true },
     )
@@ -441,12 +543,28 @@ describe('Gestion des produits', () => {
     expect(calls.find((c) => c.path === `/boutique/produits/${P1}`)!.body).toEqual({ actif: false })
   })
 
-  const DETAIL = (over: Partial<AdminProduitDetail['produit']> = {}, variantes: AdminProduitDetail['variantes'] = [{ id: 'v1', libelle: '270 mm · 1 m', reference: 'CV', prixHt: 17.5, prixTtc: 21, actif: true }]): AdminProduitDetail => ({
-    produit: { id: P1, nom: 'Couvertine blanche', categorie: 'Couvertine', description: 'Texte', actif: false, hasImage: false, version: 3, imageAlt: '', imageLargeur: null, imageHauteur: null, ...over },
+  const DETAIL = (
+    over: Partial<AdminProduitDetail['produit']> = {},
+    variantes: AdminProduitDetail['variantes'] = [{ id: 'v1', libelle: '270 mm · 1 m', reference: 'CV', prixHt: 17.5, prixTtc: 21, actif: true }],
+  ): AdminProduitDetail => ({
+    produit: {
+      id: P1,
+      nom: 'Couvertine blanche',
+      categorie: 'Couvertine',
+      description: 'Texte',
+      actif: false,
+      hasImage: false,
+      version: 3,
+      imageAlt: '',
+      imageLargeur: null,
+      imageHauteur: null,
+      ...over,
+    },
     variantes,
     tva: 20,
   })
-  const mountProduct = (d: AdminProduitDetail, extra: Parameters<typeof mockApi>[0] = {}) => mountAt(ProductView, `/produits/${P1}`, { [`GET /boutique/produits/${P1}`]: [200, d], ...extra }, { id: P1 }, { admin: true })
+  const mountProduct = (d: AdminProduitDetail, extra: Parameters<typeof mockApi>[0] = {}) =>
+    mountAt(ProductView, `/produits/${P1}`, { [`GET /boutique/produits/${P1}`]: [200, d], ...extra }, { id: P1 }, { admin: true })
 
   it('copie le produit sous un autre nom et ouvre la copie', async () => {
     const { wrapper, router, calls } = await mountProduct(DETAIL(), { [`POST /boutique/produits/${P1}/dupliquer`]: [201, { id: 'copie1' }] })
@@ -517,7 +635,9 @@ describe('Gestion des produits', () => {
     await flushPromises()
     expect(ok.calls.find((c) => c.method === 'PATCH')!.body).toEqual({ actif: true })
     expect(ok.wrapper.get('[role="status"]').text()).toContain('en ligne sur le site')
-    const no = await mountProduct(DETAIL({}, []), { [`PATCH /boutique/produits/${P1}`]: [409, { error: 'Ajoutez au moins une déclinaison active (avec son prix) avant de mettre ce produit en ligne.', field: 'actif' }] })
+    const no = await mountProduct(DETAIL({}, []), {
+      [`PATCH /boutique/produits/${P1}`]: [409, { error: 'Ajoutez au moins une déclinaison active (avec son prix) avant de mettre ce produit en ligne.', field: 'actif' }],
+    })
     expect(no.wrapper.text()).toContain('Aucune déclinaison')
     await button(no.wrapper, 'Mettre en ligne').trigger('click')
     await flushPromises()
@@ -587,7 +707,23 @@ describe('Gestion des produits', () => {
 })
 
 describe('Articles de la boutique dans les commandes', () => {
-  const line = { repere: null, modeleLabel: 'Couvertine blanche', cap: 0, materialLabel: '270 mm · 1 m', colorLabel: '', colorHex: '#cdd1d4', cotes: [] as number[], angles: [] as number[], longueur: 0, quantite: 2, accessoires: [], prixUnitaire: 17.5, remiseQuantite: 0, miseEnRoute: 0, total: 35 }
+  const line = {
+    repere: null,
+    modeleLabel: 'Couvertine blanche',
+    cap: 0,
+    materialLabel: '270 mm · 1 m',
+    colorLabel: '',
+    colorHex: '#cdd1d4',
+    cotes: [] as number[],
+    angles: [] as number[],
+    longueur: 0,
+    quantite: 2,
+    accessoires: [],
+    prixUnitaire: 17.5,
+    remiseQuantite: 0,
+    miseEnRoute: 0,
+    total: 35,
+  }
   it('affiche un article sans profil ni cotes, avec son prix à l’unité', () => {
     const w = mount(OrderLineCard, { props: { index: 0, line, prices: true } })
     expect(w.find('svg').exists()).toBe(false)
@@ -618,6 +754,8 @@ describe('Articles de la boutique dans les commandes', () => {
     expect(e('boutique.checkout_started', { montant: 126, articles: 3 })).toMatch(/Un client ouvre le paiement de 126,00 € \(3 articles\)/)
     expect(e('boutique.payment_confirmed', { numero: 'C-2026-0007', montant: 126 })).toBe('Paiement de 126,00 € reçu : commande C-2026-0007 créée')
     expect(e('boutique.payment_failed', { montant: 126 })).toMatch(/Paiement de 126,00 € abandonné/)
-    expect(e('order.refused', { numero: 'C-2026-0007', montant: 126, motif: 'Impossible', avoir: 'A-2026-0001' })).toMatch(/refusé la commande C-2026-0007 et remboursé 126,00 € .*Impossible.*A-2026-0001/)
+    expect(e('order.refused', { numero: 'C-2026-0007', montant: 126, motif: 'Impossible', avoir: 'A-2026-0001' })).toMatch(
+      /refusé la commande C-2026-0007 et remboursé 126,00 € .*Impossible.*A-2026-0001/,
+    )
   })
 })

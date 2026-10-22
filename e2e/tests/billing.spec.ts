@@ -4,7 +4,9 @@ test.describe('Devis et factures', () => {
   test('la direction fait un devis, facture la commande, encaisse puis annule par un avoir', async ({ adminPage: page, baseURL, uid }) => {
     const headers = { Origin: baseURL! }
     const nom = `Fact${uid.slice(-6)}`
-    const client = await (await page.request.post('/api/clients', { data: { type: 'particulier', prenom: 'Léa', nom, adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' }, headers })).json()
+    const client = await (
+      await page.request.post('/api/clients', { data: { type: 'particulier', prenom: 'Léa', nom, adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' }, headers })
+    ).json()
 
     // Commande saisie à l'écran
     await page.goto(`/commandes/nouvelle?client=${client.id}`)
@@ -97,7 +99,9 @@ test.describe('Devis et factures', () => {
     const headers = { Origin: baseURL! }
     const nom = `Mail${uid.slice(-6)}`
     const email = `${uid}@exemple.fr`
-    const client = await (await page.request.post('/api/clients', { data: { type: 'particulier', prenom: 'Léa', nom, email, adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' }, headers })).json()
+    const client = await (
+      await page.request.post('/api/clients', { data: { type: 'particulier', prenom: 'Léa', nom, email, adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' }, headers })
+    ).json()
     const cat = await (await page.request.get('/api/orders/catalog')).json()
     const m = cat.models[0]
     const ligne = { modelId: m.id, materialId: cat.materials[0].id, colorId: cat.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: 2000, quantite: 3, accessoires: [] }
@@ -138,7 +142,12 @@ test.describe('Devis et factures', () => {
     const headers = { Origin: baseURL! }
     const raison = `Elec${uid.slice(-6)}`
     // Professionnel sans adresse e-mail : la règle française demande celle de l'acheteur
-    const client = await (await page.request.post('/api/clients', { data: { type: 'professionnel', raisonSociale: raison, siret: '732 829 320 00074', adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' }, headers })).json()
+    const client = await (
+      await page.request.post('/api/clients', {
+        data: { type: 'professionnel', raisonSociale: raison, siret: '732 829 320 00074', adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' },
+        headers,
+      })
+    ).json()
     const cat = await (await page.request.get('/api/orders/catalog')).json()
     const m = cat.models[0]
     const ligne = { modelId: m.id, materialId: cat.materials[0].id, colorId: cat.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: 2000, quantite: 3, accessoires: [] }
@@ -167,7 +176,9 @@ test.describe('Devis et factures', () => {
   test('la direction exporte les ventes et les encaissements en CSV pour son comptable', async ({ adminPage: page, baseURL, uid }) => {
     const headers = { Origin: baseURL! }
     const nom = `Export${uid.slice(-6)}`
-    const client = await (await page.request.post('/api/clients', { data: { type: 'particulier', prenom: 'Léa', nom, adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' }, headers })).json()
+    const client = await (
+      await page.request.post('/api/clients', { data: { type: 'particulier', prenom: 'Léa', nom, adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' }, headers })
+    ).json()
     const cat = await (await page.request.get('/api/orders/catalog')).json()
     const m = cat.models[0]
     const ligne = { modelId: m.id, materialId: cat.materials[0].id, colorId: cat.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: 2000, quantite: 3, accessoires: [] }

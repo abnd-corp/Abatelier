@@ -60,7 +60,10 @@ const updateBody = z.object({ type, ...clientFields, proVerifie: z.boolean({ err
 const siteBody = z.object({
   libelle: z.string().trim().min(1, 'Donnez un nom au chantier.').max(80, 'Nom du chantier : 80 caractères maximum.'),
   adresse: z.string().trim().min(1, 'L’adresse est requise.').max(200, 'Adresse : 200 caractères maximum.'),
-  codePostal: z.string().trim().regex(/^\d{5}$/, 'Code postal : 5 chiffres.'),
+  codePostal: z
+    .string()
+    .trim()
+    .regex(/^\d{5}$/, 'Code postal : 5 chiffres.'),
   ville: z.string().trim().min(1, 'La ville est requise.').max(80, 'Ville : 80 caractères maximum.'),
 })
 
@@ -71,8 +74,7 @@ const listQuery = z.object({
 })
 
 /** Nom affiché : la raison sociale d'un professionnel, « Prénom Nom » d'un particulier. */
-export const clientName = (c: Pick<Client, 'type' | 'raisonSociale' | 'prenom' | 'nom'>) =>
-  c.type === 'professionnel' ? (c.raisonSociale ?? '') : [c.prenom, c.nom].filter(Boolean).join(' ')
+export const clientName = (c: Pick<Client, 'type' | 'raisonSociale' | 'prenom' | 'nom'>) => (c.type === 'professionnel' ? (c.raisonSociale ?? '') : [c.prenom, c.nom].filter(Boolean).join(' '))
 
 // Libellés des champs pour le journal ; le contenu des notes n'y est jamais copié
 const LABELS: Record<string, string> = {
@@ -96,7 +98,10 @@ const EMAIL_TAKEN = 'Un client existe déjà avec cette adresse e-mail.'
 /** Client qui a déjà cette adresse e-mail (pour proposer d'ouvrir sa fiche). */
 async function emailOwner(email: string | null | undefined) {
   if (!email) return null
-  const [c] = await db.select({ id: clients.id }).from(clients).where(sql`lower(${clients.email}) = ${email.toLowerCase()}`)
+  const [c] = await db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(sql`lower(${clients.email}) = ${email.toLowerCase()}`)
   return c?.id ?? null
 }
 
@@ -190,7 +195,10 @@ export async function clientRoutes(app: FastifyInstance) {
     if (bad) return reply.code(400).send(bad)
     try {
       // Une fiche créée par l'atelier est reconnue tout de suite comme professionnelle
-      const [c] = await db.insert(clients).values({ ...data, proVerifie: data.type === 'professionnel' }).returning()
+      const [c] = await db
+        .insert(clients)
+        .values({ ...data, proVerifie: data.type === 'professionnel' })
+        .returning()
       await audit(req, 'client.created', { targetType: 'client', targetId: c!.id, details: { nom: clientName(c!), type: c!.type, origine: c!.origine } })
       return reply.code(201).send({ id: c!.id })
     } catch (e) {

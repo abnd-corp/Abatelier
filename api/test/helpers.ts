@@ -14,7 +14,9 @@ export const PASSWORD = 'Plieuse-numerique-2026'
 export { buildApp }
 
 export async function resetDb() {
-  await db.execute(sql`truncate audit_log, login_attempts, sessions, client_sessions, client_accounts, employees, users, materials, colors, pricing_settings, piece_models, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events, billing_documents, payments, product_variants, products, site_content, site_photos, contact_requests, email_log restart identity cascade`)
+  await db.execute(
+    sql`truncate audit_log, login_attempts, sessions, client_sessions, client_accounts, employees, users, materials, colors, pricing_settings, piece_models, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events, billing_documents, payments, product_variants, products, site_content, site_photos, contact_requests, email_log restart identity cascade`,
+  )
 }
 
 // Les quatre modèles de départ, avec les identifiants de la migration 0013
@@ -26,7 +28,17 @@ export const M = {
 }
 export async function seedModels() {
   await db.insert(pieceModels).values([
-    { id: M.couvertine, nom: 'Couvertine', cotes: [20, 70, 300, 70, 20], angles: [-135, 90, 90, -135], noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'], cap: -45, longueur: 3000, quantite: 4, position: 1 },
+    {
+      id: M.couvertine,
+      nom: 'Couvertine',
+      cotes: [20, 70, 300, 70, 20],
+      angles: [-135, 90, 90, -135],
+      noms: ['Larmier', 'Retombée', 'Dessus', 'Retombée', 'Larmier'],
+      cap: -45,
+      longueur: 3000,
+      quantite: 4,
+      position: 1,
+    },
     { id: M.bavette, nom: 'Bavette d’appui', cotes: [30, 220, 45, 15], angles: [-95, 95, 135], noms: ['Rejingot', 'Dessus', 'Nez', 'Retour'], cap: 90, longueur: 1400, quantite: 2, position: 2 },
     { id: M.bandeau, nom: 'Bandeau', cotes: [40, 150], angles: [-90], noms: ['Retour', 'Face'], cap: 180, longueur: 3000, quantite: 6, position: 3 },
     { id: M.autre, nom: 'Autre profil', cotes: [60, 120], angles: [90], noms: ['', ''], cap: 0, longueur: 2000, quantite: 1, position: 4 },
@@ -34,9 +46,7 @@ export async function seedModels() {
 }
 
 let counter = 0
-export async function createUser(
-  o: Partial<{ identifiant: string; nom: string; role: Role; password: string; mustChangePassword: boolean; disabled: boolean }> = {},
-) {
+export async function createUser(o: Partial<{ identifiant: string; nom: string; role: Role; password: string; mustChangePassword: boolean; disabled: boolean }> = {}) {
   counter++
   const identifiant = o.identifiant ?? `user${counter}`
   const password = o.password ?? PASSWORD

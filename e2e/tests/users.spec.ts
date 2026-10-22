@@ -1,7 +1,7 @@
 import { apiLogin, createUser, expect, NEW_PASSWORD, test, uiLogin } from './fixtures'
 
 test.describe('Arrivée et départ d’un employé', () => {
-  test('l’admin crée un compte, l’employé choisit son mot de passe, l’admin le désactive', async ({ adminPage, browser, baseURL, uid }) => {
+  test('l’admin crée un compte, l’employé choisit son mot de passe, l’admin le désactive', async ({ adminPage, browser, uid }) => {
     const nom = `Employé ${uid.slice(-6)}`
 
     // 1. L'admin crée le compte depuis l'interface

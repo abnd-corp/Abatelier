@@ -106,15 +106,12 @@ const CONFIRM: Record<Kind, string> = {
       <span class="eyebrow">Équipe</span>
       <h1>Comptes</h1>
     </div>
-    <button class="btn primary with-icon" type="button" @click="showForm = !showForm">
-      <AppIcon name="plus" />Ajouter un compte
-    </button>
+    <button class="btn primary with-icon" type="button" @click="showForm = !showForm"><AppIcon name="plus" />Ajouter un compte</button>
   </div>
 
   <p class="muted intro">
     Les comptes servent à se connecter. Pour un membre de l’équipe, passez plutôt par
-    <RouterLink :to="{ name: 'employees' }">Salariés</RouterLink> : la fiche et le compte sont créés ensemble. Ici, on gère aussi les comptes
-    techniques (administration, poste partagé de l’atelier).
+    <RouterLink :to="{ name: 'employees' }">Salariés</RouterLink> : la fiche et le compte sont créés ensemble. Ici, on gère aussi les comptes techniques (administration, poste partagé de l’atelier).
   </p>
 
   <TempPasswordPanel v-if="temp" :nom="temp.nom" :identifiant="temp.identifiant" :password="temp.password" @done="temp = null" />
@@ -164,7 +161,8 @@ const CONFIRM: Record<Kind, string> = {
         <tbody>
           <tr v-for="u in users" :key="u.id" :class="{ off: u.disabledAt }">
             <td>
-              <b>{{ u.nom }}</b><span v-if="u.id === auth.user?.id" class="muted"> (vous)</span>
+              <b>{{ u.nom }}</b
+              ><span v-if="u.id === auth.user?.id" class="muted"> (vous)</span>
               <span class="sub mono">{{ u.identifiant }}</span>
             </td>
             <td class="hide-sm">
@@ -192,9 +190,7 @@ const CONFIRM: Record<Kind, string> = {
             <td class="n actions">
               <template v-if="pending?.id === u.id">
                 <span class="confirm">{{ CONFIRM[pending.kind] }}</span>
-                <button class="btn small" :class="pending.kind === 'disable' ? 'danger' : 'primary'" type="button" :disabled="busy" @click="run(u, pending.kind)">
-                  Confirmer
-                </button>
+                <button class="btn small" :class="pending.kind === 'disable' ? 'danger' : 'primary'" type="button" :disabled="busy" @click="run(u, pending.kind)">Confirmer</button>
                 <button class="btn small" type="button" @click="pending = null">Annuler</button>
               </template>
               <template v-else>
@@ -211,10 +207,7 @@ const CONFIRM: Record<Kind, string> = {
       </table>
     </div>
   </section>
-  <p class="muted foot">
-    Quand quelqu’un quitte l’entreprise, désactivez son compte plutôt que de le supprimer : il ne peut plus se connecter, et son historique reste
-    dans le journal.
-  </p>
+  <p class="muted foot">Quand quelqu’un quitte l’entreprise, désactivez son compte plutôt que de le supprimer : il ne peut plus se connecter, et son historique reste dans le journal.</p>
 </template>
 
 <style scoped>

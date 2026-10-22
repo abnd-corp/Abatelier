@@ -57,11 +57,22 @@ const importBody = z.object({
     .min(1, 'Le fichier ne contient aucun produit.')
     .max(PRODUITS_MAX, `${PRODUITS_MAX} produits maximum.`),
 })
-const blanks = (s: string) => s.replace(/[\u00a0\u202f]/g, ' ').replace(/\s+/g, ' ').trim()
+const blanks = (s: string) =>
+  s
+    .replace(/[\u00a0\u202f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 /** « BANDEAUX EN « L » BLANC » → « Bandeaux en « L » blanc » : le nom reste lisible sans crier. */
 const sentence = (s: string) => {
   const t = blanks(s)
-  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase().replace(/\bral\b/g, 'RAL').replace(/«\s*([a-z])\s*»/g, (_m, l: string) => `« ${l.toUpperCase()} »`)
+  return (
+    t.charAt(0).toUpperCase() +
+    t
+      .slice(1)
+      .toLowerCase()
+      .replace(/\bral\b/g, 'RAL')
+      .replace(/«\s*([a-z])\s*»/g, (_m, l: string) => `« ${l.toUpperCase()} »`)
+  )
 }
 /** Libellé d'une déclinaison : ses attributs, un nombre seul étant précédé du nom de l'attribut (« hauteur de bandeau 225 »). */
 const variantLabel = (attrs: Record<string, string>) =>
@@ -79,7 +90,14 @@ const prixBody = z.object({
 const duplicateBody = z.object({ nom: productFields.nom })
 
 /** Réponse d'une déclinaison : prix HT enregistré et prix TTC affiché au client. */
-const variantOut = (v: typeof productVariants.$inferSelect, taux: number) => ({ id: v.id, libelle: v.libelle, reference: v.reference, prixHt: v.prixHt, prixTtc: ttcOf(v.prixHt, taux), actif: v.actif })
+const variantOut = (v: typeof productVariants.$inferSelect, taux: number) => ({
+  id: v.id,
+  libelle: v.libelle,
+  reference: v.reference,
+  prixHt: v.prixHt,
+  prixTtc: ttcOf(v.prixHt, taux),
+  actif: v.actif,
+})
 
 export async function boutiqueRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requirePerm('products.manage'))
@@ -95,7 +113,12 @@ export async function boutiqueRoutes(app: FastifyInstance) {
   }
 
   async function findProduct(id: string, reply: FastifyReply) {
-    const [p] = isUuid(id) ? await db.select({ ...columns, description: products.description, imageAlt: products.imageAlt, imageLargeur: products.imageLargeur, imageHauteur: products.imageHauteur }).from(products).where(eq(products.id, id)) : []
+    const [p] = isUuid(id)
+      ? await db
+          .select({ ...columns, description: products.description, imageAlt: products.imageAlt, imageLargeur: products.imageLargeur, imageHauteur: products.imageHauteur })
+          .from(products)
+          .where(eq(products.id, id))
+      : []
     if (!p) reply.code(404).send({ error: 'Produit introuvable.' })
     return p ?? null
   }
@@ -106,7 +129,10 @@ export async function boutiqueRoutes(app: FastifyInstance) {
   }
   const touch = (id: string) => db.update(products).set({ updatedAt: new Date() }).where(eq(products.id, id))
   const activeVariants = async (productId: string, except?: string) => {
-    const rows = await db.select({ id: productVariants.id }).from(productVariants).where(and(eq(productVariants.productId, productId), eq(productVariants.actif, true)))
+    const rows = await db
+      .select({ id: productVariants.id })
+      .from(productVariants)
+      .where(and(eq(productVariants.productId, productId), eq(productVariants.actif, true)))
     return rows.filter((r) => r.id !== except).length
   }
 
@@ -159,7 +185,12 @@ export async function boutiqueRoutes(app: FastifyInstance) {
     }
     const set: Partial<typeof products.$inferInsert> = {}
     const champs: string[] = []
-    for (const [key, label] of [['nom', 'nom'], ['categorie', 'catégorie'], ['description', 'description'], ['imageAlt', 'description de la photo']] as const) {
+    for (const [key, label] of [
+      ['nom', 'nom'],
+      ['categorie', 'catégorie'],
+      ['description', 'description'],
+      ['imageAlt', 'description de la photo'],
+    ] as const) {
       if (d[key] !== undefined && d[key] !== p[key]) {
         set[key] = d[key]
         champs.push(label)
@@ -167,7 +198,10 @@ export async function boutiqueRoutes(app: FastifyInstance) {
     }
     if (d.actif !== undefined && d.actif !== p.actif) set.actif = d.actif
     if (!Object.keys(set).length) return { ok: true }
-    await db.update(products).set({ ...set, updatedAt: new Date() }).where(eq(products.id, p.id))
+    await db
+      .update(products)
+      .set({ ...set, updatedAt: new Date() })
+      .where(eq(products.id, p.id))
     if (champs.length) await audit(req, 'product.updated', { targetType: 'product', targetId: p.id, details: { nom: d.nom ?? p.nom, champs } })
     if (set.actif !== undefined) await audit(req, set.actif ? 'product.activated' : 'product.deactivated', { targetType: 'product', targetId: p.id, details: { nom: d.nom ?? p.nom } })
     return { ok: true }
@@ -190,52 +224,57 @@ export async function boutiqueRoutes(app: FastifyInstance) {
     if (!parsed.success) return invalid(reply, parsed.error)
     const taux = (await getPricingSettings()).tva
     const bilan = { produitsCrees: 0, produitsExistants: 0, variantesCreees: 0, variantesMisesAJour: 0, ignorees: 0 }
-    await db.transaction(async (tx) => {
-      const [last] = await tx.select({ p: max(products.position) }).from(products)
-      let position = last?.p ?? 0
-      const [{ n: deja }] = (await tx.select({ n: count() }).from(products)) as [{ n: number }]
-      let total = deja
-      for (const src of parsed.data.produits) {
-        const nom = sentence(src.nom)
-        const [existing] = await tx.select().from(products).where(sql`lower(${products.nom}) = ${nom.toLowerCase()}`)
-        let productId = existing?.id
-        if (existing) bilan.produitsExistants++
-        else {
-          if (++total > PRODUITS_MAX) throw new RangeError(`${PRODUITS_MAX} produits maximum.`)
-          const categorie = sentence(Array.isArray(src.categorie) ? (src.categorie[0] ?? '') : (src.categorie ?? '')).slice(0, 60)
-          const [p] = await tx.insert(products).values({ nom, categorie, position: ++position }).returning({ id: products.id })
-          productId = p!.id
-          bilan.produitsCrees++
-        }
-        const have = new Map((await tx.select().from(productVariants).where(eq(productVariants.productId, productId!))).map((v) => [v.libelle, v]))
-        let vpos = Math.max(0, ...[...have.values()].map((v) => v.position))
-        const seen = new Set<string>()
-        for (const v of src.variations) {
-          const libelle = variantLabel(v.attrs).slice(0, 120)
-          const prixTtc = Math.round(v.prix * 100) / 100
-          if (!libelle || prixTtc <= 0 || v.achetable === false || seen.has(libelle)) {
-            bilan.ignorees++
-            continue
+    await db
+      .transaction(async (tx) => {
+        const [last] = await tx.select({ p: max(products.position) }).from(products)
+        let position = last?.p ?? 0
+        const [{ n: deja }] = (await tx.select({ n: count() }).from(products)) as [{ n: number }]
+        let total = deja
+        for (const src of parsed.data.produits) {
+          const nom = sentence(src.nom)
+          const [existing] = await tx
+            .select()
+            .from(products)
+            .where(sql`lower(${products.nom}) = ${nom.toLowerCase()}`)
+          let productId = existing?.id
+          if (existing) bilan.produitsExistants++
+          else {
+            if (++total > PRODUITS_MAX) throw new RangeError(`${PRODUITS_MAX} produits maximum.`)
+            const categorie = sentence(Array.isArray(src.categorie) ? (src.categorie[0] ?? '') : (src.categorie ?? '')).slice(0, 60)
+            const [p] = await tx.insert(products).values({ nom, categorie, position: ++position }).returning({ id: products.id })
+            productId = p!.id
+            bilan.produitsCrees++
           }
-          seen.add(libelle)
-          const prixHt = htFromTtc(prixTtc, taux)
-          const cur = have.get(libelle)
-          if (cur) {
-            if (cur.prixHt !== prixHt) {
-              await tx.update(productVariants).set({ prixHt, updatedAt: new Date() }).where(eq(productVariants.id, cur.id))
-              bilan.variantesMisesAJour++
+          const have = new Map((await tx.select().from(productVariants).where(eq(productVariants.productId, productId!))).map((v) => [v.libelle, v]))
+          let vpos = Math.max(0, ...[...have.values()].map((v) => v.position))
+          const seen = new Set<string>()
+          for (const v of src.variations) {
+            const libelle = variantLabel(v.attrs).slice(0, 120)
+            const prixTtc = Math.round(v.prix * 100) / 100
+            if (!libelle || prixTtc <= 0 || v.achetable === false || seen.has(libelle)) {
+              bilan.ignorees++
+              continue
             }
-          } else {
-            await tx.insert(productVariants).values({ productId: productId!, libelle, prixHt, position: ++vpos })
-            bilan.variantesCreees++
+            seen.add(libelle)
+            const prixHt = htFromTtc(prixTtc, taux)
+            const cur = have.get(libelle)
+            if (cur) {
+              if (cur.prixHt !== prixHt) {
+                await tx.update(productVariants).set({ prixHt, updatedAt: new Date() }).where(eq(productVariants.id, cur.id))
+                bilan.variantesMisesAJour++
+              }
+            } else {
+              await tx.insert(productVariants).values({ productId: productId!, libelle, prixHt, position: ++vpos })
+              bilan.variantesCreees++
+            }
           }
+          await tx.update(products).set({ updatedAt: new Date() }).where(eq(products.id, productId!))
         }
-        await tx.update(products).set({ updatedAt: new Date() }).where(eq(products.id, productId!))
-      }
-    }).catch((e) => {
-      if (e instanceof RangeError) return reply.code(409).send({ error: e.message })
-      throw e
-    })
+      })
+      .catch((e) => {
+        if (e instanceof RangeError) return reply.code(409).send({ error: e.message })
+        throw e
+      })
     if (reply.sent) return
     await audit(req, 'product.imported', { details: bilan })
     return bilan
@@ -245,13 +284,43 @@ export async function boutiqueRoutes(app: FastifyInstance) {
     const parsed = lotBody.safeParse(req.body)
     if (!parsed.success) return invalid(reply, parsed.error)
     const { ids, action } = parsed.data
-    const rows = await db.select({ id: products.id, nom: products.nom, actif: products.actif, actives: sql<number>`(select count(*) from product_variants v where v.product_id = products.id and v.actif)::int`.mapWith(Number) }).from(products).where(inArray(products.id, ids))
+    const rows = await db
+      .select({
+        id: products.id,
+        nom: products.nom,
+        actif: products.actif,
+        actives: sql<number>`(select count(*) from product_variants v where v.product_id = products.id and v.actif)::int`.mapWith(Number),
+      })
+      .from(products)
+      .where(inArray(products.id, ids))
     if (action === 'mettre_en_ligne') {
       const vides = rows.filter((r) => !r.actif && !r.actives)
-      if (vides.length) return reply.code(409).send({ error: `Sans déclinaison active, impossible de mettre en ligne : ${vides.slice(0, 3).map((r) => r.nom).join(', ')}${vides.length > 3 ? ` et ${vides.length - 3} autre${vides.length > 4 ? 's' : ''}` : ''}.`, field: 'ids' })
+      if (vides.length)
+        return reply.code(409).send({
+          error: `Sans déclinaison active, impossible de mettre en ligne : ${vides
+            .slice(0, 3)
+            .map((r) => r.nom)
+            .join(', ')}${vides.length > 3 ? ` et ${vides.length - 3} autre${vides.length > 4 ? 's' : ''}` : ''}.`,
+          field: 'ids',
+        })
     }
-    if (action === 'supprimer') await db.delete(products).where(inArray(products.id, rows.map((r) => r.id)))
-    else await db.update(products).set({ actif: action === 'mettre_en_ligne', updatedAt: new Date() }).where(inArray(products.id, rows.map((r) => r.id)))
+    if (action === 'supprimer')
+      await db.delete(products).where(
+        inArray(
+          products.id,
+          rows.map((r) => r.id),
+        ),
+      )
+    else
+      await db
+        .update(products)
+        .set({ actif: action === 'mettre_en_ligne', updatedAt: new Date() })
+        .where(
+          inArray(
+            products.id,
+            rows.map((r) => r.id),
+          ),
+        )
     await audit(req, 'product.bulk', { details: { action, produits: rows.length, noms: rows.slice(0, 5).map((r) => r.nom) } })
     return { produits: rows.length }
   })
@@ -268,7 +337,10 @@ export async function boutiqueRoutes(app: FastifyInstance) {
       const [src] = await tx.select().from(products).where(eq(products.id, p.id))
       const [last] = await tx.select({ p: max(products.position) }).from(products)
       const { id: _i, createdAt: _c, updatedAt: _u, actif: _a, position: _p, nom: _n, ...rest } = src!
-      const [copy] = await tx.insert(products).values({ ...rest, nom: parsed.data.nom, actif: false, position: (last?.p ?? 0) + 1 }).returning({ id: products.id })
+      const [copy] = await tx
+        .insert(products)
+        .values({ ...rest, nom: parsed.data.nom, actif: false, position: (last?.p ?? 0) + 1 })
+        .returning({ id: products.id })
       const vs = await tx.select().from(productVariants).where(eq(productVariants.productId, p.id))
       if (vs.length) await tx.insert(productVariants).values(vs.map((v) => ({ productId: copy!.id, libelle: v.libelle, reference: '', prixHt: v.prixHt, actif: v.actif, position: v.position })))
       return copy!.id
@@ -321,7 +393,10 @@ export async function boutiqueRoutes(app: FastifyInstance) {
     const img = await inspectImage(body)
     if (!img || img.type !== req.headers['content-type']) return reply.code(400).send({ error: 'Image illisible : envoyez un fichier PNG ou JPEG valide.', field: 'image' })
     if (img.width < 200 || img.height < 200) return reply.code(400).send({ error: 'Image trop petite : 200 × 200 pixels minimum.', field: 'image' })
-    await db.update(products).set({ image: body, imageType: img.type, imageLargeur: img.width, imageHauteur: img.height, imageAlt: q.data.alt || p.imageAlt, updatedAt: new Date() }).where(eq(products.id, p.id))
+    await db
+      .update(products)
+      .set({ image: body, imageType: img.type, imageLargeur: img.width, imageHauteur: img.height, imageAlt: q.data.alt || p.imageAlt, updatedAt: new Date() })
+      .where(eq(products.id, p.id))
     await audit(req, 'product.image_updated', { targetType: 'product', targetId: p.id, details: { nom: p.nom, largeur: img.width, hauteur: img.height, octets: body.length } })
     return { ok: true }
   })
@@ -344,11 +419,21 @@ export async function boutiqueRoutes(app: FastifyInstance) {
     const [total] = await db.select({ n: count() }).from(productVariants).where(eq(productVariants.productId, p.id))
     if ((total?.n ?? 0) >= VARIANTES_MAX) return reply.code(409).send({ error: `${VARIANTES_MAX} déclinaisons maximum par produit.` })
     const taux = (await getPricingSettings()).tva
-    const [last] = await db.select({ p: max(productVariants.position) }).from(productVariants).where(eq(productVariants.productId, p.id))
+    const [last] = await db
+      .select({ p: max(productVariants.position) })
+      .from(productVariants)
+      .where(eq(productVariants.productId, p.id))
     try {
       const [v] = await db
         .insert(productVariants)
-        .values({ productId: p.id, libelle: parsed.data.libelle, reference: parsed.data.reference, prixHt: htFromTtc(parsed.data.prixTtc, taux), actif: parsed.data.actif ?? true, position: (last?.p ?? 0) + 1 })
+        .values({
+          productId: p.id,
+          libelle: parsed.data.libelle,
+          reference: parsed.data.reference,
+          prixHt: htFromTtc(parsed.data.prixTtc, taux),
+          actif: parsed.data.actif ?? true,
+          position: (last?.p ?? 0) + 1,
+        })
         .returning()
       await touch(p.id)
       await audit(req, 'product.variant_added', { targetType: 'product', targetId: p.id, details: { nom: p.nom, libelle: v!.libelle, prixTtc: ttcOf(v!.prixHt, taux) } })
@@ -377,10 +462,17 @@ export async function boutiqueRoutes(app: FastifyInstance) {
     if (d.actif !== undefined) set.actif = d.actif
     try {
       if (Object.keys(set).length) {
-        await db.update(productVariants).set({ ...set, updatedAt: new Date() }).where(eq(productVariants.id, v.id))
+        await db
+          .update(productVariants)
+          .set({ ...set, updatedAt: new Date() })
+          .where(eq(productVariants.id, v.id))
         await touch(v.productId)
         const prix = set.prixHt !== undefined ? { avant: ttcOf(v.prixHt, taux), apres: ttcOf(set.prixHt, taux) } : undefined
-        await audit(req, 'product.variant_updated', { targetType: 'product', targetId: v.productId, details: { nom: p!.nom, libelle: set.libelle ?? v.libelle, ...(prix ? { prixTtc: prix } : {}), ...(set.actif !== undefined ? { actif: set.actif } : {}) } })
+        await audit(req, 'product.variant_updated', {
+          targetType: 'product',
+          targetId: v.productId,
+          details: { nom: p!.nom, libelle: set.libelle ?? v.libelle, ...(prix ? { prixTtc: prix } : {}), ...(set.actif !== undefined ? { actif: set.actif } : {}) },
+        })
       }
     } catch (e) {
       if (isUniqueViolation(e)) return reply.code(409).send({ error: 'Ce produit a déjà une déclinaison avec ce libellé.', field: 'libelle' })

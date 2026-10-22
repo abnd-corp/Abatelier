@@ -206,7 +206,10 @@ async function removeLogo() {
         <div class="card group facturx" :class="{ ok: !facturxManque.length }" role="status">
           <h3>Facturation électronique</h3>
           <p v-if="!facturxManque.length">Les informations de l’entreprise sont complètes : les factures et avoirs sont émis au format Factur-X.</p>
-          <p v-else>Pour des factures électroniques conformes, il manque : <b>{{ facturxManque.join(', ') }}</b>.</p>
+          <p v-else>
+            Pour des factures électroniques conformes, il manque : <b>{{ facturxManque.join(', ') }}</b
+            >.
+          </p>
         </div>
 
         <fieldset class="card group">
@@ -338,7 +341,14 @@ async function removeLogo() {
           </div>
           <div class="field">
             <label for="t-conditions">Conditions de paiement</label>
-            <textarea id="t-conditions" v-model="template.conditionsPaiement" class="input" rows="2" placeholder="Ex. 30 % à la commande, solde à la livraison. Virement ou chèque." :aria-invalid="!!err('conditionsPaiement') || undefined" />
+            <textarea
+              id="t-conditions"
+              v-model="template.conditionsPaiement"
+              class="input"
+              rows="2"
+              placeholder="Ex. 30 % à la commande, solde à la livraison. Virement ou chèque."
+              :aria-invalid="!!err('conditionsPaiement') || undefined"
+            />
             <span v-if="err('conditionsPaiement')" class="field-error">{{ err('conditionsPaiement') }}</span>
           </div>
           <div class="field">
@@ -366,12 +376,21 @@ async function removeLogo() {
           <legend>Devis</legend>
           <div class="field">
             <label for="t-validite">Validité</label>
-            <span class="unit"><input id="t-validite" v-model="template.validiteDevis" class="input mono" inputmode="numeric" :aria-invalid="!!err('validiteDevis') || undefined" /><span>jours</span></span>
+            <span class="unit"
+              ><input id="t-validite" v-model="template.validiteDevis" class="input mono" inputmode="numeric" :aria-invalid="!!err('validiteDevis') || undefined" /><span>jours</span></span
+            >
             <span v-if="err('validiteDevis')" class="field-error">{{ err('validiteDevis') }}</span>
           </div>
           <div class="field">
             <label for="t-note-devis">Note du devis</label>
-            <textarea id="t-note-devis" v-model="template.noteDevis" class="input" rows="2" placeholder="Ex. Délai de fabrication : 5 jours ouvrés après accord." :aria-invalid="!!err('noteDevis') || undefined" />
+            <textarea
+              id="t-note-devis"
+              v-model="template.noteDevis"
+              class="input"
+              rows="2"
+              placeholder="Ex. Délai de fabrication : 5 jours ouvrés après accord."
+              :aria-invalid="!!err('noteDevis') || undefined"
+            />
             <span v-if="err('noteDevis')" class="field-error">{{ err('noteDevis') }}</span>
           </div>
         </fieldset>
@@ -380,7 +399,9 @@ async function removeLogo() {
           <legend>Facture</legend>
           <div class="field">
             <label for="t-echeance">Délai de paiement</label>
-            <span class="unit"><input id="t-echeance" v-model="template.echeanceFacture" class="input mono" inputmode="numeric" :aria-invalid="!!err('echeanceFacture') || undefined" /><span>jours</span></span>
+            <span class="unit"
+              ><input id="t-echeance" v-model="template.echeanceFacture" class="input mono" inputmode="numeric" :aria-invalid="!!err('echeanceFacture') || undefined" /><span>jours</span></span
+            >
             <span v-if="err('echeanceFacture')" class="field-error">{{ err('echeanceFacture') }}</span>
             <span class="hint muted">60 jours maximum entre professionnels.</span>
           </div>
@@ -398,11 +419,21 @@ async function removeLogo() {
           <legend>{{ t.legend }}</legend>
           <div class="field">
             <label :for="`n-${t.type}`">Prochain numéro</label>
-            <input :id="`n-${t.type}`" v-model="numbering[t.type]" class="input mono" inputmode="numeric" :disabled="locked(t.type)" :aria-invalid="!!err(t.type) || undefined" :aria-describedby="locked(t.type) ? `n-${t.type}-lock` : undefined" />
+            <input
+              :id="`n-${t.type}`"
+              v-model="numbering[t.type]"
+              class="input mono"
+              inputmode="numeric"
+              :disabled="locked(t.type)"
+              :aria-invalid="!!err(t.type) || undefined"
+              :aria-describedby="locked(t.type) ? `n-${t.type}-lock` : undefined"
+            />
             <span v-if="err(t.type)" class="field-error">{{ err(t.type) }}</span>
             <span v-else-if="locked(t.type)" :id="`n-${t.type}-lock`" class="muted hint">{{ t.lock }}</span>
           </div>
-          <p class="next">{{ t.next }} <b class="mono">{{ label(t.type, numbering[t.type]) }}</b></p>
+          <p class="next">
+            {{ t.next }} <b class="mono">{{ label(t.type, numbering[t.type]) }}</b>
+          </p>
         </fieldset>
 
         <div class="card group explain">

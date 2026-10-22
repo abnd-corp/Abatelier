@@ -27,7 +27,12 @@ const block = (max: number, label: string) =>
     .string()
     .max(max, `${label} : ${max} caractères maximum.`)
     // Lignes nettoyées, sans lignes vides en trop au début et à la fin
-    .transform((s) => s.replace(/\r\n?/g, '\n').replace(/[ \t]+$/gm, '').trim())
+    .transform((s) =>
+      s
+        .replace(/\r\n?/g, '\n')
+        .replace(/[ \t]+$/gm, '')
+        .trim(),
+    )
 const orEmpty = <T extends z.ZodType>(schema: T) => z.union([z.literal(''), schema])
 
 const companyFields = {
@@ -36,7 +41,10 @@ const companyFields = {
   capital: line(40, 'Capital'),
   adresse: block(300, 'Adresse'),
   telephone: line(40, 'Téléphone'),
-  email: z.string().trim().pipe(orEmpty(z.email('Adresse e-mail invalide.').max(120))),
+  email: z
+    .string()
+    .trim()
+    .pipe(orEmpty(z.email('Adresse e-mail invalide.').max(120))),
   siteWeb: line(120, 'Site web'),
   siret: z
     .string()
@@ -52,7 +60,14 @@ const companyFields = {
   iban: z
     .string()
     .transform((s) => s.replace(/\s/g, '').toUpperCase())
-    .pipe(orEmpty(z.string().regex(/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/, 'IBAN invalide.').refine(ibanOk, 'IBAN invalide : vérifiez les caractères.')))
+    .pipe(
+      orEmpty(
+        z
+          .string()
+          .regex(/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/, 'IBAN invalide.')
+          .refine(ibanOk, 'IBAN invalide : vérifiez les caractères.'),
+      ),
+    )
     .transform((s) => s.replace(/(.{4})/g, '$1 ').trim()),
   bic: z
     .string()
@@ -80,7 +95,11 @@ const templateFields = {
 const nextNumber = (label: string) =>
   z.preprocess(
     (v) => (typeof v === 'string' ? Number(v.trim()) : v),
-    z.number({ error: `${label} : nombre attendu.` }).int(`${label} : nombre entier attendu.`).min(1, `${label} : 1 au minimum.`).max(999999, `${label} : 999 999 au maximum.`),
+    z
+      .number({ error: `${label} : nombre attendu.` })
+      .int(`${label} : nombre entier attendu.`)
+      .min(1, `${label} : 1 au minimum.`)
+      .max(999999, `${label} : 999 999 au maximum.`),
   )
 const numberingBody = z.object({
   devis: nextNumber('Prochain numéro de devis').optional(),

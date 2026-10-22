@@ -43,16 +43,16 @@ const clientType = z.enum(['particulier', 'professionnel'], { error: 'Indiquez s
 
 const registerBody = z
   .object({
-  type: clientType.default('particulier'),
-  raisonSociale: optText(120, 'Raison sociale'),
-  prenom: optText(60, 'Prénom'),
-  nom: z.string().trim().min(1, 'Indiquez votre nom.').max(80, 'Nom : 80 caractères maximum.'),
-  email: emailField,
-  telephone: optText(30, 'Téléphone').refine((v) => v === null || /^\+?[0-9 .()-]{6,25}$/.test(v), 'Numéro de téléphone invalide.'),
-  password: z.string().max(200, 'Mot de passe : 200 caractères maximum.'),
-  consentement: z.literal(true, { error: 'Cochez la case pour accepter l’utilisation de vos données pour gérer votre espace client.' }),
-  // Champ caché que seuls les robots remplissent
-  site: z.string().optional(),
+    type: clientType.default('particulier'),
+    raisonSociale: optText(120, 'Raison sociale'),
+    prenom: optText(60, 'Prénom'),
+    nom: z.string().trim().min(1, 'Indiquez votre nom.').max(80, 'Nom : 80 caractères maximum.'),
+    email: emailField,
+    telephone: optText(30, 'Téléphone').refine((v) => v === null || /^\+?[0-9 .()-]{6,25}$/.test(v), 'Numéro de téléphone invalide.'),
+    password: z.string().max(200, 'Mot de passe : 200 caractères maximum.'),
+    consentement: z.literal(true, { error: 'Cochez la case pour accepter l’utilisation de vos données pour gérer votre espace client.' }),
+    // Champ caché que seuls les robots remplissent
+    site: z.string().optional(),
   })
   .superRefine((b, ctx) => {
     if (b.type === 'professionnel' && !b.raisonSociale) ctx.addIssue({ code: 'custom', path: ['raisonSociale'], message: 'Indiquez la raison sociale de votre entreprise.' })
@@ -88,12 +88,20 @@ export async function espaceRoutes(app: FastifyInstance) {
     try {
       const created = await db.transaction(async (tx) => {
         // Un professionnel déclaré sur le site n'a la remise pro qu'une fois validé par l'atelier (proVerifie)
-        const [c] = await tx.insert(clients).values({ origine: 'site', ...data, raisonSociale: data.type === 'professionnel' ? data.raisonSociale : null, proVerifie: false }).returning()
+        const [c] = await tx
+          .insert(clients)
+          .values({ origine: 'site', ...data, raisonSociale: data.type === 'professionnel' ? data.raisonSociale : null, proVerifie: false })
+          .returning()
         const [a] = await tx.insert(clientAccounts).values({ clientId: c!.id, passwordHash, lastLoginAt: new Date() }).returning()
         return { client: c!, account: a! }
       })
       await startSession(req, reply, created.account.id, false)
-      await audit(req, 'espace.registered', { ...who({ clientId: created.client.id }), targetType: 'client', targetId: created.client.id, details: { nom: clientName(created.client), type: created.client.type } })
+      await audit(req, 'espace.registered', {
+        ...who({ clientId: created.client.id }),
+        targetType: 'client',
+        targetId: created.client.id,
+        details: { nom: clientName(created.client), type: created.client.type },
+      })
       return reply.code(201).send({ compte: publicAccount({ ...created.client, clientId: created.client.id, id: created.account.id } as ClientAccount) })
     } catch (e) {
       // Une adresse e-mail désigne une seule fiche client : on ne dit pas si elle a déjà un compte
@@ -159,7 +167,8 @@ export async function espaceRoutes(app: FastifyInstance) {
       .select({ attente: count() })
       .from(payments)
       .where(and(eq(payments.clientId, me.clientId), eq(payments.statut, 'attente')))) as [{ attente: number }]
-    if (ouvertes || attente) return reply.code(409).send({ error: 'Vous avez encore une commande ou un paiement en cours. Fermez votre espace une fois la commande livrée ou annulée, ou contactez l’atelier.' })
+    if (ouvertes || attente)
+      return reply.code(409).send({ error: 'Vous avez encore une commande ou un paiement en cours. Fermez votre espace une fois la commande livrée ou annulée, ou contactez l’atelier.' })
 
     const email = me.email.toLowerCase()
     await db.transaction(async (tx) => {
@@ -188,7 +197,19 @@ export async function espaceRoutes(app: FastifyInstance) {
       await tx.update(orders).set({ livraisonAdresse: null, livraisonCodePostal: null, livraisonVille: null, notes: null }).where(eq(orders.clientId, me.clientId))
       await tx
         .update(contactRequests)
-        .set({ nom: 'Client supprimé', email: 'supprime@invalid', telephone: null, adresse: null, codePostal: null, ville: null, message: '[supprimé]', fichierNom: null, fichierType: null, fichier: null, configuration: null })
+        .set({
+          nom: 'Client supprimé',
+          email: 'supprime@invalid',
+          telephone: null,
+          adresse: null,
+          codePostal: null,
+          ville: null,
+          message: '[supprimé]',
+          fichierNom: null,
+          fichierType: null,
+          fichier: null,
+          configuration: null,
+        })
         .where(sql`lower(${contactRequests.email}) = ${email}`)
       // Le nom n'a plus à rester dans le journal : actions du client, de sa fiche, de ses commandes et de ses documents
       const id = me.clientId
@@ -210,9 +231,36 @@ export async function espaceRoutes(app: FastifyInstance) {
   // L'adresse e-mail est l'identifiant de connexion : elle ne se change pas ici.
 
   const profilFields = ['type', 'raisonSociale', 'siret', 'tvaIntra', 'prenom', 'nom', 'telephone', 'adresse', 'codePostal', 'ville'] as const
-  const profilBody = z.object({ type: clientType, ...clientFields }).pick({ type: true, raisonSociale: true, siret: true, tvaIntra: true, prenom: true, nom: true, telephone: true, adresse: true, codePostal: true, ville: true }).partial()
-  const PROFIL_LABELS: Record<(typeof profilFields)[number], string> = { type: 'type', raisonSociale: 'raison sociale', siret: 'SIRET', tvaIntra: 'TVA intracommunautaire', prenom: 'prénom', nom: 'nom', telephone: 'téléphone', adresse: 'adresse', codePostal: 'code postal', ville: 'ville' }
-  const profilOf = (c: typeof clients.$inferSelect) => ({ type: c.type, proVerifie: c.proVerifie, raisonSociale: c.raisonSociale, siret: c.siret, tvaIntra: c.tvaIntra, prenom: c.prenom, nom: c.nom, email: c.email, telephone: c.telephone, adresse: c.adresse, codePostal: c.codePostal, ville: c.ville })
+  const profilBody = z
+    .object({ type: clientType, ...clientFields })
+    .pick({ type: true, raisonSociale: true, siret: true, tvaIntra: true, prenom: true, nom: true, telephone: true, adresse: true, codePostal: true, ville: true })
+    .partial()
+  const PROFIL_LABELS: Record<(typeof profilFields)[number], string> = {
+    type: 'type',
+    raisonSociale: 'raison sociale',
+    siret: 'SIRET',
+    tvaIntra: 'TVA intracommunautaire',
+    prenom: 'prénom',
+    nom: 'nom',
+    telephone: 'téléphone',
+    adresse: 'adresse',
+    codePostal: 'code postal',
+    ville: 'ville',
+  }
+  const profilOf = (c: typeof clients.$inferSelect) => ({
+    type: c.type,
+    proVerifie: c.proVerifie,
+    raisonSociale: c.raisonSociale,
+    siret: c.siret,
+    tvaIntra: c.tvaIntra,
+    prenom: c.prenom,
+    nom: c.nom,
+    email: c.email,
+    telephone: c.telephone,
+    adresse: c.adresse,
+    codePostal: c.codePostal,
+    ville: c.ville,
+  })
 
   app.get('/profil', { preHandler: requireAccount }, async (req) => {
     const [c] = await db.select().from(clients).where(eq(clients.id, req.account!.clientId))
@@ -238,7 +286,12 @@ export async function espaceRoutes(app: FastifyInstance) {
       .set({ ...Object.fromEntries(changed.map((k) => [k, merged[k]])), proVerifie: merged.proVerifie, updatedAt: new Date() })
       .where(eq(clients.id, c!.id))
       .returning()
-    await audit(req, 'espace.profile_updated', { ...who(me), targetType: 'client', targetId: c!.id, details: { champs: changed.map((k) => PROFIL_LABELS[k]), ...(changed.includes('type') ? { type: merged.type } : {}) } })
+    await audit(req, 'espace.profile_updated', {
+      ...who(me),
+      targetType: 'client',
+      targetId: c!.id,
+      details: { champs: changed.map((k) => PROFIL_LABELS[k]), ...(changed.includes('type') ? { type: merged.type } : {}) },
+    })
     return { profil: profilOf(saved!) }
   })
 
@@ -269,7 +322,12 @@ export async function espaceRoutes(app: FastifyInstance) {
     try {
       const d = await issueFromOrder('devis', order!, null)
       devis = { id: d.id, numero: d.numero }
-      await audit(req, 'billing.devis_created', { ...who(me), targetType: 'billing', targetId: d.id, details: { numero: d.numero, commande: placed.numero, client: d.client, ttc: d.ttc, origine: 'espace' } })
+      await audit(req, 'billing.devis_created', {
+        ...who(me),
+        targetType: 'billing',
+        targetId: d.id,
+        details: { numero: d.numero, commande: placed.numero, client: d.client, ttc: d.ttc, origine: 'espace' },
+      })
     } catch (e) {
       if (!(e instanceof BillingConflict)) req.log.error(e, 'Devis automatique impossible')
     }
@@ -277,10 +335,22 @@ export async function espaceRoutes(app: FastifyInstance) {
     const to = await alertRecipients()
     if (to.length) {
       const mail = espaceQuoteAlert(
-        { client: clientName({ ...me, raisonSociale: null }), email: me.email, commande: placed.numero, devis: devis?.numero ?? null, pieces: parsed.data.lignes.reduce((s, l) => s + l.quantite, 0), ht: order!.ht, ttc: order!.ttc },
+        {
+          client: clientName({ ...me, raisonSociale: null }),
+          email: me.email,
+          commande: placed.numero,
+          devis: devis?.numero ?? null,
+          pieces: parsed.data.lignes.reduce((s, l) => s + l.quantite, 0),
+          ht: order!.ht,
+          ttc: order!.ttc,
+        },
         `${baseUrl(req)}/commandes/${placed.id}`,
       )
-      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: me.email, targetType: 'order', targetId: placed.id }), 6000, { ok: false, notConfigured: false, error: 'délai dépassé' })
+      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: me.email, targetType: 'order', targetId: placed.id }), 6000, {
+        ok: false,
+        notConfigured: false,
+        error: 'délai dépassé',
+      })
     }
     return reply.code(201).send({ id: placed.id, numero: placed.numero, devis })
   })
@@ -328,7 +398,12 @@ export async function espaceRoutes(app: FastifyInstance) {
         cancelUrl: `${origin}/configurateur`,
       })
       await db.update(payments).set({ providerRef: checkout.ref }).where(eq(payments.id, p!.id))
-      await audit(req, 'boutique.checkout_started', { ...who(me), targetType: 'payment', targetId: p!.id, details: { montant: p!.montantTtc, articles: pieces, prestataire: provider.name, surMesure: true } })
+      await audit(req, 'boutique.checkout_started', {
+        ...who(me),
+        targetType: 'payment',
+        targetId: p!.id,
+        details: { montant: p!.montantTtc, articles: pieces, prestataire: provider.name, surMesure: true },
+      })
       return reply.code(201).send({ id: p!.id, url: checkout.url })
     } catch (e) {
       await failPayment(p!.id)
@@ -351,7 +426,8 @@ export async function espaceRoutes(app: FastifyInstance) {
     if (!provider) return reply.code(503).send({ error: 'Le paiement en ligne n’est pas encore ouvert. Contactez-nous pour passer commande.' })
     const priced = await priceCart(parsed.data.lignes, parsed.data.livraison)
     if ('error' in priced) return reply.code(priced.status).send({ error: priced.error, field: priced.field })
-    if (priced.indisponibles.length) return reply.code(409).send({ error: 'Certains articles ne sont plus en vente : retirez-les de votre panier.', field: 'lignes', indisponibles: priced.indisponibles })
+    if (priced.indisponibles.length)
+      return reply.code(409).send({ error: 'Certains articles ne sont plus en vente : retirez-les de votre panier.', field: 'lignes', indisponibles: priced.indisponibles })
     const origin = baseUrl(req)
     const [p] = await db
       .insert(payments)
@@ -378,7 +454,12 @@ export async function espaceRoutes(app: FastifyInstance) {
   })
 
   async function ownPayment(id: string, clientId: string, reply: FastifyReply) {
-    const [p] = isUuid(id) ? await db.select().from(payments).where(and(eq(payments.id, id), eq(payments.clientId, clientId))) : []
+    const [p] = isUuid(id)
+      ? await db
+          .select()
+          .from(payments)
+          .where(and(eq(payments.id, id), eq(payments.clientId, clientId)))
+      : []
     if (!p) reply.code(404).send({ error: 'Paiement introuvable.' })
     return p ?? null
   }
@@ -437,14 +518,29 @@ export async function espaceRoutes(app: FastifyInstance) {
   app.get('/commandes/:id', { preHandler: requireAccount }, async (req, reply) => {
     const me = req.account!
     const id = (req.params as { id: string }).id
-    const [o] = isUuid(id) ? await db.select().from(orders).where(and(eq(orders.id, id), eq(orders.clientId, me.clientId))) : []
+    const [o] = isUuid(id)
+      ? await db
+          .select()
+          .from(orders)
+          .where(and(eq(orders.id, id), eq(orders.clientId, me.clientId)))
+      : []
     if (!o) return reply.code(404).send({ error: 'Commande introuvable.' })
     const avoir = avoirAlias()
     const [lignes, events, documents, [pay]] = await Promise.all([
       db.select().from(orderLines).where(eq(orderLines.orderId, o.id)).orderBy(orderLines.position),
       eventsOf(o.id),
       db
-        .select({ id: billingDocuments.id, type: billingDocuments.type, numero: billingDocuments.numero, emisLe: billingDocuments.emisLe, echeance: billingDocuments.echeance, ttc: billingDocuments.ttc, reponse: billingDocuments.reponse, payeLe: billingDocuments.payeLe, statut: statutSql(avoir) })
+        .select({
+          id: billingDocuments.id,
+          type: billingDocuments.type,
+          numero: billingDocuments.numero,
+          emisLe: billingDocuments.emisLe,
+          echeance: billingDocuments.echeance,
+          ttc: billingDocuments.ttc,
+          reponse: billingDocuments.reponse,
+          payeLe: billingDocuments.payeLe,
+          statut: statutSql(avoir),
+        })
         .from(billingDocuments)
         .leftJoin(avoir, eq(avoir.factureId, billingDocuments.id))
         .where(and(eq(billingDocuments.orderId, o.id), eq(billingDocuments.clientId, me.clientId)))
@@ -488,7 +584,12 @@ export async function espaceRoutes(app: FastifyInstance) {
   })
 
   async function ownDocument(id: string, accountClientId: string, reply: FastifyReply) {
-    const [d] = isUuid(id) ? await db.select().from(billingDocuments).where(and(eq(billingDocuments.id, id), eq(billingDocuments.clientId, accountClientId))) : []
+    const [d] = isUuid(id)
+      ? await db
+          .select()
+          .from(billingDocuments)
+          .where(and(eq(billingDocuments.id, id), eq(billingDocuments.clientId, accountClientId)))
+      : []
     if (!d) reply.code(404).send({ error: 'Document introuvable.' })
     return d ?? null
   }
@@ -512,13 +613,18 @@ export async function espaceRoutes(app: FastifyInstance) {
     const [order] = await db.select().from(orders).where(eq(orders.id, doc.orderId))
     if (doc.reponse) return reply.code(409).send({ error: `Ce devis est déjà ${doc.reponse === 'accepte' ? 'accepté' : 'refusé'}.` })
     if (order!.statut === 'annulee') return reply.code(409).send({ error: 'Cette commande a été annulée.' })
-    if (parsed.data.reponse === 'accepte' && doc.echeance! < todayParis()) return reply.code(409).send({ error: 'Ce devis a expiré. Demandez-en un nouveau depuis le configurateur, aux tarifs actuels.' })
+    if (parsed.data.reponse === 'accepte' && doc.echeance! < todayParis())
+      return reply.code(409).send({ error: 'Ce devis a expiré. Demandez-en un nouveau depuis le configurateur, aux tarifs actuels.' })
     await db.update(billingDocuments).set({ reponse: parsed.data.reponse, reponseLe: new Date(), updatedAt: new Date() }).where(eq(billingDocuments.id, doc.id))
     await audit(req, 'espace.devis_answered', { ...who(me), targetType: 'billing', targetId: doc.id, details: { numero: doc.numero, commande: order!.numero, reponse: parsed.data.reponse } })
     const to = await alertRecipients()
     if (to.length) {
       const mail = espaceAnswerAlert({ client: doc.clientNom, devis: doc.numero, commande: order!.numero, reponse: parsed.data.reponse, ttc: doc.ttc }, `${baseUrl(req)}/commandes/${order!.id}`)
-      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: me.email, targetType: 'billing', targetId: doc.id }), 6000, { ok: false, notConfigured: false, error: 'délai dépassé' })
+      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: me.email, targetType: 'billing', targetId: doc.id }), 6000, {
+        ok: false,
+        notConfigured: false,
+        error: 'délai dépassé',
+      })
     }
     return { statut: parsed.data.reponse }
   })

@@ -26,7 +26,10 @@ const tab = ref<'inscription' | 'connexion'>('inscription')
 const livraison = reactive({ mode: 'retrait' as 'retrait' | 'livraison', adresse: '', codePostal: '', ville: '' })
 const fieldError = ref<{ field?: string; msg: string } | null>(null)
 
-const body = () => ({ lignes: panier.lignes, livraison: livraison.mode === 'retrait' ? { mode: 'retrait' } : { mode: 'livraison', adresse: livraison.adresse, codePostal: livraison.codePostal, ville: livraison.ville } })
+const body = () => ({
+  lignes: panier.lignes,
+  livraison: livraison.mode === 'retrait' ? { mode: 'retrait' } : { mode: 'livraison', adresse: livraison.adresse, codePostal: livraison.codePostal, ville: livraison.ville },
+})
 
 let timer: ReturnType<typeof setTimeout> | undefined
 async function refresh() {
@@ -47,7 +50,9 @@ async function refresh() {
 }
 onMounted(async () => {
   espace.ensureLoaded()
-  loadBoutique().then((b) => (boutique.value = b)).catch(() => undefined)
+  loadBoutique()
+    .then((b) => (boutique.value = b))
+    .catch(() => undefined)
   await refresh()
 })
 watch(
@@ -157,7 +162,10 @@ async function payer() {
           <dl v-if="prix" class="totals">
             <dt>Articles</dt>
             <dd>{{ eur(prix.totals.brut) }} HT</dd>
-            <template v-if="livraison.mode === 'livraison' && prix.totals.livraisonPrix"><dt>Livraison</dt><dd>{{ eur(prix.totals.livraisonPrix) }} HT</dd></template>
+            <template v-if="livraison.mode === 'livraison' && prix.totals.livraisonPrix"
+              ><dt>Livraison</dt>
+              <dd>{{ eur(prix.totals.livraisonPrix) }} HT</dd></template
+            >
             <dt>TVA {{ prix.totals.tauxTva.toLocaleString('fr-FR') }} %</dt>
             <dd>{{ eur(prix.totals.tva) }}</dd>
             <dt class="big">Total TTC</dt>
@@ -170,13 +178,22 @@ async function payer() {
       <section id="paiement" class="card box pay" aria-labelledby="payer">
         <h2 id="payer">Payer ma commande</h2>
         <p v-if="failure" class="alert bad" role="alert">{{ failure }}</p>
-        <p v-if="prix && !prix.paiement" class="alert warn" role="status">Le paiement en ligne n’est pas encore ouvert. Pour commander ces articles dès maintenant, <RouterLink :to="{ name: 'site-contact' }">contactez-nous</RouterLink>.</p>
+        <p v-if="prix && !prix.paiement" class="alert warn" role="status">
+          Le paiement en ligne n’est pas encore ouvert. Pour commander ces articles dès maintenant, <RouterLink :to="{ name: 'site-contact' }">contactez-nous</RouterLink>.
+        </p>
         <template v-else-if="!espace.loaded"><p class="muted" aria-busy="true">Chargement…</p></template>
 
         <form v-else-if="espace.compte" class="logged" novalidate @submit.prevent="payer">
-          <p>Vous êtes connecté : <b>{{ nomCompte(espace.compte) }}</b> ({{ espace.compte.email }}). Vous suivrez la commande dans <RouterLink :to="{ name: 'espace' }">votre espace client</RouterLink>.</p>
-          <p class="muted small">En payant, vous passez commande : elle est ferme dès la confirmation du paiement. Si nous ne pouvions pas la réaliser, nous vous rembourserions intégralement. <RouterLink :to="{ name: 'site-cgv' }" target="_blank">Conditions de vente</RouterLink></p>
-          <p><button class="s-btn primary big" type="submit" :disabled="paying || !payable">{{ paying ? 'Ouverture du paiement…' : `Payer ${prix ? eur(prix.totals.ttc) : ''} par carte` }}</button></p>
+          <p>
+            Vous êtes connecté : <b>{{ nomCompte(espace.compte) }}</b> ({{ espace.compte.email }}). Vous suivrez la commande dans <RouterLink :to="{ name: 'espace' }">votre espace client</RouterLink>.
+          </p>
+          <p class="muted small">
+            En payant, vous passez commande : elle est ferme dès la confirmation du paiement. Si nous ne pouvions pas la réaliser, nous vous rembourserions intégralement.
+            <RouterLink :to="{ name: 'site-cgv' }" target="_blank">Conditions de vente</RouterLink>
+          </p>
+          <p>
+            <button class="s-btn primary big" type="submit" :disabled="paying || !payable">{{ paying ? 'Ouverture du paiement…' : `Payer ${prix ? eur(prix.totals.ttc) : ''} par carte` }}</button>
+          </p>
         </form>
 
         <template v-else>
@@ -186,7 +203,15 @@ async function payer() {
             <button type="button" class="chip" :aria-pressed="tab === 'inscription'" @click="tab = 'inscription'">Créer mon espace</button>
             <button type="button" class="chip" :aria-pressed="tab === 'connexion'" @click="tab = 'connexion'">J’ai déjà un espace</button>
           </div>
-          <EspaceAuthForm :key="tab" :mode="tab" :busy="paying" :disabled="!payable" :submit-text="tab === 'inscription' ? 'Créer mon espace et payer' : 'Me connecter et payer'" id-prefix="pan" :after="payer" />
+          <EspaceAuthForm
+            :key="tab"
+            :mode="tab"
+            :busy="paying"
+            :disabled="!payable"
+            :submit-text="tab === 'inscription' ? 'Créer mon espace et payer' : 'Me connecter et payer'"
+            id-prefix="pan"
+            :after="payer"
+          />
         </template>
       </section>
     </template>

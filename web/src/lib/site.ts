@@ -56,9 +56,17 @@ export const photoUrl = (id: string) => `/api/public/photos/${id}`
 export const photosOf = (d: SiteData | null, place: Emplacement) => d?.photos.filter((p) => p.emplacement === place) ?? []
 
 /** Une ligne par élément : « Z, L, U » → ['Z, L, U'] */
-export const lines = (text: string | undefined) => (text ?? '').split('\n').map((l) => l.trim()).filter(Boolean)
+export const lines = (text: string | undefined) =>
+  (text ?? '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
 /** Paragraphes séparés par une ligne vide. */
-export const paragraphs = (text: string | undefined) => (text ?? '').split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
+export const paragraphs = (text: string | undefined) =>
+  (text ?? '')
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
 
 export interface LegalBlock {
   titre?: string
@@ -99,7 +107,10 @@ export function telHref(phone: string) {
 
 /** Dernière ligne « 42490 Fraisses » → code postal et commune. */
 export function splitAddress(adresse: string) {
-  const parts = adresse.split('\n').map((l) => l.trim()).filter(Boolean)
+  const parts = adresse
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
   const last = parts.at(-1) ?? ''
   const m = /^(\d{5})\s+(.+)$/.exec(last)
   return { rue: (m ? parts.slice(0, -1) : parts).join(', '), codePostal: m?.[1] ?? '', ville: m?.[2] ?? '' }

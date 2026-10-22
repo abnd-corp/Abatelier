@@ -78,7 +78,10 @@ test('captures', async ({ page, baseURL }, info) => {
   }
 
   // Un client du site avec un devis, pour les pages de l'espace client
-  const customer = await page.context().browser()!.newContext({ ...info.project.use, baseURL })
+  const customer = await page
+    .context()
+    .browser()!
+    .newContext({ ...info.project.use, baseURL })
   const cp = await customer.newPage()
   const creds = { email: `apercu-${info.project.name}@exemple.fr`, password: 'Plieuse-numerique-2026' }
   const origin = { Origin: baseURL! }
@@ -88,7 +91,23 @@ test('captures', async ({ page, baseURL }, info) => {
   const cfg = await (await cp.request.get('/api/public/configurateur')).json()
   const couvertine = (cfg.models as { id: string; nom: string; cotes: number[]; angles: number[] }[]).find((m) => m.nom === 'Couvertine')!
   const devis = await cp.request.post('/api/espace/devis', {
-    data: { lignes: [{ repere: 'Mur sud', modelId: couvertine.id, materialId: cfg.materials[0].id, colorId: cfg.colors[0].id, cotes: couvertine.cotes, angles: couvertine.angles, longueur: 3000, quantite: 6, accessoires: [] }], livraison: { mode: 'retrait' }, notes: 'Pose prévue en mars.' },
+    data: {
+      lignes: [
+        {
+          repere: 'Mur sud',
+          modelId: couvertine.id,
+          materialId: cfg.materials[0].id,
+          colorId: cfg.colors[0].id,
+          cotes: couvertine.cotes,
+          angles: couvertine.angles,
+          longueur: 3000,
+          quantite: 6,
+          accessoires: [],
+        },
+      ],
+      livraison: { mode: 'retrait' },
+      notes: 'Pose prévue en mars.',
+    },
     headers: origin,
   })
   expect(devis.ok(), await devis.text()).toBe(true)
@@ -101,7 +120,10 @@ test('captures', async ({ page, baseURL }, info) => {
   for (const p of PAGES) {
     const target = SPECIAL[p.path] ?? p.path
     if (p.anonymous) {
-      const anon = await page.context().browser()!.newContext({ ...info.project.use, baseURL })
+      const anon = await page
+        .context()
+        .browser()!
+        .newContext({ ...info.project.use, baseURL })
       const ap = await anon.newPage()
       await ap.goto(target)
       await ap.waitForLoadState('networkidle')
@@ -145,7 +167,10 @@ test('captures', async ({ page, baseURL }, info) => {
 
 test.afterAll(() => {
   // Galerie : une colonne par format d'écran, une ligne par page
-  const sets = readdirSync(OUT, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name).sort()
+  const sets = readdirSync(OUT, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+    .sort()
   const pages = PAGES.map((p) => p.name)
   const rows = pages
     .map(

@@ -150,7 +150,17 @@ const summary = (m: Pick<PieceModel, 'cotes' | 'angles'>) => {
           <div class="rotate" role="group" aria-label="Orientation du dessin">
             <button class="btn small icon" type="button" aria-label="Tourner le dessin de 15° à gauche" title="−15°" @click="rotate(-15)">↺</button>
             <span class="unit tiny">
-              <input id="m-cap" v-model.number="form.cap" class="input mono" type="number" inputmode="numeric" min="-180" max="180" aria-label="Orientation du dessin" :aria-invalid="bad('cap')" /><span>°</span>
+              <input
+                id="m-cap"
+                v-model.number="form.cap"
+                class="input mono"
+                type="number"
+                inputmode="numeric"
+                min="-180"
+                max="180"
+                aria-label="Orientation du dessin"
+                :aria-invalid="bad('cap')"
+              /><span>°</span>
             </span>
             <button class="btn small icon" type="button" aria-label="Tourner le dessin de 15° à droite" title="+15°" @click="rotate(15)">↻</button>
           </div>
@@ -174,7 +184,16 @@ const summary = (m: Pick<PieceModel, 'cotes' | 'angles'>) => {
                 :aria-invalid="bad(`noms.${j}`)"
               />
               <span class="unit">
-                <input :id="`m-cote${j}`" v-model.number="form.cotes[j]" class="input mono" type="number" inputmode="numeric" min="1" :aria-label="`Cote ${letter(j)}`" :aria-invalid="bad(`cotes.${j}`) || bad('cotes')" /><span>mm</span>
+                <input
+                  :id="`m-cote${j}`"
+                  v-model.number="form.cotes[j]"
+                  class="input mono"
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  :aria-label="`Cote ${letter(j)}`"
+                  :aria-invalid="bad(`cotes.${j}`) || bad('cotes')"
+                /><span>mm</span>
               </span>
             </div>
             <div v-if="j < form.angles.length" class="pli">
@@ -192,7 +211,13 @@ const summary = (m: Pick<PieceModel, 'cotes' | 'angles'>) => {
                   @input="setAngle(j, ($event.target as HTMLInputElement).value)"
                 /><span>{{ isPince(form.angles[j]!) ? '° pince' : '°' }}</span>
               </span>
-              <button class="btn small sens" type="button" :aria-label="`Inverser le sens du pli ${j + 1}`" :title="form.angles[j]! < 0 ? 'Pli vers le bas' : 'Pli vers le haut'" @click="form.angles[j] = -form.angles[j]!">
+              <button
+                class="btn small sens"
+                type="button"
+                :aria-label="`Inverser le sens du pli ${j + 1}`"
+                :title="form.angles[j]! < 0 ? 'Pli vers le bas' : 'Pli vers le haut'"
+                @click="form.angles[j] = -form.angles[j]!"
+              >
                 {{ form.angles[j]! < 0 ? '↓' : '↑' }}
               </button>
             </div>
@@ -201,7 +226,9 @@ const summary = (m: Pick<PieceModel, 'cotes' | 'angles'>) => {
             <button class="btn small" type="button" :disabled="form.cotes.length >= 20" @click="addPli"><AppIcon name="plus" :size="14" />Ajouter un pli</button>
             <button class="btn small" type="button" :disabled="form.cotes.length < 2" @click="removePli">Retirer le dernier pli</button>
           </div>
-          <p class="hint muted">Développé : <b class="mono">{{ developpe(form.cotes).toLocaleString('fr-FR') }} mm</b>. Le nom des cotes s’affiche à la saisie des commandes.</p>
+          <p class="hint muted">
+            Développé : <b class="mono">{{ developpe(form.cotes).toLocaleString('fr-FR') }} mm</b>. Le nom des cotes s’affiche à la saisie des commandes.
+          </p>
         </fieldset>
       </div>
 
@@ -217,8 +244,12 @@ const summary = (m: Pick<PieceModel, 'cotes' | 'angles'>) => {
         <div class="info">
           <b>{{ m.nom }}</b>
           <span class="muted sub">{{ summary(m) }}<template v-if="!m.actif"> · désactivé</template></span>
-          <span class="muted sub mono items"><span v-for="(c, i) in m.cotes" :key="i">{{ letter(i) }} {{ c }}</span></span>
-          <span v-if="m.angles.length" class="muted sub mono items"><span v-for="(a, i) in m.angles" :key="i">{{ angleText(a) }} {{ a < 0 ? '↓' : '↑' }}</span></span>
+          <span class="muted sub mono items"
+            ><span v-for="(c, i) in m.cotes" :key="i">{{ letter(i) }} {{ c }}</span></span
+          >
+          <span v-if="m.angles.length" class="muted sub mono items"
+            ><span v-for="(a, i) in m.angles" :key="i">{{ angleText(a) }} {{ a < 0 ? '↓' : '↑' }}</span></span
+          >
         </div>
         <div class="row-actions">
           <button class="btn small" type="button" :aria-label="`Modifier ${m.nom}`" @click="openEdit(m)"><AppIcon name="pencil" :size="14" />Modifier</button>

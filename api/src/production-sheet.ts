@@ -44,8 +44,7 @@ const STROKE = '#1d1f24'
 const num = (n: number) => clean(n.toLocaleString('fr-FR', { maximumFractionDigits: 1 }))
 export const letter = (i: number) => String.fromCharCode(65 + i)
 const longDay = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-const stamp = (d: Date) =>
-  `${d.toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })}`
+const stamp = (d: Date) => `${d.toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })}`
 
 /** Accessoires de toute la commande, regroupés, pour les préparer d'un coup. */
 export function accessoryTotals(lignes: SheetLine[]) {
@@ -157,7 +156,21 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
         // Flèche vers le haut ou le bas : sens du pli (négatif = pli dans l'autre sens)
         const ax = cx + 5
         const ay = cy + 4.5
-        doc.polygon(...((c.arrow > 0 ? [[ax - 3, ay + 2.5], [ax + 3, ay + 2.5], [ax, ay - 2.5]] : [[ax - 3, ay - 2.5], [ax + 3, ay - 2.5], [ax, ay + 2.5]]) as [number, number][])).fill(INK)
+        doc
+          .polygon(
+            ...((c.arrow > 0
+              ? [
+                  [ax - 3, ay + 2.5],
+                  [ax + 3, ay + 2.5],
+                  [ax, ay - 2.5],
+                ]
+              : [
+                  [ax - 3, ay - 2.5],
+                  [ax + 3, ay - 2.5],
+                  [ax, ay + 2.5],
+                ]) as [number, number][]),
+          )
+          .fill(INK)
       }
     }
     return height
@@ -204,7 +217,11 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     doc.roundedRect(PAGE.m, top, WIDTH, h, 6).lineWidth(0.8).strokeColor(LINE).stroke()
 
     // Case « fait » pour toute la ligne, en haut à droite
-    doc.rect(RIGHT - PAD - 16, top + PAD, 16, 16).lineWidth(1.2).strokeColor(INK).stroke()
+    doc
+      .rect(RIGHT - PAD - 16, top + PAD, 16, 16)
+      .lineWidth(1.2)
+      .strokeColor(INK)
+      .stroke()
     doc.font('Helvetica-Bold').fontSize(7.5).fillColor(MUTED)
     text('FAIT', RIGHT - PAD - 52, top + PAD + 5, { width: 30, align: 'right', characterSpacing: 0.6 })
 
@@ -225,7 +242,11 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     yy += 32
     if (l.cotes.length) {
       doc.rect(infoX, yy + 0.5, 9, 9).fill(l.colorHex)
-      doc.rect(infoX, yy + 0.5, 9, 9).lineWidth(0.5).strokeColor(LINE).stroke()
+      doc
+        .rect(infoX, yy + 0.5, 9, 9)
+        .lineWidth(0.5)
+        .strokeColor(LINE)
+        .stroke()
     }
     doc.font('Helvetica').fontSize(9.5).fillColor(INK)
     text([l.materialLabel, l.colorLabel].filter(Boolean).join(' · '), infoX + (l.cotes.length ? 15 : 0), yy, { width: infoW - 15, height: 12, ellipsis: true })
@@ -245,7 +266,12 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     yy += 12
     if (l.quantite <= TALLY_MAX) {
       const perRow = Math.floor(infoW / 15)
-      for (let k = 0; k < l.quantite; k++) doc.rect(infoX + (k % perRow) * 15, yy + Math.floor(k / perRow) * 15, 11, 11).lineWidth(0.8).strokeColor(INK).stroke()
+      for (let k = 0; k < l.quantite; k++)
+        doc
+          .rect(infoX + (k % perRow) * 15, yy + Math.floor(k / perRow) * 15, 11, 11)
+          .lineWidth(0.8)
+          .strokeColor(INK)
+          .stroke()
     } else {
       doc.font('Helvetica').fontSize(10).fillColor(INK)
       text(`______ / ${num(l.quantite)}`, infoX, yy)
@@ -375,12 +401,11 @@ function drawProfile(doc: PDFKit.PDFDocument, l: SheetLine, cap: number, bx: num
     if (bn < 1e-3) return
     const r = 7
     const a1 = Math.atan2(e1[1], e1[0])
-    let a2 = Math.atan2(e2[1], e2[0])
+    const a2 = Math.atan2(e2[1], e2[0])
     // Arc par le petit côté (l'angle intérieur)
     let d = a2 - a1
     while (d > Math.PI) d -= 2 * Math.PI
     while (d < -Math.PI) d += 2 * Math.PI
-    a2 = a1 + d
     const steps = 10
     doc.moveTo(v[0] + Math.cos(a1) * r, v[1] + Math.sin(a1) * r)
     for (let k = 1; k <= steps; k++) {

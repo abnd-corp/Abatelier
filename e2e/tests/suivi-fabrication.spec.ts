@@ -83,7 +83,12 @@ test.describe('Suivi de fabrication', () => {
     await expect(client).toHaveURL(/\/paiement-simulation\/[0-9a-f-]{36}$/)
     await client.getByRole('button', { name: 'Simuler un paiement réussi' }).click()
     await expect(client.getByRole('heading', { name: 'Merci, votre commande est confirmée' })).toBeVisible()
-    const numero = (await client.getByText(/C-\d{4}-\d{4}/).first().innerText()).match(/C-\d{4}-\d{4}/)![0]
+    const numero = (
+      await client
+        .getByText(/C-\d{4}-\d{4}/)
+        .first()
+        .innerText()
+    ).match(/C-\d{4}-\d{4}/)![0]
     await client.getByRole('link', { name: 'Suivre ma commande' }).click()
     await expect(client.getByRole('region', { name: 'Suivi de la commande' }).locator('li[aria-current="step"]')).toContainText('Commande validée')
     await expect(client.getByText(`Commande ${uid.slice(-4)}`).first()).toBeVisible()

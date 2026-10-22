@@ -151,7 +151,10 @@ async function startEdit() {
   form.value = {
     clientId: d.order.clientId,
     lignes: d.lignes.map(toLineForm),
-    livraison: d.order.livraisonMode === 'retrait' ? { mode: 'retrait' } : { mode: 'livraison', adresse: d.order.livraisonAdresse ?? '', codePostal: d.order.livraisonCodePostal ?? '', ville: d.order.livraisonVille ?? '' },
+    livraison:
+      d.order.livraisonMode === 'retrait'
+        ? { mode: 'retrait' }
+        : { mode: 'livraison', adresse: d.order.livraisonAdresse ?? '', codePostal: d.order.livraisonCodePostal ?? '', ville: d.order.livraisonVille ?? '' },
     notes: d.order.notes ?? '',
   }
   notice.value = ''
@@ -214,18 +217,35 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
           <li v-for="s in steps" :key="s.s" :class="{ done: s.done, current: s.current }">
             <span class="dot" aria-hidden="true"><AppIcon v-if="s.done" name="check" :size="13" /></span>
             <span class="step-label">{{ s.label }}</span>
-            <span v-if="s.at" class="sub" :title="dateTime(s.at)">{{ dateTime(s.at) }}<template v-if="s.nom"> · {{ s.nom }}</template></span>
+            <span v-if="s.at" class="sub" :title="dateTime(s.at)"
+              >{{ dateTime(s.at) }}<template v-if="s.nom"> · {{ s.nom }}</template></span
+            >
           </li>
         </ol>
-        <p v-if="cancelled" class="alert bad">Annulée le {{ dateTime(cancelled.at) }}<template v-if="cancelled.nom"> par {{ cancelled.nom }}</template> : {{ cancelled.note }}</p>
-        <p v-if="o.datePrevue" class="muted">Prévue le <b>{{ shortDay(o.datePrevue) }}</b> ({{ o.delaiJours }} jours ouvrés après validation).</p>
+        <p v-if="cancelled" class="alert bad">
+          Annulée le {{ dateTime(cancelled.at) }}<template v-if="cancelled.nom"> par {{ cancelled.nom }}</template> : {{ cancelled.note }}
+        </p>
+        <p v-if="o.datePrevue" class="muted">
+          Prévue le <b>{{ shortDay(o.datePrevue) }}</b> ({{ o.delaiJours }} jours ouvrés après validation).
+        </p>
         <p v-else-if="o.statut === 'recue'" class="muted">Délai : {{ o.delaiJours }} jours ouvrés à partir de la validation.</p>
 
         <div v-if="refusing" class="cancel">
-          <p class="muted">La commande a été payée en ligne : elle vaut contrat. Si vous ne pouvez pas la réaliser, le client est <b>remboursé en totalité</b> ({{ eur(detail.paiement?.montantTtc ?? 0) }} TTC) et reçoit votre motif par e-mail.</p>
+          <p class="muted">
+            La commande a été payée en ligne : elle vaut contrat. Si vous ne pouvez pas la réaliser, le client est <b>remboursé en totalité</b> ({{ eur(detail.paiement?.montantTtc ?? 0) }} TTC) et
+            reçoit votre motif par e-mail.
+          </p>
           <div class="field">
             <label for="refus-motif">Motif du refus (transmis au client)</label>
-            <textarea id="refus-motif" v-model="motif" class="input" rows="3" maxlength="500" placeholder="Longueur impossible à plier sur notre machine, matière indisponible…" :aria-invalid="actionError?.field === 'motif' || undefined" />
+            <textarea
+              id="refus-motif"
+              v-model="motif"
+              class="input"
+              rows="3"
+              maxlength="500"
+              placeholder="Longueur impossible à plier sur notre machine, matière indisponible…"
+              :aria-invalid="actionError?.field === 'motif' || undefined"
+            />
           </div>
           <div class="actions">
             <button class="btn danger" type="button" :disabled="busy || !motif.trim()" @click="refuse">Refuser et rembourser {{ eur(detail.paiement?.montantTtc ?? 0) }}</button>
@@ -283,7 +303,9 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
           <section v-if="detail.paiement" class="card block" aria-labelledby="pay-title">
             <h2 id="pay-title">Paiement en ligne</h2>
             <p>
-              <span class="pill" :class="detail.paiement.statut === 'paye' ? 'ok' : detail.paiement.statut === 'rembourse' ? 'neutral' : 'warn'">{{ { paye: 'Payé', rembourse: 'Remboursé', attente: 'En attente', echec: 'Échoué' }[detail.paiement.statut] }}</span>
+              <span class="pill" :class="detail.paiement.statut === 'paye' ? 'ok' : detail.paiement.statut === 'rembourse' ? 'neutral' : 'warn'">{{
+                { paye: 'Payé', rembourse: 'Remboursé', attente: 'En attente', echec: 'Échoué' }[detail.paiement.statut]
+              }}</span>
               <b class="pay-amount">{{ eur(detail.paiement.montantTtc) }} TTC</b>
             </p>
             <p v-if="detail.paiement.paidAt" class="muted">Payé par carte le {{ dateTime(detail.paiement.paidAt) }}.</p>
@@ -301,7 +323,8 @@ const tone = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!.tone
             </ul>
             <p v-else class="muted">Aucun devis ni facture pour cette commande.</p>
             <p v-if="canInvoice && detail?.facturx?.manque.length" class="warn-box" role="status">
-              Facture électronique : il manque <b>{{ detail.facturx?.manque.join(', ') }}</b>. La facture peut être émise, mais elle ne sera pas conforme tant que ce n’est pas complété (non modifiable après émission : complétez avant).
+              Facture électronique : il manque <b>{{ detail.facturx?.manque.join(', ') }}</b
+              >. La facture peut être émise, mais elle ne sera pas conforme tant que ce n’est pas complété (non modifiable après émission : complétez avant).
             </p>
             <div v-if="canQuote || canInvoice" class="actions">
               <button v-if="canQuote" class="btn" type="button" :disabled="busy" @click="issue('devis')"><AppIcon name="receipt" :size="16" />Faire un devis</button>

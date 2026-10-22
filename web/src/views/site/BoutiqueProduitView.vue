@@ -73,16 +73,26 @@ watch([variantId, quantite], () => (ajoute.value = false))
             <label for="b-quantite">Quantité</label>
             <input id="b-quantite" v-model.number="quantite" class="input" type="number" inputmode="numeric" min="1" :max="QUANTITE_MAX" />
           </div>
-          <p v-if="variante" class="total"><span class="muted">Total</span> <b>{{ eur(total) }}</b> <span class="muted">TTC</span></p>
-          <p><button class="s-btn primary big" type="submit" :disabled="!variante || !espace.compte" :aria-describedby="espace.loaded && !espace.compte ? 'b-compte' : undefined">Ajouter au panier</button></p>
+          <p v-if="variante" class="total">
+            <span class="muted">Total</span> <b>{{ eur(total) }}</b> <span class="muted">TTC</span>
+          </p>
+          <p>
+            <button class="s-btn primary big" type="submit" :disabled="!variante || !espace.compte" :aria-describedby="espace.loaded && !espace.compte ? 'b-compte' : undefined">
+              Ajouter au panier
+            </button>
+          </p>
           <p v-if="espace.loaded && !espace.compte" id="b-compte" class="alert" role="status">
             Il faut un espace client pour commander dans la boutique.
             <RouterLink :to="{ name: 'espace-inscription', query: { redirect: $route.fullPath } }">Créer mon espace</RouterLink> ·
             <RouterLink :to="{ name: 'espace-connexion', query: { redirect: $route.fullPath } }">Me connecter</RouterLink>
           </p>
-          <p v-if="ajoute" class="alert ok" role="status">Ajouté au panier. <RouterLink :to="{ name: 'site-panier' }">Voir mon panier</RouterLink> · <RouterLink :to="{ name: 'site-boutique' }">Continuer mes achats</RouterLink></p>
+          <p v-if="ajoute" class="alert ok" role="status">
+            Ajouté au panier. <RouterLink :to="{ name: 'site-panier' }">Voir mon panier</RouterLink> · <RouterLink :to="{ name: 'site-boutique' }">Continuer mes achats</RouterLink>
+          </p>
         </form>
-        <p class="muted small">Livraison ou retrait à l’atelier au moment de la commande. Une dimension particulière ? <RouterLink :to="{ name: 'site-configurateur' }">Composez votre pièce</RouterLink>.</p>
+        <p class="muted small">
+          Livraison ou retrait à l’atelier au moment de la commande. Une dimension particulière ? <RouterLink :to="{ name: 'site-configurateur' }">Composez votre pièce</RouterLink>.
+        </p>
       </div>
     </article>
   </div>

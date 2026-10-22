@@ -42,9 +42,22 @@ const mailOn = () => {
   env.SMTP_HOST = 'smtp.test'
   env.MAIL_FROM = 'APS <contact@aps.test>'
   env.MAIL_ALERT_TO = 'direction@aps.test'
-  setTransport({ async sendMail(o) { mailSent.push(o); return {} } })
+  setTransport({
+    async sendMail(o) {
+      mailSent.push(o)
+      return {}
+    },
+  })
 }
-const signup = (over: Record<string, unknown> = {}) => ({ prenom: 'Jean', nom: 'Dupont', email: 'Jean@Example.com', telephone: '06 12 34 56 78', password: 'Plieuse-numerique-2026', consentement: true, ...over })
+const signup = (over: Record<string, unknown> = {}) => ({
+  prenom: 'Jean',
+  nom: 'Dupont',
+  email: 'Jean@Example.com',
+  telephone: '06 12 34 56 78',
+  password: 'Plieuse-numerique-2026',
+  consentement: true,
+  ...over,
+})
 /** Un client avec son espace, déjà connecté. */
 async function member(over: Record<string, unknown> = {}) {
   const c = espace()
@@ -140,7 +153,10 @@ describe('Particulier ou professionnel, et mes informations', () => {
   it('à la création : particulier par défaut, ou professionnel avec sa raison sociale obligatoire, jamais reconnu d’office', async () => {
     const p = await member()
     expect((await p.get('/api/espace/session')).json().compte).toMatchObject({ type: 'particulier', proVerifie: false })
-    expect((await espace().post('/api/espace/inscription', signup({ email: 'pro@example.com', type: 'professionnel' }))).json()).toMatchObject({ field: 'raisonSociale', error: expect.stringContaining('raison sociale') })
+    expect((await espace().post('/api/espace/inscription', signup({ email: 'pro@example.com', type: 'professionnel' }))).json()).toMatchObject({
+      field: 'raisonSociale',
+      error: expect.stringContaining('raison sociale'),
+    })
     expect((await espace().post('/api/espace/inscription', signup({ email: 'x@example.com', type: 'artisan' }))).json().field).toBe('type')
     const pro = espace()
     const res = await pro.post('/api/espace/inscription', signup({ email: 'pro@example.com', type: 'professionnel', raisonSociale: 'Toitures du Forez' }))
@@ -171,7 +187,15 @@ describe('Particulier ou professionnel, et mes informations', () => {
     const c = await member()
     expect((await espace().get('/api/espace/profil')).statusCode).toBe(401)
     expect((await c.get('/api/espace/profil')).json().profil).toMatchObject({ type: 'particulier', prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', adresse: null })
-    const res = await c.patch('/api/espace/profil', { adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses', telephone: '06 11 22 33 44', email: 'autre@example.com', proVerifie: true, notes: 'x' })
+    const res = await c.patch('/api/espace/profil', {
+      adresse: '3 rue des Lilas',
+      codePostal: '42490',
+      ville: 'Fraisses',
+      telephone: '06 11 22 33 44',
+      email: 'autre@example.com',
+      proVerifie: true,
+      notes: 'x',
+    })
     expect(res.statusCode, res.body).toBe(200)
     const [fiche] = await db.select().from(clients)
     expect(fiche).toMatchObject({ adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses', email: 'jean@example.com', proVerifie: false, notes: null })

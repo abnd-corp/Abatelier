@@ -71,7 +71,16 @@ const errorFor = (field: string, error?: { field?: string; msg: string } | null)
       <div class="row">
         <div class="field">
           <label for="f-tel">Téléphone</label>
-          <input id="f-tel" v-model="model.telephone" class="input" type="tel" inputmode="tel" autocomplete="off" placeholder="06 12 34 56 78" :aria-invalid="!!errorFor('telephone', error) || undefined" />
+          <input
+            id="f-tel"
+            v-model="model.telephone"
+            class="input"
+            type="tel"
+            inputmode="tel"
+            autocomplete="off"
+            placeholder="06 12 34 56 78"
+            :aria-invalid="!!errorFor('telephone', error) || undefined"
+          />
           <span v-if="errorFor('telephone', error)" class="field-error">{{ errorFor('telephone', error) }}</span>
         </div>
         <div class="field">

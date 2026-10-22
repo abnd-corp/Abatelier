@@ -27,7 +27,20 @@ const DUPONT: Client = {
   createdAt: '2026-10-01T08:00:00Z',
   updatedAt: '2026-10-01T08:00:00Z',
 }
-const TOITURES: Client = { ...DUPONT, id: 'c2', type: 'professionnel', raisonSociale: 'Toitures du Forez', siret: '732 829 320 00074', tvaIntra: 'FR12345678901', prenom: 'Luc', nom: 'Morel', ville: 'Firminy', codePostal: '42700', origine: 'atelier', email: null }
+const TOITURES: Client = {
+  ...DUPONT,
+  id: 'c2',
+  type: 'professionnel',
+  raisonSociale: 'Toitures du Forez',
+  siret: '732 829 320 00074',
+  tvaIntra: 'FR12345678901',
+  prenom: 'Luc',
+  nom: 'Morel',
+  ville: 'Firminy',
+  codePostal: '42700',
+  origine: 'atelier',
+  email: null,
+}
 const CHANTIER: ClientSite = { id: 's1', libelle: 'Maison Rivière', adresse: '12 chemin du Bois', codePostal: '42700', ville: 'Firminy' }
 
 async function mountAt(component: object, path: string, routes: Parameters<typeof mockApi>[0], user: User = ADMIN) {
@@ -166,7 +179,10 @@ describe('Fiche client', () => {
 
   it('modifie la fiche puis la recharge', async () => {
     const { wrapper, calls } = await mountAt(ClientView, '/clients/c2', { 'GET /clients/c2': [200, DETAIL], 'PATCH /clients/c2': [200, { ok: true }] })
-    await wrapper.findAll('button').find((b) => b.text().includes('Modifier la fiche'))!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Modifier la fiche'))!
+      .trigger('click')
     expect((wrapper.get('#c-raison').element as HTMLInputElement).value).toBe('Toitures du Forez')
     await wrapper.get('#c-ville').setValue('Unieux')
     await wrapper.get('form.edit-form').trigger('submit')
@@ -181,7 +197,10 @@ describe('Fiche client', () => {
       'GET /clients/c2': [200, DETAIL],
       'POST /clients/c2/sites': () => (fail ? [400, { error: 'Code postal : 5 chiffres.', field: 'codePostal' }] : [201, { id: 's2' }]),
     })
-    await wrapper.findAll('button').find((b) => b.text() === 'Ajouter')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Ajouter')!
+      .trigger('click')
     await wrapper.get('#s-libelle').setValue('Garage')
     await wrapper.get('#s-adresse').setValue('1 rue Haute')
     await wrapper.get('#s-cp').setValue('427')
@@ -202,15 +221,24 @@ describe('Fiche client', () => {
     const { wrapper, calls } = await mountAt(ClientView, '/clients/c2', { 'GET /clients/c2': [200, DETAIL], 'DELETE /clients/c2/sites/s1': [200, { ok: true }] })
     await wrapper.get('button[aria-label="Retirer Maison Rivière"]').trigger('click')
     expect(calls.some((c) => c.method === 'DELETE')).toBe(false)
-    await wrapper.findAll('button').find((b) => b.text() === 'Retirer')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Retirer')!
+      .trigger('click')
     await flushPromises()
     expect(calls.some((c) => c.method === 'DELETE' && c.path === '/clients/c2/sites/s1')).toBe(true)
   })
 
   it('archive le client après confirmation', async () => {
     const { wrapper, calls } = await mountAt(ClientView, '/clients/c2', { 'GET /clients/c2': [200, DETAIL], 'POST /clients/c2/archive': [200, { ok: true }] })
-    await wrapper.findAll('button').find((b) => b.text() === 'Archiver le client')!.trigger('click')
-    await wrapper.findAll('button').find((b) => b.text() === 'Confirmer')!.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Archiver le client')!
+      .trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Confirmer')!
+      .trigger('click')
     await flushPromises()
     expect(calls.some((c) => c.method === 'POST' && c.path === '/clients/c2/archive')).toBe(true)
     expect(wrapper.text()).toContain('Client archivé')
