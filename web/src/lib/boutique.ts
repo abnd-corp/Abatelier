@@ -40,6 +40,8 @@ export interface PaiementStatut {
   montantTtc: number
   commande: { id: string; numero: string } | null
   simulation: boolean
+  // Commande sur mesure passée depuis le configurateur (et non un panier de la boutique)
+  surMesure?: boolean
 }
 
 export const QUANTITE_MAX = 999

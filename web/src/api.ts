@@ -64,3 +64,8 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
 export async function apiBlob(path: string, options: Options = {}): Promise<Blob> {
   return (await request(path, options)).blob()
 }
+
+/** Appel dont la réponse est un fichier (PDF…), à proposer en téléchargement. */
+export async function apiFile(path: string, options: Options = {}): Promise<Blob> {
+  return (await request(path, options)).blob()
+}

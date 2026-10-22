@@ -20,10 +20,9 @@ const NAV = [
   { name: 'site-pliage', label: 'Pliage aluminium' },
   { name: 'site-configurateur', label: 'Configurateur' },
   { name: 'site-boutique', label: 'Boutique' },
-  { name: 'site-contact', label: 'Contact' },
-  { name: 'espace', label: 'Mon espace' },
 ] as const
 const LEGAL = [
+  { name: 'site-contact', label: 'Contact' },
   { name: 'site-mentions', label: 'Mentions légales' },
   { name: 'site-confidentialite', label: 'Confidentialité' },
   { name: 'site-cookies', label: 'Cookies' },
@@ -52,6 +51,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <a v-if="e?.telephone" class="s-link s-tel-m" :href="`tel:${telHref(e.telephone)}`"><AppIcon name="phone" :size="16" />{{ e.telephone }}</a>
         </nav>
         <a v-if="e?.telephone" class="s-tel" :href="`tel:${telHref(e.telephone)}`"><AppIcon name="phone" :size="16" />{{ e.telephone }}</a>
+        <RouterLink :to="{ name: 'espace' }" class="s-cart s-profile" aria-label="Mon espace client" title="Mon espace client">
+          <AppIcon name="user" :size="22" />
+        </RouterLink>
         <RouterLink :to="{ name: 'site-panier' }" class="s-cart" :aria-label="panier.count ? `Mon panier, ${panier.count} article${panier.count > 1 ? 's' : ''}` : 'Mon panier, vide'">
           <AppIcon name="box" :size="22" />
           <span v-if="panier.count" class="s-cart-n" aria-hidden="true">{{ panier.count }}</span>
@@ -87,7 +89,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <h2 id="f-l">Informations</h2>
           <ul>
             <li v-for="l in LEGAL" :key="l.name"><RouterLink :to="{ name: l.name }">{{ l.label }}</RouterLink></li>
-            <li><RouterLink :to="{ name: 'login' }">Espace atelier</RouterLink></li>
           </ul>
         </section>
       </div>

@@ -2,10 +2,10 @@ import { createHmac } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { auditLog, billingDocuments, orderEvents, orderLines, orders, payments, productVariants, products } from '../src/db/schema.js'
+import { auditLog, billingDocuments, colors, materials, orderEvents, orderLines, orders, payments, productVariants, products } from '../src/db/schema.js'
 import { env } from '../src/env.js'
 import { setTransport, type Transport } from '../src/mail.js'
-import { pdfText, buildApp, client, createUser, loginAs, makePng, resetDb, type App, type Client } from './helpers.js'
+import { pdfText, buildApp, client, createUser, loginAs, M, makePng, resetDb, seedModels, type App, type Client } from './helpers.js'
 
 let app: App
 let direction: Client
@@ -492,5 +492,78 @@ describe('Données de la boutique', () => {
     expect(await db.select().from(productVariants).where(eq(productVariants.id, ids.v1))).toHaveLength(0)
     const lines = (await direction.get(`/api/orders/${order.id}`)).json().lignes
     expect(lines[0]).toMatchObject({ modeleLabel: 'Couvertine blanche', variantId: null })
+  })
+})
+
+describe('Commande sur mesure payée depuis le configurateur', () => {
+  let sm: { alu: string; anthracite: string }
+  beforeEach(async () => {
+    await seedModels()
+    const [alu] = await db.insert(materials).values({ nom: 'Aluminium', epaisseur: 1.5, prixM2: 62, retourMin: 10 }).returning()
+    const [anthracite] = await db.insert(colors).values({ nom: 'Gris anthracite', reference: 'RAL 7016', hex: '#383e42' }).returning()
+    sm = { alu: alu!.id, anthracite: anthracite!.id }
+  })
+  const piece = () => ({ repere: 'Mur sud', modelId: M.couvertine, materialId: sm.alu, colorId: sm.anthracite, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 4, accessoires: [] })
+  const commande = (over: Record<string, unknown> = {}) => ({ lignes: [piece()], livraison: { mode: 'retrait' }, notes: 'Pose en mars', ...over })
+
+  it('exige un compte et un prestataire de paiement, et valide la saisie avec le champ concerné', async () => {
+    expect((await visitor.post('/api/espace/commande', commande())).statusCode).toBe(401)
+    const c = await member()
+    env.PAYMENT_PROVIDER = 'none'
+    expect((await c.post('/api/espace/commande', commande())).statusCode).toBe(503)
+    env.PAYMENT_PROVIDER = 'simulation'
+    const bad = await c.post('/api/espace/commande', commande({ lignes: [{ ...piece(), longueur: 99999 }] }))
+    expect(bad.statusCode).toBe(400)
+    expect(bad.json().field).toMatch(/^lignes\.0\.longueur/)
+    expect((await c.post('/api/espace/commande', commande({ lignes: [] }))).statusCode).toBe(400)
+    expect(await db.select().from(payments)).toHaveLength(0)
+  })
+
+  it('fige le prix du configurateur, ne crée rien avant le paiement, puis une commande sur mesure déjà « Validée »', async () => {
+    mailOn()
+    const c = await member()
+    const quoted = (await visitor.post('/api/public/configurateur/chiffrage', commande())).json()
+    const res = await c.post('/api/espace/commande', commande())
+    expect(res.statusCode, res.body).toBe(201)
+    const { id, url } = res.json()
+    expect(url).toBe(`/paiement-simulation/${id}`)
+    const [p] = await db.select().from(payments)
+    expect(p!.montantTtc).toBe(quoted.totals.ttc)
+    expect(await db.select().from(orders)).toHaveLength(0)
+    expect((await c.get(`/api/espace/boutique/paiements/${id}`)).json()).toMatchObject({ statut: 'attente', commande: null, surMesure: true })
+
+    expect((await c.post(`/api/espace/boutique/paiements/${id}/simulation`, { issue: 'paye' })).statusCode).toBe(200)
+    const [o] = await db.select().from(orders)
+    expect(o).toMatchObject({ kind: 'sur_mesure', statut: 'validee', ttc: quoted.totals.ttc, ht: quoted.totals.ht, notes: 'Pose en mars' })
+    const lines = await db.select().from(orderLines)
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toMatchObject({ modeleLabel: 'Couvertine', repere: 'Mur sud', quantite: 4, longueur: 3000 })
+    expect((await db.select().from(orderEvents)).map((e) => e.statut)).toEqual(['recue', 'validee'])
+    // L'atelier la voit dans Fabrication, avec ses pièces, sans le client
+    await createUser({ identifiant: 'plieur', role: 'atelier' })
+    const atelier = await loginAs(app, 'plieur')
+    expect((await atelier.get('/api/production')).json().orders.map((x: { numero: string }) => x.numero)).toEqual([o!.numero])
+    const fab = await atelier.post(`/api/production/${o!.id}/status`, { statut: 'fabrication' })
+    expect(fab.statusCode, fab.body).toBe(200)
+    // Le client voit son suivi, la direction et le client sont prévenus
+    const suivi = (await c.get(`/api/espace/commandes/${o!.id}`)).json()
+    expect(suivi.commande).toMatchObject({ kind: 'sur_mesure', statut: 'fabrication' })
+    expect(suivi.paiement).toMatchObject({ statut: 'paye' })
+    expect(mailSent.map((m) => m.subject)).toEqual([expect.stringContaining('Commande sur mesure payée'), expect.stringContaining('est confirmée')])
+    expect(mailSent[0]!.text).toContain('depuis le configurateur')
+    expect((await entries('boutique.payment_confirmed'))).toHaveLength(1)
+  })
+
+  it('un paiement abandonné ne crée rien, et la direction peut refuser et rembourser la commande payée', async () => {
+    const c = await member()
+    const { id } = (await c.post('/api/espace/commande', commande())).json()
+    await c.post(`/api/espace/boutique/paiements/${id}/simulation`, { issue: 'echec' })
+    expect(await db.select().from(orders)).toHaveLength(0)
+    const again = (await c.post('/api/espace/commande', commande())).json()
+    await c.post(`/api/espace/boutique/paiements/${again.id}/simulation`, { issue: 'paye' })
+    const [o] = await db.select().from(orders)
+    const refus = await direction.post(`/api/orders/${o!.id}/refus`, { motif: 'Pièce impossible à plier.' })
+    expect(refus.statusCode, refus.body).toBe(200)
+    expect((await db.select().from(payments).where(eq(payments.id, again.id)))[0]!.statut).toBe('rembourse')
   })
 })

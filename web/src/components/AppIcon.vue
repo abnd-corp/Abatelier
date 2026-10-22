@@ -12,6 +12,8 @@ const PATHS = {
   copy: 'M9 9h11v11H9z M5 15H4V4h11v1',
   check: 'M4 12.5 9 17.5 20 6.5',
   plus: 'M12 5v14 M5 12h14',
+  'chevron-up': 'M6 15l6-6 6 6',
+  'chevron-down': 'M6 9l6 6 6-6',
   device: 'M4 5h16v11H4z M2 19h20 M9 16v3 M15 16v3',
   shield: 'M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6l-8-3Z M9 12l2 2 4-4',
   menu: 'M4 6h16 M4 12h16 M4 18h16',

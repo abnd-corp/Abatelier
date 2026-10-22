@@ -62,11 +62,24 @@ test.describe('Boutique : de la fiche produit au remboursement', () => {
     await expect(visitor.getByText('livrée sans visserie')).toBeVisible()
     await visitor.getByLabel('Choisissez votre version').selectOption({ label: '320 mm · 3 m · 84,00 € TTC' })
     await visitor.getByLabel('Quantité').fill('2')
+    // Sans espace client, on ne peut pas ajouter au panier : bouton désactivé et explication
+    await expect(visitor.getByRole('button', { name: 'Ajouter au panier' })).toBeDisabled()
+    await expect(visitor.getByRole('status').filter({ hasText: 'Il faut un espace client' })).toBeVisible()
+    await visitor.getByRole('link', { name: 'Créer mon espace' }).click()
+    await expect(visitor).toHaveURL(/\/espace\/inscription\?redirect=/)
+    await visitor.getByLabel('Nom *').fill(client)
+    await visitor.getByLabel('Adresse e-mail *').fill(email)
+    await visitor.getByLabel('Mot de passe *').fill(PASSWORD)
+    await visitor.getByLabel(/J’accepte que mes données/).check()
+    await visitor.getByRole('button', { name: 'Créer mon espace', exact: true }).click()
+    // De retour sur la fiche du produit, connecté : l'ajout est possible
+    await expect(visitor).toHaveURL(new RegExp(`/boutique/${produitId}$`))
+    await visitor.getByLabel('Choisissez votre version').selectOption({ label: '320 mm · 3 m · 84,00 € TTC' })
+    await visitor.getByLabel('Quantité').fill('2')
+    await expect(visitor.getByRole('button', { name: 'Ajouter au panier' })).toBeEnabled()
     await visitor.getByRole('button', { name: 'Ajouter au panier' }).click()
     await expect(visitor.getByText('Ajouté au panier.')).toBeVisible()
     await expect(visitor.getByRole('link', { name: 'Mon panier, 2 articles' })).toBeVisible()
-    // Le panier est dans le navigateur, sans cookie
-    expect(await visitor.context().cookies()).toEqual([])
 
     await visitor.getByRole('link', { name: 'Mon panier, 2 articles' }).click()
     await expect(visitor.getByRole('heading', { level: 1, name: 'Mon panier' })).toBeVisible()
@@ -75,14 +88,8 @@ test.describe('Boutique : de la fiche produit au remboursement', () => {
     await visitor.reload()
     await expect(visitor.locator('dl.totals')).toContainText('Total TTC168,00')
 
-    // --- Compte et paiement ---
-    const pay = visitor.locator('#paiement')
-    await expect(pay.getByRole('heading', { name: /Ce que nous faisons de vos données/ })).toBeVisible()
-    await pay.getByLabel('Nom *').fill(client)
-    await pay.getByLabel('Adresse e-mail *').fill(email)
-    await pay.getByLabel('Mot de passe *').fill(PASSWORD)
-    await pay.getByLabel(/J’accepte que mes données/).check()
-    await pay.getByRole('button', { name: 'Créer mon espace et payer' }).click()
+    // --- Paiement, déjà connecté ---
+    await visitor.locator('#paiement').getByRole('button', { name: /^Payer 168,00/ }).click()
 
     await expect(visitor).toHaveURL(/\/paiement-simulation\/[0-9a-f-]{36}$/)
     await expect(visitor.getByText('aucune carte n’est demandée')).toBeVisible()
@@ -166,5 +173,56 @@ test.describe('Boutique : de la fiche produit au remboursement', () => {
     await visitor.goto('/produits')
     await expect(visitor).toHaveURL(/\/connexion/)
     await admin.request.delete(`/api/boutique/produits/${id}`, { headers: h })
+  })
+
+  test('la direction importe un catalogue, le filtre, copie un produit, ajuste les prix et met tout en ligne d’un coup', async ({ adminPage, browser, uid }) => {
+    const tag = uid.slice(-6).toUpperCase()
+    const catalogue = [
+      { nom: `BANDEAUX EN « L » BLANC ${tag}`, categorie: ['BANDEAU'], variations: [{ attrs: { 'Épaisseur Alu': '1 mm', 'HAUTEUR DE BANDEAU': '200' }, prix: 26.5, achetable: true }, { attrs: { 'Épaisseur Alu': '1 mm', 'HAUTEUR DE BANDEAU': '225' }, prix: 0, achetable: true }] },
+      { nom: `BOUCHON DE COUVERTINE ${tag}`, categorie: ['ACCESSOIRE COUVERTINE'], variations: [{ attrs: { Quantité: 'Par 2' }, prix: 12, achetable: true }] },
+    ]
+    await adminPage.goto('/produits')
+    await adminPage.locator('#prod-import').setInputFiles({ name: 'catalogue.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(catalogue)) })
+    await expect(adminPage.getByRole('status').filter({ hasText: 'Import terminé' })).toContainText('2 produits créés (cachés du site)')
+    await expect(adminPage.getByRole('status')).toContainText('1 ignorée')
+
+    // Recherche, puis fiche : noms lisibles, déclinaison à 0 € écartée
+    await adminPage.getByLabel('Rechercher').fill(tag)
+    const lignes = adminPage.locator('tbody tr')
+    await expect(lignes).toHaveCount(2)
+    await expect(lignes.first()).toContainText('Hors ligne')
+    await adminPage.getByRole('link', { name: `Bandeaux en « L » blanc ${tag}` }).click()
+    await expect(adminPage.getByLabel('Prix TTC de 1 mm · hauteur de bandeau 200')).toHaveValue('26,50')
+
+    // Hausse de 10 % sur toutes les déclinaisons
+    await adminPage.getByLabel('Ajuster tous les prix (%)').fill('10')
+    await adminPage.getByRole('button', { name: 'Appliquer' }).click()
+    await expect(adminPage.getByText('Prix augmentés de 10 %')).toBeVisible()
+    await expect(adminPage.getByLabel('Prix TTC de 1 mm · hauteur de bandeau 200')).toHaveValue('29,15')
+
+    // Copie pour un autre coloris
+    await adminPage.getByRole('button', { name: 'Copier ce produit' }).click()
+    await adminPage.getByLabel('Nom de la copie').fill(`Bandeaux en « L » gris ${tag}`)
+    await adminPage.getByRole('button', { name: 'Créer la copie' }).click()
+    await expect(adminPage.getByRole('heading', { level: 1, name: `Bandeaux en « L » gris ${tag}` })).toBeVisible()
+    await expect(adminPage.getByLabel('Prix TTC de 1 mm · hauteur de bandeau 200')).toHaveValue('29,15')
+
+    // Tout mettre en ligne d'un coup : le visiteur voit les trois produits
+    await adminPage.goto('/produits')
+    await adminPage.getByLabel('Rechercher').fill(tag)
+    await expect(adminPage.locator('tbody tr')).toHaveCount(3)
+    await adminPage.getByLabel('Choisir tous les produits affichés').check()
+    await adminPage.getByRole('button', { name: 'Mettre en ligne', exact: true }).click()
+    await expect(adminPage.getByRole('status')).toContainText('3 produits mis en ligne')
+    const visitor = await browser.newPage()
+    await visitor.goto('/boutique')
+    await expect(visitor.getByRole('link', { name: new RegExp(`Bandeaux en « L » gris ${tag}`, "i") })).toBeVisible()
+    await expect(visitor.getByRole('link', { name: new RegExp(`Bouchon de couvertine ${tag}`, "i") })).toBeVisible()
+
+    // Nettoyage en lot, avec confirmation
+    await adminPage.getByLabel('Choisir tous les produits affichés').check()
+    await adminPage.getByRole('button', { name: 'Supprimer…' }).click()
+    await adminPage.getByRole('button', { name: 'Confirmer la suppression' }).click()
+    await expect(adminPage.getByRole('status')).toContainText('3 produits supprimés')
   })
 })

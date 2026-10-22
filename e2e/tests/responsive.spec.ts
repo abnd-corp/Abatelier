@@ -22,6 +22,7 @@ const PAGES = [
   { path: '/commandes', heading: 'Commandes' },
   { path: '/commandes/nouvelle', heading: 'Nouvelle commande' },
   { path: '/fabrication', heading: 'Fabrication' },
+  { path: '/stock', heading: 'Stock de feuilles' },
   { path: '/factures', heading: 'Devis et factures' },
   { path: '/factures?type=devis', heading: 'Devis et factures' },
   { path: '/site-vitrine', heading: 'Site vitrine' },
@@ -85,6 +86,9 @@ test.describe('Responsive @responsive', () => {
     expect(await noHorizontalScroll(adminPage)).toBe(true)
 
     const visitor = await browser.newPage()
+    // Sans espace client on ne peut pas ajouter au panier : on en crée un
+    const signup = await visitor.request.post('/api/espace/inscription', { data: { nom: `Resp ${uid.slice(-6)}`, email: `${uid}-b@exemple.fr`, password: 'Plieuse-numerique-2026', consentement: true }, headers: h })
+    expect(signup.status(), await signup.text()).toBe(201)
     await visitor.goto('/boutique')
     await expect(visitor.getByRole('heading', { level: 1 })).toBeInViewport()
     expect(await noHorizontalScroll(visitor)).toBe(true)

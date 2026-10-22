@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
 import AppIcon from '@/components/AppIcon.vue'
@@ -30,6 +30,18 @@ async function load() {
   }
 }
 onMounted(load)
+// Passer d'une fiche à une autre (après une copie) réutilise la même page : on recharge
+watch(
+  () => props.id,
+  () => {
+    copie.ouvert = false
+    copie.nom = ''
+    info.value = ''
+    error.value = ''
+    data.value = null
+    load()
+  },
+)
 
 const produit = computed(() => data.value?.produit)
 
@@ -47,6 +59,43 @@ async function saveFiche() {
     else error.value = e instanceof ApiError ? e.message : 'Enregistrement impossible.'
   } finally {
     saving.value = false
+  }
+}
+
+// --- Copier le produit (autre coloris) et ajuster tous les prix ---
+const copie = reactive({ ouvert: false, nom: '', erreur: '', busy: false })
+async function dupliquer() {
+  copie.erreur = ''
+  copie.busy = true
+  try {
+    const { id } = await api<{ id: string }>(`/boutique/produits/${props.id}/dupliquer`, { method: 'POST', body: { nom: copie.nom } })
+    await router.push({ name: 'product', params: { id } })
+  } catch (e) {
+    copie.erreur = e instanceof ApiError ? e.message : 'Copie impossible.'
+  } finally {
+    copie.busy = false
+  }
+}
+const ajust = reactive({ pourcent: '', erreur: '', busy: false })
+async function ajuster() {
+  ajust.erreur = ''
+  error.value = ''
+  info.value = ''
+  const v = Number(ajust.pourcent.replace(',', '.'))
+  if (!ajust.pourcent.trim() || Number.isNaN(v) || v === 0) {
+    ajust.erreur = 'Indiquez un pourcentage, par exemple 5 pour +5 % ou -3 pour -3 %.'
+    return
+  }
+  ajust.busy = true
+  try {
+    const { variantes } = await api<{ variantes: number }>(`/boutique/produits/${props.id}/prix`, { method: 'POST', body: { pourcent: v } })
+    info.value = `Prix ${v > 0 ? 'augmentés' : 'baissés'} de ${Math.abs(v).toLocaleString('fr-FR')} % (${variantes} déclinaison${variantes > 1 ? 's' : ''}).`
+    ajust.pourcent = ''
+    await load()
+  } catch (e) {
+    ajust.erreur = e instanceof ApiError ? e.message : 'Modification impossible.'
+  } finally {
+    ajust.busy = false
   }
 }
 
@@ -181,11 +230,23 @@ async function remove() {
         <span class="pill" :class="produit.actif ? 'ok' : 'neutral'">{{ produit.actif ? 'En ligne' : 'Hors ligne' }}</span>
         <button v-if="!produit.actif" class="btn primary" type="button" @click="setActif(true)">Mettre en ligne</button>
         <button v-else class="btn" type="button" @click="setActif(false)">Retirer du site</button>
+        <button class="btn" type="button" :aria-expanded="copie.ouvert" @click="copie.ouvert = !copie.ouvert; copie.nom = copie.nom || `${produit.nom} (copie)`"><AppIcon name="copy" :size="15" /> Copier ce produit</button>
       </div>
     </div>
 
     <p v-if="error" class="alert bad" role="alert">{{ error }}</p>
     <p v-if="info" class="alert ok" role="status">{{ info }}</p>
+
+    <form v-if="copie.ouvert" class="card box copy" novalidate @submit.prevent="dupliquer">
+      <h2>Copier ce produit</h2>
+      <p class="muted hint">La copie reprend la fiche, la photo, les déclinaisons et les prix, et reste cachée du site. Idéal pour un autre coloris : changez ensuite son nom et sa photo.</p>
+      <div class="field">
+        <label for="copie-nom">Nom de la copie</label>
+        <input id="copie-nom" v-model="copie.nom" class="input" maxlength="120" :aria-invalid="!!copie.erreur" />
+        <span v-if="copie.erreur" class="field-error" role="alert">{{ copie.erreur }}</span>
+      </div>
+      <p class="actions"><button class="btn primary" type="submit" :disabled="copie.busy">Créer la copie</button> <button class="btn" type="button" @click="copie.ouvert = false">Annuler</button></p>
+    </form>
 
     <div class="grid">
       <form class="card box" novalidate @submit.prevent="saveFiche">
@@ -269,6 +330,15 @@ async function remove() {
           </tbody>
         </table>
       </div>
+      <form class="ajust" novalidate @submit.prevent="ajuster">
+        <div class="field">
+          <label for="ajust-pct">Ajuster tous les prix (%)</label>
+          <input id="ajust-pct" v-model="ajust.pourcent" class="input" inputmode="decimal" placeholder="+5 ou -3" :aria-invalid="!!ajust.erreur" :aria-describedby="ajust.erreur ? 'ajust-e' : 'ajust-h'" />
+          <span v-if="ajust.erreur" id="ajust-e" class="field-error" role="alert">{{ ajust.erreur }}</span>
+          <span v-else id="ajust-h" class="muted hint">Applique la hausse ou la baisse à toutes les déclinaisons, au centime TTC près.</span>
+        </div>
+        <button class="btn" type="submit" :disabled="ajust.busy || !data.variantes.length">Appliquer</button>
+      </form>
       <form class="add" novalidate @submit.prevent="addVariant">
         <div class="field">
           <label for="v-libelle">Libellé *</label>
@@ -303,6 +373,19 @@ async function remove() {
 <style scoped>
 .page-head {
   margin-bottom: 16px;
+}
+.copy {
+  margin-bottom: 16px;
+}
+.ajust {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  padding-top: 8px;
+}
+.ajust .field {
+  flex: 0 1 320px;
 }
 .head-actions {
   display: flex;

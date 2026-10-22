@@ -107,7 +107,7 @@ describe('La boutique du site', () => {
   })
 
   it('montre la fiche produit, calcule le total et ajoute la déclinaison choisie au panier', async () => {
-    const { wrapper } = await mountAt(BoutiqueProduitView, `/boutique/${P1}`, { 'GET /public/boutique': [200, BOUTIQUE] }, { id: P1 })
+    const { wrapper } = await mountAt(BoutiqueProduitView, `/boutique/${P1}`, { 'GET /public/boutique': [200, BOUTIQUE] }, { id: P1 }, { compte: true })
     expect(wrapper.get('h1').text()).toBe('Couvertine blanche RAL 9010')
     expect(wrapper.findAll('p.desc').map((p) => p.text())).toEqual(['Couvertine en aluminium laqué.', 'Livrée sans visserie.'])
     expect(wrapper.text()).toContain('Insérez une photo')
@@ -123,6 +123,26 @@ describe('La boutique du site', () => {
     // Changer de version efface la confirmation
     await wrapper.get('#b-variante').setValue(V1)
     expect(wrapper.find('[role="status"]').exists()).toBe(false)
+  })
+
+  it('décrit l’import, la copie, les prix en lot et les actions en lot dans le journal', () => {
+    const e = (action: string, details: object): string => describeEntry({ id: 1, at: '2026-10-22T08:00:00Z', action, actor: 'Chef', targetType: null, targetId: null, ip: null, details } as unknown as AuditEntry).text
+    expect(norm(e('product.imported', { produitsCrees: 2, variantesCreees: 10, variantesMisesAJour: 3 }))).toBe('A importé un catalogue : 2 produits créés (cachés du site), 10 déclinaisons ajoutées, 3 prix mis à jour')
+    expect(e('product.duplicated', { source: 'A', nom: 'B' })).toBe('A copié le produit « A » en « B »')
+    expect(e('product.prices_adjusted', { nom: 'A', pourcent: -5, variantes: 3 })).toBe('A baissé de 5 % les prix de « A » (3 déclinaisons)')
+    expect(e('product.bulk', { action: 'supprimer', produits: 2 })).toBe('A supprimé 2 produits')
+  })
+
+  it('sans espace client : bouton « Ajouter au panier » désactivé, avec le chemin pour créer un espace ou se connecter', async () => {
+    const { wrapper } = await mountAt(BoutiqueProduitView, `/boutique/${P1}`, { 'GET /public/boutique': [200, BOUTIQUE], 'GET /espace/session': [200, { compte: null }] }, { id: P1 })
+    const add = button(wrapper, 'Ajouter au panier')
+    expect(add.attributes('disabled')).toBeDefined()
+    expect(add.attributes('aria-describedby')).toBe('b-compte')
+    const note = wrapper.get('#b-compte')
+    expect(note.text()).toContain('Il faut un espace client')
+    expect(note.findAll('a').map((a) => a.attributes('href'))).toEqual([`/espace/inscription?redirect=/boutique/${P1}`, `/espace/connexion?redirect=/boutique/${P1}`])
+    await wrapper.get('form').trigger('submit')
+    expect(usePanierStore().lignes).toEqual([])
   })
 
   it('dit qu’un produit retiré n’est plus en vente', async () => {
@@ -191,13 +211,12 @@ describe('Le panier', () => {
     expect(usePanierStore().lignes.map((l) => l.variantId)).toEqual([V1])
   })
 
-  it('demande la création de l’espace client avec ses avantages et l’usage des données, puis paie', async () => {
+  it('demande la création de l’espace client avec ses avantages, puis paie', async () => {
     const { wrapper, calls, router } = await mountCart({
       'POST /espace/inscription': [201, { compte: COMPTE }],
       'POST /espace/boutique/paiement': [201, { id: 'p1', url: '/paiement-simulation/p1' }],
     })
     expect(wrapper.text()).toContain('Pour payer et suivre votre commande, créez votre espace client')
-    expect(wrapper.text()).toContain('Ce que nous faisons de vos données')
     expect(wrapper.text()).toContain('Pourquoi un espace client ?')
     await wrapper.get('#pan-nom').setValue('Dupont')
     await wrapper.get('#pan-email').setValue('jean@example.com')
@@ -267,6 +286,29 @@ describe('Après le paiement', () => {
     expect(wrapper.get('a.s-btn').attributes('href')).toBe('/panier')
   })
 
+  it('une commande sur mesure payée garde le panier de la boutique et oublie la saisie du configurateur ; un échec renvoie au configurateur', async () => {
+    localStorage.setItem('aps-panier', JSON.stringify([{ variantId: V1, quantite: 2 }]))
+    sessionStorage.setItem('aps-configurateur', '{}')
+    const pinia = freshPinia()
+    const mount1 = async (statut: string, commande: object | null) => {
+      mockApi({ 'GET /espace/boutique/paiements/p1': [200, { id: 'p1', statut, montantTtc: 518.54, commande, simulation: true, surMesure: true }] })
+      const router = makeRouter()
+      await router.push('/boutique/commande/p1')
+      await router.isReady()
+      const wrapper = mount(PaiementRetourView, { props: { id: 'p1' }, global: { plugins: [pinia, router] } })
+      await flushPromises()
+      return wrapper
+    }
+    const failed = await mount1('echec', null)
+    expect(failed.text()).toContain('votre configuration est conservée')
+    expect(failed.get('a.s-btn').attributes('href')).toBe('/configurateur')
+    expect(sessionStorage.getItem('aps-configurateur')).toBe('{}')
+    const paid = await mount1('paye', { id: 'o1', numero: 'C-2026-0007' })
+    expect(paid.get('h1').text()).toBe('Merci, votre commande est confirmée')
+    expect(sessionStorage.getItem('aps-configurateur')).toBeNull()
+    expect(usePanierStore().lignes).toEqual([{ variantId: V1, quantite: 2 }])
+  })
+
   it('attend la confirmation du prestataire sans conclure trop tôt', async () => {
     const { wrapper } = await retour('attente')
     expect(wrapper.get('h1').text()).toContain('Nous attendons la confirmation')
@@ -320,6 +362,55 @@ describe('Gestion des produits', () => {
     expect(wrapper.text()).toContain('1 produit en ligne sur 2')
   })
 
+  it('cherche par nom, filtre par catégorie, et agit sur plusieurs produits à la fois', async () => {
+    const { wrapper, calls } = await mountAt(ProductsView, '/produits', { 'GET /boutique/produits': [200, { produits: LIST, tva: 20 }], 'POST /boutique/produits/lot': [200, { produits: 2 }] }, {}, { admin: true })
+    await wrapper.get('#prod-q').setValue('bavette')
+    expect(wrapper.findAll('tbody tr')).toHaveLength(1)
+    expect(wrapper.text()).toContain('1 affiché')
+    await wrapper.get('#prod-q').setValue('xyz')
+    expect(wrapper.text()).toContain('Aucun produit ne correspond')
+    await wrapper.get('#prod-q').setValue('')
+    await wrapper.findAll('.chip').find((c) => c.text() === 'Couvertine')!.trigger('click')
+    expect(wrapper.findAll('tbody tr')).toHaveLength(1)
+    await wrapper.findAll('.chip').find((c) => c.text() === 'Toutes')!.trigger('click')
+    expect(wrapper.find('.bulk').exists()).toBe(false)
+    await wrapper.get('thead input[type="checkbox"]').setValue(true)
+    expect(wrapper.get('.bulk').text()).toContain('2 produits choisis')
+    await button(wrapper, 'Retirer du site').trigger('click')
+    await flushPromises()
+    expect(calls.find((c) => c.path === '/boutique/produits/lot')!.body).toEqual({ ids: [P1, 'p2'], action: 'retirer' })
+    expect(wrapper.get('[role="status"]').text()).toContain('2 produits retirés du site')
+  })
+
+  it('demande confirmation avant de supprimer en lot, et dit pourquoi une mise en ligne est refusée', async () => {
+    const { wrapper, calls } = await mountAt(ProductsView, '/produits', { 'GET /boutique/produits': [200, { produits: LIST, tva: 20 }], 'POST /boutique/produits/lot': [409, { error: 'Sans déclinaison active, impossible de mettre en ligne : Bavette en préparation.' }] }, {}, { admin: true })
+    await wrapper.get('tbody tr:nth-child(2) input[type="checkbox"]').setValue(true)
+    await button(wrapper, 'Supprimer…').trigger('click')
+    expect(calls.filter((c) => c.path === '/boutique/produits/lot')).toHaveLength(0)
+    expect(button(wrapper, 'Confirmer la suppression')).toBeTruthy()
+    await button(wrapper, 'Garder').trigger('click')
+    await button(wrapper, 'Mettre en ligne').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('Bavette en préparation')
+  })
+
+  it('importe un catalogue JSON et donne le bilan', async () => {
+    const { wrapper, calls } = await mountAt(ProductsView, '/produits', { 'GET /boutique/produits': [200, { produits: [], tva: 20 }], 'POST /boutique/import': [200, { produitsCrees: 2, produitsExistants: 1, variantesCreees: 10, variantesMisesAJour: 3, ignorees: 4 }] }, {}, { admin: true })
+    const file = new File([JSON.stringify([{ nom: 'A', variations: [] }])], 'catalogue.json', { type: 'application/json' })
+    const input = wrapper.get('#prod-import')
+    Object.defineProperty(input.element, 'files', { value: [file] })
+    await input.trigger('change')
+    await flushPromises()
+    expect(calls.find((c) => c.path === '/boutique/import')!.body).toEqual({ produits: [{ nom: 'A', variations: [] }] })
+    expect(norm(wrapper.get('[role="status"]').text())).toContain('2 produits créés (cachés du site), 1 déjà présent, 10 déclinaisons ajoutées, 3 prix mis à jour, 4 ignorées')
+    const bad = await mountAt(ProductsView, '/produits', { 'GET /boutique/produits': [200, { produits: [], tva: 20 }] }, {}, { admin: true })
+    const junk = bad.wrapper.get('#prod-import')
+    Object.defineProperty(junk.element, 'files', { value: [new File(['pas du json'], 'x.json')] })
+    await junk.trigger('change')
+    await flushPromises()
+    expect(bad.wrapper.get('[role="alert"]').text()).toContain('Fichier illisible')
+  })
+
   it('crée un produit puis ouvre sa fiche, et montre l’erreur du serveur', async () => {
     const ok = await mountAt(ProductsView, '/produits', { 'GET /boutique/produits': [200, { produits: [], tva: 20 }], 'POST /boutique/produits': [201, { id: 'new1' }] }, {}, { admin: true })
     expect(ok.wrapper.text()).toContain('Aucun produit pour l’instant')
@@ -356,6 +447,41 @@ describe('Gestion des produits', () => {
     tva: 20,
   })
   const mountProduct = (d: AdminProduitDetail, extra: Parameters<typeof mockApi>[0] = {}) => mountAt(ProductView, `/produits/${P1}`, { [`GET /boutique/produits/${P1}`]: [200, d], ...extra }, { id: P1 }, { admin: true })
+
+  it('copie le produit sous un autre nom et ouvre la copie', async () => {
+    const { wrapper, router, calls } = await mountProduct(DETAIL(), { [`POST /boutique/produits/${P1}/dupliquer`]: [201, { id: 'copie1' }] })
+    await button(wrapper, 'Copier ce produit').trigger('click')
+    expect((wrapper.get('#copie-nom').element as HTMLInputElement).value).toBe('Couvertine blanche (copie)')
+    await wrapper.get('#copie-nom').setValue('Couvertine gris RAL 7016')
+    await wrapper.get('form.copy').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.path.endsWith('/dupliquer'))!.body).toEqual({ nom: 'Couvertine gris RAL 7016' })
+    expect(router.currentRoute.value.fullPath).toBe('/produits/copie1')
+  })
+
+  it('recharge la fiche quand on passe à une autre (après une copie)', async () => {
+    const { wrapper } = await mountProduct(DETAIL(), { '/boutique/produits/copie1': [200, DETAIL({ nom: 'Copie' })] })
+    expect(wrapper.get('h1').text()).toBe('Couvertine blanche')
+    mockApi({ 'GET /boutique/produits/copie1': [200, DETAIL({ nom: 'Couvertine gris' })] })
+    await (wrapper as unknown as { setProps: (p: object) => Promise<void> }).setProps({ id: 'copie1' })
+    await flushPromises()
+    expect(wrapper.get('h1').text()).toBe('Couvertine gris')
+    expect(wrapper.find('form.copy').exists()).toBe(false)
+  })
+
+  it('ajuste tous les prix en pour cent, et refuse une saisie vide ou nulle', async () => {
+    const { wrapper, calls } = await mountProduct(DETAIL(), { [`POST /boutique/produits/${P1}/prix`]: [200, { variantes: 1 }] })
+    await wrapper.get('form.ajust').trigger('submit')
+    expect(wrapper.get('#ajust-e').text()).toContain('Indiquez un pourcentage')
+    await wrapper.get('#ajust-pct').setValue('0')
+    await wrapper.get('form.ajust').trigger('submit')
+    expect(calls.filter((c) => c.path.endsWith('/prix'))).toHaveLength(0)
+    await wrapper.get('#ajust-pct').setValue('5,5')
+    await wrapper.get('form.ajust').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.path.endsWith('/prix'))!.body).toEqual({ pourcent: 5.5 })
+    expect(wrapper.get('[role="status"]').text()).toContain('augmentés de 5,5 %')
+  })
 
   it('montre la fiche avec « Insérez une photo », la mise en ligne et les prix TTC avec leur HT', async () => {
     const { wrapper } = await mountProduct(DETAIL())

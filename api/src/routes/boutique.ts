@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply } from 'fastify'
-import { and, asc, count, eq, max, sql } from 'drizzle-orm'
+import { and, asc, count, eq, inArray, max, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import { productVariants, products } from '../db/schema.js'
@@ -40,6 +40,43 @@ const variantPatch = z.object({ libelle: variantFields.libelle.optional(), refer
 const imageQuery = z.object({ alt: text(160, 'Description de la photo').default('') })
 
 const isUuid = (id: string) => z.uuid().safeParse(id).success
+
+// Catalogue à importer (celui de l'ancienne boutique : produits, déclinaisons décrites par leurs attributs, prix TTC)
+const IMPORT_MAX = 3 * 1024 * 1024
+const importBody = z.object({
+  produits: z
+    .array(
+      z.object({
+        nom: z.string().trim().min(1).max(200),
+        categorie: z.union([z.string(), z.array(z.string())]).optional(),
+        variations: z
+          .array(z.object({ attrs: z.record(z.string(), z.string()).default({}), prix: z.number().min(0).max(100000), achetable: z.boolean().optional() }))
+          .max(VARIANTES_MAX, `${VARIANTES_MAX} déclinaisons maximum par produit.`),
+      }),
+    )
+    .min(1, 'Le fichier ne contient aucun produit.')
+    .max(PRODUITS_MAX, `${PRODUITS_MAX} produits maximum.`),
+})
+const blanks = (s: string) => s.replace(/[\u00a0\u202f]/g, ' ').replace(/\s+/g, ' ').trim()
+/** « BANDEAUX EN « L » BLANC » → « Bandeaux en « L » blanc » : le nom reste lisible sans crier. */
+const sentence = (s: string) => {
+  const t = blanks(s)
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase().replace(/\bral\b/g, 'RAL').replace(/«\s*([a-z])\s*»/g, (_m, l: string) => `« ${l.toUpperCase()} »`)
+}
+/** Libellé d'une déclinaison : ses attributs, un nombre seul étant précédé du nom de l'attribut (« hauteur de bandeau 225 »). */
+const variantLabel = (attrs: Record<string, string>) =>
+  Object.entries(attrs)
+    .map(([k, v]) => (/^[\d.,\s]+$/.test(blanks(v)) ? `${blanks(k).toLowerCase()} ${blanks(v)}` : blanks(v)))
+    .filter(Boolean)
+    .join(' · ')
+const lotBody = z.object({
+  ids: z.array(z.uuid()).min(1, 'Choisissez au moins un produit.').max(PRODUITS_MAX),
+  action: z.enum(['mettre_en_ligne', 'retirer', 'supprimer'], { error: 'Action inconnue.' }),
+})
+const prixBody = z.object({
+  pourcent: z.number({ error: 'Indiquez le pourcentage.' }).min(-90, 'Baisse de 90 % maximum.').max(500, 'Hausse de 500 % maximum.'),
+})
+const duplicateBody = z.object({ nom: productFields.nom })
 
 /** Réponse d'une déclinaison : prix HT enregistré et prix TTC affiché au client. */
 const variantOut = (v: typeof productVariants.$inferSelect, taux: number) => ({ id: v.id, libelle: v.libelle, reference: v.reference, prixHt: v.prixHt, prixTtc: ttcOf(v.prixHt, taux), actif: v.actif })
@@ -142,6 +179,126 @@ export async function boutiqueRoutes(app: FastifyInstance) {
     await db.delete(products).where(eq(products.id, p.id))
     await audit(req, 'product.deleted', { targetType: 'product', targetId: p.id, details: { nom: p.nom } })
     return { ok: true }
+  })
+
+  // --- Import, copie, prix en lot, actions en lot ---
+
+  // Reprend un catalogue (JSON de l'ancienne boutique). Les nouveaux produits restent cachés du site ; un produit déjà présent
+  // (même nom) garde sa fiche et reçoit seulement les déclinaisons et prix du fichier. Les déclinaisons indisponibles ou à 0 € sont écartées.
+  app.post('/import', { bodyLimit: IMPORT_MAX }, async (req, reply) => {
+    const parsed = importBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const taux = (await getPricingSettings()).tva
+    const bilan = { produitsCrees: 0, produitsExistants: 0, variantesCreees: 0, variantesMisesAJour: 0, ignorees: 0 }
+    await db.transaction(async (tx) => {
+      const [last] = await tx.select({ p: max(products.position) }).from(products)
+      let position = last?.p ?? 0
+      const [{ n: deja }] = (await tx.select({ n: count() }).from(products)) as [{ n: number }]
+      let total = deja
+      for (const src of parsed.data.produits) {
+        const nom = sentence(src.nom)
+        const [existing] = await tx.select().from(products).where(sql`lower(${products.nom}) = ${nom.toLowerCase()}`)
+        let productId = existing?.id
+        if (existing) bilan.produitsExistants++
+        else {
+          if (++total > PRODUITS_MAX) throw new RangeError(`${PRODUITS_MAX} produits maximum.`)
+          const categorie = sentence(Array.isArray(src.categorie) ? (src.categorie[0] ?? '') : (src.categorie ?? '')).slice(0, 60)
+          const [p] = await tx.insert(products).values({ nom, categorie, position: ++position }).returning({ id: products.id })
+          productId = p!.id
+          bilan.produitsCrees++
+        }
+        const have = new Map((await tx.select().from(productVariants).where(eq(productVariants.productId, productId!))).map((v) => [v.libelle, v]))
+        let vpos = Math.max(0, ...[...have.values()].map((v) => v.position))
+        const seen = new Set<string>()
+        for (const v of src.variations) {
+          const libelle = variantLabel(v.attrs).slice(0, 120)
+          const prixTtc = Math.round(v.prix * 100) / 100
+          if (!libelle || prixTtc <= 0 || v.achetable === false || seen.has(libelle)) {
+            bilan.ignorees++
+            continue
+          }
+          seen.add(libelle)
+          const prixHt = htFromTtc(prixTtc, taux)
+          const cur = have.get(libelle)
+          if (cur) {
+            if (cur.prixHt !== prixHt) {
+              await tx.update(productVariants).set({ prixHt, updatedAt: new Date() }).where(eq(productVariants.id, cur.id))
+              bilan.variantesMisesAJour++
+            }
+          } else {
+            await tx.insert(productVariants).values({ productId: productId!, libelle, prixHt, position: ++vpos })
+            bilan.variantesCreees++
+          }
+        }
+        await tx.update(products).set({ updatedAt: new Date() }).where(eq(products.id, productId!))
+      }
+    }).catch((e) => {
+      if (e instanceof RangeError) return reply.code(409).send({ error: e.message })
+      throw e
+    })
+    if (reply.sent) return
+    await audit(req, 'product.imported', { details: bilan })
+    return bilan
+  })
+
+  app.post('/produits/lot', async (req, reply) => {
+    const parsed = lotBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const { ids, action } = parsed.data
+    const rows = await db.select({ id: products.id, nom: products.nom, actif: products.actif, actives: sql<number>`(select count(*) from product_variants v where v.product_id = products.id and v.actif)::int`.mapWith(Number) }).from(products).where(inArray(products.id, ids))
+    if (action === 'mettre_en_ligne') {
+      const vides = rows.filter((r) => !r.actif && !r.actives)
+      if (vides.length) return reply.code(409).send({ error: `Sans déclinaison active, impossible de mettre en ligne : ${vides.slice(0, 3).map((r) => r.nom).join(', ')}${vides.length > 3 ? ` et ${vides.length - 3} autre${vides.length > 4 ? 's' : ''}` : ''}.`, field: 'ids' })
+    }
+    if (action === 'supprimer') await db.delete(products).where(inArray(products.id, rows.map((r) => r.id)))
+    else await db.update(products).set({ actif: action === 'mettre_en_ligne', updatedAt: new Date() }).where(inArray(products.id, rows.map((r) => r.id)))
+    await audit(req, 'product.bulk', { details: { action, produits: rows.length, noms: rows.slice(0, 5).map((r) => r.nom) } })
+    return { produits: rows.length }
+  })
+
+  // Copie un produit (fiche, photo, déclinaisons et prix) sous un autre nom : pratique pour un autre coloris. La copie reste cachée.
+  app.post('/produits/:id/dupliquer', async (req, reply) => {
+    const p = await findProduct((req.params as { id: string }).id, reply)
+    if (!p) return
+    const parsed = duplicateBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const [total] = await db.select({ n: count() }).from(products)
+    if ((total?.n ?? 0) >= PRODUITS_MAX) return reply.code(409).send({ error: `${PRODUITS_MAX} produits maximum.` })
+    const id = await db.transaction(async (tx) => {
+      const [src] = await tx.select().from(products).where(eq(products.id, p.id))
+      const [last] = await tx.select({ p: max(products.position) }).from(products)
+      const { id: _i, createdAt: _c, updatedAt: _u, actif: _a, position: _p, nom: _n, ...rest } = src!
+      const [copy] = await tx.insert(products).values({ ...rest, nom: parsed.data.nom, actif: false, position: (last?.p ?? 0) + 1 }).returning({ id: products.id })
+      const vs = await tx.select().from(productVariants).where(eq(productVariants.productId, p.id))
+      if (vs.length) await tx.insert(productVariants).values(vs.map((v) => ({ productId: copy!.id, libelle: v.libelle, reference: '', prixHt: v.prixHt, actif: v.actif, position: v.position })))
+      return copy!.id
+    })
+    await audit(req, 'product.duplicated', { targetType: 'product', targetId: id, details: { nom: parsed.data.nom, source: p.nom } })
+    return reply.code(201).send({ id })
+  })
+
+  // Hausse ou baisse de tous les prix d'un produit, en pourcentage (au centime TTC près)
+  app.post('/produits/:id/prix', async (req, reply) => {
+    const p = await findProduct((req.params as { id: string }).id, reply)
+    if (!p) return
+    const parsed = prixBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const taux = (await getPricingSettings()).tva
+    const vs = await db.select().from(productVariants).where(eq(productVariants.productId, p.id))
+    let n = 0
+    await db.transaction(async (tx) => {
+      for (const v of vs) {
+        const ttc = Math.max(0.01, Math.round(ttcOf(v.prixHt, taux) * (1 + parsed.data.pourcent / 100) * 100) / 100)
+        const prixHt = htFromTtc(ttc, taux)
+        if (prixHt !== v.prixHt) {
+          await tx.update(productVariants).set({ prixHt, updatedAt: new Date() }).where(eq(productVariants.id, v.id))
+          n++
+        }
+      }
+      await tx.update(products).set({ updatedAt: new Date() }).where(eq(products.id, p.id))
+    })
+    await audit(req, 'product.prices_adjusted', { targetType: 'product', targetId: p.id, details: { nom: p.nom, pourcent: parsed.data.pourcent, variantes: n } })
+    return { variantes: n }
   })
 
   // --- Photo ---

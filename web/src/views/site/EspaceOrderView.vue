@@ -5,7 +5,7 @@ import AppIcon from '@/components/AppIcon.vue'
 import ProfileSketch from '@/components/orders/ProfileSketch.vue'
 import { eur } from '@/lib/catalog'
 import { AIDE_RECUE_BOUTIQUE, documentUrl, jour, PARCOURS, statutDocument, type EspaceDocument, type EspaceOrder } from '@/lib/espace'
-import { letter } from '@/lib/orders'
+import { letter, statutOf } from '@/lib/orders'
 
 // Une commande du client : suivi des étapes, devis à accepter, pièces, montants, documents à télécharger
 const props = defineProps<{ id: string }>()
@@ -34,8 +34,10 @@ const attenteReponse = (d: EspaceDocument | null) => !!d && (d.statut === 'emis'
 const etapes = computed(() => new Map((data.value?.etapes ?? []).map((e) => [e.statut, e.at])))
 const annulee = computed(() => c.value?.statut === 'annulee')
 const boutique = computed(() => c.value?.kind === 'boutique')
+// Payée en ligne (boutique ou commande sur mesure du configurateur) : le paiement tient lieu de réponse au devis
+const payee = computed(() => !!data.value?.paiement)
 const rembourse = computed(() => data.value?.paiement?.statut === 'rembourse')
-const aide = (statut: string, defaut: string) => (boutique.value && statut === 'recue' ? AIDE_RECUE_BOUTIQUE : defaut)
+const aide = (statut: string, defaut: string) => (payee.value && statut === 'recue' ? AIDE_RECUE_BOUTIQUE : defaut)
 const courant = computed(() => PARCOURS.findIndex((p) => p.statut === c.value?.statut))
 
 async function respond(reponse: 'accepte' | 'refuse') {
@@ -87,7 +89,7 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
         </p>
         <p v-else-if="annulee" class="alert bad" role="status">Cette commande a été annulée<template v-if="etapes.get('annulee')"> le {{ jour(etapes.get('annulee')!) }}</template>.</p>
         <ol v-else class="steps">
-          <li v-for="(p, i) in PARCOURS" :key="p.statut" :class="{ done: i < courant || (i === courant && c.statut === 'livree'), now: i === courant && c.statut !== 'livree', todo: i > courant }" :aria-current="i === courant ? 'step' : undefined">
+          <li v-for="(p, i) in PARCOURS" :key="p.statut" :class="[`t-${statutOf(p.statut).tone}`, { done: i < courant || (i === courant && c.statut === 'livree'), now: i === courant && c.statut !== 'livree', todo: i > courant }]" :aria-current="i === courant ? 'step' : undefined">
             <span class="dot" aria-hidden="true"><AppIcon v-if="i < courant || (i === courant && c.statut === 'livree')" name="check" :size="14" /></span>
             <span class="what">
               <b>{{ p.label }}</b>
@@ -100,7 +102,7 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
       </section>
 
       <!-- Devis -->
-      <section v-if="boutique && data.paiement" class="card box" aria-labelledby="titre-paiement">
+      <section v-if="payee && data.paiement" class="card box" aria-labelledby="titre-paiement">
         <h2 id="titre-paiement">Paiement</h2>
         <p>
           <span class="pill" :class="data.paiement.statut === 'paye' ? 'ok' : 'neutral'">{{ data.paiement.statut === 'paye' ? 'Payé' : data.paiement.statut === 'rembourse' ? 'Remboursé' : 'En attente' }}</span>
@@ -129,7 +131,7 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
         </p>
         <p v-if="attenteReponse(devis)" class="muted hint">En acceptant, vous demandez à l’atelier de lancer la commande : il la valide, fixe la date prévue, et vous suivez ici chaque étape.</p>
       </section>
-      <section v-else-if="!boutique" class="card box">
+      <section v-else-if="!payee" class="card box">
         <h2>Votre devis</h2>
         <p class="muted">Le devis de cette commande est en cours de préparation. Il apparaîtra ici dès qu’il sera prêt.</p>
       </section>
@@ -275,7 +277,7 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
   background: var(--line);
 }
 .steps li.done:not(:last-child)::before {
-  background: var(--ok);
+  background: var(--c);
 }
 .dot {
   width: 28px;
@@ -286,15 +288,21 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
   display: grid;
   place-items: center;
 }
+/* Chaque étape a la couleur de sa pastille (la même dans l'atelier) */
+.t-warn { --c: var(--warn); --c-soft: var(--warn-soft); }
+.t-info { --c: var(--info); --c-soft: var(--info-soft); }
+.t-accent { --c: var(--accent); --c-soft: var(--accent-soft); }
+.t-ok { --c: var(--ok); --c-soft: var(--ok-soft); }
+.t-done { --c: var(--done); --c-soft: var(--done-soft); }
 .done .dot {
-  background: var(--ok);
-  border-color: var(--ok);
-  color: var(--on-accent, #fff);
+  background: var(--c);
+  border-color: var(--c);
+  color: var(--surface);
 }
 .now .dot {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  box-shadow: 0 0 0 4px var(--accent-soft);
+  border-color: var(--c);
+  background: var(--c-soft);
+  box-shadow: 0 0 0 4px var(--c-soft);
 }
 .todo {
   color: var(--muted);

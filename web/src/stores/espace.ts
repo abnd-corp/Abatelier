@@ -39,10 +39,16 @@ export const useEspaceStore = defineStore('espace', () => {
     compte.value = null
   }
 
+  /** Ferme l'espace : la fiche est anonymisée côté serveur, la session s'arrête. */
+  async function fermer(password: string) {
+    await api('/espace/compte/fermeture', { method: 'POST', body: { password } })
+    compte.value = null
+  }
+
   /** Session expirée côté serveur : on oublie le compte sans appeler l'API. */
   function forget() {
     compte.value = null
   }
 
-  return { compte, loaded, isLoggedIn, ensureLoaded, inscrire, connecter, deconnecter, forget }
+  return { compte, loaded, isLoggedIn, ensureLoaded, inscrire, connecter, deconnecter, fermer, forget }
 })

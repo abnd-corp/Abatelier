@@ -22,7 +22,10 @@ const isoDay = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe
  * Lignes du document à partir de la commande chiffrée. Leur total HT retombe exactement sur celui de la commande :
  * pièces, remise quantité, accessoires, mise en route, remise pro, complément au minimum, livraison.
  */
-export function documentLines(order: Order, lines: OrderLine[]): BillingLine[] {
+type DocOrder = Pick<Order, 'remisePro' | 'brut' | 'complementMinimum' | 'livraisonMode' | 'livraisonVille' | 'livraisonPrix' | 'distanceKm'>
+type DocOrderLine = Pick<OrderLine, 'cotes' | 'modeleLabel' | 'repere' | 'materialLabel' | 'colorLabel' | 'longueur' | 'quantite' | 'prixUnitaire' | 'montantPieces' | 'remiseQuantite' | 'accessoires' | 'miseEnRoute'>
+
+export function documentLines(order: DocOrder, lines: DocOrderLine[]): BillingLine[] {
   const out: BillingLine[] = []
   for (const l of lines) {
     // Article de la boutique : une ligne simple (produit, déclinaison), à son prix

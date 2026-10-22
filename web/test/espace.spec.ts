@@ -71,6 +71,7 @@ describe('Outils de l’espace client', () => {
   it('ne revient que vers l’espace client ou le configurateur', () => {
     expect(retourEspace('/espace/commandes/o1')).toBe('/espace/commandes/o1')
     expect(retourEspace('/configurateur')).toBe('/configurateur')
+    expect(retourEspace('/boutique/abc')).toBe('/boutique/abc')
     for (const bad of ['//pirate.example', 'https://pirate.example', '/tableau-de-bord', '/espace/../x/\\evil', undefined, 42, '/\\pirate']) expect(retourEspace(bad === '/espace/../x/\\evil' ? '/\\x' : bad)).toBe('/espace')
   })
 
@@ -97,26 +98,24 @@ describe('Outils de l’espace client', () => {
 })
 
 describe('Avantages et données', () => {
-  it('dit ce que le client y gagne, ce que nous faisons de ses données, et laisse l’ancienne voie ouverte', async () => {
+  it('dit ce que le client y gagne, sans parler des données (elles sont dans la politique de confidentialité)', async () => {
     const { wrapper } = await mountAt(EspaceAvantages, '/configurateur', {}, {})
     const t = wrapper.text()
     for (const gain of ['Votre devis tout de suite', 'Le suivi de votre commande', 'Acceptez en un clic', 'Tout au même endroit']) expect(t).toContain(gain)
-    for (const donnee of ['Ce que nous gardons', 'Pourquoi', 'Ce que nous ne faisons pas', 'Vos droits']) expect(t).toContain(donnee)
-    expect(t).toContain('Pas de revente, pas de publicité, pas de cookie de suivi, pas d’e-mail commercial')
-    expect(t).toContain('Les factures sont conservées 10 ans')
-    expect(t).toContain('Votre mot de passe est chiffré')
-    // Rien d'obligatoire pour voir les prix, et le contact classique reste proposé
-    expect(t).toContain('Voir les prix ne demande aucun compte')
-    expect(wrapper.get('a[href="/contact"]').text()).toBe('nous envoyer votre plan')
-    expect(wrapper.get('a[href="/politique-de-confidentialite"]').attributes('target')).toBe('_blank')
+    expect(t).not.toContain('Ce que nous faisons de vos données')
+    expect(t).not.toContain('nous envoyer votre plan')
+    expect(wrapper.find('a[href="/contact"]').exists()).toBe(false)
     expect(wrapper.get('aside').attributes('aria-label')).toBe('Pourquoi créer un espace client')
   })
 
-  it('s’affiche à la création du compte, pas à la connexion', async () => {
+  it('s’affiche à côté du formulaire, à la connexion comme à la création du compte', async () => {
     const signup = await mountAt(EspaceAuthView, '/espace/inscription', {}, { mode: 'inscription' }, false)
-    expect(signup.wrapper.text()).toContain('Ce que nous faisons de vos données')
+    expect(signup.wrapper.text()).toContain('Pourquoi un espace client ?')
     const login = await mountAt(EspaceAuthView, '/espace/connexion', {}, { mode: 'connexion' }, false)
-    expect(login.wrapper.text()).not.toContain('Ce que nous faisons de vos données')
+    expect(login.wrapper.text()).toContain('Pourquoi un espace client ?')
+    expect(login.wrapper.get('.page').classes()).toContain('wide')
+    expect(login.wrapper.get('.page').element.children[0]!.tagName).toBe('SECTION')
+    expect(login.wrapper.get('.page').element.children[1]!.tagName).toBe('ASIDE')
   })
 })
 
@@ -210,6 +209,41 @@ describe('Mes commandes', () => {
     expect(calls.some((c) => c.method === 'POST' && c.path === '/espace/deconnexion')).toBe(true)
     expect(useEspaceStore().compte).toBeNull()
     expect(router.currentRoute.value.name).toBe('site-home')
+  })
+})
+
+describe('Fermer mon espace', () => {
+  const open = async (routes: Parameters<typeof mockApi>[0] = {}) => {
+    const m = await mountAt(EspaceHomeView, '/espace', { 'GET /espace/commandes': [200, { commandes: [] }], ...routes })
+    await button(m.wrapper, 'Fermer mon espace…').trigger('click')
+    return m
+  }
+
+  it('demande le mot de passe, ferme l’espace et revient à l’accueil', async () => {
+    const { wrapper, router, calls } = await open({ 'POST /espace/compte/fermeture': [204] })
+    expect(button(wrapper, 'Fermer définitivement').attributes('disabled')).toBeDefined()
+    await wrapper.get('#close-password').setValue('Plieuse-numerique-2026')
+    await wrapper.get('form.close-form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.path === '/espace/compte/fermeture')!.body).toEqual({ password: 'Plieuse-numerique-2026' })
+    expect(useEspaceStore().compte).toBeNull()
+    expect(router.currentRoute.value.name).toBe('site-home')
+  })
+
+  it('affiche le refus (commande en cours, mauvais mot de passe) et garde le compte', async () => {
+    const { wrapper, router } = await open({ 'POST /espace/compte/fermeture': [409, { error: 'Vous avez encore une commande ou un paiement en cours.' }] })
+    await wrapper.get('#close-password').setValue('x')
+    await wrapper.get('form.close-form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('en cours')
+    expect(useEspaceStore().compte).not.toBeNull()
+    expect(router.currentRoute.value.path).toBe('/espace')
+  })
+
+  it('peut être annulé', async () => {
+    const { wrapper } = await open()
+    await button(wrapper, 'Annuler').trigger('click')
+    expect(wrapper.find('#close-password').exists()).toBe(false)
   })
 })
 

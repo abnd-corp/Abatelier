@@ -3,7 +3,9 @@ import { and, asc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import { contactRequests, productVariants, products, sitePhotos } from '../db/schema.js'
-import { getCompany } from '../documents.js'
+import { getCompany, getTemplate } from '../documents.js'
+import { documentLines } from '../billing.js'
+import { renderDocument } from '../pdf.js'
 import { fillCompany, getContent } from '../site.js'
 import { getReviews } from '../google-reviews.js'
 import { audit } from '../audit.js'
@@ -152,6 +154,32 @@ export async function publicRoutes(app: FastifyInstance) {
     const p = await priceBody(parsed.data, false)
     if ('error' in p) return reply.code(p.status).send({ error: p.error, field: p.field })
     return { lignes: p.lines, totals: p.totals, distanceKm: p.distanceKm }
+  })
+
+  // Estimation à télécharger sans compte : mêmes lignes qu'un devis, mais ni numéro ni valeur de devis, et rien n'est enregistré.
+  // Le devis numéroté, qui fait foi, est dans l'espace client.
+  app.post('/configurateur/estimation.pdf', { config: { rateLimit: { max: env.QUOTE_RATE_LIMIT, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const parsed = configBody.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? 'Données invalides.', field: pathField(parsed.error) })
+    const p = await priceBody(parsed.data, false)
+    if ('error' in p) return reply.code(p.status).send({ error: p.error, field: p.field })
+    const { livraison: liv } = parsed.data
+    const lignes = documentLines(
+      { remisePro: p.totals.remisePro, brut: p.totals.brut, complementMinimum: p.totals.complementMinimum, livraisonPrix: p.totals.livraisonPrix, livraisonMode: liv.mode, livraisonVille: liv.mode === 'livraison' ? liv.ville : null, distanceKm: p.distanceKm },
+      p.lines,
+    )
+    const [company, template] = await Promise.all([getCompany(), getTemplate()])
+    const pdf = await renderDocument(company, template, company.logo, {
+      type: 'devis',
+      numero: '',
+      estimation: true,
+      date: new Date(),
+      client: { nom: 'Estimation sans compte', adresse: 'Pour obtenir un devis numéroté, créez votre espace client sur notre site.' },
+      lignes,
+      tva: p.totals.tauxTva,
+      totaux: { ht: p.totals.ht, tva: p.totals.tva, ttc: p.totals.ttc },
+    })
+    return reply.header('Content-Type', 'application/pdf').header('Content-Disposition', 'attachment; filename="estimation.pdf"').header('X-Content-Type-Options', 'nosniff').send(pdf)
   })
 
   // --- Boutique : produits en ligne, et chiffrage du panier, sans compte ---

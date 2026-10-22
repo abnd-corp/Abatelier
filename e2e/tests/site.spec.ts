@@ -18,6 +18,13 @@ test.describe('Site vitrine : visiteurs', () => {
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index,follow')
     await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /.{40,}/)
     await expect(page.getByRole('heading', { name: 'Comment ça marche ?' })).toBeVisible()
+    // Les étapes d'une commande sont sous le texte explicatif, chacune de sa couleur
+    const etapes = page.getByRole('list', { name: 'Étapes d’une commande' }).locator('li')
+    await expect(etapes).toHaveCount(5)
+    const texte = await page.getByRole('heading', { name: 'Ensuite, tout se suit en ligne' }).boundingBox()
+    expect((await etapes.first().boundingBox())!.y).toBeGreaterThan(texte!.y)
+    const fonds = await etapes.evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor))
+    expect(new Set(fonds).size).toBe(5)
     await expect(page.locator('script#ld-entreprise')).toHaveCount(1)
 
     await page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Pliage aluminium' }).click()
@@ -154,6 +161,20 @@ test.describe('Configurateur : du visiteur à la commande', () => {
     await expect(piece.getByLabel('Profondeur (taille standard)')).toBeVisible()
   })
 
+  test('le visiteur télécharge son devis en PDF sans compte, la page ne parle pas de données ni de contact', async ({ page, context }) => {
+    await page.goto('/configurateur')
+    await expect(page.getByRole('region', { name: 'Pièce 1' })).toBeVisible()
+    await expect(page.getByRole('complementary', { name: 'Montant de la commande' })).toBeVisible()
+    await expect(page.locator('main').getByRole('link', { name: /contact|plan/i })).toHaveCount(0)
+    await expect(page.getByText('comme avant')).toHaveCount(0)
+    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Télécharger le devis' }).click()])
+    expect(download.suggestedFilename()).toBe('devis.pdf')
+    const path = await download.path()
+    expect((await import('node:fs')).readFileSync(path).subarray(0, 5).toString()).toBe('%PDF-')
+    // Aucun compte ni cookie créé
+    expect(await context.cookies()).toEqual([])
+  })
+
   test('le visiteur dessine sa pièce, crée son espace client et a son devis tout de suite, suit sa commande', async ({ page, browser, baseURL, uid, context }) => {
     const admin = await (await browser.newContext()).newPage()
     await apiLogin(admin.request, baseURL!, ADMIN.identifiant, ADMIN.password)
@@ -176,36 +197,54 @@ test.describe('Configurateur : du visiteur à la commande', () => {
     await piece.getByLabel('Quantité').fill('9')
     await expect.poll(total).not.toBe(before)
 
-    // Cote hors limites : signalée tout de suite, la demande est bloquée
+    // Cote hors limites : signalée tout de suite, télécharger est bloqué aussi
     await piece.locator('#l0-cote0').fill('3')
     await expect(piece.getByRole('alert')).toContainText('Cote A')
-    await expect(page.locator('#devis').getByRole('button', { name: 'Créer mon espace et obtenir mon devis' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Télécharger le devis' })).toBeDisabled()
+    await expect(page.locator('#cfg-why')).toContainText('Corrigez d’abord les pièces signalées')
     await piece.locator('#l0-cote0').fill('20')
     await expect(piece.getByRole('alert')).toHaveCount(0)
     await piece.getByLabel('Repère').fill(`Muret ${uid.slice(-4)}`)
 
+    // Une pièce se réduit en gardant un résumé, et se rouvre
+    await piece.getByRole('button', { name: 'Réduire la pièce 1' }).click()
+    await expect(piece.locator('.resume')).toContainText('Couvertine')
+    await expect(piece.getByLabel('Longueur', { exact: true })).toBeHidden()
+    await piece.getByRole('button', { name: 'Développer la pièce 1' }).click()
+    await expect(piece.getByLabel('Longueur', { exact: true })).toBeVisible()
+
     // Le visiteur n'a toujours aucun cookie : le prix s'affiche sans compte
     expect(await context.cookies()).toEqual([])
 
-    // Pour le devis : création de l'espace client, erreurs claires, puis le devis est demandé aussitôt
-    const devis = page.locator('#devis')
-    // Les avantages de l'espace client et l'usage des données sont visibles avant de saisir quoi que ce soit
-    await expect(devis.getByRole('heading', { name: 'Pourquoi un espace client ?' })).toBeVisible()
-    await expect(devis.getByRole('heading', { name: /Ce que nous faisons de vos données/ })).toBeVisible()
-    await expect(devis).toContainText('pas de cookie de suivi')
-    await expect(devis.getByRole('link', { name: 'nous envoyer votre plan' })).toBeVisible()
-    await devis.getByLabel('Une précision pour l’atelier').fill('Pose prévue en mars.')
-    await devis.getByLabel('Nom *').fill(nom)
-    await devis.getByLabel('Adresse e-mail *').fill('pas-un-mail')
-    await devis.getByLabel('Mot de passe *').fill('court')
-    await devis.getByLabel(/J’accepte que mes données/).check()
-    await devis.getByRole('button', { name: 'Créer mon espace et obtenir mon devis' }).click()
-    await expect(devis.getByText('Adresse e-mail invalide.')).toBeVisible()
-    await devis.getByLabel('Adresse e-mail *').fill(email)
-    await devis.getByRole('button', { name: 'Créer mon espace et obtenir mon devis' }).click()
-    await expect(devis.getByText(/au moins 12 caractères/)).toBeVisible()
-    await devis.getByLabel('Mot de passe *').fill(PASSWORD)
-    await devis.getByRole('button', { name: 'Créer mon espace et obtenir mon devis' }).click()
+    // Sans espace client : on peut seulement télécharger, le reste est grisé et la raison est dite
+    await expect(page.getByRole('button', { name: 'Télécharger le devis' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Enregistrer le devis' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Passer la commande' })).toBeDisabled()
+    await expect(page.locator('#cfg-why')).toContainText('il faut être connecté à votre espace client')
+    await expect(page.getByRole('heading', { name: 'Obtenir mon devis' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: /Ce que nous faisons de vos données/ })).toHaveCount(0)
+
+    // Création de l'espace client à côté de « Pourquoi un espace client ? », erreurs claires, puis retour au configurateur avec la saisie
+    await page.locator('#cfg-why').getByRole('link', { name: 'Créer mon espace' }).click()
+    await expect(page).toHaveURL(/\/espace\/inscription\?redirect=/)
+    await expect(page.getByRole('heading', { name: 'Pourquoi un espace client ?' })).toBeVisible()
+    await page.getByLabel('Nom *').fill(nom)
+    await page.getByLabel('Adresse e-mail *').fill('pas-un-mail')
+    await page.getByLabel('Mot de passe *').fill('court')
+    await page.getByLabel(/J’accepte que mes données/).check()
+    await page.getByRole('button', { name: 'Créer mon espace', exact: true }).click()
+    await expect(page.getByText('Adresse e-mail invalide.')).toBeVisible()
+    await page.getByLabel('Adresse e-mail *').fill(email)
+    await page.getByRole('button', { name: 'Créer mon espace', exact: true }).click()
+    await expect(page.getByText(/au moins 12 caractères/)).toBeVisible()
+    await page.getByLabel('Mot de passe *').fill(PASSWORD)
+    await page.getByRole('button', { name: 'Créer mon espace', exact: true }).click()
+    await expect(page).toHaveURL('/configurateur')
+    await expect(page.getByRole('region', { name: 'Pièce 1' }).getByLabel('Repère')).toHaveValue(`Muret ${uid.slice(-4)}`)
+    await expect(page.getByRole('button', { name: 'Enregistrer le devis' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Passer la commande' })).toBeEnabled()
+    await page.getByLabel('Une précision pour l’atelier').fill('Pose prévue en mars.')
+    await page.getByRole('button', { name: 'Enregistrer le devis' }).click()
 
     // Le devis est tout de suite dans l'espace du client, avec le suivi de la commande
     await expect(page).toHaveURL(/\/espace\/commandes\/[0-9a-f-]{36}$/)
@@ -272,13 +311,49 @@ test.describe('Configurateur : du visiteur à la commande', () => {
     expect(clients.clients[0]).toMatchObject({ origine: 'site', email })
   })
 
-  test('la page de création de l’espace client explique les avantages et les données, pas la page de connexion', async ({ page }) => {
-    await page.goto('/espace/inscription')
-    await expect(page.getByRole('heading', { name: 'Pourquoi un espace client ?' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: /Ce que nous faisons de vos données/ })).toBeVisible()
-    await page.getByRole('link', { name: 'Politique de confidentialité complète' }).first().waitFor()
-    await page.goto('/espace/connexion')
-    await expect(page.getByRole('heading', { name: /Ce que nous faisons de vos données/ })).toHaveCount(0)
+  test('la connexion et la création de l’espace client montrent « Pourquoi un espace client ? » à côté du formulaire, sans texte sur les données', async ({ page }) => {
+    for (const path of ['/espace/inscription', '/espace/connexion']) {
+      await page.goto(path)
+      await expect(page.getByRole('heading', { name: 'Pourquoi un espace client ?' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /Ce que nous faisons de vos données/ })).toHaveCount(0)
+      // Quatre raisons en quadrillage 2 × 2
+      const cartes = await page.getByRole('complementary').locator('li').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y) } }))
+      expect(cartes).toHaveLength(4)
+      if ((page.viewportSize()?.width ?? 0) > 420) {
+        expect(cartes[1]!.y).toBe(cartes[0]!.y)
+        expect(cartes[1]!.x).toBeGreaterThan(cartes[0]!.x)
+        expect(cartes[2]!.y).toBeGreaterThan(cartes[0]!.y)
+        expect(cartes[3]!.y).toBe(cartes[2]!.y)
+      }
+      const [form, why] = [await page.locator('section.box').boundingBox(), await page.getByRole('complementary').boundingBox()]
+      if ((page.viewportSize()?.width ?? 0) > 900) expect(why!.x).toBeGreaterThan(form!.x + form!.width - 1)
+      else expect(why!.y).toBeGreaterThan(form!.y)
+    }
+  })
+
+  test('le client ferme son espace : mot de passe exigé, fiche anonymisée, adresse libérée', async ({ page, baseURL, uid }) => {
+    const email = `${uid}@exemple.fr`
+    const res = await page.request.post('/api/espace/inscription', { data: { nom: `Ferme ${uid.slice(-6)}`, email, password: PASSWORD, consentement: true }, headers: { Origin: baseURL! } })
+    expect(res.status(), await res.text()).toBe(201)
+    await page.goto('/espace')
+    await expect(page.getByRole('heading', { level: 1, name: /^Bonjour/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Fermer mon espace' })).toBeVisible()
+    await page.getByRole('button', { name: 'Fermer mon espace…' }).click()
+    // Mauvais mot de passe : refus, l'espace reste ouvert
+    await page.getByLabel('Mot de passe pour confirmer').fill('Mauvais-mot-de-passe-1')
+    await page.getByRole('button', { name: 'Fermer définitivement mon espace' }).click()
+    await expect(page.getByRole('alert')).toContainText('Mot de passe incorrect')
+    await expect(page).toHaveURL(/\/espace$/)
+    // Bon mot de passe : retour à l'accueil, l'espace n'existe plus
+    await page.getByLabel('Mot de passe pour confirmer').fill(PASSWORD)
+    await page.getByRole('button', { name: 'Fermer définitivement mon espace' }).click()
+    await expect(page).toHaveURL(/\/$/)
+    expect((await page.request.get('/api/espace/commandes')).status()).toBe(401)
+    const login = await page.request.post('/api/espace/connexion', { data: { email, password: PASSWORD }, headers: { Origin: baseURL! } })
+    expect(login.status()).toBe(401)
+    // L'adresse est libre : on peut recréer un espace
+    const again = await page.request.post('/api/espace/inscription', { data: { nom: 'Retour', email, password: PASSWORD, consentement: true }, headers: { Origin: baseURL! } })
+    expect(again.status(), await again.text()).toBe(201)
   })
 
   test('un client ne voit jamais la commande d’un autre, ni avec le cookie de l’atelier', async ({ browser, baseURL, uid }) => {
@@ -401,16 +476,28 @@ test.describe('Site vitrine : écrans @responsive', () => {
     })
   }
 
-  test('le menu du site s’ouvre sur téléphone et mène au formulaire', async ({ page }) => {
+  test('l’en-tête a l’icône du profil et le panier à droite, le contact et les mentions sont dans le pied de page', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     const burger = page.getByRole('button', { name: 'Ouvrir le menu' })
-    if (await burger.isVisible()) {
-      await burger.click()
-      await page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Contact' }).click()
-    } else {
-      await page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Contact' }).click()
-    }
+    if (await burger.isVisible()) await burger.click()
+    const menu = page.getByRole('navigation', { name: 'Navigation principale' })
+    await expect(menu.getByRole('link', { name: 'Contact' })).toHaveCount(0)
+    await expect(menu.getByRole('link', { name: 'Mon espace' })).toHaveCount(0)
+    // Pas de lien vers l'espace atelier sur le site public
+    await expect(page.getByRole('contentinfo').getByRole('link', { name: 'Espace atelier' })).toHaveCount(0)
+    // Le profil est une icône, à côté du panier
+    const profil = page.getByRole('banner').getByRole('link', { name: 'Mon espace client' })
+    const panier = page.getByRole('banner').getByRole('link', { name: /^Mon panier/ })
+    await expect(profil).toBeVisible()
+    const [p, c] = [await profil.boundingBox(), await panier.boundingBox()]
+    expect(p!.x).toBeLessThan(c!.x)
+    expect(c!.x + c!.width).toBeGreaterThan(page.viewportSize()!.width - 130)
+    // Un visiteur qui clique sur le profil arrive à la connexion
+    await profil.click()
+    await expect(page).toHaveURL(/\/espace\/connexion/)
+    await page.goto('/')
+    await page.getByRole('contentinfo').getByRole('link', { name: 'Contact' }).click()
     await expect(page).toHaveURL('/contact')
     // Champs en 16 px sur écran tactile : Safari ne zoomera pas
     const size = await page.getByLabel('Votre nom').evaluate((el) => parseFloat(getComputedStyle(el).fontSize))

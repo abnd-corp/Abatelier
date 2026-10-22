@@ -34,6 +34,8 @@ export interface DocData {
   avoir?: { facture: string; factureDate: Date; motif: string }
   // Filigrane « APERÇU » : document d'exemple, sans valeur
   apercu?: boolean
+  // Estimation téléchargée sans compte : ni numéro ni client, et aucune valeur de devis
+  estimation?: boolean
 }
 
 const TITRES: Record<PdfType, string> = { devis: 'Devis', facture: 'Facture', avoir: 'Avoir' }
@@ -102,7 +104,7 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
     size: 'A4',
     margin: PAGE.m,
     bufferPages: true,
-    info: { Title: clean(`${TITRES[data.type]} ${data.numero}`), Author: clean(company.raisonSociale), ...(facturx ? { Creator: 'Patalu', Producer: 'Patalu', CreationDate: data.date } : {}) },
+    info: { Title: clean(data.estimation ? 'Estimation' : `${TITRES[data.type]} ${data.numero}`), Author: clean(company.raisonSociale), ...(facturx ? { Creator: 'Patalu', Producer: 'Patalu', CreationDate: data.date } : {}) },
     ...(facturx ? { pdfVersion: '1.7' as const, subset: 'PDF/A-3b' as const } : {}),
   })
   const F = facturx ? { r: 'Inter', b: 'Inter-Bold' } : { r: 'Helvetica', b: 'Helvetica-Bold' }
@@ -148,12 +150,12 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
   const colX = 330
   const colW = RIGHT - colX
   doc.font(F.b).fontSize(24).fillColor(accent)
-  text(TITRES[data.type].toUpperCase(), colX, 44, { width: colW, align: 'right', characterSpacing: 1 })
+  text((data.estimation ? 'Estimation' : TITRES[data.type]).toUpperCase(), colX, 44, { width: colW, align: 'right', characterSpacing: 1 })
   doc.font(F.b).fontSize(11).fillColor(INK)
-  text(`N° ${data.numero}`, colX, doc.y + 2, { width: colW, align: 'right' })
+  if (!data.estimation) text(`N° ${data.numero}`, colX, doc.y + 2, { width: colW, align: 'right' })
   doc.font(F.r).fontSize(9.5)
   const limite = data.echeance ?? addDays(data.date, isDevis ? template.validiteDevis : template.echeanceFacture)
-  const dates = [`Date : ${day(data.date)}`, isAvoir ? `Facture : ${data.avoir?.facture ?? ''}` : `${isDevis ? 'Valable jusqu’au' : 'Échéance'} : ${day(limite)}`, ...(data.references ?? [])]
+  const dates = [`Date : ${day(data.date)}`, isAvoir ? `Facture : ${data.avoir?.facture ?? ''}` : data.estimation ? 'Prix indicatif, non contractuel' : `${isDevis ? 'Valable jusqu’au' : 'Échéance'} : ${day(limite)}`, ...(data.references ?? [])]
   text(dates.join('\n'), colX, doc.y + 2, { width: colW, align: 'right', lineGap: 1 })
 
   // Bloc client, sous les références

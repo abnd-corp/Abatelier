@@ -372,7 +372,8 @@ describe('Fiche commande', () => {
     expect(norm(wrapper.text())).toContain('Rappeler avant')
     await button(wrapper, 'Valider la commande').trigger('click')
     await flushPromises()
-    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ statut: 'validee' })
+    // On cible la route : un chiffrage en attente d'un autre test peut arriver sur le même faux fetch
+    expect(calls.find((c) => c.method === 'POST' && c.path === '/orders/o1/status')!.body).toEqual({ statut: 'validee' })
     expect(norm(wrapper.text())).toContain('Commande passée à l’étape « Validée »')
   })
 
@@ -461,6 +462,31 @@ describe('Atelier', () => {
     const links = wrapper.findAll('a[href$="/fiche.pdf"]')
     expect(links.map((l) => l.attributes('href'))).toEqual(['/api/production/o1/fiche.pdf', '/api/production/o2/fiche.pdf'])
     expect(links[0]!.attributes()).toMatchObject({ target: '_blank', 'aria-label': 'Imprimer la fiche C-2026-0001' })
+  })
+
+  it('conseille les feuilles à prendre d’après le stock, ou dit qu’il n’y en a pas', async () => {
+    const detail = {
+      order: { id: 'o1', numero: 'C-2026-0001', statut: 'fabrication', statutLabel: 'En fabrication', livraisonMode: 'retrait', datePrevue: '2026-10-26', next: 'prete' },
+      lignes: [{ ...LINE, id: 'l1', accessoires: [] }],
+      events: ORDER.events,
+    }
+    const conseil = { sheetId: 's1', libelle: 'Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 1 250 × 3 000 mm', chute: false, parFeuille: 2, feuilles: 2, disposition: { sensLongueur: true, colonnes: 2, rangees: 1 }, perte: 32.8, enStock: 6 }
+    const alt = { ...conseil, sheetId: 's2', libelle: 'Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 450 × 3 000 mm (chute)', chute: true, parFeuille: 1, feuilles: 4, perte: 6.7, enStock: 5 }
+    const ligne = { ligneId: 'l1', repere: 'Mur sud', modeleLabel: 'Couvertine', besoin: { developpe: 480, longueur: 3000, quantite: 4 }, conseils: [conseil, alt], raison: null }
+    const { wrapper } = await mountAt(ProductionOrderView, '/fabrication/o1', { 'GET /production/o1': [200, detail], 'GET /production/o1/feuilles': [200, { lignes: [ligne, { ligneId: 'l2', repere: null, modeleLabel: 'Bouchon', besoin: null, conseils: [], raison: 'Article standard' }] }] }, ATELIER)
+    const panel = wrapper.get('[aria-labelledby="feuilles"]')
+    expect(norm(panel.text())).toContain('Prendre 2 feuilles : Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 1 250 × 3 000 mm')
+    expect(panel.text()).toContain('2 pièces par feuille')
+    expect(panel.text()).toContain('32,8 % de perte')
+    expect(norm(panel.text())).toContain('Sinon : 4 × Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 450 × 3 000 mm (chute)')
+    // Un article standard n'a pas de conseil
+    expect(panel.findAll('li')).toHaveLength(1)
+    expect(norm(panel.text())).not.toContain('€')
+    const vide = await mountAt(ProductionOrderView, '/fabrication/o1', { 'GET /production/o1': [200, detail], 'GET /production/o1/feuilles': [200, { lignes: [{ ...ligne, conseils: [], raison: 'Aucune feuille en stock pour cette matière et ce coloris.' }] }] }, ATELIER)
+    expect(vide.wrapper.get('[aria-labelledby="feuilles"]').text()).toContain('Aucune feuille en stock')
+    const rien = await mountAt(ProductionOrderView, '/fabrication/o1', { 'GET /production/o1': [200, detail] }, ATELIER)
+    expect(rien.wrapper.find('[aria-labelledby="feuilles"]').exists()).toBe(false)
+    expect(norm(rien.wrapper.text())).toContain('4 × 3 000 mm')
   })
 
   it('montre la fiche de fabrication sans prix', async () => {

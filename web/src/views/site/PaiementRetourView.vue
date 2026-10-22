@@ -19,7 +19,15 @@ let tries = 0
 async function poll() {
   try {
     p.value = await api<PaiementStatut>(`/espace/boutique/paiements/${props.id}`)
-    if (p.value.statut === 'paye') panier.clear()
+    if (p.value.statut === 'paye') {
+      if (p.value.surMesure) {
+        try {
+          sessionStorage.removeItem('aps-configurateur')
+        } catch {
+          /* stockage indisponible */
+        }
+      } else panier.clear()
+    }
     if (p.value.statut === 'attente') {
       if (++tries >= 20) waited.value = true
       else timer = setTimeout(poll, 1500)
@@ -48,8 +56,9 @@ onBeforeUnmount(() => clearTimeout(timer))
 
       <template v-else-if="p.statut === 'echec'">
         <h1>Le paiement n’a pas abouti</h1>
-        <p>Aucun montant n’a été débité et votre panier est conservé. Vous pouvez réessayer.</p>
-        <p><RouterLink :to="{ name: 'site-panier' }" class="s-btn primary">Retourner au panier</RouterLink></p>
+        <p>Aucun montant n’a été débité et {{ p.surMesure ? 'votre configuration est conservée' : 'votre panier est conservé' }}. Vous pouvez réessayer.</p>
+        <p v-if="p.surMesure"><RouterLink :to="{ name: 'site-configurateur' }" class="s-btn primary">Retourner au configurateur</RouterLink></p>
+        <p v-else><RouterLink :to="{ name: 'site-panier' }" class="s-btn primary">Retourner au panier</RouterLink></p>
       </template>
 
       <template v-else-if="p.statut === 'rembourse'">

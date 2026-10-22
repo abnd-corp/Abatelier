@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
 import AppIcon from '@/components/AppIcon.vue'
+import PasswordInput from '@/components/PasswordInput.vue'
 import { eur } from '@/lib/catalog'
 import { jour, nomCompte, statutDocument, type EspaceOrderSummary } from '@/lib/espace'
 import { statutOf } from '@/lib/orders'
@@ -13,6 +14,10 @@ const espace = useEspaceStore()
 const router = useRouter()
 const commandes = ref<EspaceOrderSummary[] | null>(null)
 const error = ref('')
+const closing = ref(false)
+const closePassword = ref('')
+const closeError = ref('')
+const closeBusy = ref(false)
 
 onMounted(async () => {
   try {
@@ -27,6 +32,19 @@ const aValider = computed(() => (commandes.value ?? []).filter((c) => c.devis &&
 async function logout() {
   await espace.deconnecter()
   await router.replace({ name: 'site-home' })
+}
+
+async function closeAccount() {
+  closeError.value = ''
+  closeBusy.value = true
+  try {
+    await espace.fermer(closePassword.value)
+    await router.replace({ name: 'site-home' })
+  } catch (e) {
+    closeError.value = e instanceof ApiError ? e.message : 'Impossible de fermer votre espace. Réessayez.'
+  } finally {
+    closeBusy.value = false
+  }
 }
 </script>
 
@@ -74,6 +92,20 @@ async function logout() {
           <RouterLink :to="{ name: 'espace-commande', params: { id: c.id } }" class="s-btn">Voir</RouterLink>
         </li>
       </ul>
+      <section class="card close" aria-labelledby="close-title">
+        <h2 id="close-title">Fermer mon espace</h2>
+        <p class="muted">Vos coordonnées sont effacées. Vos factures restent conservées 10 ans, comme la loi l’impose, sans lien avec votre identité. Cette action est définitive.</p>
+        <button v-if="!closing" class="s-btn" type="button" @click="closing = true">Fermer mon espace…</button>
+        <form v-else class="close-form" @submit.prevent="closeAccount">
+          <label for="close-password">Mot de passe pour confirmer</label>
+          <PasswordInput id="close-password" v-model="closePassword" autocomplete="current-password" />
+          <p v-if="closeError" class="alert bad" role="alert">{{ closeError }}</p>
+          <div class="actions">
+            <button class="s-btn danger" type="submit" :disabled="closeBusy || !closePassword">Fermer définitivement mon espace</button>
+            <button class="s-btn" type="button" @click="closing = false; closePassword = ''; closeError = ''">Annuler</button>
+          </div>
+        </form>
+      </section>
     </template>
   </div>
 </template>
@@ -142,6 +174,25 @@ h1 {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+.close {
+  padding: 18px;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.close h2,
+.close p {
+  margin: 0;
+}
+.s-btn.danger {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.close-form {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 420px);
 }
 @media (max-width: 860px) {
   .row {

@@ -4,6 +4,7 @@ import AppIcon from '@/components/AppIcon.vue'
 import SiteReviews from '@/components/site/SiteReviews.vue'
 import PhotoPlaceholder from '@/components/site/PhotoPlaceholder.vue'
 import ProfileSketch from '@/components/orders/ProfileSketch.vue'
+import { statutOf, type OrderStatut } from '@/lib/orders'
 import { setDescription } from '@/lib/seo'
 import { lines, photosOf, photoUrl, site, telHref, type Emplacement } from '@/lib/site'
 
@@ -52,12 +53,12 @@ const PARCOURS: { id: string; icon: InstanceType<typeof AppIcon>['$props']['name
 ]
 
 // Ce qui se passe ensuite, quel que soit le parcours : les étapes visibles dans l'espace client
-const SUIVI = [
-  { titre: 'Reçue', texte: 'Votre commande est enregistrée' },
-  { titre: 'Validée', texte: 'L’atelier la confirme' },
-  { titre: 'En fabrication', texte: 'Vos pièces sont pliées' },
-  { titre: 'Prête', texte: 'À retirer ou à livrer' },
-  { titre: 'Livrée', texte: 'C’est dans vos mains' },
+const SUIVI: { statut: OrderStatut; texte: string }[] = [
+  { statut: 'recue', texte: 'Votre commande est enregistrée' },
+  { statut: 'validee', texte: 'L’atelier la confirme' },
+  { statut: 'fabrication', texte: 'Vos pièces sont pliées' },
+  { statut: 'prete', texte: 'À retirer ou à livrer' },
+  { statut: 'livree', texte: 'C’est dans vos mains' },
 ]
 watch(() => c.value['site.description'], (d) => d && setDescription(d), { immediate: true })
 const cover = (id: Emplacement) => photosOf(site.value, id)[0]
@@ -165,8 +166,8 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
             <p class="muted">Dans votre espace client : l’étape de chaque commande, la date prévue, vos devis et vos factures en PDF.</p>
           </div>
           <ol class="suivi-steps" aria-label="Étapes d’une commande">
-            <li v-for="e in SUIVI" :key="e.titre">
-              <b>{{ e.titre }}</b>
+            <li v-for="e in SUIVI" :key="e.statut" :class="statutOf(e.statut).tone">
+              <b>{{ statutOf(e.statut).label }}</b>
               <span>{{ e.texte }}</span>
             </li>
           </ol>
@@ -488,9 +489,8 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
   margin-top: 16px;
   padding: 22px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  gap: 22px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
   background: var(--bg);
 }
 .suivi h3 {
@@ -512,12 +512,23 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
   align-content: start;
   padding: 12px;
   border-radius: 10px;
-  background: var(--accent-soft);
+  background: var(--surface-2);
   font-size: 0.86rem;
 }
 .suivi-steps b {
-  color: var(--accent);
+  color: var(--ink);
 }
+/* Chaque étape garde la couleur de sa pastille dans l'espace client et l'atelier */
+.suivi-steps li.warn { background: var(--warn-soft); }
+.suivi-steps li.warn b { color: var(--warn); }
+.suivi-steps li.info { background: var(--info-soft); }
+.suivi-steps li.info b { color: var(--info); }
+.suivi-steps li.accent { background: var(--accent-soft); }
+.suivi-steps li.accent b { color: var(--accent); }
+.suivi-steps li.ok { background: var(--ok-soft); }
+.suivi-steps li.ok b { color: var(--ok); }
+.suivi-steps li.done { background: var(--done-soft); }
+.suivi-steps li.done b { color: var(--done); }
 .suivi-steps span {
   color: var(--muted);
 }
@@ -570,17 +581,11 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
   }
   .products,
   .parcours,
-  .suivi,
   .suivi-steps {
     grid-template-columns: minmax(0, 1fr);
   }
   .cta .s-btn {
     flex: 1 1 100%;
-  }
-}
-@media (min-width: 861px) and (max-width: 1100px) {
-  .suivi {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

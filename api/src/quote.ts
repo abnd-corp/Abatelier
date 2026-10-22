@@ -214,3 +214,6 @@ export function addWorkingDays(day: string, n: number) {
   }
   return d.toISOString().slice(0, 10)
 }
+
+/** Lignes de commande à enregistrer à partir des pièces chiffrées (sans les champs de calcul). */
+export const lineValues = (orderId: string, lines: PricedLine[]) => lines.map(({ developpe: _d, delaiJours: _j, ...l }, position) => ({ ...l, orderId, position }))

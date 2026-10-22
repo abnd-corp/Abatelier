@@ -112,6 +112,17 @@ function useAddress(i: string) {
 
 // Vue de chaque pièce : profil coté ou 3D (par numéro de ligne)
 const views = reactive<Record<number, '2d' | '3d'>>({})
+
+// Pièces réduites : on garde la pièce elle-même (et pas son rang), pour que le choix suive les copies et les retraits
+const reduites = reactive(new WeakSet<object>())
+const isReduced = (l: LineForm) => reduites.has(l)
+const toggle = (l: LineForm) => (reduites.has(l) ? reduites.delete(l) : reduites.add(l))
+const setAll = (reduced: boolean) => form.value.lignes.forEach((l) => (reduced ? reduites.add(l) : reduites.delete(l)))
+const allReduced = computed(() => form.value.lignes.every((l) => reduites.has(l)))
+const resume = (l: LineForm, i: number) => {
+  const p = priced(i)
+  return [modelOf(props.catalog, l.modelId)?.nom, l.repere, `${developpe(l.cotes).toLocaleString('fr-FR')} mm développés × ${l.longueur.toLocaleString('fr-FR')} mm`, `${l.quantite} pièce${l.quantite > 1 ? 's' : ''}`, p ? `${eur(p.total)} HT` : null].filter(Boolean).join(' · ')
+}
 const epaisseur = (id: string) => props.catalog.materials.find((m) => m.id === id)?.epaisseur ?? 1
 
 // Angle saisi : la valeur, le sens étant gardé par le bouton ↑ / ↓. 0 = pince, enregistrée ±PINCE.
@@ -132,16 +143,23 @@ defineExpose({ refresh })
 <template>
   <div class="editor">
     <div class="lines">
-      <section v-for="(l, i) in form.lignes" :key="i" class="card line" :aria-label="`Pièce ${i + 1}`">
+      <div v-if="form.lignes.length > 1" class="fold-all" role="group" aria-label="Toutes les pièces">
+        <button class="btn small" type="button" :disabled="allReduced" @click="setAll(true)"><AppIcon name="chevron-up" :size="14" />Tout réduire</button>
+        <button class="btn small" type="button" :disabled="!form.lignes.some(isReduced)" @click="setAll(false)"><AppIcon name="chevron-down" :size="14" />Tout développer</button>
+      </div>
+      <section v-for="(l, i) in form.lignes" :key="i" class="card line" :class="{ reduced: isReduced(l) }" :aria-label="`Pièce ${i + 1}`">
         <div class="line-head">
           <h2>Pièce {{ i + 1 }}</h2>
+          <p v-if="isReduced(l)" class="resume muted">{{ resume(l, i) }}</p>
           <div class="line-tools">
+            <button class="btn small icon" type="button" :aria-expanded="!isReduced(l)" :aria-label="`${isReduced(l) ? 'Développer' : 'Réduire'} la pièce ${i + 1}`" :title="isReduced(l) ? 'Développer' : 'Réduire'" @click="toggle(l)"><AppIcon :name="isReduced(l) ? 'chevron-down' : 'chevron-up'" :size="15" /></button>
             <button class="btn small icon" type="button" :aria-label="`Dupliquer la pièce ${i + 1}`" title="Dupliquer" @click="duplicate(i)"><AppIcon name="copy" :size="15" /></button>
             <button v-if="form.lignes.length > 1" class="btn small icon" type="button" :aria-label="`Retirer la pièce ${i + 1}`" title="Retirer" @click="removeLine(i)"><AppIcon name="trash" :size="15" /></button>
           </div>
         </div>
         <p v-if="lineErr(i)" class="alert bad" role="alert">{{ lineErr(i) }}</p>
 
+        <div v-show="!isReduced(l)" class="line-body">
         <div class="row">
           <div class="field">
             <label :for="`l${i}-modele`">Modèle</label>
@@ -275,6 +293,7 @@ defineExpose({ refresh })
           <span>{{ eur(priced(i)!.prixUnitaire) }} la pièce<template v-if="priced(i)!.remiseQuantite"> · remise quantité {{ priced(i)!.remiseQuantite.toLocaleString('fr-FR') }} %</template> · mise en route {{ eur(priced(i)!.miseEnRoute) }}</span>
           <b>{{ eur(priced(i)!.total) }} HT</b>
         </p>
+        </div>
       </section>
 
       <button class="btn add-line" type="button" :disabled="form.lignes.length >= 50" @click="addLine"><AppIcon name="plus" :size="16" />Ajouter une pièce</button>
@@ -389,6 +408,29 @@ defineExpose({ refresh })
 .line-tools {
   display: flex;
   gap: 6px;
+}
+.line-body {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.fold-all {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.resume {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.line.reduced {
+  padding-block: 10px;
 }
 .btn.icon {
   padding-inline: 8px;

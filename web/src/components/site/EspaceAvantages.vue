@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import AppIcon from '@/components/AppIcon.vue'
-import { site } from '@/lib/site'
 
-// Ce que gagne un client à ouvrir son espace, et ce que devient ce qu'il nous confie. Ton posé : rien n'est obligatoire
-// pour voir les prix, et le téléphone et la page Contact restent ouverts.
+// Ce que gagne un client à ouvrir son espace. L'usage des données est dans la politique de confidentialité, pas ici.
 defineProps<{ compact?: boolean; idPrefix?: string }>()
 </script>
 
@@ -29,24 +27,6 @@ defineProps<{ compact?: boolean; idPrefix?: string }>()
           <span><b>Tout au même endroit</b> : devis, commandes et factures, quand vous voulez.</span>
         </li>
       </ul>
-      <p class="muted calm">Voir les prix ne demande aucun compte. Et vous pouvez toujours nous appeler ou <RouterLink :to="{ name: 'site-contact' }">nous envoyer votre plan</RouterLink> : on s’en occupe comme avant.</p>
-    </section>
-
-    <section class="data" :aria-labelledby="`${idPrefix ?? 'av'}-donnees`">
-      <h3 :id="`${idPrefix ?? 'av'}-donnees`"><AppIcon name="shield" :size="18" /> Ce que nous faisons de vos données</h3>
-      <dl>
-        <dt>Ce que nous gardons</dt>
-        <dd>Votre nom, votre adresse e-mail, votre téléphone si vous le donnez, et vos devis, commandes et factures.</dd>
-        <dt>Pourquoi</dt>
-        <dd>Uniquement pour établir vos devis, fabriquer vos pièces, les facturer et vous répondre. Les factures sont conservées 10 ans, comme la loi l’exige.</dd>
-        <dt>Ce que nous ne faisons pas</dt>
-        <dd>Pas de revente, pas de publicité, pas de cookie de suivi, pas d’e-mail commercial. Votre mot de passe est chiffré : nous ne pouvons pas le lire.</dd>
-        <dt>Vos droits</dt>
-        <dd>
-          Voir, corriger ou supprimer vos données en nous écrivant<template v-if="site?.entreprise.email"> à <a :href="`mailto:${site.entreprise.email}`">{{ site.entreprise.email }}</a></template>.
-          <RouterLink :to="{ name: 'site-confidentialite' }" target="_blank">Politique de confidentialité complète</RouterLink>
-        </dd>
-      </dl>
     </section>
   </aside>
 </template>
@@ -55,86 +35,79 @@ defineProps<{ compact?: boolean; idPrefix?: string }>()
 .av {
   display: grid;
   gap: 18px;
-  padding: 20px 22px;
+  align-content: start;
+}
+/* À côté du formulaire : une carte blanche comme la sienne, dont les cartes de raison s'étirent jusqu'en bas */
+.av:not(.compact) {
+  padding: 28px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
+  grid-template-rows: minmax(0, 1fr);
+}
+.av:not(.compact) > section {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+.av:not(.compact) .gains {
+  /* Les cartes s'étirent jusqu'en bas du formulaire, sans devenir démesurées quand il est long */
+  grid-auto-rows: minmax(0, 190px);
   align-content: start;
 }
 h3 {
-  margin: 0 0 10px;
-  font-size: 1.02rem;
+  margin: 0 0 14px;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.15;
   text-transform: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 .gains {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
+  /* Quadrillage 2 × 2 : une carte par raison */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+/* Une carte par raison, aux couleurs du site */
 .gains li {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
-  align-items: start;
+  align-content: start;
+  justify-items: start;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
 }
 .gains svg {
+  box-sizing: content-box;
+  padding: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.gains span {
+  color: var(--ink);
+}
+.gains b {
   color: var(--accent);
-  margin-top: 1px;
 }
-.calm {
-  margin: 12px 0 0;
-  font-size: 0.9rem;
+.compact h3 {
+  font-size: 1.15rem;
+  margin-bottom: 10px;
 }
-.data {
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
+@media (max-width: 520px) {
+  .av:not(.compact) {
+    padding: 20px;
+  }
 }
-dl {
-  margin: 0;
-  display: grid;
-  gap: 2px 0;
-  font-size: 0.92rem;
-}
-dt {
-  font-weight: 600;
-  margin-top: 8px;
-}
-dt:first-child {
-  margin-top: 0;
-}
-dd {
-  margin: 0;
-  color: var(--muted);
-}
-.compact {
-  padding: 16px 18px;
-}
-.compact .gains {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 18px;
-}
-.compact dl {
-  grid-template-columns: minmax(0, 11em) minmax(0, 1fr);
-  gap: 6px 14px;
-}
-.compact dt {
-  margin-top: 0;
-}
-@media (max-width: 720px) {
-  .compact .gains,
-  .compact dl {
+@media (max-width: 420px) {
+  .gains {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .compact dl {
-    gap: 2px 0;
-  }
-  .compact dt {
-    margin-top: 8px;
   }
 }
 </style>

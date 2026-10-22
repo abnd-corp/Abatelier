@@ -17,7 +17,7 @@ const done = () => router.replace(retourEspace(route.query.redirect))
 </script>
 
 <template>
-  <div class="s-wrap page" :class="{ wide: inscription }">
+  <div class="s-wrap page wide">
     <section class="card box" :aria-labelledby="'titre-espace'">
       <span class="eyebrow">Espace client</span>
       <h1 id="titre-espace">{{ inscription ? 'Créer mon espace client' : 'Me connecter' }}</h1>
@@ -31,7 +31,7 @@ const done = () => router.replace(retourEspace(route.query.redirect))
         <template v-else>Pas encore d’espace client ? <RouterLink :to="other">Créer mon espace</RouterLink></template>
       </p>
     </section>
-    <EspaceAvantages v-if="inscription" id-prefix="auth-av" />
+    <EspaceAvantages id-prefix="auth-av" />
   </div>
 </template>
 
@@ -40,12 +40,12 @@ const done = () => router.replace(retourEspace(route.query.redirect))
   padding-top: 40px;
   padding-bottom: 40px;
 }
-/* Création du compte : le formulaire à gauche, ce que le client y gagne et ce que devient sa donnée à droite */
+/* Connexion et création : le formulaire à gauche, « Pourquoi un espace client ? » à droite (dessous sur téléphone) */
 .page.wide {
   display: grid;
   grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
   justify-content: center;
 }
 .box {
@@ -68,6 +68,12 @@ h1 {
 @media (max-width: 900px) {
   .page.wide {
     grid-template-columns: minmax(0, 1fr);
+  }
+  /* Une seule colonne : « Pourquoi un espace client ? » a la largeur du formulaire */
+  .page.wide > .av {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
   }
 }
 @media (max-width: 520px) {

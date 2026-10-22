@@ -43,10 +43,10 @@ Quand vous nous écrivez par le formulaire de contact, nous recevons votre nom, 
 
 Si vous payez en ligne dans la boutique, le règlement par carte est traité par notre prestataire de paiement : nous recevons seulement la confirmation et le montant, jamais votre numéro de carte.
 
-Si vous créez un espace client, nous gardons en plus votre mot de passe, sous une forme chiffrée que nous ne pouvons pas lire, ainsi que les pièces que vous composez dans le configurateur, vos devis, vos commandes et leur suivi. Ces données servent uniquement à vous remettre votre devis, à fabriquer et facturer vos pièces, et à vous montrer l’avancement de votre commande. Elles ne servent à aucune publicité ni prospection.
+Si vous créez un espace client, nous gardons en plus votre mot de passe, sous une forme chiffrée que nous ne pouvons pas lire, ainsi que les pièces que vous composez dans le configurateur, vos devis, vos commandes et leur suivi. Ces données servent uniquement à vous remettre votre devis, à fabriquer et facturer vos pièces, et à vous montrer l’avancement de votre commande. Elles ne servent à aucune publicité ni prospection : pas de revente, pas d’e-mail commercial, pas de cookie de suivi.
 
 # Combien de temps ?
-Une demande restée sans suite est supprimée au bout de 12 mois. Les devis, commandes et factures sont conservés le temps imposé par la loi (10 ans pour les factures). Vous pouvez demander la fermeture de votre espace client à tout moment : vos identifiants et votre accès sont X
+Une demande restée sans suite est supprimée au bout de 12 mois. Les devis, commandes et factures sont conservés le temps imposé par la loi (10 ans pour les factures). Vous pouvez obtenir la fermeture de votre espace client à tout moment, depuis la page « Mon espace » : vos coordonnées sont alors effacées et vos commandes sont anonymisées. Seules les factures et avoirs sont gardés, sans lien avec votre identité côté fiche client, car la loi l’impose.
 
 # Qui y a accès ?
 Seule l’équipe de {raisonSociale}. Vos données ne sont ni vendues ni transmises à des tiers à des fins commerciales.
@@ -73,7 +73,7 @@ const CGV = `# Objet
 Les présentes conditions s’appliquent à toute commande de pièces de tôlerie (pliage d’aluminium ou d’acier) passée auprès de {raisonSociale}, {adresse}.
 
 # Devis et commande
-Les pièces sont fabriquées sur mesure, d’après les dimensions, la matière et le coloris que vous indiquez. Un devis gratuit vous est remis avant toute fabrication ; il est valable pendant la durée qui y est indiquée. La commande est ferme une fois le devis accepté. Vous êtes responsable des cotes que vous nous transmettez.
+Les pièces sont fabriquées sur mesure, d’après les dimensions, la matière et le coloris que vous indiquez. Le configurateur affiche un prix indicatif, téléchargeable sans compte. Le devis gratuit, numéroté, est établi dans votre espace client, où il est enregistré avec le suivi de votre commande, et vous est remis avant toute fabrication ; il est valable pendant la durée qui y est indiquée. La commande est ferme une fois le devis accepté. Vous êtes responsable des cotes que vous nous transmettez.
 
 # Prix
 Les prix sont indiqués en euros, hors taxes et toutes taxes comprises. Ils comprennent le façonnage ; la livraison est facturée à part, sauf mention contraire sur le devis.

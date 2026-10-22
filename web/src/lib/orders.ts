@@ -1,13 +1,13 @@
 export type OrderStatut = 'recue' | 'validee' | 'fabrication' | 'prete' | 'livree' | 'annulee'
-export type Tone = 'ok' | 'warn' | 'accent' | 'neutral'
+export type Tone = 'ok' | 'warn' | 'accent' | 'info' | 'done' | 'bad' | 'neutral'
 
 export const STATUTS: { value: OrderStatut; label: string; tone: Tone }[] = [
   { value: 'recue', label: 'Reçue', tone: 'warn' },
-  { value: 'validee', label: 'Validée', tone: 'accent' },
+  { value: 'validee', label: 'Validée', tone: 'info' },
   { value: 'fabrication', label: 'En fabrication', tone: 'accent' },
   { value: 'prete', label: 'Prête', tone: 'ok' },
-  { value: 'livree', label: 'Livrée / retirée', tone: 'neutral' },
-  { value: 'annulee', label: 'Annulée', tone: 'neutral' },
+  { value: 'livree', label: 'Livrée / retirée', tone: 'done' },
+  { value: 'annulee', label: 'Annulée', tone: 'bad' },
 ]
 export const statutOf = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!
 

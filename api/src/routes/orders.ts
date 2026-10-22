@@ -8,7 +8,7 @@ import { audit } from '../audit.js'
 import { allocateNumber } from '../documents.js'
 import { distanceFromAtelier } from '../delivery.js'
 import { GeoUnavailable } from '../geo.js'
-import { colorLabel, isError, materialLabel, priceLine, priceOrder, type PricedLine, type Totals } from '../quote.js'
+import { colorLabel, isError, lineValues, materialLabel, priceLine, priceOrder, type PricedLine, type Totals } from '../quote.js'
 import { changeStatus, eventsOf, loadCatalog, NEXT, STATUT_LABELS } from '../orders.js'
 import { clientName } from './clients.js'
 import { activeInvoice, issueCreditNote } from '../billing.js'
@@ -157,9 +157,6 @@ const orderValues = (body: Body, p: Priced) => ({
   ttc: p.totals.ttc,
   delaiJours: p.totals.delaiJours,
 })
-
-const lineValues = (orderId: string, lines: PricedLine[]) =>
-  lines.map(({ developpe: _d, delaiJours: _j, ...l }, position) => ({ ...l, orderId, position }))
 
 async function findOrder(id: string, reply: FastifyReply) {
   const [o] = z.uuid().safeParse(id).success ? await db.select().from(orders).where(eq(orders.id, id)) : []

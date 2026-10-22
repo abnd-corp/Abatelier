@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHash } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { auditLog, billingDocuments, clientAccounts, clientSessions, clients, colors, loginAttempts, materials, orders } from '../src/db/schema.js'
+import { auditLog, billingDocuments, clientAccounts, clientSessions, clients, colors, loginAttempts, materials, orders, contactRequests } from '../src/db/schema.js'
 import { env } from '../src/env.js'
 import { setTransport, type Transport } from '../src/mail.js'
 import { buildApp, client, createUser, loginAs, M, PASSWORD, resetDb, seedModels, type App, type Client } from './helpers.js'
@@ -182,6 +182,60 @@ describe('Connexion', () => {
     await staff.post('/api/auth/login', { identifiant: 'chef', password: PASSWORD })
     expect((await staff.get('/api/espace/commandes')).statusCode).toBe(401)
     expect((await staff.get('/api/espace/session')).json().compte).toBeNull()
+  })
+})
+
+describe('Fermeture du compte', () => {
+  it('exige une session et le mot de passe', async () => {
+    expect((await espace().post('/api/espace/compte/fermeture', { password: 'x' })).statusCode).toBe(401)
+    const c = await member()
+    expect((await c.post('/api/espace/compte/fermeture', {})).statusCode).toBe(400)
+    const bad = await c.post('/api/espace/compte/fermeture', { password: 'Mauvais-mot-de-passe-1' })
+    expect(bad.statusCode).toBe(403)
+    expect(bad.json().field).toBe('password')
+    expect((await c.get('/api/espace/session')).json().compte).not.toBeNull()
+  })
+
+  it('refuse tant qu’une commande est en cours', async () => {
+    const c = await member()
+    await demander(c)
+    const res = await c.post('/api/espace/compte/fermeture', { password: 'Plieuse-numerique-2026' })
+    expect(res.statusCode).toBe(409)
+    expect(res.json().error).toContain('en cours')
+  })
+
+  it('anonymise la fiche, garde les factures, coupe la session et le note au journal', async () => {
+    const c = await member()
+    const o = await demander(c, { notes: 'Note du client' })
+    await direction.post(`/api/orders/${o.id}/status`, { statut: 'annulee', note: 'Client injoignable' })
+    const res = await c.post('/api/espace/compte/fermeture', { password: 'Plieuse-numerique-2026' })
+    expect(res.statusCode, res.body).toBe(204)
+
+    const [fiche] = await db.select().from(clients).where(eq(clients.email, 'jean@example.com'))
+    expect(fiche).toBeUndefined()
+    const [anon] = await db.select().from(clients)
+    expect(anon).toMatchObject({ nom: 'Client supprimé', prenom: null, email: null, telephone: null })
+    expect(anon!.archivedAt).not.toBeNull()
+    expect(await db.select().from(clientAccounts)).toHaveLength(0)
+    expect(await db.select().from(clientSessions)).toHaveLength(0)
+    const [cmd] = await db.select().from(orders)
+    expect(cmd!.notes).toBeNull()
+    // Le devis émis est conservé tel quel
+    expect(await db.select().from(billingDocuments)).toHaveLength(1)
+    expect((await c.get('/api/espace/commandes')).statusCode).toBe(401)
+    expect(JSON.stringify(await db.select().from(auditLog))).not.toContain('Jean Dupont')
+    const [closed] = await entries('espace.account_closed')
+    expect(closed).toMatchObject({ targetId: anon!.id })
+  })
+
+  it('libère l’adresse e-mail et efface les demandes de contact de cette adresse', async () => {
+    const c = await member()
+    await db.insert(contactRequests).values({ nom: 'Jean Dupont', email: 'jean@example.com', telephone: '0612345678', objet: 'Question', message: 'Mon adresse est 3 rue X' })
+    expect((await c.post('/api/espace/compte/fermeture', { password: 'Plieuse-numerique-2026' })).statusCode).toBe(204)
+    const [req] = await db.select().from(contactRequests)
+    expect(req).toMatchObject({ nom: 'Client supprimé', telephone: null, message: '[supprimé]' })
+    // Elle peut recréer un espace avec la même adresse
+    expect((await espace().post('/api/espace/inscription', signup())).statusCode).toBe(201)
   })
 })
 

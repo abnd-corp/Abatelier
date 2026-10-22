@@ -93,7 +93,13 @@ describe('Accueil', () => {
     expect(parcours.map((p) => p.get('h3').text())).toEqual(['Sur mesure', 'Boutique'])
     expect(parcours.map((p) => p.findAll('.p-steps li').length)).toEqual([4, 4])
     expect(parcours.map((p) => p.get('a').attributes('href'))).toEqual(['/configurateur', '/boutique'])
-    expect(wrapper.findAll('.suivi-steps li').map((l) => l.get('b').text())).toEqual(['Reçue', 'Validée', 'En fabrication', 'Prête', 'Livrée'])
+    expect(wrapper.findAll('.suivi-steps li').map((l) => l.get('b').text())).toEqual(['Reçue', 'Validée', 'En fabrication', 'Prête', 'Livrée / retirée'])
+    // Chaque étape a la couleur de sa pastille
+    expect(wrapper.findAll('.suivi-steps li').map((l) => l.classes().filter((c) => ['warn', 'info', 'accent', 'ok', 'done'].includes(c))[0])).toEqual(['warn', 'info', 'accent', 'ok', 'done'])
+    // Les étapes sont sous le texte explicatif
+    const suivi = wrapper.get('.suivi')
+    expect(suivi.element.children[0]!.classList.contains('suivi-text')).toBe(true)
+    expect(suivi.element.children[1]!.classList.contains('suivi-steps')).toBe(true)
     expect(wrapper.get('.steps-band').text()).not.toContain('faisabilité')
     // L'envoi d'un plan n'est plus mis en avant : tout passe par le configurateur ou la boutique
     expect(wrapper.text()).not.toMatch(/Envoyer mon plan|Envoyez-nous votre plan/)
@@ -177,7 +183,18 @@ describe('Mise en page publique', () => {
     const { wrapper } = await mountAt(PublicLayout, '/')
     expect(wrapper.findAll('nav[aria-label="Navigation principale"] a').map((a) => a.text())).toContain('Pliage aluminium')
     expect(wrapper.text()).toContain('Le vendredi : 7h30–12h')
-    for (const t of ['Mentions légales', 'Confidentialité', 'Cookies', 'Conditions générales de vente', 'Espace atelier']) expect(wrapper.text()).toContain(t)
+    for (const t of ['Mentions légales', 'Confidentialité', 'Cookies', 'Conditions générales de vente', 'Contact']) expect(wrapper.text()).toContain(t)
+    expect(wrapper.text()).not.toContain('Espace atelier')
+    // En-tête : pas de Contact ni de « Mon espace » en libellé ; une icône de profil à côté du panier
+    const menu = wrapper.findAll('nav[aria-label="Navigation principale"] a').map((a) => a.text())
+    expect(menu).not.toContain('Contact')
+    expect(menu).not.toContain('Mon espace')
+    const head = wrapper.get('header')
+    expect(head.get('a[aria-label="Mon espace client"]').attributes('href')).toBe('/espace')
+    expect(head.find('a[aria-label="Mon espace client"] svg').exists()).toBe(true)
+    expect(head.get('a[aria-label="Mon espace client"]').text()).toBe('')
+    expect(head.findAll('a.s-cart').map((a) => a.attributes('aria-label'))).toEqual(['Mon espace client', 'Mon panier, vide'])
+    expect(wrapper.get('footer a[href="/contact"]').text()).toBe('Contact')
     expect(wrapper.get('a.skip').attributes('href')).toBe('#contenu')
     const ld = JSON.parse(document.head.querySelector('script#ld-entreprise')!.textContent!)
     expect(ld).toMatchObject({ '@type': 'LocalBusiness', address: { postalCode: '42490', addressLocality: 'Fraisses' } })
@@ -483,13 +500,9 @@ describe('Configurateur public', () => {
   })
 
   const COMPTE = { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: null, type: 'particulier' as const }
-  const signup = async (wrapper: ReturnType<typeof mount>) => {
-    await wrapper.get('#cfg-nom').setValue('Dupont')
-    await wrapper.get('#cfg-email').setValue('jean@example.com')
-    await wrapper.get('#cfg-password').setValue('Plieuse-numerique-2026')
-    await wrapper.get('#cfg-consentement').setValue(true)
-  }
   const mountSite = (extra: Parameters<typeof mockApi>[0] = {}) => mountConfig({ 'GET /espace/session': [200, { compte: null }], ...extra })
+  const mountLogged = (extra: Parameters<typeof mockApi>[0] = {}) => mountConfig({ 'GET /espace/session': [200, { compte: COMPTE }], ...extra })
+  const bouton = (w: ReturnType<typeof mount>, texte: string) => w.findAll('button').find((b) => b.text().includes(texte))!
 
   it('vérifie la session de l’espace client, jamais celle de l’atelier', async () => {
     const { calls } = await mountSite()
@@ -497,93 +510,130 @@ describe('Configurateur public', () => {
     expect(calls.map((c) => c.path)).not.toContain('/auth/session')
   })
 
-  it('sans compte : crée l’espace client puis demande le devis avec les pièces, et ouvre la commande', async () => {
-    const { wrapper, calls } = await mountSite({
-      'POST /espace/inscription': [201, { compte: COMPTE }],
-      'POST /espace/devis': [201, { id: 'o9', numero: 'C-2026-0009', devis: { id: 'd9', numero: 'D-2026-0009' } }],
-    })
-    expect(wrapper.get('#devis h2').text()).toBe('Obtenir mon devis')
-    await wrapper.get('#d-precision-n').setValue('Pour un muret.')
-    await signup(wrapper)
-    await wrapper.get('form.auth').trigger('submit')
+  it('n’a plus de section « Obtenir mon devis » : ni explications, ni formulaire de compte, ni renvoi vers le contact', async () => {
+    const { wrapper } = await mountSite()
+    expect(wrapper.find('#devis').exists()).toBe(false)
+    expect(wrapper.find('form.auth').exists()).toBe(false)
+    for (const t of ['Pourquoi un espace client ?', 'Ce que nous faisons de vos données', 'nous envoyer votre plan', 'Obtenir mon devis']) expect(wrapper.text()).not.toContain(t)
+  })
+
+  it('sans compte : seul « Télécharger le devis » est possible, les deux autres sont grisés avec la raison et le chemin pour se connecter', async () => {
+    const { wrapper } = await mountSite()
+    expect(bouton(wrapper, 'Télécharger le devis').attributes('disabled')).toBeUndefined()
+    for (const t of ['Enregistrer le devis', 'Passer la commande']) {
+      const b = bouton(wrapper, t)
+      expect(b.attributes('disabled')).toBeDefined()
+      expect(b.attributes('aria-describedby')).toBe('cfg-why')
+    }
+    const why = wrapper.get('#cfg-why')
+    expect(why.text()).toContain('il faut être connecté à votre espace client')
+    expect(why.findAll('a').map((a) => a.attributes('href'))).toEqual(['/espace/connexion?redirect=/configurateur', '/espace/inscription?redirect=/configurateur'])
+  })
+
+  it('télécharge le devis en PDF sans compte, sans rien créer', async () => {
+    const created = vi.fn(() => 'blob:devis')
+    Object.assign(URL, { createObjectURL: created, revokeObjectURL: vi.fn() })
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const { wrapper, calls } = await mountSite({ 'POST /public/configurateur/estimation.pdf': [200, { pdf: true }] })
+    await bouton(wrapper, 'Télécharger le devis').trigger('click')
     await flushPromises()
-    const inscription = calls.find((c) => c.path === '/espace/inscription')!
-    expect(inscription.body).toMatchObject({ nom: 'Dupont', email: 'jean@example.com', password: 'Plieuse-numerique-2026', consentement: true, site: '' })
+    const dl = calls.filter((c) => c.path === '/public/configurateur/estimation.pdf')
+    expect(dl).toHaveLength(1)
+    expect(dl[0]!.body.lignes[0]).toMatchObject({ modelId: 'couvertine', longueur: 3000, quantite: 4 })
+    expect(created).toHaveBeenCalled()
+    expect(click).toHaveBeenCalled()
+    expect(calls.map((c) => c.path)).not.toContain('/espace/devis')
+    click.mockRestore()
+  })
+
+  it('connecté : les trois boutons sont actifs, sans message de connexion', async () => {
+    const { wrapper } = await mountLogged()
+    for (const t of ['Télécharger le devis', 'Enregistrer le devis', 'Passer la commande']) expect(bouton(wrapper, t).attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('#cfg-why').text()).not.toContain('il faut être connecté')
+    expect(wrapper.get('#cfg-why').text()).toContain('votre espace client')
+  })
+
+  it('enregistre le devis avec les pièces et la précision, sans jamais envoyer de prix, puis ouvre la commande', async () => {
+    const { wrapper, calls } = await mountLogged({ 'POST /espace/devis': [201, { id: 'o9', numero: 'C-2026-0009', devis: { id: 'd9', numero: 'D-2026-0009' } }] })
+    await wrapper.get('#d-precision').setValue('Pour un muret.')
+    await bouton(wrapper, 'Enregistrer le devis').trigger('click')
+    await flushPromises()
     const devis = calls.find((c) => c.path === '/espace/devis')!
     expect(devis.method).toBe('POST')
     expect(devis.body).toMatchObject({ livraison: { mode: 'retrait' }, notes: 'Pour un muret.' })
     expect(devis.body.lignes[0]).toMatchObject({ modelId: 'couvertine', materialId: 'm1', colorId: 'k1', longueur: 3000, quantite: 4 })
-    // Le prix n'est jamais envoyé : le serveur le recalcule
     expect(JSON.stringify(devis.body)).not.toMatch(/ttc|518/)
-    // L'ordre compte : le compte d'abord, le devis ensuite
-    expect(calls.findIndex((c) => c.path === '/espace/inscription')).toBeLessThan(calls.findIndex((c) => c.path === '/espace/devis'))
+    expect(calls.map((c) => c.path)).not.toContain('/espace/commande')
   })
 
-  it('avec un compte existant : se connecte puis demande le devis', async () => {
-    const { wrapper, calls } = await mountSite({
-      'POST /espace/connexion': [200, { compte: COMPTE }],
-      'POST /espace/devis': [201, { id: 'o9', numero: 'C-2026-0009', devis: null }],
-    })
-    await wrapper.findAll('button.chip').find((b) => b.text().includes('déjà un espace'))!.trigger('click')
-    expect(wrapper.find('#cfg-nom').exists()).toBe(false)
-    await wrapper.get('#cfg-email').setValue('jean@example.com')
-    await wrapper.get('#cfg-password').setValue('Plieuse-numerique-2026')
-    await wrapper.get('form.auth').trigger('submit')
+  it('passe la commande : ouvre le paiement en ligne avec les pièces, sans prix', async () => {
+    const { wrapper, calls } = await mountLogged({ 'POST /espace/commande': [201, { id: 'p1', url: '/paiement-simulation/p1' }] })
+    await bouton(wrapper, 'Passer la commande').trigger('click')
     await flushPromises()
-    expect(calls.find((c) => c.path === '/espace/connexion')!.body).toEqual({ email: 'jean@example.com', password: 'Plieuse-numerique-2026', remember: false })
-    expect(calls.map((c) => c.path)).toContain('/espace/devis')
-    expect(calls.map((c) => c.path)).not.toContain('/espace/inscription')
-  })
-
-  it('explique les avantages de l’espace client et l’usage des données avant de créer le compte, mais pas à un client connecté', async () => {
-    const { wrapper } = await mountSite()
-    expect(wrapper.get('#devis').text()).toContain('Pourquoi un espace client ?')
-    expect(wrapper.get('#devis').text()).toContain('Ce que nous faisons de vos données')
-    const logged = await mountConfig({ 'GET /espace/session': [200, { compte: COMPTE }] })
-    expect(logged.wrapper.get('#devis').text()).not.toContain('Ce que nous faisons de vos données')
-  })
-
-  it('déjà connecté : un seul clic pour obtenir le devis', async () => {
-    const { wrapper, calls } = await mountConfig({ 'GET /espace/session': [200, { compte: COMPTE }], 'POST /espace/devis': [201, { id: 'o9', numero: 'C-2026-0009', devis: null }] })
-    expect(wrapper.get('#devis').text()).toContain('Vous êtes connecté')
-    expect(wrapper.find('form.auth').exists()).toBe(false)
-    await wrapper.get('#devis form').trigger('submit')
-    await flushPromises()
-    expect(calls.filter((c) => c.path === '/espace/devis')).toHaveLength(1)
-    expect(calls.map((c) => c.path)).not.toContain('/espace/inscription')
-  })
-
-  it('affiche l’erreur du serveur sous le bon champ, sans demander de devis, et celles des pièces dans le chiffrage', async () => {
-    const { wrapper, calls } = await mountSite({ 'POST /espace/inscription': [409, { error: 'Cette adresse e-mail est déjà enregistrée.', field: 'email' }] })
-    await signup(wrapper)
-    await wrapper.get('form.auth').trigger('submit')
-    await flushPromises()
-    expect(wrapper.get('#cfg-e-email').text()).toBe('Cette adresse e-mail est déjà enregistrée.')
-    expect(wrapper.get('#cfg-email').attributes('aria-invalid')).toBe('true')
-    expect((wrapper.get('#cfg-nom').element as HTMLInputElement).value).toBe('Dupont')
+    const cmd = calls.find((c) => c.path === '/espace/commande')!
+    expect(cmd.method).toBe('POST')
+    expect(cmd.body.lignes).toHaveLength(1)
+    expect(JSON.stringify(cmd.body)).not.toMatch(/ttc|518/)
     expect(calls.map((c) => c.path)).not.toContain('/espace/devis')
-
-    const bad = await mountSite({ 'POST /public/configurateur/chiffrage': [400, { error: 'Longueur : 3000 mm maximum.', field: 'lignes.0.longueur' }] })
-    expect(bad.wrapper.text()).toContain('Longueur : 3000 mm maximum.')
-    expect(bad.wrapper.get('form.auth button[type="submit"]').attributes('disabled')).toBeDefined()
-    expect(bad.wrapper.get('a.btn.primary').classes()).toContain('off')
   })
 
-  it('montre l’erreur de la demande de devis, et garde le client connecté', async () => {
-    const { wrapper } = await mountConfig({ 'GET /espace/session': [200, { compte: COMPTE }], 'POST /espace/devis': [429, { error: 'Vous avez déjà demandé 10 devis aujourd’hui.' }] })
-    await wrapper.get('#devis form').trigger('submit')
+  it('montre l’erreur du serveur (paiement fermé, limite de devis) et garde le client connecté', async () => {
+    const closed = await mountLogged({ 'POST /espace/commande': [503, { error: 'Le paiement en ligne n’est pas encore ouvert.' }] })
+    await bouton(closed.wrapper, 'Passer la commande').trigger('click')
     await flushPromises()
-    expect(wrapper.get('#devis [role="alert"]').text()).toContain('10 devis')
-    expect(wrapper.get('#devis').text()).toContain('Vous êtes connecté')
+    expect(closed.wrapper.get('[role="alert"]').text()).toContain('pas encore ouvert')
+    const limit = await mountLogged({ 'POST /espace/devis': [429, { error: 'Vous avez déjà demandé 10 devis aujourd’hui.' }] })
+    await bouton(limit.wrapper, 'Enregistrer le devis').trigger('click')
+    await flushPromises()
+    expect(limit.wrapper.get('[role="alert"]').text()).toContain('10 devis')
+    expect(bouton(limit.wrapper, 'Enregistrer le devis').attributes('disabled')).toBeUndefined()
   })
 
-  it('cache le piège à robots, et dit quand le catalogue est vide', async () => {
-    const { wrapper } = await mountSite()
-    expect(wrapper.get('.trap').attributes('aria-hidden')).toBe('true')
+  it('grise les trois boutons quand le prix ne s’affiche pas, et dit pourquoi', async () => {
+    const { wrapper } = await mountLogged({ 'POST /public/configurateur/chiffrage': [400, { error: 'Longueur : 3000 mm maximum.', field: 'lignes.0.longueur' }] })
+    expect(wrapper.text()).toContain('Longueur : 3000 mm maximum.')
+    for (const t of ['Télécharger le devis', 'Enregistrer le devis', 'Passer la commande']) expect(bouton(wrapper, t).attributes('disabled')).toBeDefined()
+    expect(wrapper.get('#cfg-why').text()).toContain('Corrigez d’abord les pièces signalées')
+  })
+
+  it('garde la saisie quand on part se connecter, et dit quand le catalogue est vide', async () => {
+    sessionStorage.clear()
+    const first = await mountSite()
+    await first.wrapper.get('#l0-repere').setValue('Mur nord')
+    await flushPromises()
+    first.wrapper.unmount()
+    const back = await mountSite()
+    expect((back.wrapper.get('#l0-repere').element as HTMLInputElement).value).toBe('Mur nord')
+    sessionStorage.clear()
     const empty = await mountSite({ 'GET /public/configurateur': [200, { ...CATALOG, models: [] }] })
     expect(empty.wrapper.text()).toContain('pas disponible pour l’instant')
     const down = await mountSite({ 'GET /public/configurateur': [500, { error: 'Le serveur a rencontré un problème.' }] })
     expect(down.wrapper.find('[role="alert"]').exists()).toBe(true)
+  })
+
+  it('réduit une pièce, ou toutes, en gardant un résumé et la possibilité de les rouvrir', async () => {
+    sessionStorage.clear()
+    const { wrapper } = await mountSite()
+    const bodies = () => wrapper.findAll('.line-body')
+    expect(wrapper.find('.fold-all').exists()).toBe(false)
+    await wrapper.get('button[aria-label="Dupliquer la pièce 1"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('section.line')).toHaveLength(2)
+    expect(wrapper.find('.fold-all').exists()).toBe(true)
+    const reduire1 = wrapper.get('button[aria-label="Réduire la pièce 1"]')
+    expect(reduire1.attributes('aria-expanded')).toBe('true')
+    await reduire1.trigger('click')
+    expect(bodies()[0]!.attributes('style')).toContain('display: none')
+    expect(bodies()[1]!.attributes('style') ?? '').not.toContain('display: none')
+    expect(wrapper.get('section.line.reduced .resume').text()).toContain('Couvertine')
+    expect(wrapper.get('section.line.reduced .resume').text()).toContain('4 pièces')
+    expect(wrapper.get('button[aria-label="Développer la pièce 1"]').attributes('aria-expanded')).toBe('false')
+    await bouton(wrapper, 'Tout réduire').trigger('click')
+    expect(bodies().every((b) => (b.attributes('style') ?? '').includes('display: none'))).toBe(true)
+    expect(bouton(wrapper, 'Tout réduire').attributes('disabled')).toBeDefined()
+    await bouton(wrapper, 'Tout développer').trigger('click')
+    expect(bodies().every((b) => !(b.attributes('style') ?? '').includes('display: none'))).toBe(true)
+    sessionStorage.clear()
   })
 
   describe('côté direction', () => {

@@ -121,7 +121,7 @@ export function statutDocument(type: EspaceDocType, s: BillingStatut): { label: 
 /** Page où revenir après la connexion : seulement l'espace client ou le configurateur, jamais un autre site. */
 export function retourEspace(value: unknown): string {
   if (typeof value !== 'string' || value.startsWith('//') || value.startsWith('/\\')) return '/espace'
-  return /^\/(espace|configurateur)(\/|\?|$)/.test(value) ? value : '/espace'
+  return /^\/(espace|configurateur|boutique|panier)(\/|\?|$)/.test(value) ? value : '/espace'
 }
 
 /** Texte de l'étape « reçue » d'une commande payée en ligne : le contrat est déjà formé. */

@@ -1,9 +1,9 @@
 import type { FastifyInstance, FastifyReply } from 'fastify'
-import { and, count, desc, eq, gt, inArray, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gt, inArray, notInArray, sql } from 'drizzle-orm'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { billingDocuments, clientAccounts, clients, DEVIS_REPONSES, orderLines, orders, payments } from '../db/schema.js'
+import { auditLog, billingDocuments, clientAccounts, clientSites, clients, contactRequests, DEVIS_REPONSES, orderLines, orders, payments } from '../db/schema.js'
 import { hashPassword, verifyPassword } from '../auth/password.js'
 import { checkPasswordPolicy } from '../auth/password-policy.js'
 import { clearClientCookieOptions, CLIENT_COOKIE, clientCookieOptions, createClientSession, deleteClientSession, requireAccount, type ClientAccount } from '../auth/client-session.js'
@@ -17,7 +17,7 @@ import { espaceAnswerAlert, espaceQuoteAlert } from '../mail-texts.js'
 import { eventsOf, STATUT_LABELS } from '../orders.js'
 import { invalid, isUniqueViolation } from '../validation.js'
 import { clientName } from './clients.js'
-import { orderBody, placeOrder } from './orders.js'
+import { orderBody, placeOrder, priceBody } from './orders.js'
 import { cartBody } from './public.js'
 import { PaymentError, paymentProvider } from '../payments.js'
 import { confirmPayment, failPayment, priceCart } from '../shop.js'
@@ -51,6 +51,7 @@ const registerBody = z.object({
 })
 const loginBody = z.object({ email: z.string().trim().toLowerCase().min(1).max(120), password: z.string().min(1).max(200), remember: z.boolean().default(false) })
 const devisBody = orderBody.omit({ clientId: true })
+const fermetureBody = z.object({ password: z.string().min(1, 'Saisissez votre mot de passe pour confirmer.').max(200) })
 const reponseBody = z.object({ reponse: z.enum(DEVIS_REPONSES, { error: 'Indiquez si vous acceptez ou refusez le devis.' }) })
 
 const publicAccount = (a: ClientAccount) => ({ prenom: a.prenom, nom: a.nom, email: a.email, telephone: a.telephone, type: a.type })
@@ -132,6 +133,70 @@ export async function espaceRoutes(app: FastifyInstance) {
     return reply.code(204).send()
   })
 
+  // Fermeture du compte (droit à l'effacement) : la fiche est anonymisée, pas supprimée. Les factures et avoirs
+  // sont gardés 10 ans (obligation légale) et ne sont plus rattachés à une personne identifiable côté fiche.
+  app.post('/compte/fermeture', { preHandler: requireAccount, config: { rateLimit: { max: 5, timeWindow: '1 hour' } } }, async (req, reply) => {
+    const me = req.account!
+    const parsed = fermetureBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const [acc] = await db.select({ passwordHash: clientAccounts.passwordHash }).from(clientAccounts).where(eq(clientAccounts.id, me.id))
+    if (!(await verifyPassword(acc?.passwordHash, parsed.data.password))) return reply.code(403).send({ error: 'Mot de passe incorrect.', field: 'password' })
+
+    const [{ ouvertes }] = (await db
+      .select({ ouvertes: count() })
+      .from(orders)
+      .where(and(eq(orders.clientId, me.clientId), notInArray(orders.statut, ['livree', 'annulee'])))) as [{ ouvertes: number }]
+    const [{ attente }] = (await db
+      .select({ attente: count() })
+      .from(payments)
+      .where(and(eq(payments.clientId, me.clientId), eq(payments.statut, 'attente')))) as [{ attente: number }]
+    if (ouvertes || attente) return reply.code(409).send({ error: 'Vous avez encore une commande ou un paiement en cours. Fermez votre espace une fois la commande livrée ou annulée, ou contactez l’atelier.' })
+
+    const email = me.email.toLowerCase()
+    await db.transaction(async (tx) => {
+      const [c] = await tx.select({ type: clients.type }).from(clients).where(eq(clients.id, me.clientId))
+      await tx
+        .update(clients)
+        .set({
+          raisonSociale: c!.type === 'professionnel' ? 'Client supprimé' : null,
+          nom: c!.type === 'particulier' ? 'Client supprimé' : null,
+          prenom: null,
+          email: null,
+          telephone: null,
+          adresse: null,
+          codePostal: null,
+          ville: null,
+          siret: null,
+          tvaIntra: null,
+          notes: null,
+          archivedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(clients.id, me.clientId))
+      // Les sessions partent avec le compte (suppression en cascade)
+      await tx.delete(clientAccounts).where(eq(clientAccounts.id, me.id))
+      await tx.delete(clientSites).where(eq(clientSites.clientId, me.clientId))
+      await tx.update(orders).set({ livraisonAdresse: null, livraisonCodePostal: null, livraisonVille: null, notes: null }).where(eq(orders.clientId, me.clientId))
+      await tx
+        .update(contactRequests)
+        .set({ nom: 'Client supprimé', email: 'supprime@invalid', telephone: null, adresse: null, codePostal: null, ville: null, message: '[supprimé]', fichierNom: null, fichierType: null, fichier: null, configuration: null })
+        .where(sql`lower(${contactRequests.email}) = ${email}`)
+      // Le nom n'a plus à rester dans le journal : actions du client, de sa fiche, de ses commandes et de ses documents
+      const id = me.clientId
+      await tx
+        .update(auditLog)
+        .set({ details: sql`${auditLog.details} - 'nom' - 'client'` })
+        .where(
+          sql`${auditLog.details} is not null and (${auditLog.identifiant} = ${`espace:${id}`} or ${auditLog.details}->>'clientId' = ${id} or (${auditLog.targetType} = 'client' and ${auditLog.targetId} = ${id})
+            or (${auditLog.targetType} = 'order' and ${auditLog.targetId} in (select id::text from orders where client_id = ${id}))
+            or (${auditLog.targetType} = 'billing' and ${auditLog.targetId} in (select id::text from billing_documents where client_id = ${id})))`,
+        )
+    })
+    await audit(req, 'espace.account_closed', { ...who(me), targetType: 'client', targetId: me.clientId })
+    reply.clearCookie(CLIENT_COOKIE, clearClientCookieOptions)
+    return reply.code(204).send()
+  })
+
   // Toujours 200, avec compte à null sans session : pas d'erreur 401 dans la console du navigateur
   app.get('/session', async (req) => ({ compte: req.account ? publicAccount(req.account) : null }))
 
@@ -173,6 +238,58 @@ export async function espaceRoutes(app: FastifyInstance) {
       await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: me.email, targetType: 'order', targetId: placed.id }), 6000, { ok: false, notConfigured: false, error: 'délai dépassé' })
     }
     return reply.code(201).send({ id: placed.id, numero: placed.numero, devis })
+  })
+
+  // --- Commande sur mesure payée en ligne depuis le configurateur ---
+  // Comme la boutique : la commande n'existe qu'une fois le paiement confirmé, au prix chiffré ici, et naît déjà « Validée ».
+
+  app.post('/commande', { preHandler: requireAccount, config: { rateLimit: { max: env.CONTACT_RATE_LIMIT, timeWindow: '1 hour' } } }, async (req, reply) => {
+    const me = req.account!
+    const parsed = devisBody.safeParse(req.body)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]
+      return reply.code(400).send({ error: issue?.message ?? 'Données invalides.', field: issue?.path.length ? issue.path.join('.') : undefined })
+    }
+    const provider = paymentProvider()
+    if (!provider) return reply.code(503).send({ error: 'Le paiement en ligne n’est pas encore ouvert. Enregistrez votre devis : l’atelier vous confirmera la suite.' })
+    const priced = await priceBody(parsed.data, me.type === 'professionnel')
+    if ('error' in priced) return reply.code(priced.status).send({ error: priced.error, field: priced.field })
+    const { lines, totals, distanceKm } = priced
+    const origin = baseUrl(req)
+    const pieces = lines.reduce((s, l) => s + l.quantite, 0)
+    const [p] = await db
+      .insert(payments)
+      .values({
+        clientId: me.clientId,
+        provider: provider.name,
+        montantTtc: totals.ttc,
+        panier: {
+          lignes: [],
+          livraison: parsed.data.livraison,
+          distanceKm,
+          totals: { brut: totals.brut, livraisonPrix: totals.livraisonPrix, ht: totals.ht, tauxTva: totals.tauxTva, tva: totals.tva, ttc: totals.ttc, delaiJours: totals.delaiJours },
+          origin,
+          surMesure: { lignes: lines, notes: parsed.data.notes, remisePro: totals.remisePro, complementMinimum: totals.complementMinimum },
+        },
+      })
+      .returning()
+    try {
+      const checkout = await provider.createCheckout({
+        paymentId: p!.id,
+        montantCents: Math.round(totals.ttc * 100),
+        description: `Alu Pliage Service : ${pieces} pièce${pieces > 1 ? 's' : ''} sur mesure`,
+        email: me.email,
+        successUrl: `${origin}/boutique/commande/${p!.id}`,
+        cancelUrl: `${origin}/configurateur`,
+      })
+      await db.update(payments).set({ providerRef: checkout.ref }).where(eq(payments.id, p!.id))
+      await audit(req, 'boutique.checkout_started', { ...who(me), targetType: 'payment', targetId: p!.id, details: { montant: p!.montantTtc, articles: pieces, prestataire: provider.name, surMesure: true } })
+      return reply.code(201).send({ id: p!.id, url: checkout.url })
+    } catch (e) {
+      await failPayment(p!.id)
+      if (e instanceof PaymentError) return reply.code(502).send({ error: e.message })
+      throw e
+    }
   })
 
   // --- Boutique : payer son panier ---
@@ -226,7 +343,7 @@ export async function espaceRoutes(app: FastifyInstance) {
     const p = await ownPayment((req.params as { id: string }).id, req.account!.clientId, reply)
     if (!p) return
     const [o] = p.orderId ? await db.select({ id: orders.id, numero: orders.numero }).from(orders).where(eq(orders.id, p.orderId)) : []
-    return { id: p.id, statut: p.statut, montantTtc: p.montantTtc, commande: o ?? null, simulation: p.provider === 'simulation' }
+    return { id: p.id, statut: p.statut, montantTtc: p.montantTtc, commande: o ?? null, simulation: p.provider === 'simulation', surMesure: !!p.panier.surMesure }
   })
 
   // Faux paiement, pour le développement et les tests : jamais disponible avec un vrai prestataire

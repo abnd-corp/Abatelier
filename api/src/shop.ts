@@ -7,7 +7,7 @@ import { GeoUnavailable } from './geo.js'
 import { auditSystem } from './audit.js'
 import { loadCatalog } from './orders.js'
 import { alertRecipients, sendMail, withTimeout } from './mail.js'
-import { addWorkingDays, cents } from './quote.js'
+import { addWorkingDays, cents, lineValues } from './quote.js'
 import { todayParis } from './departures.js'
 import { clientName } from './routes/clients.js'
 
@@ -136,7 +136,7 @@ export async function confirmPayment(paymentId: string, providerPayment: string 
       .insert(orders)
       .values({
         numero: label,
-        kind: 'boutique',
+        kind: c.surMesure ? 'sur_mesure' : 'boutique',
         statut: 'validee',
         clientId: p.clientId,
         livraisonMode: livraison.mode,
@@ -145,8 +145,9 @@ export async function confirmPayment(paymentId: string, providerPayment: string 
         livraisonVille: livraison.mode === 'livraison' ? livraison.ville : null,
         distanceKm: c.distanceKm,
         brut: c.totals.brut,
-        remisePro: 0,
-        complementMinimum: 0,
+        remisePro: c.surMesure?.remisePro ?? 0,
+        complementMinimum: c.surMesure?.complementMinimum ?? 0,
+        notes: c.surMesure?.notes ?? null,
         livraisonPrix: c.totals.livraisonPrix,
         ht: c.totals.ht,
         tauxTva: c.totals.tauxTva,
@@ -158,31 +159,33 @@ export async function confirmPayment(paymentId: string, providerPayment: string 
       })
       .returning()
     await tx.insert(orderLines).values(
-      c.lignes.map((l, position) => {
-        const total = cents(l.quantite * l.prixHt)
-        return {
-          orderId: o!.id,
-          position,
-          repere: null,
-          variantId: l.variantId,
-          modeleLabel: l.produit,
-          cap: 0,
-          materialLabel: l.libelle,
-          colorLabel: '',
-          colorHex: '#cdd1d4',
-          cotes: [],
-          angles: [],
-          longueur: 0,
-          quantite: l.quantite,
-          accessoires: [],
-          prixUnitaire: l.prixHt,
-          remiseQuantite: 0,
-          montantPieces: total,
-          montantAccessoires: 0,
-          miseEnRoute: 0,
-          total,
-        }
-      }),
+      c.surMesure
+        ? lineValues(o!.id, c.surMesure.lignes)
+        : c.lignes.map((l, position) => {
+            const total = cents(l.quantite * l.prixHt)
+            return {
+              orderId: o!.id,
+              position,
+              repere: null,
+              variantId: l.variantId,
+              modeleLabel: l.produit,
+              cap: 0,
+              materialLabel: l.libelle,
+              colorLabel: '',
+              colorHex: '#cdd1d4',
+              cotes: [],
+              angles: [],
+              longueur: 0,
+              quantite: l.quantite,
+              accessoires: [],
+              prixUnitaire: l.prixHt,
+              remiseQuantite: 0,
+              montantPieces: total,
+              montantAccessoires: 0,
+              miseEnRoute: 0,
+              total,
+            }
+          }),
     )
     await tx.insert(orderEvents).values([
       { orderId: o!.id, statut: 'recue', userId: null, note: 'Commande payée en ligne' },
@@ -214,15 +217,18 @@ async function afterPayment(p: Payment, order: { id: string; numero: string }) {
     const origin = p.panier.origin
     const nom = clientName(c)
     const euros = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }).replace(/[  ]/g, ' ')
-    const articles = p.panier.lignes.map((l) => `  - ${l.quantite} × ${l.produit} (${l.libelle})`).join('\n')
+    const sm = p.panier.surMesure
+    const articles = sm
+      ? sm.lignes.map((l) => `  - ${l.quantite} × ${l.modeleLabel}${l.repere ? ` « ${l.repere} »` : ''} (${l.materialLabel}, ${l.colorLabel})`).join('\n')
+      : p.panier.lignes.map((l) => `  - ${l.quantite} × ${l.produit} (${l.libelle})`).join('\n')
     const to = await alertRecipients()
     if (to.length) {
       await withTimeout(
         sendMail({
           kind: 'contact',
           to,
-          subject: `Commande boutique payée : ${order.numero} (${euros(p.montantTtc)})`,
-          text: `${nom} <${c.email}> vient de payer sa commande ${order.numero} sur la boutique, ${euros(p.montantTtc)} TTC.\n\n${articles}\n\nLa commande vaut contrat : elle est déjà validée et visible dans Fabrication. Si elle n’est finalement pas réalisable, vous pouvez la refuser, ce qui rembourse le client.\n${origin}/commandes/${order.id}`,
+          subject: `${sm ? 'Commande sur mesure' : 'Commande boutique'} payée : ${order.numero} (${euros(p.montantTtc)})`,
+          text: `${nom} <${c.email}> vient de payer sa commande ${order.numero} ${sm ? 'depuis le configurateur' : 'sur la boutique'}, ${euros(p.montantTtc)} TTC.\n\n${articles}\n\nLa commande vaut contrat : elle est déjà validée et visible dans Fabrication. Si elle n’est finalement pas réalisable, vous pouvez la refuser, ce qui rembourse le client.\n${origin}/commandes/${order.id}`,
           replyTo: c.email ?? undefined,
           targetType: 'order',
           targetId: order.id,

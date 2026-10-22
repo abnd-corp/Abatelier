@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { auditLog, clients, colors, contactRequests, materials, orders, siteContent } from '../src/db/schema.js'
+import { auditLog, billingDocuments, clients, colors, contactRequests, materials, orders, siteContent } from '../src/db/schema.js'
 import { env } from '../src/env.js'
 import { resetReviewsCache } from '../src/google-reviews.js'
 import { buildApp, client, createUser, loginAs, M, makePng, resetDb, seedModels, type App, type Client } from './helpers.js'
@@ -365,6 +365,20 @@ describe('Configurateur public', () => {
     expect(pub.totals.ttc).toBeGreaterThan(0)
     // Un chiffrage ne crée ni commande ni client
     expect(await db.select().from(orders)).toHaveLength(0)
+  })
+
+  it('donne une estimation PDF sans compte, sans numéro de devis, sans rien enregistrer', async () => {
+    const res = await visitor.post('/api/public/configurateur/estimation.pdf', config())
+    expect(res.statusCode, res.body).toBe(200)
+    expect(res.headers['content-type']).toBe('application/pdf')
+    expect(res.headers['set-cookie']).toBeUndefined()
+    expect(res.rawPayload.subarray(0, 5).toString()).toBe('%PDF-')
+    expect(await db.select().from(orders)).toHaveLength(0)
+    expect(await db.select().from(billingDocuments)).toHaveLength(0)
+    // Les erreurs de saisie sont les mêmes que pour le chiffrage
+    const bad = await visitor.post('/api/public/configurateur/estimation.pdf', config({ lignes: [] }))
+    expect(bad.statusCode).toBe(400)
+    expect(bad.json().error).toMatch(/au moins une pièce/)
   })
 
   it('refuse ce que la plieuse ne sait pas faire, avec le champ concerné', async () => {

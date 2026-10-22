@@ -5,11 +5,13 @@ import PhotoPlaceholder from '@/components/site/PhotoPlaceholder.vue'
 import { eur } from '@/lib/catalog'
 import { loadBoutique, QUANTITE_MAX, type BoutiqueData } from '@/lib/boutique'
 import { paragraphs } from '@/lib/site'
+import { useEspaceStore } from '@/stores/espace'
 import { usePanierStore } from '@/stores/panier'
 
 // Fiche d'un produit : photo, description, choix de la déclinaison et ajout au panier
 const props = defineProps<{ id: string }>()
 const panier = usePanierStore()
+const espace = useEspaceStore()
 const data = ref<BoutiqueData | null>(null)
 const error = ref('')
 const variantId = ref('')
@@ -17,6 +19,7 @@ const quantite = ref(1)
 const ajoute = ref(false)
 
 onMounted(async () => {
+  espace.ensureLoaded()
   try {
     data.value = await loadBoutique()
   } catch (e) {
@@ -29,7 +32,7 @@ const variante = computed(() => produit.value?.variantes.find((v) => v.id === va
 const total = computed(() => (variante.value ? Math.round(variante.value.prixTtc * Math.max(1, quantite.value) * 100) / 100 : 0))
 
 function add() {
-  if (!variante.value) return
+  if (!variante.value || !espace.compte) return
   const q = Math.min(QUANTITE_MAX, Math.max(1, Math.floor(Number(quantite.value) || 1)))
   quantite.value = q
   panier.add(variante.value.id, q)
@@ -71,7 +74,12 @@ watch([variantId, quantite], () => (ajoute.value = false))
             <input id="b-quantite" v-model.number="quantite" class="input" type="number" inputmode="numeric" min="1" :max="QUANTITE_MAX" />
           </div>
           <p v-if="variante" class="total"><span class="muted">Total</span> <b>{{ eur(total) }}</b> <span class="muted">TTC</span></p>
-          <p><button class="s-btn primary big" type="submit" :disabled="!variante">Ajouter au panier</button></p>
+          <p><button class="s-btn primary big" type="submit" :disabled="!variante || !espace.compte" :aria-describedby="espace.loaded && !espace.compte ? 'b-compte' : undefined">Ajouter au panier</button></p>
+          <p v-if="espace.loaded && !espace.compte" id="b-compte" class="alert" role="status">
+            Il faut un espace client pour commander dans la boutique.
+            <RouterLink :to="{ name: 'espace-inscription', query: { redirect: $route.fullPath } }">Créer mon espace</RouterLink> ·
+            <RouterLink :to="{ name: 'espace-connexion', query: { redirect: $route.fullPath } }">Me connecter</RouterLink>
+          </p>
           <p v-if="ajoute" class="alert ok" role="status">Ajouté au panier. <RouterLink :to="{ name: 'site-panier' }">Voir mon panier</RouterLink> · <RouterLink :to="{ name: 'site-boutique' }">Continuer mes achats</RouterLink></p>
         </form>
         <p class="muted small">Livraison ou retrait à l’atelier au moment de la commande. Une dimension particulière ? <RouterLink :to="{ name: 'site-configurateur' }">Composez votre pièce</RouterLink>.</p>
