@@ -41,8 +41,14 @@ test.describe('Limites de pliage et vue 3D', () => {
 
     // Vue 3D, chargée à la demande
     await piece.getByRole('button', { name: '3D' }).click()
-    await expect(piece.getByRole('img', { name: 'Pièce 1 en 3D' })).toBeVisible()
-    await expect(piece).toContainText('Glissez pour tourner')
+    // Sans WebGL (Firefox sans carte graphique, comme sur la CI), la vue le dit au lieu de planter
+    const webgl = await adminPage.evaluate(() => !!document.createElement('canvas').getContext('webgl2'))
+    if (webgl) {
+      await expect(piece.getByRole('img', { name: 'Pièce 1 en 3D' })).toBeVisible()
+      await expect(piece).toContainText('Glissez pour tourner')
+    } else {
+      await expect(piece).toContainText('La vue 3D n’est pas disponible sur cet appareil.')
+    }
     await piece.getByRole('button', { name: 'Profil' }).click()
     await expect(piece.getByRole('img', { name: 'Profil de la pièce 1' })).toBeVisible()
   })
