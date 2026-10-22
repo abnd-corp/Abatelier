@@ -59,7 +59,7 @@ make bdd-minimale               # remonte la base de dev avec le strict nécessa
 make mdp COMPTE=admin           # mot de passe oublié : un mot de passe provisoire est affiché une fois
 ```
 
-Les deux premières commandes **remplacent toute la base de dev** (une sauvegarde est faite avant : `make backups`, `make restore`). Elles refusent de tourner en production et ne touchent jamais à la base des tests. Comptes de démonstration : `demo-direction`, `demo-rh`, `demo-atelier` (mot de passe `Demo-Alu-Pliage-2026!`, public : ce sont des données inventées). Pour essayer sans risque : `BDD_NOM=patalu_essai ./scripts/bdd.sh demo --oui`.
+Les deux premières commandes **remplacent toute la base de dev** (une sauvegarde est faite avant : `make backups`, `make restore`). Elles refusent de tourner en production et ne touchent jamais à la base des tests. Comptes de démonstration : `demo-direction`, `demo-rh`, `demo-atelier` (mot de passe `Demo-Alu-Pliage-2026!`, public : ce sont des données inventées). Pour essayer sans risque : `BDD_NOM=abatelier_essai ./scripts/bdd.sh demo --oui`.
 
 `make demo` et `make demo-boutique` existent toujours : le premier remplit une base **vide**, le second **ajoute** la boutique et le stock sans rien supprimer.
 
@@ -93,7 +93,7 @@ Les failles de sécurité déclenchent une PR immédiate, sans attendre le lundi
 
 Une fonctionnalité n'est pas terminée tant qu'elle n'a pas :
 
-1. **Des tests d'API** (`api/test/*.test.ts`, Vitest + `app.inject` sur la base `patalu_test`). Ils couvrent le cas normal, les erreurs de validation, les droits par rôle (401 et 403) et l'écriture dans le journal.
+1. **Des tests d'API** (`api/test/*.test.ts`, Vitest + `app.inject` sur la base `abatelier_test`). Ils couvrent le cas normal, les erreurs de validation, les droits par rôle (401 et 403) et l'écriture dans le journal.
 2. **Des tests de composants** (`web/test/*.spec.ts`, Vitest + @vue/test-utils, fetch simulé avec `mockApi`) pour chaque vue ou composant ajouté.
 3. **Un test Playwright** (`e2e/tests/*.spec.ts`) pour le parcours utilisateur, qui tourne sur Chromium **et** Firefox.
 4. **Les contrôles de sécurité** :

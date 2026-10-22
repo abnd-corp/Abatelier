@@ -13,7 +13,7 @@ const defaults: Record<string, string> = {
   GEO_FAKE: '1',
 }
 if (!process.env.DATABASE_URL) {
-  Object.assign(defaults, { DB_HOST: 'localhost', DB_NAME: 'patalu_test', DB_PASSWORD_FILE: '../secrets/db_password.txt' })
+  Object.assign(defaults, { DB_HOST: 'localhost', DB_NAME: 'abatelier_test', DB_PASSWORD_FILE: '../secrets/db_password.txt' })
 }
 for (const [k, v] of Object.entries(defaults)) process.env[k] ??= v
 

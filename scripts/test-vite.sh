@@ -8,7 +8,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 DEPUIS="${DEPUIS:-HEAD}"
-E2E=(docker compose -p patalu-e2e -f compose.yaml -f compose.e2e.yaml)
+E2E=(docker compose -p abatelier-e2e -f compose.yaml -f compose.e2e.yaml)
 
 changed=$({ git diff --name-only "$DEPUIS"; git ls-files --others --exclude-standard; } | sort -u)
 if [ -z "$changed" ]; then

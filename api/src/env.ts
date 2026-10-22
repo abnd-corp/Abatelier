@@ -26,8 +26,8 @@ const schema = z.object({
   DATABASE_URL: z.url().optional(),
   DB_HOST: z.string().default('localhost'),
   DB_PORT: z.coerce.number().int().default(5432),
-  DB_NAME: z.string().default('patalu'),
-  DB_USER: z.string().default('patalu'),
+  DB_NAME: z.string().default('abatelier'),
+  DB_USER: z.string().default('abatelier'),
   DB_PASSWORD: z.string().optional(),
   // Session « Rester connecté » : prolongée tant que l'utilisateur revient
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(30),

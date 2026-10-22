@@ -1,4 +1,4 @@
-# Patalu : espace atelier
+# Abatelier : espace atelier
 
 | Dossier | Contenu |
 |---|---|
@@ -26,7 +26,7 @@ Le premier compte, avec le rôle Direction, s'appelle `ADMIN_IDENTIFIANT` (par d
 
 ```bash
 make test-vite  # rapide : seulement les tests touchés par les fichiers modifiés (DEPUIS=dev pour toute la branche)
-make test-api   # tests des routes API, sur la base patalu_test (la base de dev doit tourner)
+make test-api   # tests des routes API, sur la base abatelier_test (la base de dev doit tourner)
 make test-web   # tests des composants Vue
 make e2e PAGE=catalogue ECRAN=firefox   # un parcours, un écran (chromium, firefox, telephone, tablette)
 make e2e        # Playwright sur une stack de prod jetable : Chromium et Firefox, plus téléphone et tablette pour le responsive
@@ -55,7 +55,7 @@ Le container `backup` sauvegarde la base **chaque nuit à 2h30** (heure de Paris
 make backup                                  # sauvegarde immédiate
 make backups                                 # liste
 make backup-verify                           # restaure la dernière dans une base temporaire et compare
-make restore fichier=patalu-…-manuel.dump    # vérifie le fichier, sauvegarde l'état actuel, puis restaure
+make restore fichier=abatelier-…-manuel.dump    # vérifie le fichier, sauvegarde l'état actuel, puis restaure
 make backup-export                           # copie tout dans ./backups
 ```
 

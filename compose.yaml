@@ -1,7 +1,7 @@
 # Base commune, durcie pour la production.
 #   Développement : docker compose up               (ajoute compose.override.yaml automatiquement)
 #   Production    : docker compose -f compose.yaml -f compose.prod.yaml up -d --build
-name: patalu
+name: abatelier
 
 x-hardening: &hardening
   restart: unless-stopped
@@ -16,8 +16,8 @@ services:
     # Le script de démarrage de Postgres a besoin de ces droits pour préparer son dossier
     cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
     environment:
-      POSTGRES_DB: patalu
-      POSTGRES_USER: patalu
+      POSTGRES_DB: abatelier
+      POSTGRES_USER: abatelier
       POSTGRES_PASSWORD_FILE: /run/secrets/db_password
     secrets: [db_password]
     volumes:
@@ -25,7 +25,7 @@ services:
     tmpfs: [/var/run/postgresql, /tmp]
     networks: [backend]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U patalu -d patalu"]
+      test: ["CMD-SHELL", "pg_isready -U abatelier -d abatelier"]
       interval: 5s
       timeout: 3s
       retries: 10

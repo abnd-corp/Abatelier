@@ -1,5 +1,5 @@
 {
-  "name": "patalu-outils",
+  "name": "abatelier-outils",
   "private": true,
   "description": "Linter et formateur partagés par api/, web/ et e2e/ (« make lint », « make format »)",
   "type": "module",

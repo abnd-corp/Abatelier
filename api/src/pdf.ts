@@ -161,7 +161,7 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
     info: {
       Title: clean(data.estimation ? 'Estimation' : `${TITRES[data.type]} ${data.numero}`),
       Author: clean(company.raisonSociale),
-      ...(facturx ? { Creator: 'Patalu', Producer: 'Patalu', CreationDate: data.date } : {}),
+      ...(facturx ? { Creator: 'Abatelier', Producer: 'Abatelier', CreationDate: data.date } : {}),
     },
     ...(facturx ? { pdfVersion: '1.7' as const, subset: 'PDF/A-3b' as const } : {}),
   })

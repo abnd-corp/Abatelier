@@ -1,6 +1,6 @@
 PROD = docker compose -f compose.yaml -f compose.prod.yaml
-E2E = docker compose -p patalu-e2e -f compose.yaml -f compose.e2e.yaml
-# Même projet « patalu » en dev et en prod : ces commandes marchent sur les deux
+E2E = docker compose -p abatelier-e2e -f compose.yaml -f compose.e2e.yaml
+# Même projet « abatelier » en dev et en prod : ces commandes marchent sur les deux
 BASE = docker compose -f compose.yaml
 BK = $(BASE) exec -T backup /bin/sh /opt/backup/backup.sh
 # Filtres de « make e2e » : PAGE=catalogue (cherché dans le nom du fichier et le titre des tests),
@@ -59,7 +59,7 @@ test: test-api test-web e2e ## Lance tous les tests (API, composants, Playwright
 test-vite: ## Rejoue seulement les tests touchés par les fichiers modifiés (DEPUIS=dev pour comparer à une branche)
 	$(if $(DEPUIS),DEPUIS=$(DEPUIS)) ./scripts/test-vite.sh
 
-test-api: ## Tests des routes API (base patalu_test, lancer « make dev-d » avant)
+test-api: ## Tests des routes API (base abatelier_test, lancer « make dev-d » avant)
 	cd api && npm test
 
 test-web: ## Tests des composants Vue
@@ -109,7 +109,7 @@ backups: ## Liste les sauvegardes
 backup-verify: ## Restaure la dernière sauvegarde dans une base temporaire et vérifie
 	$(BK) verify
 
-restore: ## Restaure une sauvegarde : make restore fichier=patalu-AAAA-MM-JJ_HHMMSS-manuel.dump
+restore: ## Restaure une sauvegarde : make restore fichier=abatelier-AAAA-MM-JJ_HHMMSS-manuel.dump
 	@test -n "$(fichier)" || { echo "Usage : make restore fichier=… (voir « make backups »)"; exit 1; }
 	$(BK) check "$(fichier)"
 	$(BASE) stop api

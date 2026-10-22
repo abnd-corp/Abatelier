@@ -57,15 +57,15 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_USER: patalu
+          POSTGRES_USER: abatelier
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: patalu_test
+          POSTGRES_DB: abatelier_test
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U patalu -d patalu_test"
+          --health-cmd "pg_isready -U abatelier -d abatelier_test"
           --health-interval 5s --health-timeout 3s --health-retries 10
     env:
-      DATABASE_URL: postgres://patalu:test@localhost:5432/patalu_test
+      DATABASE_URL: postgres://abatelier:test@localhost:5432/abatelier_test
     defaults:
       run:
         working-directory: api
@@ -117,7 +117,7 @@ jobs:
     name: E2E (Chromium + Firefox)
     runs-on: ubuntu-latest
     env:
-      COMPOSE: docker compose -p patalu-e2e -f compose.yaml -f compose.e2e.yaml
+      COMPOSE: docker compose -p abatelier-e2e -f compose.yaml -f compose.e2e.yaml
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -150,7 +150,7 @@ jobs:
     name: Sauvegardes
     runs-on: ubuntu-latest
     env:
-      COMPOSE: docker compose -p patalu-ci -f compose.yaml
+      COMPOSE: docker compose -p abatelier-ci -f compose.yaml
     steps:
       - uses: actions/checkout@v4
       - name: Secrets jetables
@@ -160,14 +160,14 @@ jobs:
       - name: Sauvegarder, vérifier, perdre les données, restaurer
         run: |
           BK="$COMPOSE exec -T backup /bin/sh /opt/backup/backup.sh"
-          Q="$COMPOSE exec -T db psql -U patalu -d patalu -Atc"
+          Q="$COMPOSE exec -T db psql -U abatelier -d abatelier -Atc"
 
           $BK now ci
           $COMPOSE exec -T -e BACKUP_VERIFY_STRICT=1 backup /bin/sh /opt/backup/backup.sh verify
 
           avant=$($Q "select count(*) from users")
           $Q "delete from users"
-          f=$($BK list | grep -o 'patalu-[^ ]*-ci.dump' | head -1)
+          f=$($BK list | grep -o 'abatelier-[^ ]*-ci.dump' | head -1)
           $BK check "$f"
           $BK restore "$f"
           apres=$($Q "select count(*) from users")

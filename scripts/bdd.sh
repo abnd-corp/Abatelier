@@ -8,7 +8,7 @@
 #
 # Une sauvegarde est faite d'abord (« make backups », « make restore »). Jamais en production.
 #   --oui          ne demande pas confirmation
-# Pour essayer sans toucher à la base de dev : BDD_NOM=patalu_essai scripts/bdd.sh demo --oui
+# Pour essayer sans toucher à la base de dev : BDD_NOM=abatelier_essai scripts/bdd.sh demo --oui
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -19,10 +19,10 @@ case "$mode" in minimale | demo) ;; *)
   ;;
 esac
 oui="${2:-}"
-nom="${BDD_NOM:-patalu}"
+nom="${BDD_NOM:-abatelier}"
 dc="docker compose"
 
-case "$nom" in patalu_test | postgres | template0 | template1)
+case "$nom" in abatelier_test | postgres | template0 | template1)
   echo "✗ Base « $nom » interdite : c'est celle des tests ou du serveur."
   exit 1
   ;;
@@ -35,12 +35,12 @@ fi
 
 if [ "$oui" != "--oui" ]; then
   echo "Cela va REMPLACER tout le contenu de la base « $nom » par la base « $mode »."
-  [ "$nom" = "patalu" ] && echo "(une sauvegarde est faite avant : « make backups » pour la retrouver)"
+  [ "$nom" = "abatelier" ] && echo "(une sauvegarde est faite avant : « make backups » pour la retrouver)"
   read -r -p "Taper « oui » pour continuer : " reponse
   [ "$reponse" = "oui" ] || { echo "Annulé."; exit 1; }
 fi
 
-if [ "$nom" = "patalu" ]; then
+if [ "$nom" = "abatelier" ]; then
   echo "→ Sauvegarde de la base actuelle"
   $dc exec -T backup /bin/sh /opt/backup/backup.sh now avant-remise-a-zero | tail -1
   echo "→ Arrêt de l'API"
@@ -48,11 +48,11 @@ if [ "$nom" = "patalu" ]; then
 fi
 
 echo "→ Base « $nom » recréée"
-psql() { $dc exec -T db psql -U patalu -d postgres -v ON_ERROR_STOP=1 -q "$@"; }
+psql() { $dc exec -T db psql -U abatelier -d postgres -v ON_ERROR_STOP=1 -q "$@"; }
 psql -c "DROP DATABASE IF EXISTS \"$nom\" WITH (FORCE)"
-psql -c "CREATE DATABASE \"$nom\" OWNER patalu"
+psql -c "CREATE DATABASE \"$nom\" OWNER abatelier"
 
-if [ "$nom" = "patalu" ]; then
+if [ "$nom" = "abatelier" ]; then
   echo "→ Démarrage de l'API (schéma, catalogue de départ, compte admin)"
   $dc up -d --wait api >/dev/null
   run() { $dc exec -T api "$@"; }
@@ -71,7 +71,7 @@ fi
 
 echo
 echo "✓ Base « $nom » prête ($mode)."
-if [ "$nom" = "patalu" ]; then
+if [ "$nom" = "abatelier" ]; then
   echo "  Compte admin : admin, mot de passe dans secrets/admin_password.txt"
 fi
 if [ "$mode" = "demo" ]; then
