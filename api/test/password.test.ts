@@ -84,7 +84,7 @@ describe('POST /api/auth/password', () => {
 
 describe('Mot de passe temporaire', () => {
   it('bloque l’application tant que le mot de passe n’est pas changé', async () => {
-    await createUser({ identifiant: 'chef', role: 'admin', mustChangePassword: true })
+    await createUser({ identifiant: 'chef', role: 'direction', mustChangePassword: true })
     const c = await loginAs(app, 'chef')
     expect((await c.get('/api/auth/me')).statusCode).toBe(200)
     expect((await c.get('/api/auth/sessions')).statusCode).toBe(200)
@@ -94,7 +94,7 @@ describe('Mot de passe temporaire', () => {
   })
 
   it('débloque après le changement', async () => {
-    const u = await createUser({ identifiant: 'chef', role: 'admin', mustChangePassword: true })
+    const u = await createUser({ identifiant: 'chef', role: 'direction', mustChangePassword: true })
     const c = await loginAs(app, 'chef')
     const res = await c.post('/api/auth/password', { current: PASSWORD, next: NEW })
     expect(res.json().user.mustChangePassword).toBe(false)

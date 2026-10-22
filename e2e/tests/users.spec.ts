@@ -1,12 +1,14 @@
 import { apiLogin, createUser, expect, NEW_PASSWORD, test, uiLogin } from './fixtures'
 
 test.describe('Arrivée et départ d’un employé', () => {
-  test('l’admin crée un compte, l’employé choisit son mot de passe, l’admin le désactive', async ({ adminPage, browser, baseURL, uid }) => {
+  test('l’admin crée un compte, l’employé choisit son mot de passe, l’admin le désactive', async ({ adminPage, browser, uid }) => {
     const nom = `Employé ${uid.slice(-6)}`
 
     // 1. L'admin crée le compte depuis l'interface
     await adminPage.goto('/utilisateurs')
-    await adminPage.getByRole('button', { name: 'Ajouter un utilisateur' }).click()
+    await adminPage.getByRole('button', { name: 'Ajouter un compte' }).click()
+    // Le rôle RH n'est plus proposé (gardé dans le code pour une V2)
+    await expect(adminPage.locator('#new-role option')).toHaveText([/^Atelier/, /^Direction/])
     await adminPage.getByLabel('Nom affiché').fill(nom)
     await adminPage.getByLabel('Identifiant de connexion').fill(uid)
     await adminPage.getByRole('button', { name: 'Créer le compte' }).click()
@@ -33,13 +35,13 @@ test.describe('Arrivée et départ d’un employé', () => {
     await employee.locator('#pw-next').fill(NEW_PASSWORD)
     await employee.locator('#pw-confirm').fill(NEW_PASSWORD)
     await employee.getByRole('button', { name: 'Changer le mot de passe' }).click()
-    await expect(employee).toHaveURL('/')
+    await expect(employee).toHaveURL('/tableau-de-bord')
 
     // 4. Rôle atelier : pas d'accès à la gestion des comptes ni au journal
     const nav = employee.getByRole('navigation', { name: 'Navigation principale' })
-    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord'])
+    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication', 'Stock de feuilles'])
     await employee.goto('/utilisateurs')
-    await expect(employee).toHaveURL('/')
+    await expect(employee).toHaveURL('/tableau-de-bord')
 
     // 5. Départ : l'admin désactive le compte
     await adminPage.reload()
@@ -55,7 +57,7 @@ test.describe('Arrivée et départ d’un employé', () => {
     await employee.getByLabel('Identifiant').fill(uid)
     await employee.getByLabel('Mot de passe', { exact: true }).fill(NEW_PASSWORD)
     await employee.getByRole('button', { name: 'Se connecter' }).click()
-    await expect(employee.getByRole('alert')).toHaveText('Ce compte est désactivé. Contactez l’administrateur.')
+    await expect(employee.getByRole('alert')).toHaveText('Ce compte est désactivé. Contactez la direction.')
     await employee.context().close()
   })
 

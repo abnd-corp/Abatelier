@@ -1,0 +1,110 @@
+/* Styles communs aux formulaires de réglages du catalogue (façonnage, livraison).
+   Importé sans portée « scoped » : tout est préfixé par .settings pour ne rien toucher ailleurs. */
+.settings {
+  display: grid;
+  gap: 14px;
+}
+.settings .groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.settings .group {
+  margin: 0;
+  padding: 16px 20px 20px;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.settings .row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.settings .unit {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.settings .unit:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.settings .unit .input {
+  border: 0;
+  box-shadow: none !important;
+  text-align: right;
+  min-width: 0;
+}
+.settings .unit > span {
+  padding: 0 12px 0 4px;
+  color: var(--muted);
+  font-family: var(--f-mono);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.settings .unit:has([aria-invalid='true']) {
+  border-color: var(--bad);
+}
+.settings .unit.small {
+  width: 120px;
+}
+.settings .unit.tiny {
+  width: 86px;
+}
+/* Champs à largeur raisonnable : le nombre reste près de son libellé */
+.settings .group > .field .unit,
+.settings .row .unit {
+  max-width: 240px;
+}
+.settings .hint {
+  font-size: 0.8rem;
+}
+.settings .tiers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.settings .tiers li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+.settings .btn.icon {
+  padding-inline: 8px;
+}
+.settings .savebar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, var(--bg) 35%);
+}
+.settings .state {
+  margin-right: auto;
+  font-size: 0.86rem;
+}
+.settings .check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 0.9rem;
+}
+.settings .check input {
+  accent-color: var(--accent);
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  flex: none;
+}

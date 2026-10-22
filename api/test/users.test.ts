@@ -11,7 +11,7 @@ beforeEach(async () => {
 afterEach(() => app.close())
 beforeEach(async () => {
   await resetDb()
-  adminId = (await createUser({ identifiant: 'chef', nom: 'Le Chef', role: 'admin' })).id
+  adminId = (await createUser({ identifiant: 'chef', nom: 'Le Chef', role: 'direction' })).id
   admin = await loginAs(app, 'chef')
 })
 
@@ -23,8 +23,8 @@ describe('Accès', () => {
     const c = await loginAs(app, 'paul')
     const responses = await Promise.all([
       c.get('/api/users'),
-      c.post('/api/users', { identifiant: 'x', nom: 'X', role: 'admin' }),
-      c.patch(`/api/users/${u.id}`, { role: 'admin' }),
+      c.post('/api/users', { identifiant: 'x', nom: 'X', role: 'direction' }),
+      c.patch(`/api/users/${u.id}`, { role: 'direction' }),
       c.post(`/api/users/${adminId}/disable`),
       c.post(`/api/users/${u.id}/enable`),
       c.post(`/api/users/${adminId}/reset-password`),
@@ -47,7 +47,7 @@ describe('Création', () => {
     expect(tempPassword).toMatch(/^[A-Za-z0-9]{4}(-[A-Za-z0-9]{4}){3}$/)
     const login = await client(app).post('/api/auth/login', { identifiant: 'paul', password: tempPassword })
     expect(login.statusCode).toBe(200)
-    expect(login.json().user).toMatchObject({ nom: 'Paul Martin', mustChangePassword: true, permissions: [] })
+    expect(login.json().user).toMatchObject({ nom: 'Paul Martin', mustChangePassword: true, permissions: ['orders.production', 'stock.manage'] })
     expect(await auditActions(adminId)).toContain('user.created')
   })
 
@@ -72,17 +72,17 @@ describe('Création', () => {
 describe('Modification', () => {
   it('change le rôle et le nom, et le note dans le journal', async () => {
     const u = await createUser({ identifiant: 'paul', nom: 'Paul' })
-    const res = await admin.patch(`/api/users/${u.id}`, { role: 'admin', nom: 'Paul Martin' })
+    const res = await admin.patch(`/api/users/${u.id}`, { role: 'direction', nom: 'Paul Martin' })
     expect(res.statusCode).toBe(200)
     const paul = await loginAs(app, 'paul')
-    expect((await paul.get('/api/auth/me')).json().user).toMatchObject({ role: 'admin', nom: 'Paul Martin' })
+    expect((await paul.get('/api/auth/me')).json().user).toMatchObject({ role: 'direction', nom: 'Paul Martin' })
     expect(await auditActions(adminId)).toContain('user.updated')
   })
 
   it('empêche de retirer le rôle au dernier administrateur', async () => {
     const res = await admin.patch(`/api/users/${adminId}`, { role: 'atelier' })
     expect(res.statusCode).toBe(400)
-    expect(res.json().error).toMatch(/au moins un administrateur/)
+    expect(res.json().error).toMatch(/au moins un compte Direction/)
   })
 
   it('répond 404 pour un utilisateur inconnu ou un id invalide', async () => {
@@ -113,7 +113,7 @@ describe('Départ d’un employé', () => {
   })
 
   it('permet de désactiver un autre admin tant qu’il en reste un', async () => {
-    const other = await createUser({ identifiant: 'adjoint', role: 'admin' })
+    const other = await createUser({ identifiant: 'adjoint', role: 'direction' })
     expect((await admin.post(`/api/users/${other.id}/disable`)).statusCode).toBe(200)
   })
 })

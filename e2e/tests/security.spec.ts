@@ -20,9 +20,9 @@ test.describe('Sécurité dans le navigateur', () => {
     page.on('request', (r) => !r.url().startsWith(baseURL!) && !r.url().startsWith('data:') && external.push(r.url()))
 
     await uiLogin(page, ADMIN.identifiant, ADMIN.password)
-    await expect(page.getByRole('heading', { name: 'Tableau de bord' })).toBeVisible()
-    for (const link of ['Utilisateurs', 'Journal']) {
-      await page.getByRole('link', { name: link }).click()
+    await expect(page.getByRole('heading', { name: /^Bonjour/ })).toBeVisible()
+    for (const link of ['Salariés', 'Comptes', 'Journal d’activité']) {
+      await page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: link }).click()
       await expect(page.getByRole('table')).toBeVisible()
     }
     expect(errors).toEqual([])
@@ -41,7 +41,7 @@ test.describe('Sécurité dans le navigateur', () => {
 
   test('le cookie de session est invisible pour JavaScript', async ({ page, context }) => {
     await uiLogin(page, ADMIN.identifiant, ADMIN.password)
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/tableau-de-bord')
     const cookie = (await context.cookies()).find((c) => c.name.endsWith('aps_session'))!
     expect(cookie.httpOnly).toBe(true)
     expect(cookie.sameSite).toBe('Lax')
@@ -50,7 +50,7 @@ test.describe('Sécurité dans le navigateur', () => {
 
   test('l’API refuse une requête envoyée depuis un autre site', async ({ adminPage }) => {
     const res = await adminPage.request.post('/api/users', {
-      data: { identifiant: 'pirate', nom: 'Pirate', role: 'admin' },
+      data: { identifiant: 'pirate', nom: 'Pirate', role: 'direction' },
       headers: { Origin: 'https://site-pirate.example' },
     })
     expect(res.status()).toBe(403)
@@ -62,7 +62,10 @@ test.describe('Sécurité dans le navigateur', () => {
     // Chromium garde une frame vide, Firefox n'en expose parfois aucune : on inspecte celles qui existent.
     await page.waitForTimeout(1500)
     const counts = await Promise.all(
-      page.frames().slice(1).map((f) => Promise.race([f.locator('#identifiant').count(), new Promise<number>((r) => setTimeout(() => r(0), 3000))])),
+      page
+        .frames()
+        .slice(1)
+        .map((f) => Promise.race([f.locator('#identifiant').count(), new Promise<number>((r) => setTimeout(() => r(0), 3000))])),
     )
     expect(counts.every((n) => n === 0)).toBe(true)
   })

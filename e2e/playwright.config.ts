@@ -2,6 +2,10 @@ import { defineConfig, devices } from '@playwright/test'
 
 const CI = !!process.env.CI
 
+// Les tests marqués @responsive tournent aussi sur téléphone et tablette.
+// Les autres parcours supposent un écran d'ordinateur (menu toujours visible).
+const RESPONSIVE = /@responsive/
+
 export default defineConfig({
   testDir: './tests',
   globalSetup: './global-setup.ts',
@@ -19,5 +23,9 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    // Téléphone Android : écran tactile, 412 px de large
+    { name: 'telephone', grep: RESPONSIVE, use: { ...devices['Pixel 7'] } },
+    // Tablette en portrait (taille d'iPad), moteur Chromium
+    { name: 'tablette', grep: RESPONSIVE, use: { ...devices['iPad (gen 7)'], browserName: 'chromium', defaultBrowserType: 'chromium' } },
   ],
 })

@@ -1,11 +1,35 @@
 # Stack jetable pour les tests Playwright : images de production, base vierge à chaque lancement.
 #   make e2e
 services:
+  # Boîte de réception de test : les tests y lisent les e-mails envoyés (http://localhost:8091/api/v1/messages)
+  mailpit:
+    image: axllent/mailpit:v1.31.6
+    ports:
+      - "127.0.0.1:${E2E_MAIL_PORT:-8091}:8025"
+    networks: [frontend]
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
   api:
+    depends_on:
+      mailpit: { condition: service_healthy }
     environment:
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      MAIL_FROM: "Alu Pliage Service <contact@aps.test>"
+      MAIL_ALERT_TO: "direction@aps.test"
       # Les tests se connectent beaucoup depuis la même IP : on relève la limite et on raccourcit les délais
       LOGIN_RATE_LIMIT: "1000"
       LOGIN_DELAY_BASE_MS: "50"
+      CONTACT_RATE_LIMIT: "1000"
+      QUOTE_RATE_LIMIT: "10000"
+      # Adresses localisées en dur, sans appeler les services de l'IGN (voir api/src/geo.ts)
+      GEO_FAKE: "1"
+      # Faux paiement en ligne : la boutique se teste de bout en bout sans prestataire
+      PAYMENT_PROVIDER: simulation
+      ALLOW_FAKE_PAYMENT: "true"
   web:
     ports:
       - "127.0.0.1:${E2E_PORT:-8090}:8080"

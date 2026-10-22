@@ -60,10 +60,7 @@ describe('Mon compte : mot de passe', () => {
   })
 
   it('après un mot de passe temporaire, ouvre l’application une fois changé', async () => {
-    const { wrapper, router } = await setup(
-      { ...ADMIN, mustChangePassword: true },
-      { 'POST /auth/password': [200, { user: ADMIN, closedSessions: 1 }] },
-    )
+    const { wrapper, router } = await setup({ ...ADMIN, mustChangePassword: true }, { 'POST /auth/password': [200, { user: ADMIN, closedSessions: 1 }] })
     expect(wrapper.text()).toContain('mot de passe est temporaire')
     expect(wrapper.get('label[for="pw-current"]').text()).toBe('Mot de passe temporaire')
     await wrapper.get('#pw-current').setValue('ABCD-efgh-2345-JKLM')

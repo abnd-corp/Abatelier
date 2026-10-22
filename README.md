@@ -1,4 +1,4 @@
-# Patalu : espace atelier
+# Abatelier : espace atelier
 
 | Dossier | Contenu |
 |---|---|
@@ -18,19 +18,22 @@ make setup     # hooks Git, .env, secrets/ et dépendances
 make dev       # http://localhost:5173 : l'API et le front se rechargent à chaque modification
 ```
 
-Le premier compte, administrateur, s'appelle `ADMIN_IDENTIFIANT` (par défaut `admin`). Son mot de passe est dans `secrets/admin_password.txt`. Le compte est créé au premier démarrage, si la base est vide.
+Le premier compte, avec le rôle Direction, s'appelle `ADMIN_IDENTIFIANT` (par défaut `admin`). Son mot de passe est dans `secrets/admin_password.txt`. Le compte est créé au premier démarrage, si la base est vide.
 
 `make help` liste toutes les commandes. En dev, l'API et le front se rechargent tout seuls à chaque modification. Il faut relancer `make dev` seulement après l'ajout d'un paquet npm, ou après une modification d'un Dockerfile ou d'un compose.
 
 ## Tests
 
 ```bash
-make test-api   # 76 tests des routes API, sur la base patalu_test (la base de dev doit tourner)
-make test-web   # 46 tests des composants Vue
-make e2e        # 16 parcours Playwright × 2 navigateurs, sur une stack de production jetable
+make test-vite  # rapide : seulement les tests touchés par les fichiers modifiés (DEPUIS=dev pour toute la branche)
+make test-api   # tests des routes API, sur la base abatelier_test (la base de dev doit tourner)
+make test-web   # tests des composants Vue
+make e2e PAGE=catalogue ECRAN=firefox   # un parcours, un écran (chromium, firefox, telephone, tablette)
+make e2e        # Playwright sur une stack de prod jetable : Chromium et Firefox, plus téléphone et tablette pour le responsive
+make apercu     # captures de toutes les pages (téléphone, tablette, ordinateur, clair et sombre) : apercus/index.html
 ```
 
-Chaque élément du site doit être couvert par des tests et des contrôles de sécurité avant d'être mergé. Le fonctionnement des branches est décrit dans [CONTRIBUTING.md](CONTRIBUTING.md).
+Chaque élément du site doit être couvert par des tests et des contrôles de sécurité avant d'être mergé. Les règles, les branches et les conventions sont dans [CONTRIBUTING.md](CONTRIBUTING.md). La suite du projet est dans la [feuille de route](docs/feuille-de-route.md).
 
 ## Production et staging
 
@@ -52,7 +55,7 @@ Le container `backup` sauvegarde la base **chaque nuit à 2h30** (heure de Paris
 make backup                                  # sauvegarde immédiate
 make backups                                 # liste
 make backup-verify                           # restaure la dernière dans une base temporaire et compare
-make restore fichier=patalu-…-manuel.dump    # vérifie le fichier, sauvegarde l'état actuel, puis restaure
+make restore fichier=abatelier-…-manuel.dump    # vérifie le fichier, sauvegarde l'état actuel, puis restaure
 make backup-export                           # copie tout dans ./backups
 ```
 
@@ -64,9 +67,28 @@ La CI vérifie à chaque PR qu'une sauvegarde se restaure vraiment après une pe
 
 | Compte | Rôle | Usage |
 |---|---|---|
-| `admin` | Administrateur | Uniquement pour gérer les comptes et lire le journal. Créé au premier démarrage. |
-| Un compte par personne | Atelier | Usage quotidien. Chaque action est tracée au nom de la personne. |
+| `admin` | Direction | Compte technique d'administration, créé au premier démarrage. |
+| Un compte par salarié | Atelier, RH ou Direction | Usage quotidien. Il est créé depuis la fiche salarié, et chaque action est tracée au nom de la personne. |
 | `atelier` (facultatif) | Atelier | Compte commun, par exemple pour le poste de l'atelier. |
+
+## Tarifs et catalogue
+
+Menu **Direction → Tarifs et catalogue** :
+- **Matières** : nom, épaisseur, prix HT au m² de développé, retour minimum ;
+- **Coloris** : référence, nom, teinte, majoration en %, délai supplémentaire ;
+- **Façonnage et conditions** : prix par pli et par mètre, mise en route, minimum de commande, remise pro, TVA, délai standard, paliers de remise quantité, limites des machines (largeur de tôle, longueurs, plis maximum).
+
+Rien n'est supprimé : on désactive, pour que les anciens devis restent lisibles. Chaque changement de prix est noté au journal avec l'ancienne et la nouvelle valeur (filtre « Catalogue et prix »). Le catalogue de départ reprend les valeurs de la maquette.
+
+## Salariés
+
+Menu **Équipe → Salariés** (Direction et RH) :
+- fiche avec poste, contrat, dates d'entrée et de sortie, coordonnées et notes internes ;
+- compte de connexion facultatif, créé en même temps que la fiche ou plus tard.
+
+Le jour de la date de sortie, le compte est **désactivé automatiquement** et la personne est déconnectée partout. Son historique reste dans le journal.
+
+Les comptes sans fiche (`admin`, poste partagé) se gèrent dans **Équipe → Comptes**.
 
 ## Modifier la base
 
@@ -90,10 +112,10 @@ La CI vérifie à chaque PR qu'une sauvegarde se restaure vraiment après une pe
 - Protection CSRF : l'API vérifie l'en-tête Origin.
 
 **Comptes**
-- Rôles admin et atelier, avec des permissions par rôle (`api/src/auth/permissions.ts`).
+- Rôles **Direction** (tout), **RH** (salariés, journal, sans les comptes) et **Atelier**, avec des permissions par rôle (`api/src/auth/permissions.ts`). Les espaces prévus sont décrits dans la [feuille de route](docs/feuille-de-route.md).
 - Mot de passe temporaire à la création, à changer à la première connexion.
 - Désactivation d'un compte au départ d'un employé : la personne est déconnectée partout et son historique est conservé.
-- Impossible de désactiver ou de rétrograder le dernier admin.
+- Impossible de désactiver ou de rétrograder le dernier compte Direction.
 
 **Journal**
 - Connexions, échecs et actions sur les comptes, avec auteur, IP et appareil.

@@ -14,6 +14,10 @@
   --warn-soft: #fbebd2;
   --bad: #b42318;
   --bad-soft: #fbe3df;
+  --info: #1a56b0;
+  --info-soft: #dce9fb;
+  --done: #0f6b6b;
+  --done-soft: #d6efee;
   --f-display: 'Archivo Variable', 'Arial Narrow', system-ui, sans-serif;
   --f-body: 'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --f-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
@@ -37,6 +41,10 @@
     --warn-soft: #3a2810;
     --bad: #ff8c80;
     --bad-soft: #3d1714;
+    --info: #7db3ff;
+    --info-soft: #14284a;
+    --done: #5fd3d0;
+    --done-soft: #0f3333;
     color-scheme: dark;
   }
 }
@@ -82,7 +90,8 @@ p {
 }
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
   color: inherit;
 }
@@ -301,4 +310,84 @@ button {
   display: block;
   font-size: 0.76rem;
   color: var(--muted);
+}
+
+/* Texte réservé aux lecteurs d'écran */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.pill.info {
+  background: var(--info-soft);
+  color: var(--info);
+  border-color: transparent;
+}
+.pill.done {
+  background: var(--done-soft);
+  color: var(--done);
+  border-color: transparent;
+}
+.pill.neutral {
+  background: var(--surface-2);
+}
+.pill.bad {
+  background: var(--bad-soft);
+  color: var(--bad);
+  border-color: transparent;
+}
+.btn svg {
+  flex: none;
+}
+
+/* Écrans tactiles : boutons plus grands, et champs en 16 px pour éviter le zoom automatique d'iOS */
+@media (pointer: coarse) {
+  .btn {
+    min-height: 44px;
+  }
+  .btn.small {
+    min-height: 36px;
+  }
+  .input,
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+  .chip {
+    min-height: 36px;
+  }
+}
+/* Sur téléphone, les colonnes secondaires des tableaux sont masquées */
+@media (max-width: 640px) {
+  .table .hide-sm {
+    display: none;
+  }
+  .table.fits-sm {
+    min-width: 0;
+  }
+  .page-head .btn {
+    width: 100%;
+  }
+}
+
+/* Titre d'une carte de formulaire (<fieldset class="card"><legend>) : à l'intérieur du cadre, en tête,
+   et non à cheval sur la bordure comme le veut le navigateur. Le « float » sort la légende de sa place spéciale. */
+fieldset.card > legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  font-family: var(--f-display);
+  font-stretch: 78%;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 1rem;
+}
+fieldset.card > legend + * {
+  clear: both;
 }

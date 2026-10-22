@@ -16,12 +16,27 @@ const GENERIC = 'Identifiant ou mot de passe incorrect.'
 
 describe('POST /api/auth/login', () => {
   it('connecte avec le bon mot de passe et ne renvoie jamais le hash', async () => {
-    const u = await createUser({ identifiant: 'paul', role: 'admin' })
+    const u = await createUser({ identifiant: 'paul', role: 'direction' })
     const res = await client(app).post('/api/auth/login', { identifiant: 'paul', password: PASSWORD })
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body.user).toMatchObject({ id: u.id, identifiant: 'paul', role: 'admin', mustChangePassword: false })
-    expect(body.user.permissions).toEqual(['users.manage', 'audit.read'])
+    expect(body.user).toMatchObject({ id: u.id, identifiant: 'paul', role: 'direction', mustChangePassword: false })
+    expect(body.user.permissions).toEqual([
+      'users.manage',
+      'employees.manage',
+      'audit.read',
+      'catalog.manage',
+      'documents.manage',
+      'clients.manage',
+      'clients.read',
+      'orders.manage',
+      'orders.production',
+      'billing.manage',
+      'site.manage',
+      'products.manage',
+      'stock.manage',
+    ])
+    expect(body.user.role).toBe('direction')
     expect(res.body).not.toContain('argon2')
     expect(res.body).not.toContain('passwordHash')
   })
@@ -110,9 +125,7 @@ describe('Verrouillage et délai progressif', () => {
   it('débloque après le délai et remet le compteur à zéro', async () => {
     await createUser({ identifiant: 'paul' })
     for (let i = 0; i < 5; i++) await client(app).post('/api/auth/login', { identifiant: 'paul', password: 'faux' })
-    await db
-      .update(loginAttempts)
-      .set({ lockedUntil: sql`now() - interval '1 minute'`, lastFailedAt: sql`now() - interval '16 minutes'` })
+    await db.update(loginAttempts).set({ lockedUntil: sql`now() - interval '1 minute'`, lastFailedAt: sql`now() - interval '16 minutes'` })
     const res = await client(app).post('/api/auth/login', { identifiant: 'paul', password: PASSWORD })
     expect(res.statusCode).toBe(200)
     expect(await db.select().from(loginAttempts)).toHaveLength(0)

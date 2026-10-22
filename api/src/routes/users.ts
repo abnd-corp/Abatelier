@@ -2,18 +2,14 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { and, asc, count, eq, gt, isNull, ne } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { ROLES, sessions, users } from '../db/schema.js'
+import { employees, ROLES, sessions, users } from '../db/schema.js'
 import { hashPassword } from '../auth/password.js'
 import { generateTempPassword } from '../auth/password-policy.js'
+import { createAccount, IdentifiantTaken, identifiantSchema } from '../accounts.js'
 import { requirePerm } from '../auth/plugin.js'
 import { deleteUserSessions } from '../auth/session.js'
 import { audit } from '../audit.js'
 
-const identifiantSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .regex(/^[a-z0-9._-]{3,40}$/, 'L’identifiant fait 3 à 40 caractères : lettres sans accent, chiffres, point, tiret ou tiret bas.')
 const nomSchema = z.string().trim().min(1, 'Le nom est requis.').max(80)
 
 const createBody = z.object({ identifiant: identifiantSchema, nom: nomSchema, role: z.enum(ROLES) })
@@ -31,12 +27,12 @@ async function findUser(id: string, reply: FastifyReply) {
   return u ?? null
 }
 
-/** Nombre d'admins actifs autres que userId : on refuse de retirer le dernier. */
+/** Nombre de comptes Direction actifs autres que userId : on refuse de retirer le dernier. */
 async function otherActiveAdmins(userId: string) {
   const [row] = await db
     .select({ n: count() })
     .from(users)
-    .where(and(eq(users.role, 'admin'), isNull(users.disabledAt), ne(users.id, userId)))
+    .where(and(eq(users.role, 'direction'), isNull(users.disabledAt), ne(users.id, userId)))
   return row?.n ?? 0
 }
 
@@ -61,9 +57,11 @@ export async function userRoutes(app: FastifyInstance) {
         createdAt: users.createdAt,
         lastLoginAt: users.lastLoginAt,
         activeSessions: active.n,
+        employeeId: employees.id,
       })
       .from(users)
       .leftJoin(active, eq(active.userId, users.id))
+      .leftJoin(employees, eq(employees.userId, users.id))
       .orderBy(asc(users.disabledAt), asc(users.nom))
     return { users: rows.map((r) => ({ ...r, activeSessions: Number(r.activeSessions ?? 0) })) }
   })
@@ -73,17 +71,15 @@ export async function userRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: firstError(parsed.error) })
     const { identifiant, nom, role } = parsed.data
 
-    const [exists] = await db.select({ id: users.id }).from(users).where(eq(users.identifiant, identifiant))
-    if (exists) return reply.code(409).send({ error: `L’identifiant « ${identifiant} » est déjà utilisé.` })
-
-    const tempPassword = generateTempPassword()
-    const [created] = await db
-      .insert(users)
-      .values({ identifiant, nom, role, passwordHash: await hashPassword(tempPassword), mustChangePassword: true })
-      .returning({ id: users.id })
-    await audit(req, 'user.created', { targetType: 'user', targetId: created!.id, details: { identifiant, nom, role } })
-    // Le mot de passe temporaire n'est renvoyé qu'ici, une seule fois
-    return reply.code(201).send({ id: created!.id, tempPassword })
+    try {
+      const { id, tempPassword } = await createAccount(db, { identifiant, nom, role })
+      await audit(req, 'user.created', { targetType: 'user', targetId: id, details: { identifiant, nom, role } })
+      // Le mot de passe temporaire n'est renvoyé qu'ici, une seule fois
+      return reply.code(201).send({ id, tempPassword })
+    } catch (e) {
+      if (e instanceof IdentifiantTaken) return reply.code(409).send({ error: e.message, field: 'identifiant' })
+      throw e
+    }
   })
 
   app.patch('/:id', async (req, reply) => {
@@ -93,8 +89,8 @@ export async function userRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: firstError(parsed.error) })
     const changes = parsed.data
 
-    if (changes.role && changes.role !== 'admin' && u.role === 'admin' && !u.disabledAt && (await otherActiveAdmins(u.id)) === 0) {
-      return reply.code(400).send({ error: 'Il doit rester au moins un administrateur actif.' })
+    if (changes.role && changes.role !== 'direction' && u.role === 'direction' && !u.disabledAt && (await otherActiveAdmins(u.id)) === 0) {
+      return reply.code(400).send({ error: 'Il doit rester au moins un compte Direction actif.' })
     }
     const diff: Record<string, { avant: string; apres: string }> = {}
     if (changes.nom && changes.nom !== u.nom) diff.nom = { avant: u.nom, apres: changes.nom }
@@ -111,8 +107,8 @@ export async function userRoutes(app: FastifyInstance) {
     if (!u) return
     if (u.id === req.user!.id) return reply.code(400).send({ error: 'Vous ne pouvez pas désactiver votre propre compte.' })
     if (u.disabledAt) return { ok: true }
-    if (u.role === 'admin' && (await otherActiveAdmins(u.id)) === 0) {
-      return reply.code(400).send({ error: 'Il doit rester au moins un administrateur actif.' })
+    if (u.role === 'direction' && (await otherActiveAdmins(u.id)) === 0) {
+      return reply.code(400).send({ error: 'Il doit rester au moins un compte Direction actif.' })
     }
     await db.update(users).set({ disabledAt: new Date() }).where(eq(users.id, u.id))
     const closed = await deleteUserSessions(u.id)

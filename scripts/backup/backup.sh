@@ -14,9 +14,9 @@ DIR=/backups
 DAILY_KEEP=${BACKUP_KEEP_DAILY:-14}
 WEEKLY_KEEP=${BACKUP_KEEP_WEEKLY:-8}
 AT=${BACKUP_TIME:-02:30}
-VERIFY_DB=patalu_verif
+VERIFY_DB=abatelier_verif
 
-export PGHOST="${PGHOST:-db}" PGUSER="${PGUSER:-patalu}" PGDATABASE="${PGDATABASE:-patalu}"
+export PGHOST="${PGHOST:-db}" PGUSER="${PGUSER:-abatelier}" PGDATABASE="${PGDATABASE:-abatelier}"
 PGPASSWORD="$(cat /run/secrets/db_password)"
 export PGPASSWORD
 
@@ -33,7 +33,7 @@ rotate() {
 
 dump() {
   mkdir -p "$DIR/daily" "$DIR/weekly"
-  name="patalu-$(date +%Y-%m-%d_%H%M%S)${1:+-$1}.dump"
+  name="abatelier-$(date +%Y-%m-%d_%H%M%S)${1:+-$1}.dump"
   tmp="$DIR/.$name.part"
   trap 'rm -f "$tmp"' EXIT
 
@@ -104,7 +104,7 @@ verify() {
 
   status=0
   printf '  %-20s %10s %10s\n' table actuelle sauvegarde
-  for t in users sessions login_attempts audit_log; do
+  for t in users employees materials colors pricing_settings piece_models accessories delivery_settings company_settings document_template document_counters clients client_sites orders order_lines order_events billing_documents site_content site_photos contact_requests email_log sessions client_accounts client_sessions products product_variants payments sheet_stock sheet_movements login_attempts audit_log; do
     now=$(psql -Atc "select count(*) from \"$t\"")
     saved=$(psql -d "$VERIFY_DB" -Atc "select count(*) from \"$t\"" 2>/dev/null) || { saved=ABSENTE; status=1; }
     printf '  %-20s %10s %10s\n' "$t" "$now" "$saved"
@@ -116,7 +116,7 @@ verify() {
 }
 
 restore() {
-  [ -n "${1:-}" ] || fail "indiquez le fichier : make restore fichier=patalu-AAAA-MM-JJ_HHMMSS.dump"
+  [ -n "${1:-}" ] || fail "indiquez le fichier : make restore fichier=abatelier-AAAA-MM-JJ_HHMMSS.dump"
   f=$(resolve "$1")
   log "Sauvegarde de sécurité de l'état actuel avant restauration"
   (dump avant-restauration)
