@@ -328,6 +328,8 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A refusé la commande ${d.numero} et remboursé ${eur(d.montant)} au client : ${d.motif}${d.avoir ? ` (avoir ${d.avoir})` : ''}`, tone: 'bad' }
     case 'espace.registered':
       return { text: `Espace client créé : ${d.nom}`, tone: 'accent' }
+    case 'espace.profile_updated':
+      return { text: `Un client a modifié ses informations (${(d.champs ?? []).join(', ')})`, tone: 'neutral' }
     case 'espace.login':
       return { text: 'Connexion d’un client à son espace', tone: 'neutral' }
     case 'espace.login_failed':

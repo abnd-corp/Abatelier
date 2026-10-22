@@ -316,6 +316,58 @@ test.describe('Configurateur : du visiteur à la commande', () => {
     expect(clients.clients[0]).toMatchObject({ origine: 'site', email })
   })
 
+  test('un professionnel crée son espace, complète « Mes informations », et l’atelier valide son statut', async ({ page, browser, baseURL, uid }) => {
+    const email = `pro-${uid}@exemple.fr`
+    const raison = `Toitures ${uid.slice(-6)}`
+    await page.goto('/espace/inscription')
+    await expect(page.getByLabel('Un particulier')).toBeChecked()
+    await expect(page.getByLabel('Raison sociale *')).toHaveCount(0)
+    await page.getByLabel('Un professionnel').check()
+    // La raison sociale est obligatoire pour un professionnel
+    await page.getByLabel('Nom *').fill('Morel')
+    await page.getByLabel('Adresse e-mail *').fill(email)
+    await page.getByLabel('Mot de passe *').fill(PASSWORD)
+    await page.getByLabel(/J’accepte que mes données/).check()
+    await page.getByRole('button', { name: 'Créer mon espace', exact: true }).click()
+    await expect(page.locator('.field-error')).toContainText('raison sociale')
+    await page.getByLabel('Raison sociale *').fill(raison)
+    await page.getByRole('button', { name: 'Créer mon espace', exact: true }).click()
+    await expect(page).toHaveURL('/espace')
+
+    // Mes informations : SIRET invalide refusé, puis adresse de facturation enregistrée ; le statut attend la validation de l'atelier
+    await page.getByRole('link', { name: 'Mes informations' }).click()
+    await expect(page).toHaveURL('/espace/profil')
+    await expect(page.getByRole('heading', { level: 1, name: 'Mes informations' })).toBeVisible()
+    await expect(page.getByLabel('Adresse e-mail')).toBeDisabled()
+    await expect(page.getByRole('status')).toContainText('en cours de validation')
+    await page.getByLabel('SIRET').fill('123')
+    await page.getByRole('button', { name: 'Enregistrer' }).click()
+    await expect(page.locator('.field-error')).toBeVisible()
+    await page.getByLabel('SIRET').fill('73282932000074')
+    await page.getByLabel('Rue').fill('3 rue des Lilas')
+    await page.getByLabel('Code postal').fill('42490')
+    await page.getByLabel('Ville').fill('Fraisses')
+    await page.getByRole('button', { name: 'Enregistrer' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'enregistrées' })).toBeVisible()
+    expect(await noHorizontalScroll(page)).toBe(true)
+
+    // L'atelier voit un professionnel à valider, et le valide
+    const atelier = await browser.newContext({ baseURL })
+    const adminPage = await atelier.newPage()
+    await apiLogin(adminPage.request, baseURL!, ADMIN.identifiant, ADMIN.password)
+    const clients = await (await adminPage.request.get(`/api/clients?q=${encodeURIComponent(email)}`)).json()
+    await adminPage.goto(`/clients/${clients.clients[0].id}`)
+    await expect(adminPage.getByText('À valider')).toBeVisible()
+    await adminPage.getByRole('button', { name: 'Valider le statut professionnel' }).click()
+    await expect(adminPage.getByRole('status')).toContainText('Statut professionnel validé')
+    await expect(adminPage.getByRole('button', { name: 'Retirer le statut professionnel' })).toBeVisible()
+    await atelier.close()
+
+    // Côté client, le statut est validé
+    await page.reload()
+    await expect(page.getByRole('status')).toContainText('statut professionnel est validé')
+  })
+
   test('la connexion et la création de l’espace client montrent « Pourquoi un espace client ? » à côté du formulaire, sans texte sur les données', async ({ page }) => {
     for (const path of ['/espace/inscription', '/espace/connexion']) {
       await page.goto(path)

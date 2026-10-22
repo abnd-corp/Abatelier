@@ -11,6 +11,7 @@ import { ADMIN, RH, freshPinia, makeRouter, mockApi } from './helpers'
 const DUPONT: Client = {
   id: 'c1',
   type: 'particulier',
+  proVerifie: false,
   raisonSociale: null,
   siret: null,
   tvaIntra: null,
@@ -40,6 +41,7 @@ const TOITURES: Client = {
   codePostal: '42700',
   origine: 'atelier',
   email: null,
+  proVerifie: true,
 }
 const CHANTIER: ClientSite = { id: 's1', libelle: 'Maison Rivière', adresse: '12 chemin du Bois', codePostal: '42700', ville: 'Firminy' }
 
@@ -227,6 +229,30 @@ describe('Fiche client', () => {
       .trigger('click')
     await flushPromises()
     expect(calls.some((c) => c.method === 'DELETE' && c.path === '/clients/c2/sites/s1')).toBe(true)
+  })
+
+  it('valide le statut professionnel d’un client du site, puis permet de le retirer', async () => {
+    const attente = { ...DETAIL, client: { ...TOITURES, proVerifie: false } }
+    const { wrapper, calls } = await mountAt(ClientView, '/clients/c2', { 'GET /clients/c2': [200, attente], 'PATCH /clients/c2': [200, { ok: true }] })
+    expect(wrapper.text()).toContain('À valider')
+    expect(wrapper.text()).toContain('la remise pro ne s’applique pas')
+    expect(wrapper.text()).not.toContain('Retirer le statut professionnel')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Valider le statut professionnel'))!
+      .trigger('click')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ proVerifie: true })
+    expect(wrapper.text()).toContain('Statut professionnel validé')
+  })
+
+  it('montre un professionnel validé et ne propose pas la validation à la RH', async () => {
+    const { wrapper } = await mountAt(ClientView, '/clients/c2', { 'GET /clients/c2': [200, DETAIL] })
+    expect(wrapper.text()).toContain('Validé')
+    expect(wrapper.text()).toContain('Retirer le statut professionnel')
+    const rh = await mountAt(ClientView, '/clients/c2', { 'GET /clients/c2': [200, { ...DETAIL, client: { ...TOITURES, proVerifie: false } }] }, RH)
+    expect(rh.wrapper.text()).toContain('À valider')
+    expect(rh.wrapper.text()).not.toContain('Valider le statut professionnel')
   })
 
   it('archive le client après confirmation', async () => {

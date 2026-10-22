@@ -19,7 +19,7 @@ const norm = (t: string) => t.replace(/[  ]/g, ' ')
 const V1 = '11111111-1111-4111-8111-111111111111'
 const V2 = '22222222-2222-4222-8222-222222222222'
 const P1 = '33333333-3333-4333-8333-333333333333'
-const COMPTE = { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: null, type: 'particulier' as const }
+const COMPTE = { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: null, type: 'particulier' as const, proVerifie: false }
 
 const BOUTIQUE: BoutiqueData = {
   paiement: true,

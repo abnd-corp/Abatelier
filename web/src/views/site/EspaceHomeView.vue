@@ -63,6 +63,7 @@ async function closeAccount() {
       </div>
       <div class="actions">
         <RouterLink :to="{ name: 'site-configurateur' }" class="s-btn primary"><AppIcon name="plus" :size="16" /> Nouveau devis</RouterLink>
+        <RouterLink :to="{ name: 'espace-profil' }" class="s-btn">Mes informations</RouterLink>
         <button class="s-btn" type="button" @click="logout">Me déconnecter</button>
       </div>
     </header>

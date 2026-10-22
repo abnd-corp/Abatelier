@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '@/api'
-import type { Compte } from '@/lib/espace'
+import type { Compte, Profil } from '@/lib/espace'
 
 // Compte du client connecté à l'espace client du site. Sans lien avec la session de l'atelier (autre cookie, autre API).
 export const useEspaceStore = defineStore('espace', () => {
@@ -45,10 +45,17 @@ export const useEspaceStore = defineStore('espace', () => {
     compte.value = null
   }
 
+  /** Enregistre « Mes informations » et met à jour le compte affiché (nom, type, statut pro). */
+  async function modifierProfil(body: Record<string, unknown>) {
+    const { profil } = await api<{ profil: Profil }>('/espace/profil', { method: 'PATCH', body })
+    if (compte.value) compte.value = { ...compte.value, prenom: profil.prenom, nom: profil.nom, telephone: profil.telephone, type: profil.type, proVerifie: profil.proVerifie }
+    return profil
+  }
+
   /** Session expirée côté serveur : on oublie le compte sans appeler l'API. */
   function forget() {
     compte.value = null
   }
 
-  return { compte, loaded, isLoggedIn, ensureLoaded, inscrire, connecter, deconnecter, fermer, forget }
+  return { compte, loaded, isLoggedIn, ensureLoaded, inscrire, connecter, deconnecter, fermer, modifierProfil, forget }
 })

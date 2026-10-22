@@ -54,6 +54,7 @@ const PAGES: { name: string; path: string; anonymous?: boolean; client?: boolean
   { name: '39-espace-connexion', path: '/espace/connexion', anonymous: true },
   { name: '39b-espace-inscription', path: '/espace/inscription', anonymous: true },
   { name: '39c-espace-commandes', path: 'ESPACE', client: true },
+  { name: '39e-espace-profil', path: '/espace/profil', client: true },
   { name: '39d-espace-commande', path: 'ESPACE_COMMANDE', client: true },
 ]
 

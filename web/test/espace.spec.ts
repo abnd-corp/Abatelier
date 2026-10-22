@@ -4,13 +4,14 @@ import EspaceAvantages from '@/components/site/EspaceAvantages.vue'
 import EspaceAuthView from '@/views/site/EspaceAuthView.vue'
 import EspaceHomeView from '@/views/site/EspaceHomeView.vue'
 import EspaceOrderView from '@/views/site/EspaceOrderView.vue'
+import EspaceProfilView from '@/views/site/EspaceProfilView.vue'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 import { retourEspace, statutDocument, type EspaceOrder, type EspaceOrderSummary } from '@/lib/espace'
 import { useEspaceStore } from '@/stores/espace'
 import { freshPinia, makeRouter, mockApi } from './helpers'
 
 const norm = (t: string) => t.replace(/[  ]/g, ' ')
-const COMPTE = { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: null, type: 'particulier' as const }
+const COMPTE = { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: null, type: 'particulier' as const, proVerifie: false }
 
 async function mountAt(component: object, path: string, routes: Parameters<typeof mockApi>[0], props: Record<string, unknown> = {}, logged = true) {
   const calls = mockApi(routes)
@@ -111,6 +112,7 @@ describe('Outils de l’espace client', () => {
   it('décrit les actions de l’espace client dans le journal', () => {
     const e = (action: string, details: object) => norm(describeEntry({ action, details, identifiant: 'espace:c1' } as unknown as AuditEntry).text)
     expect(e('espace.registered', { nom: 'Jean Dupont' })).toBe('Espace client créé : Jean Dupont')
+    expect(e('espace.profile_updated', { champs: ['SIRET', 'ville'] })).toBe('Un client a modifié ses informations (SIRET, ville)')
     expect(e('espace.login', {})).toMatch(/Connexion d’un client/)
     expect(e('espace.login_failed', {})).toMatch(/Échec/)
     expect(e('espace.document_downloaded', { type: 'devis', numero: 'D-2026-0002' })).toBe('Un client a téléchargé le devis D-2026-0002')
@@ -191,6 +193,8 @@ describe('Connexion et création de l’espace client', () => {
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(calls.find((c) => c.path === '/espace/inscription')!.body).toEqual({
+      type: 'particulier',
+      raisonSociale: '',
       prenom: 'Jean',
       nom: 'Dupont',
       email: 'jean@example.com',
@@ -200,6 +204,44 @@ describe('Connexion et création de l’espace client', () => {
       site: '',
     })
     expect(router.currentRoute.value.fullPath).toBe('/espace')
+  })
+
+  it('demande la raison sociale d’un professionnel et l’envoie avec son type', async () => {
+    const { wrapper, calls } = await mountAt(
+      EspaceAuthView,
+      '/espace/inscription',
+      { 'POST /espace/inscription': [201, { compte: { ...COMPTE, type: 'professionnel' } }] },
+      { mode: 'inscription' },
+      false,
+    )
+    // Par défaut : particulier, pas de raison sociale
+    expect((wrapper.get('#auth-type-particulier').element as HTMLInputElement).checked).toBe(true)
+    expect(wrapper.find('#auth-raisonSociale').exists()).toBe(false)
+    await wrapper.get('#auth-type-professionnel').setValue(true)
+    expect(wrapper.get('#auth-h-pro').text()).toContain('validé par l’atelier')
+    await wrapper.get('#auth-raisonSociale').setValue('Toitures du Forez')
+    await wrapper.get('#auth-nom').setValue('Morel')
+    await wrapper.get('#auth-email').setValue('luc@example.com')
+    await wrapper.get('#auth-password').setValue('Plieuse-numerique-2026')
+    await wrapper.get('#auth-consentement').setValue(true)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.path === '/espace/inscription')!.body).toMatchObject({ type: 'professionnel', raisonSociale: 'Toitures du Forez', nom: 'Morel' })
+  })
+
+  it('affiche l’erreur de la raison sociale sous son champ', async () => {
+    const { wrapper } = await mountAt(
+      EspaceAuthView,
+      '/espace/inscription',
+      { 'POST /espace/inscription': [400, { error: 'Indiquez la raison sociale de votre entreprise.', field: 'raisonSociale' }] },
+      { mode: 'inscription' },
+      false,
+    )
+    await wrapper.get('#auth-type-professionnel').setValue(true)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('#auth-e-raisonSociale').text()).toContain('raison sociale')
+    expect(wrapper.get('#auth-raisonSociale').attributes('aria-invalid')).toBe('true')
   })
 
   it('affiche chaque erreur sous son champ et met le focus sur le premier', async () => {
@@ -252,6 +294,89 @@ describe('Mes commandes', () => {
     expect(calls.some((c) => c.method === 'POST' && c.path === '/espace/deconnexion')).toBe(true)
     expect(useEspaceStore().compte).toBeNull()
     expect(router.currentRoute.value.name).toBe('site-home')
+  })
+})
+
+const PROFIL = {
+  type: 'particulier',
+  proVerifie: false,
+  raisonSociale: null,
+  siret: null,
+  tvaIntra: null,
+  prenom: 'Jean',
+  nom: 'Dupont',
+  email: 'jean@example.com',
+  telephone: '06 12 34 56 78',
+  adresse: null,
+  codePostal: null,
+  ville: null,
+}
+
+describe('Mes informations', () => {
+  it('affiche le profil, avec l’e-mail en lecture seule, et l’adresse de facturation', async () => {
+    const { wrapper, calls } = await mountAt(EspaceProfilView, '/espace/profil', { 'GET /espace/profil': [200, { profil: PROFIL }] })
+    expect(calls[0]).toMatchObject({ method: 'GET', path: '/espace/profil' })
+    expect((wrapper.get('#pf-nom').element as HTMLInputElement).value).toBe('Dupont')
+    expect(wrapper.get('#pf-email').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('#pf-siret').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Adresse de facturation')
+  })
+
+  it('enregistre l’adresse et met à jour le compte affiché', async () => {
+    const { wrapper, calls } = await mountAt(EspaceProfilView, '/espace/profil', {
+      'GET /espace/profil': [200, { profil: PROFIL }],
+      'PATCH /espace/profil': [200, { profil: { ...PROFIL, nom: 'Durand', adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' } }],
+    })
+    await wrapper.get('#pf-nom').setValue('Durand')
+    await wrapper.get('#pf-adresse').setValue('3 rue des Lilas')
+    await wrapper.get('#pf-codePostal').setValue('42490')
+    await wrapper.get('#pf-ville').setValue('Fraisses')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toMatchObject({ type: 'particulier', nom: 'Durand', adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' })
+    expect(wrapper.get('[role=status]').text()).toContain('enregistrées')
+    expect(useEspaceStore().compte?.nom).toBe('Durand')
+  })
+
+  it('prévient que l’atelier valide le statut quand on passe professionnel, et montre SIRET et TVA', async () => {
+    const { wrapper } = await mountAt(EspaceProfilView, '/espace/profil', { 'GET /espace/profil': [200, { profil: PROFIL }] })
+    await wrapper.get('#pf-type-professionnel').setValue(true)
+    expect(wrapper.text()).toContain('l’atelier valide votre statut professionnel')
+    expect(wrapper.find('#pf-raisonSociale').exists()).toBe(true)
+    expect(wrapper.find('#pf-siret').exists()).toBe(true)
+    expect(wrapper.find('#pf-tvaIntra').exists()).toBe(true)
+  })
+
+  it('dit si le statut professionnel est en attente ou validé', async () => {
+    const pro = { ...PROFIL, type: 'professionnel', raisonSociale: 'Toitures du Forez' }
+    const attente = await mountAt(EspaceProfilView, '/espace/profil', { 'GET /espace/profil': [200, { profil: pro }] })
+    expect(attente.wrapper.text()).toContain('en cours de validation')
+    const valide = await mountAt(EspaceProfilView, '/espace/profil', { 'GET /espace/profil': [200, { profil: { ...pro, proVerifie: true } }] })
+    expect(valide.wrapper.text()).toContain('statut professionnel est validé')
+  })
+
+  it('affiche l’erreur sous son champ et garde la saisie', async () => {
+    const { wrapper } = await mountAt(EspaceProfilView, '/espace/profil', {
+      'GET /espace/profil': [200, { profil: PROFIL }],
+      'PATCH /espace/profil': [400, { error: 'Indiquez votre nom.', field: 'nom' }],
+    })
+    await wrapper.get('#pf-nom').setValue('')
+    await wrapper.get('#pf-ville').setValue('Fraisses')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('#pf-nom').attributes('aria-invalid')).toBe('true')
+    expect(wrapper.text()).toContain('Indiquez votre nom.')
+    expect((wrapper.get('#pf-ville').element as HTMLInputElement).value).toBe('Fraisses')
+  })
+
+  it('dit l’erreur de chargement', async () => {
+    const { wrapper } = await mountAt(EspaceProfilView, '/espace/profil', { 'GET /espace/profil': [500, { error: 'Erreur serveur.' }] })
+    expect(wrapper.get('[role=alert]').text()).toContain('Erreur serveur.')
+  })
+
+  it('est accessible depuis l’accueil de l’espace', async () => {
+    const { wrapper } = await mountAt(EspaceHomeView, '/espace', { 'GET /espace/commandes': [200, { commandes: [] }] })
+    expect(wrapper.findAll('a').some((a) => a.text() === 'Mes informations' && a.attributes('href') === '/espace/profil')).toBe(true)
   })
 })
 

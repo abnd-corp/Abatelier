@@ -30,6 +30,8 @@ export interface ClientSummary extends Pick<ClientFields, 'type' | 'raisonSocial
 
 export interface Client extends ClientFields {
   id: string
+  /** Statut professionnel validé par l'atelier (remise pro). */
+  proVerifie: boolean
   origine: ClientOrigine
   archivedAt: string | null
   createdAt: string

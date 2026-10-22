@@ -12,7 +12,18 @@ const props = defineProps<{ mode: 'inscription' | 'connexion'; submitText: strin
 
 const espace = useEspaceStore()
 const p = computed(() => props.idPrefix ?? 'ea')
-const form = reactive({ prenom: '', nom: '', email: '', telephone: '', password: '', remember: false, consentement: false, site: '' })
+const form = reactive({
+  type: 'particulier' as 'particulier' | 'professionnel',
+  raisonSociale: '',
+  prenom: '',
+  nom: '',
+  email: '',
+  telephone: '',
+  password: '',
+  remember: false,
+  consentement: false,
+  site: '',
+})
 const errors = reactive<Record<string, string>>({})
 const failure = ref('')
 const sending = ref(false)
@@ -25,7 +36,17 @@ async function submit() {
   sending.value = true
   try {
     if (props.mode === 'inscription')
-      await espace.inscrire({ prenom: form.prenom, nom: form.nom, email: form.email, telephone: form.telephone, password: form.password, consentement: form.consentement, site: form.site })
+      await espace.inscrire({
+        type: form.type,
+        raisonSociale: form.raisonSociale,
+        prenom: form.prenom,
+        nom: form.nom,
+        email: form.email,
+        telephone: form.telephone,
+        password: form.password,
+        consentement: form.consentement,
+        site: form.site,
+      })
     else await espace.connecter(form.email, form.password, form.remember)
     form.password = ''
     await props.after?.()
@@ -45,6 +66,26 @@ async function submit() {
   <form class="auth" novalidate @submit.prevent="submit">
     <p v-if="failure" class="alert bad" role="alert">{{ failure }}</p>
     <template v-if="mode === 'inscription'">
+      <fieldset class="type">
+        <legend>Vous êtes</legend>
+        <label class="check"><input :id="`${p}-type-particulier`" v-model="form.type" type="radio" name="type" value="particulier" /><span>Un particulier</span></label>
+        <label class="check"><input :id="`${p}-type-professionnel`" v-model="form.type" type="radio" name="type" value="professionnel" /><span>Un professionnel</span></label>
+      </fieldset>
+      <div v-if="form.type === 'professionnel'" class="field">
+        <label :for="`${p}-raisonSociale`">Raison sociale *</label>
+        <input
+          :id="`${p}-raisonSociale`"
+          v-model="form.raisonSociale"
+          class="input"
+          :class="{ invalid: errors.raisonSociale }"
+          autocomplete="organization"
+          required
+          :aria-invalid="!!errors.raisonSociale"
+          :aria-describedby="errors.raisonSociale ? `${p}-e-raisonSociale` : `${p}-h-pro`"
+        />
+        <span v-if="errors.raisonSociale" :id="`${p}-e-raisonSociale`" class="field-error">{{ errors.raisonSociale }}</span>
+        <span v-else :id="`${p}-h-pro`" class="muted hint">La remise professionnelle s’applique une fois votre statut validé par l’atelier.</span>
+      </div>
       <div class="two">
         <div class="field">
           <label :for="`${p}-prenom`">Prénom</label>
@@ -149,6 +190,25 @@ async function submit() {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+.type {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 8px 22px;
+  flex-wrap: wrap;
+}
+.type legend {
+  font-weight: 600;
+  margin-bottom: 6px;
+  padding: 0;
+}
+.type .check {
+  align-items: center;
+}
+.type .check input {
+  margin-top: 0;
 }
 .hint {
   font-size: 0.84rem;

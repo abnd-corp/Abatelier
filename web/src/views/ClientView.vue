@@ -79,6 +79,18 @@ async function saveEdit() {
   }
 }
 
+// --- Statut professionnel (remise pro) : l'atelier valide un professionnel inscrit sur le site ---
+async function setProVerifie(proVerifie: boolean) {
+  actionError.value = notice.value = ''
+  try {
+    await api(`/clients/${id.value}`, { method: 'PATCH', body: { proVerifie } })
+    notice.value = proVerifie ? 'Statut professionnel validé : la remise pro s’applique à ce client.' : 'Statut professionnel retiré : la remise pro ne s’applique plus.'
+    await load()
+  } catch (e) {
+    actionError.value = e instanceof ApiError ? e.message : 'L’action a échoué.'
+  }
+}
+
 // --- Archivage ---
 const confirmArchive = ref(false)
 async function setArchived(archived: boolean) {
@@ -202,7 +214,16 @@ const telHref = (t: string) => `tel:${t.replace(/[^+\d]/g, '')}`
             <dd class="mono">{{ client.siret || '—' }}</dd>
             <dt>TVA intracom.</dt>
             <dd class="mono">{{ client.tvaIntra || '—' }}</dd>
+            <dt>Statut pro</dt>
+            <dd>
+              <span class="pill" :class="client.proVerifie ? 'ok' : 'warn'">{{ client.proVerifie ? 'Validé' : 'À valider' }}</span>
+            </dd>
           </dl>
+          <p v-if="!client.proVerifie" class="muted">Tant que le statut n’est pas validé, la remise pro ne s’applique pas à ses devis.</p>
+          <div v-if="canManage">
+            <button v-if="!client.proVerifie" class="btn small" type="button" @click="setProVerifie(true)">Valider le statut professionnel</button>
+            <button v-else class="btn small" type="button" @click="setProVerifie(false)">Retirer le statut professionnel</button>
+          </div>
         </section>
 
         <section class="card block">

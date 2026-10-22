@@ -595,7 +595,7 @@ describe('Configurateur public', () => {
     expect(wrapper.find('#o-notes').exists()).toBe(false)
   })
 
-  const COMPTE = { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: null, type: 'particulier' as const }
+  const COMPTE = { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: null, type: 'particulier' as const, proVerifie: false }
   const mountSite = (extra: Parameters<typeof mockApi>[0] = {}) => mountConfig({ 'GET /espace/session': [200, { compte: null }], ...extra })
   const mountLogged = (extra: Parameters<typeof mockApi>[0] = {}) => mountConfig({ 'GET /espace/session': [200, { compte: COMPTE }], ...extra })
   const bouton = (w: ReturnType<typeof mount>, texte: string) => w.findAll('button').find((b) => b.text().includes(texte))!

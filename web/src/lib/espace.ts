@@ -7,6 +7,24 @@ export interface Compte {
   email: string
   telephone: string | null
   type: 'particulier' | 'professionnel'
+  /** Statut professionnel validé par l'atelier : seul à donner droit à la remise pro. */
+  proVerifie: boolean
+}
+
+/** « Mes informations » : coordonnées et adresse de facturation du client. */
+export interface Profil {
+  type: 'particulier' | 'professionnel'
+  proVerifie: boolean
+  raisonSociale: string | null
+  siret: string | null
+  tvaIntra: string | null
+  prenom: string | null
+  nom: string | null
+  email: string | null
+  telephone: string | null
+  adresse: string | null
+  codePostal: string | null
+  ville: string | null
 }
 
 export type EtapeStatut = 'recue' | 'validee' | 'fabrication' | 'prete' | 'livree' | 'annulee'

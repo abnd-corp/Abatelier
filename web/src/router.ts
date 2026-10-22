@@ -153,6 +153,12 @@ export const router = createRouter({
           meta: { public: true, site: true, noindex: true, espace: 'invite', title: 'Créer mon espace client' },
         },
         {
+          path: 'espace/profil',
+          name: 'espace-profil',
+          component: () => import('@/views/site/EspaceProfilView.vue'),
+          meta: { public: true, site: true, noindex: true, espace: 'connecte', title: 'Mes informations' },
+        },
+        {
           path: 'espace/commandes/:id',
           name: 'espace-commande',
           component: () => import('@/views/site/EspaceOrderView.vue'),
