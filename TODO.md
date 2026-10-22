@@ -10,6 +10,8 @@
 
 **Questions à poser à l'entreprise** (direction, atelier, comptable, domaine et e-mails, Google) : toutes dans `entreprise/questions-a-poser.md`, chacune avec son contexte et ce que la réponse change. À mettre à jour quand une nouvelle question apparaît.
 
+**Suivi dans GitHub** : les chantiers de la mini roadmap (M), des retours (R) et de la distribution (D) sont maintenant des issues du dépôt [abnd-corp/abatelier](https://github.com/abnd-corp/abatelier/issues), avec un label par chantier, des jalons (milestones) et leurs tâches en cases à cocher. Ce fichier garde le plan détaillé ; l'avancement se suit dans les issues.
+
 ## Mini roadmap (22 octobre 2026) : de la fin du développement à la mise en service
 
 Objectif : déployer chez le client, le paramétrer avec lui, lui faire une démonstration, le laisser l'utiliser et recueillir ses retours. Tout n'est pas fini, et ce n'est pas grave : on avance par retours.
@@ -267,10 +269,7 @@ Le pliage commence par de la découpe : chaque pièce est une bande de « dével
 - [ ] Devis modifiable par le client avant acceptation (aujourd'hui : il refuse, puis refait une configuration)
 
 ## 4. Technique et administration
-- [ ] **Recréer le dépôt GitHub** quand le réseau le permet :
-  1. renommer l'ancien `Rxdy/patalu` en `patalu-ancien` et le passer en privé ;
-  2. lancer `.depot-a-recreer/recreer-depot.sh` ;
-  3. ouvrir les PR des branches locales vers `dev`, dans l'ordre : `feature/salaries`, `feature/roles`, `feature/catalogue`, `feature/faconnage`.
+- [x] **Dépôt GitHub recréé** le 22 octobre 2026 : [abnd-corp/abatelier](https://github.com/abnd-corp/abatelier) (historique nettoyé, règles de branches, `Rxdy/patalu` conservé en privé sous `patalu-ancien`). Reste : ouvrir les PR des branches `feature/**` vers `dev` (`feature/salaries`, `feature/roles`, `feature/catalogue`, `feature/faconnage`, puis `feature/site-vitrine`) et ajouter « Linter et mise en forme » aux contrôles obligatoires.
 - [ ] Réseau : `sudo tailscale set --accept-dns=false` (sinon GitHub devient injoignable)
 - [ ] Activer les comptes `admin` et `rudy` (mots de passe temporaires dans `secrets/comptes-a-activer.txt`), puis supprimer ce fichier
 - [ ] Désactiver le compte de test `paul`
