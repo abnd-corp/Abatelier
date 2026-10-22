@@ -19,6 +19,7 @@ feature/xxx ──PR──▶ dev ──PR──▶ staging ──PR──▶ ma
 
 | Contrôle | Ce qu'il vérifie |
 |---|---|
+| Linter et mise en forme | ESLint et Prettier (`make lint`, et `make format` pour tout remettre en forme) |
 | API | Types, compilation, migrations à jour |
 | Tests API | Toutes les routes, sur une vraie base Postgres |
 | Front | Types et build |

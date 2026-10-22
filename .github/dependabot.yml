@@ -4,6 +4,18 @@
 version: 2
 
 updates:
+  # Outils partagés (ESLint, Prettier)
+  - package-ecosystem: npm
+    directory: /
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    open-pull-requests-limit: 3
+    commit-message: { prefix: "deps(outils)" }
+    labels: [dépendances]
+    groups:
+      outils-mineures:
+        update-types: [minor, patch]
+
   - package-ecosystem: npm
     directory: /api
     target-branch: dev

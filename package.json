@@ -1,0 +1,20 @@
+{
+  "name": "patalu-outils",
+  "private": true,
+  "description": "Linter et formateur partagés par api/, web/ et e2e/ (« make lint », « make format »)",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint . && npm run format:check",
+    "format": "prettier --write \"{api/src,api/test,web/src,web/test,e2e}/**/*.{ts,vue,css}\" \"*.config.js\"",
+    "format:check": "prettier --check \"{api/src,api/test,web/src,web/test,e2e}/**/*.{ts,vue,css}\" \"*.config.js\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.11.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "typescript-eslint": "^8.72.0"
+  }
+}

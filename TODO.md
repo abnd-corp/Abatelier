@@ -10,6 +10,23 @@
 
 **Questions à poser à l'entreprise** (direction, atelier, comptable, domaine et e-mails, Google) : toutes dans `entreprise/questions-a-poser.md`, chacune avec son contexte et ce que la réponse change. À mettre à jour quand une nouvelle question apparaît.
 
+## Mini roadmap (22 octobre 2026) : de la fin du développement à la mise en service
+
+Objectif : déployer chez le client, le paramétrer avec lui, lui faire une démonstration, le laisser l'utiliser et recueillir ses retours. Tout n'est pas fini, et ce n'est pas grave : on avance par retours.
+
+**Fait récemment** : espace client (compte, suivi, fermeture), configurateur à trois actions (télécharger, enregistrer, commander), boutique (import, gestion, panier réservé aux comptes), stock de feuilles et conseil de découpe, scripts de base de dev (`make bdd-demo`, `make bdd-minimale`, `make mdp`), linter et formateur (`make lint`, `make format`, contrôle en CI).
+
+| # | Tâche | Taille | Notes |
+|---|---|---|---|
+| 1 | **Espace client : particulier ou professionnel, et « Mes informations »** (interface). L'API est faite (commit « Particulier ou professionnel… ») : choix du type et raison sociale à l'inscription, page `/espace/profil` (adresse de facturation, téléphone, SIRET, TVA, changement de type), lien depuis l'accueil de l'espace, bouton « Valider le statut professionnel » sur la fiche client côté direction (la remise pro n'est appliquée qu'après validation). Tests de composants et Playwright | M | en cours |
+| 2 | **Guide de mise en service** (`docs/mise-en-service.md`) : ordre du paramétrage chez le client (entreprise, tarifs, catalogue, modèles de documents, livraison, textes et photos du site, boutique, stock, comptes), scénario de démonstration (avec `make bdd-demo`), façon de recueillir les retours | S | à faire avant le déploiement |
+| 3 | **Déploiement** (P0 n°2 à 4, 8, 9) : dépôt GitHub recréé (ajouter « Linter et mise en forme » aux contrôles obligatoires), domaine, Raspberry Pi, HTTPS, e-mail réel, sauvegardes hors machine, supervision | M à L | [humain] domaine, accès au Pi, choix du service d'e-mail |
+| 4 | **Paramétrage chez le client** avec le guide : informations légales (P0 n°11), clé Google (n°12), comptes réels (n°13), import des 52 produits et photos | S | [humain] avec le client |
+| 5 | **Stripe en mode test** (P0 n°6) : compte, clés, webhook, un paiement et un remboursement réels | M | [humain] compte Stripe |
+| 6 | **Confirmation de l'adresse e-mail et mot de passe oublié du client** (P0 n°5 et 5b) | M | après l'e-mail réel |
+| 7 | **Stock de feuilles, la suite** : décompte automatique au passage « en fabrication » (avec correction possible), alertes de stock bas sur le tableau de bord, **commandes fournisseur** (bon de commande, réception qui fait entrer le stock), vue matières premières | L | après les premiers retours de l'atelier |
+| 8 | **Démonstration, usage et retours** : le client utilise, on note ses retours dans ce fichier, on priorise | - | en continu |
+
 ## Plan priorisé (mis à jour le 20 octobre 2026)
 
 **Lecture des estimations.** Le code est écrit par des agents : les durées sont celles d'un **agent** qui livre la tâche *complète* (code, tests API et composants, Playwright, `make apercu`, `make check`), pas celles d'un développeur. Les agents enchaînent vite, mais attendent les humains : une tâche marquée **[humain]** dépend d'une décision, d'un compte ou d'une réponse de l'entreprise, et son délai réel n'a rien à voir avec le temps de l'agent. Les estimations sont des ordres de grandeur, à ±50 %.
@@ -57,7 +74,6 @@
 | Invitation par e-mail pour activer l'espace d'un client déjà connu de l'atelier | M | P0 n°5 |
 | Clients professionnels (raison sociale, SIRET, remise pro) | M | - |
 | **Facturation électronique** : choix de la plateforme agréée puis dépôt par l'API et retour des statuts (émission obligatoire au 1er septembre 2027) | XL | [humain] comptable, choix de la plateforme |
-| Linter et formateur (ESLint, Prettier) dans la CI | M | produit un gros diff, à faire entre deux fonctionnalités |
 | Tests d'accessibilité automatiques (axe-core) sur le site et l'atelier | M | - |
 | Dessin 2D : étiquettes de petites cotes qui se chevauchent (`ProfileSketch.vue`) | M | - |
 | Prix exacts des tailles standard (prix fixes ou calculés) | S | [humain] réponse A1b |

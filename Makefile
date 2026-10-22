@@ -7,7 +7,7 @@ BK = $(BASE) exec -T backup /bin/sh /opt/backup/backup.sh
 # ECRAN=chromium | firefox | telephone | tablette
 PW_ARGS = $(if $(PAGE),--grep "$(PAGE)") $(if $(ECRAN),--project=$(ECRAN))
 
-.PHONY: help setup secrets dev dev-d down logs prod prod-down check bdd-minimale bdd-demo mdp demo demo-boutique mails test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
+.PHONY: help setup secrets dev dev-d down logs prod prod-down check lint format bdd-minimale bdd-demo mdp demo demo-boutique mails test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
 
 help: ## Liste les commandes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -16,6 +16,7 @@ setup: ## Première installation : hooks Git, .env, secrets, dépendances
 	git config core.hooksPath .githooks
 	@[ -f .env ] || cp .env.example .env
 	./scripts/init-secrets.sh
+	npm ci
 	cd api && npm ci
 	cd web && npm ci
 	cd e2e && npm ci && npx playwright install chromium firefox
@@ -46,6 +47,12 @@ check: ## Vérifie les types et compile l'API, le front et les tests e2e
 	cd web && npm run build
 	cd e2e && npm run typecheck
 	for f in scripts/*.sh scripts/backup/*.sh; do bash -n $$f || exit 1; done
+
+lint: ## Linter (ESLint) et vérification de la mise en forme (Prettier) : les mêmes contrôles que la CI
+	npm run lint
+
+format: ## Remet en forme tout le code avec Prettier
+	npm run format
 
 test: test-api test-web e2e ## Lance tous les tests (API, composants, Playwright)
 
