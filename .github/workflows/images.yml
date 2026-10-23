@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       publier:
-        description: "false : construit sans publier (essai)"
+        description: 'false : construit sans publier (essai)'
         type: boolean
         default: false
 
