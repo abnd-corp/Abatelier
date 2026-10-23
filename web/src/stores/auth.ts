@@ -1,9 +1,22 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api, ApiError } from '@/api'
+import { api } from '@/api'
 
-export type Role = 'admin' | 'atelier'
-export type Permission = 'users.manage' | 'audit.read'
+export type Role = 'direction' | 'rh' | 'atelier'
+export type Permission =
+  | 'users.manage'
+  | 'employees.manage'
+  | 'audit.read'
+  | 'catalog.manage'
+  | 'documents.manage'
+  | 'clients.manage'
+  | 'clients.read'
+  | 'orders.manage'
+  | 'orders.production'
+  | 'billing.manage'
+  | 'site.manage'
+  | 'products.manage'
+  | 'stock.manage'
 
 export interface User {
   id: string
@@ -14,7 +27,20 @@ export interface User {
   permissions: Permission[]
 }
 
-export const ROLE_LABELS: Record<Role, string> = { admin: 'Administrateur', atelier: 'Atelier' }
+export const ROLE_LABELS: Record<Role, string> = { direction: 'Direction', rh: 'RH', atelier: 'Atelier' }
+
+/** Rôles proposés dans les listes de choix, du moins au plus étendu. */
+export const ROLE_OPTIONS: { value: Role; label: string; description: string }[] = [
+  { value: 'atelier', label: 'Atelier', description: 'commandes à fabriquer, sans les clients ni les prix' },
+  { value: 'rh', label: 'RH', description: 'salariés, journal, clients en lecture' },
+  { value: 'direction', label: 'Direction', description: 'tout, dont les comptes, tarifs, clients et commandes' },
+]
+
+/**
+ * Rôles proposés à la création d'un compte. Pour l'instant : un compte « gestion » (direction, qui a aussi les droits de la RH)
+ * et un compte atelier. Le rôle RH reste dans le code et l'API pour une V2 : on ne le propose plus, sauf pour un compte qui l'a déjà.
+ */
+export const roleOptions = (current?: Role) => ROLE_OPTIONS.filter((r) => r.value !== 'rh' || r.value === current)
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -26,9 +52,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function ensureLoaded() {
     if (loaded.value) return
     try {
-      user.value = (await api<{ user: User }>('/auth/me')).user
+      user.value = (await api<{ user: User | null }>('/auth/session')).user
     } catch (e) {
-      if (!(e instanceof ApiError && e.status === 401)) console.error(e)
+      console.error(e)
       user.value = null
     }
     loaded.value = true

@@ -8,6 +8,7 @@ import App from './App.vue'
 import { router } from './router'
 import { apiEvents } from './api'
 import { useAuthStore } from './stores/auth'
+import { useEspaceStore } from './stores/espace'
 import './style.css'
 
 const app = createApp(App).use(createPinia()).use(router)
@@ -17,6 +18,12 @@ apiEvents.onUnauthorized = () => {
   auth.forget()
   const current = router.currentRoute.value
   if (!current.meta.public) router.replace({ name: 'login', query: { redirect: current.fullPath, expire: '1' } })
+}
+const espace = useEspaceStore()
+apiEvents.onEspaceUnauthorized = () => {
+  espace.forget()
+  const current = router.currentRoute.value
+  if (current.meta.espace === 'connecte') router.replace({ name: 'espace-connexion', query: { redirect: current.fullPath, expire: '1' } })
 }
 apiEvents.onPasswordChangeRequired = () => router.replace({ name: 'account' })
 

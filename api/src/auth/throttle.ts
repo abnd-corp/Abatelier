@@ -1,6 +1,7 @@
 import { and, eq, gt, lt, sql } from 'drizzle-orm'
 import { db } from '../db/index.js'
 import { loginAttempts } from '../db/schema.js'
+import { env } from '../env.js'
 
 export const MAX_FAILURES = 5
 export const LOCK_MINUTES = 15
@@ -40,8 +41,8 @@ export async function deleteOldAttempts() {
   await db.delete(loginAttempts).where(lt(loginAttempts.lastFailedAt, new Date(Date.now() - 24 * 3600 * 1000)))
 }
 
-/** Délai avant de répondre après un échec : 1 s, 2 s, 4 s, puis 8 s. */
-export const failureDelayMs = (failures: number) => Math.min(1000 * 2 ** (failures - 1), 8000)
+/** Délai avant de répondre après un échec : 1 s, 2 s, 4 s, puis 8 s (avec la base par défaut). */
+export const failureDelayMs = (failures: number) => Math.min(env.LOGIN_DELAY_BASE_MS * 2 ** (failures - 1), env.LOGIN_DELAY_BASE_MS * 8)
 
 export function lockedMessage(until: Date) {
   const min = Math.max(1, Math.ceil((until.getTime() - Date.now()) / 60000))

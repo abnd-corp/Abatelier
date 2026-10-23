@@ -1,0 +1,4 @@
+# Faux positif : mot de passe de test dans api/test/espace.test.ts (fermeture du compte), commit 2fb2e08
+2fb2e080769750949006a82b80d2162877422242:api/test/espace.test.ts:generic-api-key:193
+# Même faux positif, dans le commit de squash de la PR n°26 (1e0344e)
+1e0344ebcb6a6714c08cfa5ce10ae5b71256b724:api/test/espace.test.ts:generic-api-key:291

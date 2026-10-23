@@ -1,0 +1,77 @@
+# Mises à jour automatiques des dépendances.
+# Chaque lundi, Dependabot ouvre des PR vers dev. Elles passent par la même CI que tout le reste
+# (tests, E2E, sécurité) avant de pouvoir être mergées. Les correctifs de sécurité arrivent sans attendre le lundi.
+version: 2
+
+updates:
+  # Outils partagés (ESLint, Prettier)
+  - package-ecosystem: npm
+    directory: /
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    open-pull-requests-limit: 3
+    commit-message: { prefix: "deps(outils)" }
+    labels: [dépendances]
+    groups:
+      outils-mineures:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /api
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: "deps(api)" }
+    labels: [dépendances]
+    groups:
+      # Les mises à jour mineures et correctives sont regroupées en une seule PR
+      api-mineures:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /web
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: "deps(web)" }
+    labels: [dépendances]
+    groups:
+      web-mineures:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /e2e
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    open-pull-requests-limit: 3
+    commit-message: { prefix: "deps(e2e)" }
+    labels: [dépendances]
+    groups:
+      e2e-toutes:
+        patterns: ["*"]
+
+  # Images de base des Dockerfiles (node, nginx)
+  - package-ecosystem: docker
+    directories: [/api, /web]
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    commit-message: { prefix: "deps(docker)" }
+    labels: [dépendances]
+
+  # Images des fichiers compose (postgres, caddy)
+  - package-ecosystem: docker-compose
+    directory: /
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    commit-message: { prefix: "deps(compose)" }
+    labels: [dépendances]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule: { interval: monthly }
+    commit-message: { prefix: "deps(ci)" }
+    labels: [dépendances]
+    groups:
+      actions:
+        patterns: ["*"]

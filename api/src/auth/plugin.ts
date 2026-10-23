@@ -11,6 +11,8 @@ declare module 'fastify' {
   interface FastifyContextConfig {
     // Route accessible même si l'utilisateur doit d'abord changer son mot de passe
     allowWhilePasswordChange?: boolean
+    // Notification d'un prestataire extérieur (signée) : exemptée du contrôle d'origine, jamais d'une session
+    webhook?: boolean
   }
 }
 

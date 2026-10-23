@@ -1,0 +1,10 @@
+node_modules
+dist
+apercus
+entreprise
+secrets
+backups
+.cache
+**/test-results
+**/playwright-report
+api/drizzle
