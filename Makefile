@@ -1,6 +1,13 @@
 PROD = docker compose -f compose.yaml -f compose.prod.yaml
+E2E = docker compose -p abatelier-e2e -f compose.yaml -f compose.e2e.yaml
+# Même projet « abatelier » en dev et en prod : ces commandes marchent sur les deux
+BASE = docker compose -f compose.yaml
+BK = $(BASE) exec -T backup /bin/sh /opt/backup/backup.sh
+# Filtres de « make e2e » : PAGE=catalogue (cherché dans le nom du fichier et le titre des tests),
+# ECRAN=chromium | firefox | telephone | tablette
+PW_ARGS = $(if $(PAGE),--grep "$(PAGE)") $(if $(ECRAN),--project=$(ECRAN))
 
-.PHONY: help setup secrets dev dev-d down logs prod prod-down check feature pr promote-staging promote-main
+.PHONY: help setup secrets dev dev-d down logs prod prod-down check lint format bdd-minimale bdd-demo mdp demo demo-boutique mails test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
 
 help: ## Liste les commandes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -9,8 +16,10 @@ setup: ## Première installation : hooks Git, .env, secrets, dépendances
 	git config core.hooksPath .githooks
 	@[ -f .env ] || cp .env.example .env
 	./scripts/init-secrets.sh
+	npm ci
 	cd api && npm ci
 	cd web && npm ci
+	cd e2e && npm ci && npx playwright install chromium firefox
 
 secrets: ## Crée les secrets manquants dans secrets/
 	./scripts/init-secrets.sh
@@ -33,9 +42,83 @@ prod: ## Lance la prod ou le staging (Caddy + HTTPS, DOMAIN dans .env)
 prod-down: ## Arrête la prod
 	$(PROD) down
 
-check: ## Vérifie les types et compile l'API et le front
-	cd api && npm run typecheck
+check: ## Vérifie les types et compile l'API, le front et les tests e2e
+	cd api && npm run typecheck && npm run build
 	cd web && npm run build
+	cd e2e && npm run typecheck
+	for f in scripts/*.sh scripts/backup/*.sh; do bash -n $$f || exit 1; done
+
+lint: ## Linter (ESLint) et vérification de la mise en forme (Prettier) : les mêmes contrôles que la CI
+	npm run lint
+
+format: ## Remet en forme tout le code avec Prettier
+	npm run format
+
+test: test-api test-web e2e ## Lance tous les tests (API, composants, Playwright)
+
+test-vite: ## Rejoue seulement les tests touchés par les fichiers modifiés (DEPUIS=dev pour comparer à une branche)
+	$(if $(DEPUIS),DEPUIS=$(DEPUIS)) ./scripts/test-vite.sh
+
+test-api: ## Tests des routes API (base abatelier_test, lancer « make dev-d » avant)
+	cd api && npm test
+
+test-web: ## Tests des composants Vue
+	cd web && npm test
+
+e2e: ## Tests Playwright sur une stack de prod jetable (filtres : PAGE=catalogue ECRAN=firefox)
+	$(E2E) up -d --build --wait
+	cd e2e && npx playwright test $(PW_ARGS); status=$$?; cd .. && $(E2E) down -v; exit $$status
+
+apercu: ## Captures de toutes les pages (téléphone, tablette, ordinateur, clair et sombre) : apercus/index.html
+	rm -rf apercus
+	$(E2E) up -d --build --wait
+	cd e2e && npx playwright test -c apercu.config.ts; status=$$?; cd .. && $(E2E) down -v; exit $$status
+	@echo "Ouvrir : $$(pwd)/apercus/index.html"
+
+bdd-minimale: ## Remonte la base de dev de zéro, avec le strict nécessaire (catalogue de départ + compte admin). Sauvegarde avant.
+	./scripts/bdd.sh minimale
+
+bdd-demo: ## Remonte la base de dev de zéro, en démonstration complète (équipe, clients, commandes, factures, boutique, stock). Sauvegarde avant.
+	./scripts/bdd.sh demo
+
+mdp: ## Mot de passe oublié : make mdp COMPTE=admin (mot de passe provisoire affiché une fois)
+	@test -n "$(COMPTE)" || { echo "Usage : make mdp COMPTE=identifiant"; exit 1; }
+	docker compose exec -T api npx tsx src/reset-password.ts "$(COMPTE)" 2>&1 | grep -v '^{"level"' | grep -v '^npm '
+
+demo-boutique: ## Ajoute à la base de dev des produits de boutique en ligne (avec photos) et du stock de feuilles, sans rien supprimer
+	docker compose exec -T api npx tsx src/demo-boutique.ts 2>&1 | grep -v '^{"level"'
+
+demo: ## Remplit la base de dev vide avec des clients, commandes, devis et factures de démonstration (comptes demo-*)
+	docker compose exec -T api npx tsx src/demo.ts 2>&1 | grep -v '^{"level"'
+
+mails: ## Ouvre la boîte de réception de test des e-mails (Mailpit, http://localhost:8025)
+	@echo "http://localhost:$${MAILPIT_PORT:-8025}"; xdg-open http://localhost:$${MAILPIT_PORT:-8025} >/dev/null 2>&1 || true
+
+e2e-up: ## Démarre seulement la stack e2e (pour « cd e2e && npm run test:ui »)
+	$(E2E) up -d --build --wait
+
+e2e-down: ## Supprime la stack e2e
+	$(E2E) down -v
+
+backup: ## Sauvegarde la base tout de suite
+	$(BK) now manuel
+
+backups: ## Liste les sauvegardes
+	$(BK) list
+
+backup-verify: ## Restaure la dernière sauvegarde dans une base temporaire et vérifie
+	$(BK) verify
+
+restore: ## Restaure une sauvegarde : make restore fichier=abatelier-AAAA-MM-JJ_HHMMSS-manuel.dump
+	@test -n "$(fichier)" || { echo "Usage : make restore fichier=… (voir « make backups »)"; exit 1; }
+	$(BK) check "$(fichier)"
+	$(BASE) stop api
+	$(BK) restore "$(fichier)"; status=$$?; $(BASE) start api; exit $$status
+
+backup-export: ## Copie toutes les sauvegardes dans ./backups (pour les mettre ailleurs)
+	mkdir -p backups
+	$(BASE) cp backup:/backups/. ./backups/
+	@echo "Copiées dans ./backups : à mettre sur un autre support (disque, NAS, cloud)."
 
 feature: ## Crée une branche de travail depuis dev : make feature nom=commandes
 	@test -n "$(nom)" || { echo "Usage : make feature nom=ma-fonction"; exit 1; }

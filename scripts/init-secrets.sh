@@ -20,5 +20,15 @@ for name in db_password admin_password; do
   fi
 done
 
+# Secrets fournis par un service extérieur : fichiers vides tant qu'on n'en a pas, à remplir à la main
+for name in google_places_api_key smtp_password stripe_secret_key stripe_webhook_secret; do
+  file="$dir/$name.txt"
+  if [ ! -e "$file" ]; then
+    : >"$file"
+    chmod 644 "$file"
+    echo "• $name : fichier vide créé (à remplir quand le service sera choisi)"
+  fi
+done
+
 echo
 echo "Mot de passe du premier compte admin : secrets/admin_password.txt"

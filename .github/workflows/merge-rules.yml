@@ -1,6 +1,6 @@
 name: Règles de merge
 
-# Chemin imposé : feature/** → dev → staging → main.
+# Chemin imposé : feature/** (ou dependabot/**) → dev → staging → main.
 # Ce contrôle est obligatoire pour merger (règles de branche GitHub).
 on:
   pull_request:
@@ -18,7 +18,8 @@ jobs:
           HEAD: ${{ github.head_ref }}
         run: |
           case "$BASE" in
-            dev)     allowed='feature/*'; ok=false; case "$HEAD" in feature/*) ok=true ;; esac ;;
+            # Dependabot ouvre aussi ses PR de mises à jour vers dev
+            dev)     allowed='feature/* ou dependabot/*'; ok=false; case "$HEAD" in feature/* | dependabot/*) ok=true ;; esac ;;
             staging) allowed='dev';       ok=false; [ "$HEAD" = dev ] && ok=true ;;
             main)    allowed='staging';   ok=false; [ "$HEAD" = staging ] && ok=true ;;
           esac

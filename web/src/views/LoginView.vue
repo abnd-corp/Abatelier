@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ApiError } from '@/api'
 import BrandMark from '@/components/BrandMark.vue'
 import PasswordInput from '@/components/PasswordInput.vue'
+import { safeRedirect } from '@/lib/redirect'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -22,8 +23,7 @@ async function submit() {
   loading.value = true
   try {
     await auth.login(identifiant.value, password.value, remember.value)
-    const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') ? route.query.redirect : '/'
-    await router.replace(auth.user?.mustChangePassword ? { name: 'account' } : redirect)
+    await router.replace(auth.user?.mustChangePassword ? { name: 'account' } : safeRedirect(route.query.redirect))
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : 'Impossible de joindre le serveur. Vérifiez votre connexion.'
     password.value = ''
@@ -39,7 +39,7 @@ async function submit() {
       <div class="brand">
         <BrandMark class="mark" />
         <div>
-          <b>Pliage sur mesure</b>
+          <b>Alu Pliage Service</b>
           <span class="muted">Espace atelier</span>
         </div>
       </div>
@@ -51,17 +51,7 @@ async function submit() {
 
       <div class="field">
         <label for="identifiant">Identifiant</label>
-        <input
-          id="identifiant"
-          v-model="identifiant"
-          class="input"
-          name="username"
-          autocomplete="username"
-          autocapitalize="none"
-          spellcheck="false"
-          required
-          autofocus
-        />
+        <input id="identifiant" v-model="identifiant" class="input" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus />
       </div>
 
       <div class="field">
@@ -81,7 +71,7 @@ async function submit() {
         {{ loading ? 'Connexion…' : 'Se connecter' }}
       </button>
 
-      <p class="help muted">Mot de passe oublié ? Demandez à un administrateur de le réinitialiser.</p>
+      <p class="help muted">Mot de passe oublié ? Demandez à la direction de le réinitialiser.</p>
     </form>
   </main>
 </template>
@@ -92,8 +82,7 @@ async function submit() {
   min-height: 100dvh;
   display: grid;
   place-items: center;
-  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
-    max(16px, env(safe-area-inset-left));
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background-color: var(--bg);
   background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
   background-size: 24px 24px;

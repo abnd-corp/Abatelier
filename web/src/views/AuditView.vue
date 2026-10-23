@@ -5,8 +5,17 @@ import { api, ApiError } from '@/api'
 import { dateTime } from '@/lib/format'
 import { describe, type AuditEntry } from '@/lib/audit-labels'
 
-type Filter = 'all' | 'login' | 'failures' | 'accounts'
-const FILTERS: Record<Filter, string> = { all: 'Tout', login: 'Connexions', failures: 'Échecs', accounts: 'Comptes' }
+type Filter = 'all' | 'login' | 'failures' | 'accounts' | 'catalog' | 'documents' | 'clients' | 'orders'
+const FILTERS: Record<Filter, string> = {
+  all: 'Tout',
+  login: 'Connexions',
+  failures: 'Échecs',
+  accounts: 'Comptes et équipe',
+  catalog: 'Catalogue et prix',
+  documents: 'Devis et factures',
+  clients: 'Clients',
+  orders: 'Commandes',
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -67,13 +76,13 @@ onMounted(async () => {
     </div>
     <p v-if="error" class="alert bad" role="alert">{{ error }}</p>
     <div class="table-wrap">
-      <table class="table">
+      <table class="table fits-sm">
         <thead>
           <tr>
             <th>Date</th>
             <th>Qui</th>
             <th>Action</th>
-            <th>Appareil</th>
+            <th class="hide-sm">Appareil</th>
           </tr>
         </thead>
         <tbody>
@@ -81,13 +90,14 @@ onMounted(async () => {
             <td class="mono date">{{ dateTime(e.at) }}</td>
             <td>
               <b v-if="e.nom">{{ e.nom }}</b>
+              <span v-else-if="!e.identifiant" class="muted">Automatique</span>
               <span v-else class="muted">Inconnu</span>
               <span v-if="e.identifiant" class="sub mono">{{ e.identifiant }}</span>
             </td>
             <td>
               <span class="tone" :data-tone="describe(e).tone">{{ describe(e).text }}</span>
             </td>
-            <td>
+            <td class="hide-sm">
               {{ e.device }}<span class="sub mono">{{ e.ip }}</span>
             </td>
           </tr>

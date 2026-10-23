@@ -1,0 +1,108 @@
+/* Styles communs aux panneaux du catalogue (matières, coloris).
+   Importé sans portée « scoped » : tout est préfixé par .cat-panel pour ne rien toucher ailleurs. */
+.cat-panel {
+  display: grid;
+  gap: 14px;
+}
+.cat-panel .toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cat-panel .check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.88rem;
+}
+.cat-panel .check input {
+  accent-color: var(--accent);
+}
+.cat-panel .edit {
+  padding: 18px 20px;
+  display: grid;
+  gap: 14px;
+  border-color: var(--accent);
+}
+.cat-panel .edit h3 {
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.cat-panel .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.cat-panel .unit {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.cat-panel .unit:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.cat-panel .unit .input {
+  border: 0;
+  box-shadow: none !important;
+  text-align: right;
+}
+.cat-panel .unit > span {
+  padding: 0 12px 0 4px;
+  color: var(--muted);
+  font-family: var(--f-mono);
+  font-size: 0.85rem;
+}
+.cat-panel .unit:has([aria-invalid='true']) {
+  border-color: var(--bad);
+}
+.cat-panel .hint {
+  font-size: 0.82rem;
+}
+.cat-panel .actions {
+  display: flex;
+  gap: 8px;
+}
+.cat-panel .table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+.cat-panel tr.off td {
+  color: var(--muted);
+}
+.cat-panel .actions-cell {
+  white-space: nowrap;
+}
+.cat-panel .actions-cell .btn {
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.cat-panel .swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid rgb(127 127 127 / 0.45);
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+  flex: none;
+}
+.cat-panel .color-row {
+  display: flex;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .cat-panel .actions-cell {
+    white-space: normal;
+  }
+  .cat-panel .actions-cell .btn {
+    margin: 2px 0 2px 4px;
+  }
+}

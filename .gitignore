@@ -2,5 +2,11 @@ node_modules
 dist
 .env
 secrets/
+backups/
+apercus/
 *.tsbuildinfo
 .DS_Store
+
+# Informations privées sur l’entreprise (jamais commitées : le dépôt est public)
+entreprise/
+.cache/
