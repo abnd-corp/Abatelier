@@ -61,7 +61,8 @@ test.describe('Commandes', () => {
     await nav.getByRole('link', { name: 'Fabrication' }).click()
     await atelier.getByRole('link', { name: numero, exact: true }).click()
     await expect(atelier.getByRole('heading', { level: 1 })).toHaveText(numero)
-    await expect(atelier.getByText('6 × 3 000 mm')).toBeVisible()
+    // exact : le conseil de découpe (« Prendre 2 feuilles : … 6 × 3 000 mm ») s'affiche aussi quand un autre test a créé du stock
+    await expect(atelier.getByText('6 × 3 000 mm', { exact: true })).toBeVisible()
     await expect(atelier.getByText(raison)).toHaveCount(0)
     await expect(atelier.getByText('Firminy')).toHaveCount(0)
     await expect(atelier.getByText(/€/)).toHaveCount(0)
