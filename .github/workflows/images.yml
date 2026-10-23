@@ -1,0 +1,34 @@
+# Images de production sur GHCR (charte Abnd, R44) : une image par mise en production,
+# construite uniquement quand une promotion arrive sur main (merge staging → main).
+# Jamais sur dev, staging ni sur une PR. Images privées, amd64 et arm64 (Raspberry Pi).
+name: Images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publier:
+        description: "false : construit sans publier (essai)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  api:
+    uses: abnd-corp/gouvernance/.github/workflows/publier-image.yml@ef4919b6d078e96c6fc00d21d90be4d1fb84a8cb # gouvernance, 23 octobre 2026
+    with:
+      nom: abatelier-api
+      contexte: ./api
+      cible: prod
+      publier: ${{ github.event_name == 'push' || inputs.publier }}
+  web:
+    uses: abnd-corp/gouvernance/.github/workflows/publier-image.yml@ef4919b6d078e96c6fc00d21d90be4d1fb84a8cb # gouvernance, 23 octobre 2026
+    with:
+      nom: abatelier-web
+      contexte: ./web
+      cible: prod
+      publier: ${{ github.event_name == 'push' || inputs.publier }}
