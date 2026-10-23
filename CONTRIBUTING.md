@@ -1,5 +1,7 @@
 # Branches et mises en production
 
+Les règles communes à toute l'organisation sont dans la [charte Abnd](https://github.com/abnd-corp/gouvernance/blob/main/CHARTE.md). Les écarts d'Abatelier sont listés dans [docs/adr/0001-ecarts-a-la-charte.md](docs/adr/0001-ecarts-a-la-charte.md) : c'est ce fichier-ci qui prévaut pour les branches.
+
 ```
 feature/xxx ──PR──▶ dev ──PR──▶ staging ──PR──▶ main
  (travail)        (intégration)  (recette)      (production)
