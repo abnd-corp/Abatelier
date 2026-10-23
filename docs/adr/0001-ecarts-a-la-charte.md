@@ -14,14 +14,14 @@ La [charte Abnd](https://github.com/abnd-corp/gouvernance/blob/main/CHARTE.md) s
 
 ## Écarts assumés
 
-| Règle | Écart | Raison |
-|---|---|---|
+| Règle                                                                  | Écart                                                         | Raison                                                                                                                         |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | R4, R10 : merge en squash, `main` reçoit des commits signés par GitHub | Les promotions `dev → staging → main` se font en merge commit | Un squash crée un commit absent de la branche source et provoque des conflits à la promotion suivante (voir `CONTRIBUTING.md`) |
-| R5 : titres de PR en Conventional Commits | Exigé seulement sur les PR vers `dev`, pas sur les promotions | Les promotions portent un titre libre ; le merge commit n'alimente pas de changelog |
-| R3 : une PR = une issue | Pas encore systématique | Les chantiers sont suivis en issues depuis le 22 octobre 2026 ; à généraliser |
-| R22 : CI partagée | Seul le contrôle de PR est partagé | La CI d'Abatelier (API, front, e2e, sauvegardes) lui est propre |
-| R23 : release-please, R24 : Renovate | Pas en place | Dependabot ouvre les mises à jour, chaque lundi |
-| R6 : kanban d'orga | Pas en place | Chantiers suivis en issues et jalons du dépôt |
+| R5 : titres de PR en Conventional Commits                              | Exigé seulement sur les PR vers `dev`, pas sur les promotions | Les promotions portent un titre libre ; le merge commit n'alimente pas de changelog                                            |
+| R3 : une PR = une issue                                                | Pas encore systématique                                       | Les chantiers sont suivis en issues depuis le 22 octobre 2026 ; à généraliser                                                  |
+| R22 : CI partagée                                                      | Seul le contrôle de PR est partagé                            | La CI d'Abatelier (API, front, e2e, sauvegardes) lui est propre                                                                |
+| R23 : release-please, R24 : Renovate                                   | Pas en place                                                  | Dependabot ouvre les mises à jour, chaque lundi                                                                                |
+| R6 : kanban d'orga                                                     | Pas en place                                                  | Chantiers suivis en issues et jalons du dépôt                                                                                  |
 
 ## Suite
 
