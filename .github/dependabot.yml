@@ -9,6 +9,7 @@ updates:
     directory: /
     target-branch: dev
     schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 3
     commit-message: { prefix: "deps(outils)" }
     labels: [dépendances]
@@ -20,6 +21,7 @@ updates:
     directory: /api
     target-branch: dev
     schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 5
     commit-message: { prefix: "deps(api)" }
     labels: [dépendances]
@@ -32,6 +34,7 @@ updates:
     directory: /web
     target-branch: dev
     schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 5
     commit-message: { prefix: "deps(web)" }
     labels: [dépendances]
@@ -43,6 +46,7 @@ updates:
     directory: /e2e
     target-branch: dev
     schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 3
     commit-message: { prefix: "deps(e2e)" }
     labels: [dépendances]
@@ -55,6 +59,7 @@ updates:
     directories: [/api, /web]
     target-branch: dev
     schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    cooldown: { default-days: 7 }
     commit-message: { prefix: "deps(docker)" }
     labels: [dépendances]
 
@@ -63,6 +68,7 @@ updates:
     directory: /
     target-branch: dev
     schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Paris }
+    cooldown: { default-days: 7 }
     commit-message: { prefix: "deps(compose)" }
     labels: [dépendances]
 
@@ -70,6 +76,7 @@ updates:
     directory: /
     target-branch: dev
     schedule: { interval: monthly }
+    cooldown: { default-days: 7 }
     commit-message: { prefix: "deps(ci)" }
     labels: [dépendances]
     groups:
