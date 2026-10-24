@@ -127,3 +127,7 @@ Les comptes sans fiche (`admin`, poste partagé) se gèrent dans **Équipe → C
 - Containers en lecture seule, sans privilèges, avec l'API et nginx qui tournent sans root.
 - Base sur un réseau interne sans accès à Internet.
 - Mots de passe dans `secrets/` (secrets Docker), jamais dans `.env`.
+
+## Licence
+
+AGPL-3.0-or-later : voir [LICENSE](LICENSE).
