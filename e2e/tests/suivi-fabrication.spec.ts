@@ -106,6 +106,8 @@ test.describe('Suivi de fabrication', () => {
     const carte = atelier.getByRole('article').filter({ hasText: numero })
     await expect(carte).toBeVisible()
     await carte.getByRole('button', { name: 'Lancer la fabrication' }).click()
+    // On attend que l'atelier voie l'étape enregistrée avant de recharger la page du client
+    await expect(carte).toContainText('En fabrication')
     await client.reload()
     await expect(client.getByRole('region', { name: 'Suivi de la commande' }).locator('li[aria-current="step"]')).toContainText('En fabrication')
   })
