@@ -30,7 +30,8 @@ test.describe('Stock de feuilles', () => {
     await expect(atelier.getByLabel('Matière et épaisseur')).toBeVisible()
 
     // Saisie : erreur claire, puis une feuille entière et une chute (tailles propres à ce test, pour ne pas gêner les autres)
-    const l = 200 + Math.floor(Math.random() * 2700)
+    // La pièce commandée plus bas a 480 mm de développé : une feuille plus étroite ne convient pas et la fabrication dirait « aucune feuille ».
+    const l = 500 + Math.floor(Math.random() * 2400)
     await atelier.getByLabel('Matière et épaisseur').selectOption(matiere.id)
     await atelier.getByLabel('Coloris').selectOption(coloris.id)
     await atelier.getByLabel('Largeur (mm)').fill('10')
