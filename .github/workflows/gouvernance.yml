@@ -15,4 +15,4 @@ permissions:
 jobs:
   controle:
     name: Contrôle des PR
-    uses: abnd-corp/gouvernance/.github/workflows/controle-pr.yml@1501ae7b2e8b6eb1e4f1540bcbf6c174784e9eb6 # gouvernance, 25 octobre 2026
+    uses: abnd-corp/gouvernance/.github/workflows/controle-pr.yml@66eac40c76d2fa667555f2987f1836e598db6a26 # gouvernance, 25 octobre 2026
