@@ -5,7 +5,7 @@ import { db } from '../src/db/index.js'
 import { auditLog, documentCounters } from '../src/db/schema.js'
 import { allocateNumber, formatNumber, yearOf } from '../src/documents.js'
 import { clean, inspectImage, renderDocument, sampleDocument, totals } from '../src/pdf.js'
-import { buildApp, createUser, loginAs, resetDb, type App, type Client } from './helpers.js'
+import { buildApp, createUser, loginAs, pdfText, resetDb, type App, type Client } from './helpers.js'
 
 let app: App
 let direction: Client
@@ -296,6 +296,11 @@ describe('Aperçu PDF', () => {
     expect(nbImages(await renderDocument(company, tpl, null, data))).toBeGreaterThan(0)
     expect(nbImages(await renderDocument(company, { ...tpl, qrCode: false }, null, data))).toBe(0)
     expect(nbImages(await renderDocument({ ...company, siteWeb: '' }, tpl, null, data))).toBe(0)
+
+    // L'adresse du site s'écrit sous le QR code, en plus des coordonnées de l'en-tête
+    const occurrences = (pdf: Buffer) => (pdfText(pdf).match(/alupliageservice\.fr/g) ?? []).length
+    expect(occurrences(await renderDocument(company, { ...tpl, qrCode: false }, null, data))).toBe(1)
+    expect(occurrences(await renderDocument(company, tpl, null, data))).toBe(2)
   })
 })
 

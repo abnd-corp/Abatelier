@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { accessories, auditLog, colors, materials, orderLines, orders } from '../src/db/schema.js'
+import { accessories, auditLog, colors, materials, orderLines, orders, sheetStock } from '../src/db/schema.js'
 import { yearOf } from '../src/documents.js'
 import { addWorkingDays, quantityDiscount } from '../src/quote.js'
 import { todayParis } from '../src/departures.js'
@@ -433,6 +433,41 @@ describe('Fiche de fabrication (PDF)', () => {
     for (const secret of ['Toitures', 'Forez', 'Firminy', 'chemin', 'Dupont', '€', 'HT', 'TTC']) expect(txt, secret).not.toContain(secret)
     const [entry] = await entries('order.sheet_printed')
     expect(entry).toMatchObject({ targetType: 'order', targetId: o.id, details: { numero: o.numero, statut: 'validee' } })
+  })
+
+  it('détaille la découpe de la feuille et toutes les étapes de l’atelier, avec « Remise » pour retrait ou livraison', async () => {
+    const o = await validated()
+    await db.insert(sheetStock).values({ materialId: ids.alu, colorId: ids.anthracite, largeur: 1250, longueur: 3000, quantite: 10 })
+    const txt = pdfText((await direction.get(`/api/production/${o.id}/fiche.pdf`)).rawPayload)
+    for (const attendu of [
+      'REMISE',
+      'Retrait à l’atelier',
+      'Découpe',
+      '2 feuilles 1 250 × 3 000 mm',
+      '2 bandes de 480 mm par feuille',
+      'Feuille 1 250 × 3 000 mm · 2 bandes',
+      'Étapes en atelier',
+      '1. Préparer la matière',
+      '2. Découper à la cisaille',
+      '4 bandes de 480 mm de large × 3 000 mm de long',
+      '3. Plier à la presse',
+      '4 plis',
+      '4. Contrôler',
+      'cotes A 20 · B 70 · C 300 · D 70 · E 20',
+      '5. Préparer les accessoires',
+      '6. Étiqueter et emballer',
+      '7. Mettre à jour le stock de feuilles',
+      '8. Remise : retrait à l’atelier',
+    ])
+      expect(txt, attendu).toContain(attendu)
+    expect(txt).not.toContain('DÉPART')
+  })
+
+  it('dit quand aucune feuille du stock ne convient, sans bloquer la fiche', async () => {
+    const o = await validated()
+    const txt = pdfText((await direction.get(`/api/production/${o.id}/fiche.pdf`)).rawPayload)
+    expect(txt).toContain('aucune feuille conseillée en stock')
+    expect(txt).not.toContain('Feuille 1 250')
   })
 
   it('est réservée à l’atelier et à la direction, et seulement pour les commandes en cours de fabrication', async () => {

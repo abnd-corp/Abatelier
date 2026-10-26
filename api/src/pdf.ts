@@ -307,8 +307,16 @@ export async function renderDocument(company: Company, template: Template, logo:
 
   // --- Totaux ---
   const t = data.totaux ?? totals(data.lignes, data.tva)
-  ensure(80)
+  // Le QR code du site (avec son adresse en clair dessous) se place à gauche des totaux, là où la page est vide
+  const QR = 64
+  ensure(qr ? QR + 38 : 80)
   y += 12
+  const totauxTop = y
+  if (qr) {
+    doc.image(qr, PAGE.m, y - 2, { width: QR, height: QR })
+    doc.font(F.r).fontSize(7.5).fillColor(MUTED)
+    text(company.siteWeb.replace(/^https?:\/\//i, '').replace(/\/$/, ''), PAGE.m, y + QR + 4, { width: colX - PAGE.m - 24, lineBreak: false, ellipsis: true })
+  }
   const rows: [string, string, boolean][] = [
     ['Total HT', eur(t.ht), false],
     [`TVA ${qty(data.tva)} %`, eur(t.tva), false],
@@ -323,6 +331,8 @@ export async function renderDocument(company: Company, template: Template, logo:
     text(value, colX + colW / 2, y + (strong ? 3 : 0), { width: colW / 2 - 12, align: 'right' })
     y += strong ? 28 : 18
   }
+  // Le QR code et son adresse peuvent descendre plus bas que les totaux
+  if (qr) y = Math.max(y, totauxTop + QR + 22)
   y += 14
 
   // --- Conditions et textes ---
@@ -404,11 +414,9 @@ export async function renderDocument(company: Company, template: Template, logo:
     doc.moveTo(PAGE.m, fy).lineTo(RIGHT, fy).lineWidth(0.6).strokeColor(LINE).stroke()
     doc.font(F.r).fontSize(7.5).fillColor(MUTED)
     const lines = [template.piedDePage, identity].filter((s) => s.trim()).join('\n')
-    // Le QR code (vers le site web) prend la place habituelle du numéro de page, qui se décale à sa gauche
-    const reserved = 50 + (qr ? 38 : 0)
+    const reserved = 50
     text(lines, PAGE.m, fy + 8, { width: WIDTH - reserved, lineGap: 1 })
     text(`${i + 1} / ${range.count}`, RIGHT - reserved, fy + 8, { width: 50, align: 'right' })
-    if (qr) doc.image(qr, RIGHT - 34, fy + 4, { width: 34, height: 34 })
     doc.page.margins.bottom = margin
   }
 
