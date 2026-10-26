@@ -74,7 +74,7 @@ describe('Gestion des comptes', () => {
     await wrapper.get('#droits-p1-admin').setValue(true)
     await wrapper.get('button[aria-label="Enregistrer les droits de Paul Martin"]').trigger('click')
     await flushPromises()
-    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ sections: ['atelier', 'ventes'], admin: true })
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ sections: ['ventes', 'atelier'], admin: true })
     expect(wrapper.text()).toContain('Les droits de Paul Martin sont enregistrés.')
   })
 

@@ -6,7 +6,8 @@ const props = defineProps<{ modelValue: Access; idPrefix: string; disabled?: boo
 const emit = defineEmits<{ 'update:modelValue': [Access] }>()
 
 function toggle(section: Section, on: boolean) {
-  const sections = on ? [...props.modelValue.sections, section] : props.modelValue.sections.filter((s) => s !== section)
+  // Toujours dans l'ordre du menu
+  const sections = SECTION_OPTIONS.map((o) => o.value).filter((s) => (s === section ? on : props.modelValue.sections.includes(s)))
   emit('update:modelValue', { ...props.modelValue, sections })
 }
 </script>
