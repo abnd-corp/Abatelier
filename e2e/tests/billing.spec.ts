@@ -36,12 +36,13 @@ test.describe('Devis et factures', () => {
     await page.getByRole('button', { name: 'Accepté par le client' }).click()
     await expect(page.getByText('Devis accepté.')).toBeVisible()
     await expect(page.locator('.identity .pill')).toHaveText('Accepté')
-    await page.getByRole('link', { name: 'valider la commande' }).click()
+    // Le devis accepté devient une commande validée d'un clic, sans passer par la fiche de la commande
+    await page.getByRole('button', { name: 'Valider la commande' }).click()
+    await expect(page.getByText('Commande validée : elle est chez l’atelier.')).toBeVisible()
 
     // Facture : une fois la commande validée
-    await expect(page).toHaveURL(orderUrl)
-    await page.getByRole('button', { name: 'Valider la commande' }).click()
-    await expect(page.getByText('Commande passée à l’étape « Validée »')).toBeVisible()
+    await page.goto(orderUrl)
+    await expect(page.getByRole('button', { name: 'Valider la commande' })).toHaveCount(0)
     await expect(section).toContainText(devis)
     await section.getByRole('button', { name: 'Facturer' }).click()
     await expect(page).toHaveURL(/\/factures\/[0-9a-f-]{36}$/)
@@ -171,6 +172,29 @@ test.describe('Devis et factures', () => {
     expect(text).toContain(`<ram:ID>${numero}</ram:ID>`)
     expect(text).toContain(raison)
     expect(text).toContain('<ram:ID schemeID="0002">732829320</ram:ID>')
+  })
+
+  test('un devis signé sur papier : un seul clic l’accepte et valide la commande', async ({ adminPage: page, baseURL, uid }) => {
+    const headers = { Origin: baseURL! }
+    const client = await (
+      await page.request.post('/api/clients', {
+        data: { type: 'particulier', prenom: 'Léa', nom: `Papier${uid.slice(-6)}`, adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' },
+        headers,
+      })
+    ).json()
+    const cat = await (await page.request.get('/api/orders/catalog')).json()
+    const m = cat.models[0]
+    const ligne = { modelId: m.id, materialId: cat.materials[0].id, colorId: cat.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: 2000, quantite: 2, accessoires: [] }
+    const order = await (await page.request.post('/api/orders', { data: { clientId: client.id, lignes: [ligne], livraison: { mode: 'retrait' } }, headers })).json()
+    const devis = await (await page.request.post(`/api/billing/orders/${order.id}/devis`, { headers })).json()
+
+    await page.goto(`/factures/${devis.id}`)
+    await page.getByRole('button', { name: 'Accepté : valider la commande' }).click()
+    await expect(page.getByText('Devis accepté et commande validée : elle est chez l’atelier.')).toBeVisible()
+    await expect(page.locator('.identity .pill')).toHaveText('Accepté')
+    await expect(page.getByRole('button', { name: /valider la commande/i })).toHaveCount(0)
+    await page.goto(`/commandes/${order.id}`)
+    await expect(page.locator('.identity .pill')).toContainText('Validée')
   })
 
   test('la direction annule un paiement enregistré par erreur', async ({ adminPage: page, baseURL, uid }) => {

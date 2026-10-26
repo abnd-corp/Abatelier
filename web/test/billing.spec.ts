@@ -75,9 +75,9 @@ const DOC: BillingDoc = {
   facturx: true,
   statut: 'emise',
 }
-const detail = (over: Partial<BillingDoc> = {}, lie: BillingDetail['lie'] = null): BillingDetail => ({
+const detail = (over: Partial<BillingDoc> = {}, lie: BillingDetail['lie'] = null, order: Partial<BillingDetail['order']> = {}): BillingDetail => ({
   document: { ...DOC, ...over },
-  order: { id: 'o1', numero: 'C-2026-0001', statut: 'livree', statutLabel: 'Livrée / retirée' },
+  order: { id: 'o1', numero: 'C-2026-0001', statut: 'livree', statutLabel: 'Livrée / retirée', ...order },
   lie,
 })
 
@@ -458,5 +458,33 @@ describe('Facture électronique : fichier Factur-X', () => {
     expect(link.text()).toContain('XML Factur-X')
     const devis = await mountAt(BillingDocView, '/factures/f1', { 'GET /billing/f1': [200, detail({ type: 'devis', numero: 'D-2026-0001', statut: 'emis', facturx: false })] })
     expect(devis.wrapper.find('a[href$="facturx.xml"]').exists()).toBe(false)
+  })
+
+  it('devis : accepte et valide la commande en un clic, ou valide seulement si déjà accepté', async () => {
+    const devis = { type: 'devis' as const, numero: 'D-2026-0001' }
+    const un = await mountAt(BillingDocView, '/factures/f1', {
+      'GET /billing/f1': [200, detail({ ...devis, statut: 'envoye', envoyeLe: '2026-10-20T09:00:00Z' }, null, { statut: 'recue' })],
+      'POST /billing/f1/reponse': [200, { statut: 'accepte' }],
+      'POST /orders/o1/status': [200, { statut: 'validee' }],
+    })
+    await button(un.wrapper, 'Accepté : valider la commande')!.trigger('click')
+    await flushPromises()
+    expect(sent(un.calls)).toEqual([
+      { method: 'POST', path: '/billing/f1/reponse', body: { reponse: 'accepte' } },
+      { method: 'POST', path: '/orders/o1/status', body: { statut: 'validee' } },
+    ])
+    expect(un.wrapper.text()).toContain('Devis accepté et commande validée')
+
+    const deja = await mountAt(BillingDocView, '/factures/f1', {
+      'GET /billing/f1': [200, detail({ ...devis, statut: 'accepte', reponse: 'accepte' }, null, { statut: 'recue' })],
+      'POST /orders/o1/status': [200, { statut: 'validee' }],
+    })
+    expect(button(deja.wrapper, 'Accepté : valider la commande')).toBeUndefined()
+    await button(deja.wrapper, 'Valider la commande')!.trigger('click')
+    await flushPromises()
+    expect(sent(deja.calls)).toEqual([{ method: 'POST', path: '/orders/o1/status', body: { statut: 'validee' } }])
+
+    const annule = await mountAt(BillingDocView, '/factures/f1', { 'GET /billing/f1': [200, detail({ ...devis, statut: 'expire' }, null, { statut: 'recue' })] })
+    expect(button(annule.wrapper, 'Valider la commande')).toBeUndefined()
   })
 })
