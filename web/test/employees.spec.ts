@@ -260,6 +260,27 @@ describe('Fiche salarié', () => {
     expect(wrapper.text()).toContain('eeee-ffff-gggg-hhhh')
   })
 
+  it('affiche les droits du compte et les modifie en cochant les sections', async () => {
+    const { wrapper, calls } = await mountAt(EmployeeView, '/salaries/e1', {
+      'GET /employees/e1': [200, FICHE()],
+      'PATCH /users/u1': [200, { ok: true }],
+    })
+    expect(wrapper.text()).toContain('Atelier')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Modifier les droits')!
+      .trigger('click')
+    await wrapper.get('#account-ventes').setValue(true)
+    await wrapper.get('#account-admin').setValue(true)
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Enregistrer les droits')!
+      .trigger('click')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ sections: ['ventes', 'atelier'], admin: true })
+    expect(wrapper.text()).toContain('sont enregistrés')
+  })
+
   it('demande confirmation avant de désactiver le compte', async () => {
     const { wrapper, calls } = await mountAt(EmployeeView, '/salaries/e1', {
       'GET /employees/e1': [200, FICHE()],

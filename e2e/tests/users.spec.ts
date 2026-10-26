@@ -83,34 +83,45 @@ test.describe('Arrivée et départ d’un employé', () => {
     await employee.context().close()
   })
 
-  test('la direction change le rôle d’un compte, le désactive puis le réactive', async ({ adminPage, browser, baseURL, uid }) => {
-    const nom = `Rôle ${uid.slice(-4)}`
+  test('l’administrateur coche les droits d’un compte, les retire, le désactive puis le réactive', async ({ adminPage, browser, baseURL, uid }) => {
+    const nom = `Droits ${uid.slice(-4)}`
     const temp = await createUser(adminPage.request, baseURL!, { identifiant: uid, nom })
     await adminPage.goto('/utilisateurs')
     const row = adminPage.getByRole('row', { name: new RegExp(uid) })
+    await expect(row).toContainText('Atelier')
 
-    // Atelier → direction : ses droits changent tout de suite
+    // Atelier seul : ni clients, ni commandes. Les sections se cumulent : on ajoute Ventes
     const employee = await (await browser.newContext()).newPage()
     await apiLogin(employee.request, baseURL!, uid, temp)
     await employee.request.post('/api/auth/password', { data: { current: temp, next: NEW_PASSWORD }, headers: { Origin: baseURL! } })
     expect((await employee.request.get('/api/clients')).status()).toBe(403)
-    await row.getByLabel(`Rôle de ${nom}`).selectOption('direction')
-    await expect(adminPage.getByText(`${nom} a maintenant le rôle`)).toBeVisible()
+    await row.getByRole('button', { name: `Modifier les droits de ${nom}` }).click()
+    await adminPage.getByLabel(/^Ventes/).check()
+    await adminPage.getByRole('button', { name: `Enregistrer les droits de ${nom}` }).click()
+    await expect(adminPage.getByText(`Les droits de ${nom} sont enregistrés.`)).toBeVisible()
+    await expect(row).toContainText('Ventes')
+    await expect(row).toContainText('Atelier')
     expect((await employee.request.get('/api/clients')).status()).toBe(200)
+    expect((await employee.request.get('/api/employees')).status()).toBe(403)
 
-    // Désactivé : plus de connexion, et le rôle ne se change plus
+    // Sans aucune case, l'enregistrement est refusé
+    await row.getByRole('button', { name: `Modifier les droits de ${nom}` }).click()
+    await adminPage.getByLabel(/^Ventes/).uncheck()
+    await adminPage.getByLabel(/^Atelier/).uncheck()
+    await adminPage.getByRole('button', { name: `Enregistrer les droits de ${nom}` }).click()
+    await expect(adminPage.getByRole('alert')).toContainText('Cochez au moins une section')
+    await adminPage.getByRole('button', { name: 'Annuler' }).click()
+
+    // Désactivé : plus de connexion, plus de modification ; réactivé : il revient
     await row.getByRole('button', { name: 'Désactiver' }).click()
     await row.getByRole('button', { name: 'Confirmer' }).click()
     await expect(row).toContainText('Désactivé')
-    await expect(row.getByLabel(`Rôle de ${nom}`)).toBeDisabled()
+    await expect(row.getByRole('button', { name: /^Modifier les droits/ })).toHaveCount(0)
     const refus = await employee.request.post('/api/auth/login', { data: { identifiant: uid, password: NEW_PASSWORD }, headers: { Origin: baseURL! } })
     expect(refus.status()).toBe(403)
-
-    // Réactivé : il peut se reconnecter
     await row.getByRole('button', { name: 'Activer' }).click()
     await row.getByRole('button', { name: 'Confirmer' }).click()
     await expect(adminPage.getByText(`Le compte de ${nom} est réactivé.`)).toBeVisible()
-    await expect(row).not.toContainText('Désactivé')
     await apiLogin(employee.request, baseURL!, uid, NEW_PASSWORD)
     await employee.context().close()
   })

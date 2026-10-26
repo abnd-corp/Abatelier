@@ -99,7 +99,7 @@ test.describe('Clients', () => {
     await expect(adminPage.getByRole('heading', { level: 1 })).toHaveText(`Jean Dupont${uid.slice(-4)}`)
   })
 
-  test('la RH consulte les clients sans les modifier, l’atelier n’y a pas accès', async ({ adminPage, browser, baseURL, uid }) => {
+  test('les clients sont réservés à la section Ventes : l’atelier et l’administration seule n’y ont pas accès', async ({ adminPage, browser, baseURL, uid }) => {
     const res = await adminPage.request.post('/api/clients', { data: { type: 'particulier', nom: `Lecture${uid.slice(-4)}` }, headers: { Origin: baseURL! } })
     const { id } = await res.json()
     for (const role of ['rh', 'atelier'] as const) {
@@ -109,16 +109,8 @@ test.describe('Clients', () => {
       await apiLogin(page.request, baseURL!, identifiant, temp)
       await page.request.post('/api/auth/password', { data: { current: temp, next: NEW_PASSWORD }, headers: { Origin: baseURL! } })
       await page.goto(`/clients/${id}`)
-      if (role === 'rh') {
-        await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Lecture${uid.slice(-4)}`)
-        await expect(page.getByRole('button', { name: 'Modifier la fiche' })).toHaveCount(0)
-        await expect(page.getByRole('button', { name: 'Archiver le client' })).toHaveCount(0)
-        await page.goto('/clients/nouveau')
-        await expect(page).toHaveURL('/tableau-de-bord')
-      } else {
-        await expect(page).toHaveURL('/tableau-de-bord')
-        await expect(page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Clients' })).toHaveCount(0)
-      }
+      await expect(page).toHaveURL('/tableau-de-bord')
+      await expect(page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Clients' })).toHaveCount(0)
       await page.context().close()
     }
   })
