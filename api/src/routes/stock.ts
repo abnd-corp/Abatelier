@@ -87,7 +87,16 @@ export async function stockRoutes(app: FastifyInstance) {
   type Row = Awaited<ReturnType<typeof base>>[number]
   const libelle = (r: Pick<Row, 'matiere' | 'epaisseur' | 'coloris' | 'reference' | 'largeur' | 'longueur' | 'chute'>) =>
     `${materialLabel({ nom: r.matiere, epaisseur: r.epaisseur })} · ${r.coloris ? colorLabel({ nom: r.coloris, reference: r.reference! }) : 'brut'} · ${fmt(r.largeur)} × ${fmt(r.longueur)} mm${r.chute ? ' (chute)' : ''}`
-  const out = (r: Row) => ({ ...r, libelle: libelle(r), bas: r.seuil > 0 && r.quantite <= r.seuil })
+  // État visuel à 4 niveaux (R7) : vide (plus aucune feuille), critique (à moins de la moitié du seuil),
+  // bas (au seuil ou sous lui) et ok. Sans seuil réglé (0), seul le niveau vide reste détecté.
+  const etatOf = (seuil: number, quantite: number): 'vide' | 'critique' | 'bas' | 'ok' => {
+    if (quantite <= 0) return 'vide'
+    if (seuil <= 0) return 'ok'
+    if (quantite <= Math.ceil(seuil / 2)) return 'critique'
+    if (quantite <= seuil) return 'bas'
+    return 'ok'
+  }
+  const out = (r: Row) => ({ ...r, libelle: libelle(r), bas: r.seuil > 0 && r.quantite <= r.seuil, etat: etatOf(r.seuil, r.quantite) })
 
   async function find(id: string, reply: FastifyReply) {
     const [r] = isUuid(id) ? await base().where(eq(sheetStock.id, id)) : []
@@ -107,8 +116,22 @@ export async function stockRoutes(app: FastifyInstance) {
   app.get('/feuilles', async () => {
     const rows = await base().orderBy(asc(materials.nom), asc(materials.epaisseur), asc(colors.nom), asc(sheetStock.chute), asc(sheetStock.largeur), asc(sheetStock.longueur))
     const feuilles = rows.map(out)
-    const m2 = feuilles.reduce((s, f) => s + (f.quantite * f.largeur * f.longueur) / 1_000_000, 0)
-    return { feuilles, totaux: { references: feuilles.length, feuilles: feuilles.reduce((s, f) => s + f.quantite, 0), m2: Math.round(m2 * 10) / 10, bas: feuilles.filter((f) => f.bas).length } }
+    // Une chute n'est pas une feuille entière (un reste de découpe, parfois trop petit pour être réutilisé) :
+    // on les compte à part, pour ne jamais les mélanger dans un même total.
+    const m2 = (list: typeof feuilles) => Math.round(list.reduce((s, f) => s + (f.quantite * f.largeur * f.longueur) / 1_000_000, 0) * 10) / 10
+    const entieres = feuilles.filter((f) => !f.chute)
+    const chutes = feuilles.filter((f) => f.chute)
+    return {
+      feuilles,
+      totaux: {
+        references: feuilles.length,
+        feuillesEntieres: entieres.reduce((s, f) => s + f.quantite, 0),
+        chutes: chutes.reduce((s, f) => s + f.quantite, 0),
+        m2Entieres: m2(entieres),
+        m2Chutes: m2(chutes),
+        bas: feuilles.filter((f) => f.bas).length,
+      },
+    }
   })
 
   app.post('/feuilles', async (req, reply) => {
@@ -121,6 +144,8 @@ export async function stockRoutes(app: FastifyInstance) {
       const [c] = await db.select({ id: colors.id }).from(colors).where(eq(colors.id, d.colorId))
       if (!c) return reply.code(400).send({ error: 'Coloris inconnu.', field: 'colorId' })
     }
+    // Une chute n'est pas réapprovisionnée : pas d'alerte de stock bas possible dessus
+    if (d.chute && d.seuil) return reply.code(400).send({ error: 'Pas d’alerte de stock bas sur une chute.', field: 'seuil' })
     const [{ n }] = (await db.select({ n: sql<number>`count(*)::int` }).from(sheetStock)) as [{ n: number }]
     if (n >= FEUILLES_MAX) return reply.code(409).send({ error: `${FEUILLES_MAX} références maximum.` })
     // Largeur ≤ longueur : le plus petit côté est la largeur
@@ -153,6 +178,10 @@ export async function stockRoutes(app: FastifyInstance) {
     const largeur = d.largeur ?? r.largeur
     const longueur = d.longueur ?? r.longueur
     if (longueur < largeur) return reply.code(400).send({ error: 'La longueur doit être supérieure ou égale à la largeur.', field: 'longueur' })
+    // Une chute n'est pas réapprovisionnée : pas d'alerte de stock bas possible dessus
+    const chuteApres = d.chute ?? r.chute
+    const seuilApres = d.seuil ?? r.seuil
+    if (chuteApres && seuilApres) return reply.code(400).send({ error: 'Pas d’alerte de stock bas sur une chute.', field: 'seuil' })
     const set: Partial<typeof sheetStock.$inferInsert> = {}
     if (d.largeur !== undefined && d.largeur !== r.largeur) set.largeur = d.largeur
     if (d.longueur !== undefined && d.longueur !== r.longueur) set.longueur = d.longueur
@@ -190,7 +219,7 @@ export async function stockRoutes(app: FastifyInstance) {
     if (!u) return reply.code(409).send({ error: `Il n’y a que ${fmt(r.quantite)} feuille${r.quantite > 1 ? 's' : ''} en stock : impossible d’en sortir ${fmt(-delta)}.`, field: 'delta' })
     if (delta !== 0) await db.insert(sheetMovements).values({ sheetId: r.id, libelle: libelle(r), delta, apres: u.quantite, motif: d.motif, note: d.note, userId: req.user!.id })
     await audit(req, 'stock.moved', { targetType: 'sheet', targetId: r.id, details: { libelle: libelle(r), delta, apres: u.quantite, motif: d.motif } })
-    return { quantite: u.quantite, bas: r.seuil > 0 && u.quantite <= r.seuil }
+    return { quantite: u.quantite, bas: r.seuil > 0 && u.quantite <= r.seuil, etat: etatOf(r.seuil, u.quantite) }
   })
 
   app.delete('/feuilles/:id', async (req, reply) => {

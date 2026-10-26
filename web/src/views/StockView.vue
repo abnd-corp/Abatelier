@@ -3,12 +3,12 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { api, ApiError } from '@/api'
 import AppIcon from '@/components/AppIcon.vue'
 import { jour } from '@/lib/espace'
-import { MOTIFS, MOTIFS_ENTREE, MOTIFS_SORTIE, type Feuille, type Motif, type Mouvement, type StockOptions, type StockTotaux } from '@/lib/stock'
+import { ETAT_LABELS, MOTIFS, MOTIFS_ENTREE, MOTIFS_SORTIE, type EtatStock, type Feuille, type Motif, type Mouvement, type StockOptions, type StockTotaux } from '@/lib/stock'
 
 // Stock de feuilles de l'atelier : ce qu'il y a (matière, épaisseur, coloris, format), les entrées et sorties, l'inventaire.
 // Les chutes sont des feuilles comme les autres, marquées « chute » : le conseil de découpe les utilise en premier.
 const feuilles = ref<Feuille[]>([])
-const totaux = ref<StockTotaux>({ references: 0, feuilles: 0, m2: 0, bas: 0 })
+const totaux = ref<StockTotaux>({ references: 0, feuillesEntieres: 0, chutes: 0, m2Entieres: 0, m2Chutes: 0, bas: 0 })
 const options = ref<StockOptions>({ materials: [], colors: [] })
 const mouvements = ref<Mouvement[]>([])
 const loading = ref(true)
@@ -36,13 +36,34 @@ onMounted(async () => {
   }
 })
 
-// --- Ajouter une feuille : le formulaire reste fermé tant qu'on ne le demande pas ---
-const ajoutOuvert = ref(false)
+// --- Ajouter des feuilles ou des chutes : deux boutons, deux informations différentes ---
+// Une chute n'est pas une feuille (un morceau de dimensions quelconques, parfois trop petit pour être
+// réutilisé) : on garde un seul formulaire, mais pas les mêmes valeurs de départ ni le même intitulé.
+const ajoutType = ref<'entiere' | 'chute' | null>(null)
 const histOuvert = ref(false)
 const draft = reactive({ materialId: '', colorId: '', largeur: '1250', longueur: '3000', quantite: '0', seuil: '0', chute: false, note: '' })
 const errors = reactive<Record<string, string>>({})
 const adding = ref(false)
 const num = (v: string) => (v.trim() === '' ? NaN : Number(v.replace(',', '.')))
+
+function ouvrirAjout(type: 'entiere' | 'chute') {
+  if (ajoutType.value === type) {
+    ajoutType.value = null
+    return
+  }
+  ajoutType.value = type
+  for (const k of Object.keys(errors)) delete errors[k]
+  Object.assign(draft, {
+    materialId: '',
+    colorId: '',
+    largeur: type === 'entiere' ? '1250' : '',
+    longueur: type === 'entiere' ? '3000' : '',
+    quantite: '0',
+    seuil: '0',
+    chute: type === 'chute',
+    note: '',
+  })
+}
 
 async function add() {
   for (const k of Object.keys(errors)) delete errors[k]
@@ -63,9 +84,9 @@ async function add() {
         note: draft.note,
       },
     })
-    info.value = 'Feuille ajoutée au stock.'
+    info.value = draft.chute ? 'Chute ajoutée au stock.' : 'Feuille ajoutée au stock.'
     Object.assign(draft, { quantite: '0', seuil: '0', note: '' })
-    ajoutOuvert.value = false
+    ajoutType.value = null
     await load()
   } catch (e) {
     if (e instanceof ApiError && e.field) errors[e.field] = e.message
@@ -75,12 +96,14 @@ async function add() {
   }
 }
 
-// --- Entrées, sorties, inventaire d'une feuille ---
+// --- Ajuster le stock (entrée, sortie ou inventaire) et noter une instruction : un seul panneau par carte à la fois ---
 type Mode = 'entree' | 'sortie' | 'inventaire'
-const open = ref<string | null>(null)
+type Panel = 'ajuster' | 'note'
+const openPanel = ref<{ id: string; panel: Panel } | null>(null)
+const estOuvert = (f: Feuille, panel: Panel) => openPanel.value?.id === f.id && openPanel.value.panel === panel
+
 const move = reactive({ mode: 'entree' as Mode, valeur: '', motif: 'reception' as Motif, note: '', erreur: '', busy: false })
-function ouvrir(f: Feuille, mode: Mode) {
-  open.value = open.value === f.id && move.mode === mode ? null : f.id
+function choisirMode(f: Feuille, mode: Mode) {
   Object.assign(move, {
     mode,
     valeur: mode === 'inventaire' ? String(f.quantite) : '',
@@ -88,6 +111,10 @@ function ouvrir(f: Feuille, mode: Mode) {
     note: '',
     erreur: '',
   })
+}
+function ouvrirAjuster(f: Feuille) {
+  openPanel.value = estOuvert(f, 'ajuster') ? null : { id: f.id, panel: 'ajuster' }
+  if (openPanel.value) choisirMode(f, 'entree')
 }
 const motifs = computed(() => (move.mode === 'entree' ? MOTIFS_ENTREE : move.mode === 'sortie' ? MOTIFS_SORTIE : (['inventaire'] as Motif[])))
 
@@ -104,13 +131,26 @@ async function appliquer(f: Feuille) {
     const body = move.mode === 'inventaire' ? { quantite: v, motif: move.motif, note: move.note } : { delta: move.mode === 'sortie' ? -v : v, motif: move.motif, note: move.note }
     const r = await api<{ quantite: number; bas: boolean }>(`/stock/feuilles/${f.id}/mouvement`, { method: 'POST', body })
     info.value = `Stock mis à jour : ${r.quantite} feuille${r.quantite > 1 ? 's' : ''}${r.bas ? ' (stock bas)' : ''}.`
-    open.value = null
+    openPanel.value = null
     await load()
   } catch (e) {
     move.erreur = e instanceof ApiError ? e.message : 'Mouvement impossible.'
   } finally {
     move.busy = false
   }
+}
+
+// --- Note : une petite instruction (rack, palette, fournisseur…), cachée derrière un bouton ---
+const noteDraft = reactive({ valeur: '', busy: false })
+function ouvrirNote(f: Feuille) {
+  openPanel.value = estOuvert(f, 'note') ? null : { id: f.id, panel: 'note' }
+  if (openPanel.value) Object.assign(noteDraft, { valeur: f.note, busy: false })
+}
+async function validerNote(f: Feuille) {
+  noteDraft.busy = true
+  await patch(f, { note: noteDraft.valeur })
+  noteDraft.busy = false
+  openPanel.value = null
 }
 
 // --- Supprimer une référence vide ---
@@ -138,12 +178,39 @@ async function patch(f: Feuille, body: Record<string, unknown>) {
   }
 }
 const onSeuil = (f: Feuille, ev: Event) => patch(f, { seuil: Number((ev.target as HTMLInputElement).value) || 0 })
-const onNote = (f: Feuille, ev: Event) => patch(f, { note: (ev.target as HTMLInputElement).value })
 
-// Filtre par matière
-const filtre = ref('')
-const visibles = computed(() => feuilles.value.filter((f) => !filtre.value || f.materialId === filtre.value))
-const matieres = computed(() => options.value.materials.filter((m) => feuilles.value.some((f) => f.materialId === m.id)))
+// --- Filtres détaillés : un champ par paramètre, plutôt qu'un seul filtre par type (R7) ---
+const filtres = reactive({ matiere: '', epaisseur: '', couleur: '', format: '', etat: '' as '' | EtatStock })
+const sorted = (arr: string[]) => [...new Set(arr)].sort((a, b) => a.localeCompare(b, 'fr'))
+const matiereOptions = computed(() => sorted(feuilles.value.map((f) => f.matiere)))
+const epaisseurOptions = computed(() => [...new Set(feuilles.value.map((f) => f.epaisseur))].sort((a, b) => a - b))
+const couleurOptions = computed(() => {
+  const seen = new Map<string, { id: string; label: string }>()
+  for (const f of feuilles.value) if (f.colorId && !seen.has(f.colorId)) seen.set(f.colorId, { id: f.colorId, label: f.coloris! })
+  return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+})
+const formatOptions = computed(() => sorted(feuilles.value.map((f) => `${f.largeur}×${f.longueur}`)))
+const ETATS: EtatStock[] = ['vide', 'critique', 'bas', 'ok']
+
+const visibles = computed(() =>
+  feuilles.value.filter(
+    (f) =>
+      (!filtres.matiere || f.matiere === filtres.matiere) &&
+      (!filtres.epaisseur || String(f.epaisseur) === filtres.epaisseur) &&
+      (!filtres.couleur || (filtres.couleur === 'brut' ? !f.colorId : f.colorId === filtres.couleur)) &&
+      (!filtres.format || `${f.largeur}×${f.longueur}` === filtres.format) &&
+      (!filtres.etat || f.etat === filtres.etat),
+  ),
+)
+// Deux sections : les feuilles entières, et les chutes (représentées à part, avec leurs dimensions)
+const entieres = computed(() => visibles.value.filter((f) => !f.chute))
+const chutes = computed(() => visibles.value.filter((f) => f.chute))
+const filtresActifs = computed(() => Object.values(filtres).some(Boolean))
+function reinitialiserFiltres() {
+  Object.assign(filtres, { matiere: '', epaisseur: '', couleur: '', format: '', etat: '' })
+}
+
+const ETAT_PILL: Record<EtatStock, string> = { vide: 'vide', critique: 'bad', bas: 'warn', ok: 'ok' }
 const heure = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 const fmt = (n: number) => n.toLocaleString('fr-FR')
 </script>
@@ -165,12 +232,16 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
       <dd>{{ fmt(totaux.references) }}</dd>
     </div>
     <div>
-      <dt>Feuilles</dt>
-      <dd>{{ fmt(totaux.feuilles) }}</dd>
+      <dt>Feuilles entières</dt>
+      <dd>
+        {{ fmt(totaux.feuillesEntieres) }} <span class="sub">{{ fmt(totaux.m2Entieres) }} m²</span>
+      </dd>
     </div>
     <div>
-      <dt>Surface</dt>
-      <dd>{{ fmt(totaux.m2) }} m²</dd>
+      <dt>Chutes</dt>
+      <dd>
+        {{ fmt(totaux.chutes) }} <span class="sub">{{ fmt(totaux.m2Chutes) }} m²</span>
+      </dd>
     </div>
     <div :class="{ alerte: totaux.bas }">
       <dt>Stock bas</dt>
@@ -179,15 +250,22 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
   </dl>
 
   <div class="bar">
-    <button class="btn primary" type="button" aria-controls="ajout" :aria-expanded="ajoutOuvert" @click="ajoutOuvert = !ajoutOuvert">
-      <AppIcon :name="ajoutOuvert ? 'x' : 'plus'" :size="16" /> {{ ajoutOuvert ? 'Fermer le formulaire' : 'Ajouter une feuille' }}
+    <button class="btn primary" type="button" aria-controls="ajout" :aria-expanded="ajoutType === 'entiere'" @click="ouvrirAjout('entiere')">
+      <AppIcon :name="ajoutType === 'entiere' ? 'x' : 'plus'" :size="16" /> {{ ajoutType === 'entiere' ? 'Fermer le formulaire' : 'Ajouter des feuilles' }}
+    </button>
+    <button class="btn" type="button" aria-controls="ajout" :aria-expanded="ajoutType === 'chute'" @click="ouvrirAjout('chute')">
+      <AppIcon :name="ajoutType === 'chute' ? 'x' : 'plus'" :size="16" /> {{ ajoutType === 'chute' ? 'Fermer le formulaire' : 'Ajouter des chutes' }}
     </button>
   </div>
 
-  <section v-if="ajoutOuvert" id="ajout" class="card new" aria-labelledby="ajout-titre">
-    <h2 id="ajout-titre">Ajouter une feuille</h2>
+  <section v-if="ajoutType" id="ajout" class="card new" aria-labelledby="ajout-titre">
+    <h2 id="ajout-titre">{{ ajoutType === 'chute' ? 'Ajouter des chutes' : 'Ajouter des feuilles' }}</h2>
     <p class="muted hint">
-      Une ligne par matière, épaisseur, coloris et format. La matière et son épaisseur viennent du catalogue de la direction ; si elle manque, demandez-lui de l’ajouter dans « Tarifs et catalogue ».
+      {{
+        ajoutType === 'chute'
+          ? 'Un morceau récupéré d’une feuille entamée : ses dimensions réelles, pas un format standard. Gardez-la même si elle est petite, tant qu’elle peut encore servir.'
+          : 'Une ligne par matière, épaisseur, coloris et format standard. La matière et son épaisseur viennent du catalogue de la direction ; si elle manque, demandez-lui de l’ajouter dans « Tarifs et catalogue ».'
+      }}
     </p>
     <form class="grid" novalidate @submit.prevent="add">
       <div class="field">
@@ -243,114 +321,226 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
         <input id="s-quantite" v-model="draft.quantite" class="input mono" inputmode="numeric" :class="{ invalid: errors.quantite }" :aria-invalid="!!errors.quantite" />
         <span v-if="errors.quantite" class="field-error">{{ errors.quantite }}</span>
       </div>
-      <div class="field">
+      <div v-if="ajoutType !== 'chute'" class="field">
         <label for="s-seuil">Alerte stock bas (0 = aucune)</label>
         <input id="s-seuil" v-model="draft.seuil" class="input mono" inputmode="numeric" />
         <span v-if="errors.seuil" class="field-error">{{ errors.seuil }}</span>
       </div>
       <div class="field wide">
-        <label for="s-note">Note (rack, palette, fournisseur…)</label>
+        <label for="s-note">{{ ajoutType === 'chute' ? 'Note (pièce d’origine, découpe…)' : 'Note (rack, palette, fournisseur…)' }}</label>
         <input id="s-note" v-model="draft.note" class="input" maxlength="300" autocomplete="off" />
       </div>
-      <label class="check"><input v-model="draft.chute" type="checkbox" /><span>C’est une chute (morceau récupéré d’une feuille entamée)</span></label>
       <p class="actions">
-        <button class="btn primary" type="submit" :disabled="adding"><AppIcon name="plus" :size="16" /> Ajouter au stock</button>
+        <button class="btn primary" type="submit" :disabled="adding"><AppIcon name="plus" :size="16" /> {{ ajoutType === 'chute' ? 'Ajouter la chute' : 'Ajouter au stock' }}</button>
       </p>
     </form>
   </section>
 
-  <section class="card" aria-labelledby="liste">
-    <h2 id="liste" class="sr-only">Feuilles en stock</h2>
-    <div v-if="matieres.length > 1" class="chips" role="group" aria-label="Matière">
-      <button type="button" class="chip" :aria-pressed="!filtre" @click="filtre = ''">Toutes</button>
-      <button v-for="m in matieres" :key="m.id" type="button" class="chip" :aria-pressed="filtre === m.id" @click="filtre = m.id">{{ m.label }}</button>
+  <section v-if="feuilles.length" class="card filtres" aria-label="Filtres">
+    <div class="field">
+      <label for="f-matiere">Matière</label>
+      <select id="f-matiere" v-model="filtres.matiere" class="input">
+        <option value="">Toutes</option>
+        <option v-for="m in matiereOptions" :key="m" :value="m">{{ m }}</option>
+      </select>
     </div>
-    <div v-if="!loading && !feuilles.length" class="empty">
-      <AppIcon name="layers" :size="32" class="muted" />
-      <p><b>Aucune feuille en stock pour l’instant.</b></p>
-      <p class="muted">Ajoutez vos feuilles ci-dessus : l’atelier saura quelle feuille prendre pour chaque commande.</p>
+    <div class="field">
+      <label for="f-epaisseur">Épaisseur</label>
+      <select id="f-epaisseur" v-model="filtres.epaisseur" class="input">
+        <option value="">Toutes</option>
+        <option v-for="e in epaisseurOptions" :key="e" :value="String(e)">{{ fmt(e) }} mm</option>
+      </select>
     </div>
-    <div v-else class="table-wrap">
-      <table class="table" :aria-busy="loading">
-        <caption class="sr-only">
-          Feuilles en stock
-        </caption>
-        <thead>
-          <tr>
-            <th>Matière</th>
-            <th>Coloris</th>
-            <th>Format</th>
-            <th class="n">En stock</th>
-            <th class="hide-sm n">Alerte</th>
-            <th class="hide-sm">Note</th>
-            <th><span class="sr-only">Actions</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          <template v-for="f in visibles" :key="f.id">
-            <tr>
-              <td>
-                {{ f.matiere }} <span class="sub">{{ fmt(f.epaisseur) }} mm</span>
-              </td>
-              <td>
-                <span v-if="f.coloris" class="with-swatch"
-                  ><span class="swatch" :style="{ background: f.hex ?? undefined }" aria-hidden="true" /><span
-                    >{{ f.coloris }}<span class="sub">{{ f.reference }}</span></span
-                  ></span
-                >
-                <span v-else class="muted">Brut</span>
-              </td>
-              <td class="mono fmt">{{ fmt(f.largeur) }} × {{ fmt(f.longueur) }} mm <span v-if="f.chute" class="pill accent">Chute</span></td>
-              <td class="n">
-                <b class="mono">{{ f.quantite }}</b> <span v-if="f.bas" class="pill warn">Stock bas</span>
-              </td>
-              <td class="hide-sm n"><input class="input compact seuil" inputmode="numeric" :aria-label="`Alerte stock bas de ${f.libelle}`" :value="f.seuil" @change="onSeuil(f, $event)" /></td>
-              <td class="hide-sm"><input class="input compact note" :aria-label="`Note de ${f.libelle}`" :value="f.note" maxlength="300" @change="onNote(f, $event)" /></td>
-              <td>
-                <span class="row-actions">
-                  <button class="btn small" type="button" :aria-expanded="open === f.id && move.mode === 'entree'" :aria-label="`Entrée de feuilles : ${f.libelle}`" @click="ouvrir(f, 'entree')">
-                    Entrée
-                  </button>
-                  <button class="btn small" type="button" :aria-expanded="open === f.id && move.mode === 'sortie'" :aria-label="`Sortie de feuilles : ${f.libelle}`" @click="ouvrir(f, 'sortie')">
-                    Sortie
-                  </button>
-                  <button class="btn small" type="button" :aria-expanded="open === f.id && move.mode === 'inventaire'" :aria-label="`Inventaire : ${f.libelle}`" @click="ouvrir(f, 'inventaire')">
-                    Compter
-                  </button>
-                  <button v-if="!f.quantite" class="btn small danger" type="button" :aria-label="`Supprimer la référence ${f.libelle}`" @click="supprimer(f)">
-                    <AppIcon name="trash" :size="14" />
-                  </button>
-                </span>
-              </td>
-            </tr>
-            <tr v-if="open === f.id" class="mouvement">
-              <td colspan="7">
-                <form class="move" novalidate @submit.prevent="appliquer(f)">
-                  <div class="field">
-                    <label :for="`m-${f.id}`">{{ move.mode === 'entree' ? 'Feuilles reçues' : move.mode === 'sortie' ? 'Feuilles sorties' : 'Quantité comptée' }}</label>
-                    <input :id="`m-${f.id}`" v-model="move.valeur" class="input mono" inputmode="numeric" :aria-invalid="!!move.erreur" :aria-describedby="move.erreur ? `m-${f.id}-e` : undefined" />
-                  </div>
-                  <div v-if="move.mode !== 'inventaire'" class="field">
-                    <label :for="`mm-${f.id}`">Motif</label>
-                    <select :id="`mm-${f.id}`" v-model="move.motif" class="input">
-                      <option v-for="m in motifs" :key="m" :value="m">{{ MOTIFS[m] }}</option>
-                    </select>
-                  </div>
-                  <div class="field grow">
-                    <label :for="`mn-${f.id}`">Note (n° de commande, fournisseur…)</label>
-                    <input :id="`mn-${f.id}`" v-model="move.note" class="input" maxlength="300" autocomplete="off" />
-                  </div>
-                  <button class="btn primary" type="submit" :disabled="move.busy">Valider</button>
-                  <button class="btn" type="button" @click="open = null">Annuler</button>
-                  <span v-if="move.erreur" :id="`m-${f.id}-e`" class="field-error full" role="alert">{{ move.erreur }}</span>
-                </form>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
+    <div class="field">
+      <label for="f-couleur">Coloris</label>
+      <select id="f-couleur" v-model="filtres.couleur" class="input">
+        <option value="">Tous</option>
+        <option value="brut">Brut</option>
+        <option v-for="c in couleurOptions" :key="c.id" :value="c.id">{{ c.label }}</option>
+      </select>
     </div>
+    <div class="field">
+      <label for="f-format">Format</label>
+      <select id="f-format" v-model="filtres.format" class="input">
+        <option value="">Tous</option>
+        <option v-for="fo in formatOptions" :key="fo" :value="fo">{{ fo }} mm</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="f-etat">État</label>
+      <select id="f-etat" v-model="filtres.etat" class="input">
+        <option value="">Tous</option>
+        <option v-for="e in ETATS" :key="e" :value="e">{{ ETAT_LABELS[e] }}</option>
+      </select>
+    </div>
+    <button v-if="filtresActifs" class="btn small reset" type="button" @click="reinitialiserFiltres"><AppIcon name="x" :size="14" />Réinitialiser les filtres</button>
   </section>
+
+  <div v-if="!loading && !feuilles.length" class="card empty">
+    <AppIcon name="layers" :size="32" class="muted" />
+    <p><b>Aucune feuille en stock pour l’instant.</b></p>
+    <p class="muted">Ajoutez vos feuilles ci-dessus : l’atelier saura quelle feuille prendre pour chaque commande.</p>
+  </div>
+
+  <template v-else>
+    <section aria-labelledby="entieres-titre">
+      <h2 id="entieres-titre" class="section-titre">
+        Feuilles entières <span class="muted">({{ entieres.length }})</span>
+      </h2>
+      <p v-if="feuilles.length && !entieres.length" class="muted vide-filtre">Aucune feuille entière avec ces filtres.</p>
+      <div v-else class="cards">
+        <article v-for="f in entieres" :key="f.id" class="sheet-card" :class="f.etat">
+          <div class="top">
+            <div class="qty">
+              <b class="mono">{{ fmt(f.quantite) }}</b> <span class="unit muted">feuille{{ f.quantite > 1 ? 's' : '' }}</span>
+            </div>
+            <span class="pill" :class="ETAT_PILL[f.etat]">{{ ETAT_LABELS[f.etat] }}</span>
+          </div>
+          <div class="id">
+            <span v-if="f.coloris" class="swatch" :style="{ background: f.hex ?? undefined }" aria-hidden="true" />
+            <div>
+              <b>{{ f.matiere }}</b> <span class="sub">{{ fmt(f.epaisseur) }} mm</span>
+              <div class="muted coloris">{{ f.coloris ? `${f.coloris} · ${f.reference}` : 'Brut, sans laquage' }}</div>
+            </div>
+          </div>
+          <p class="format mono">{{ fmt(f.largeur) }} × {{ fmt(f.longueur) }} mm</p>
+          <label class="mini seuil"
+            >Alerte stock bas<input class="input compact" inputmode="numeric" :aria-label="`Alerte stock bas de ${f.libelle}`" :value="f.seuil" @change="onSeuil(f, $event)"
+          /></label>
+          <p v-if="f.note" class="muted note-apercu">{{ f.note }}</p>
+
+          <div class="card-actions">
+            <button class="btn small" type="button" :aria-expanded="estOuvert(f, 'ajuster')" :aria-label="`Ajuster le stock : ${f.libelle}`" @click="ouvrirAjuster(f)">Ajuster le stock</button>
+            <button class="btn small" type="button" :aria-expanded="estOuvert(f, 'note')" :aria-label="`${f.note ? 'Modifier la' : 'Ajouter une'} note : ${f.libelle}`" @click="ouvrirNote(f)">
+              {{ f.note ? 'Modifier la note' : 'Ajouter une note' }}
+            </button>
+            <button v-if="!f.quantite" class="btn small danger" type="button" :aria-label="`Supprimer la référence ${f.libelle}`" @click="supprimer(f)">
+              <AppIcon name="trash" :size="14" />
+            </button>
+          </div>
+
+          <form v-if="estOuvert(f, 'ajuster')" class="move" novalidate @submit.prevent="appliquer(f)">
+            <div class="field wide">
+              <span class="mode-label muted">Mouvement</span>
+              <div class="chips" role="radiogroup" :aria-label="`Mouvement pour ${f.libelle}`">
+                <button type="button" class="chip" :aria-pressed="move.mode === 'entree'" @click="choisirMode(f, 'entree')">Entrée</button>
+                <button type="button" class="chip" :aria-pressed="move.mode === 'sortie'" @click="choisirMode(f, 'sortie')">Sortie</button>
+                <button type="button" class="chip" :aria-pressed="move.mode === 'inventaire'" @click="choisirMode(f, 'inventaire')">Compter</button>
+              </div>
+            </div>
+            <div class="field">
+              <label :for="`m-${f.id}`">{{ move.mode === 'entree' ? 'Feuilles reçues' : move.mode === 'sortie' ? 'Feuilles sorties' : 'Quantité comptée' }}</label>
+              <input :id="`m-${f.id}`" v-model="move.valeur" class="input mono" inputmode="numeric" :aria-invalid="!!move.erreur" :aria-describedby="move.erreur ? `m-${f.id}-e` : undefined" />
+            </div>
+            <div v-if="move.mode !== 'inventaire'" class="field">
+              <label :for="`mm-${f.id}`">Motif</label>
+              <select :id="`mm-${f.id}`" v-model="move.motif" class="input">
+                <option v-for="m in motifs" :key="m" :value="m">{{ MOTIFS[m] }}</option>
+              </select>
+            </div>
+            <div class="field grow">
+              <label :for="`mn-${f.id}`">Note (n° de commande, fournisseur…)</label>
+              <input :id="`mn-${f.id}`" v-model="move.note" class="input" maxlength="300" autocomplete="off" />
+            </div>
+            <div class="move-actions">
+              <button class="btn primary" type="submit" :disabled="move.busy">Valider</button>
+              <button class="btn" type="button" @click="openPanel = null">Annuler</button>
+            </div>
+            <span v-if="move.erreur" :id="`m-${f.id}-e`" class="field-error full" role="alert">{{ move.erreur }}</span>
+          </form>
+
+          <form v-if="estOuvert(f, 'note')" class="move" novalidate @submit.prevent="validerNote(f)">
+            <div class="field wide">
+              <label :for="`note-${f.id}`">Note (petite instruction : rack, palette, fournisseur…)</label>
+              <input :id="`note-${f.id}`" v-model="noteDraft.valeur" class="input" maxlength="300" autocomplete="off" />
+            </div>
+            <div class="move-actions">
+              <button class="btn primary" type="submit" :disabled="noteDraft.busy">Valider</button>
+              <button class="btn" type="button" @click="openPanel = null">Annuler</button>
+            </div>
+          </form>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="chutes-titre">
+      <h2 id="chutes-titre" class="section-titre">
+        Chutes <span class="muted">({{ chutes.length }})</span>
+      </h2>
+      <p v-if="feuilles.length && !chutes.length" class="muted vide-filtre">Aucune chute avec ces filtres.</p>
+      <div v-else class="cards">
+        <article v-for="f in chutes" :key="f.id" class="sheet-card" :class="f.etat">
+          <div class="top">
+            <div class="qty">
+              <b class="mono">{{ fmt(f.quantite) }}</b> <span class="unit muted">morceau{{ f.quantite > 1 ? 'x' : '' }}</span>
+            </div>
+            <span class="pill" :class="ETAT_PILL[f.etat]">{{ ETAT_LABELS[f.etat] }}</span>
+          </div>
+          <div class="id">
+            <span v-if="f.coloris" class="swatch" :style="{ background: f.hex ?? undefined }" aria-hidden="true" />
+            <div>
+              <b>{{ f.matiere }}</b> <span class="sub">{{ fmt(f.epaisseur) }} mm</span>
+              <div class="muted coloris">{{ f.coloris ? `${f.coloris} · ${f.reference}` : 'Brut, sans laquage' }}</div>
+            </div>
+          </div>
+          <p class="format mono">{{ fmt(f.largeur) }} × {{ fmt(f.longueur) }} mm</p>
+          <!-- Pas d'alerte sur une chute : elle n'est pas réapprovisionnée, juste reçue comme sous-produit de la découpe -->
+          <p v-if="f.note" class="muted note-apercu">{{ f.note }}</p>
+
+          <div class="card-actions">
+            <button class="btn small" type="button" :aria-expanded="estOuvert(f, 'ajuster')" :aria-label="`Ajuster le stock : ${f.libelle}`" @click="ouvrirAjuster(f)">Ajuster le stock</button>
+            <button class="btn small" type="button" :aria-expanded="estOuvert(f, 'note')" :aria-label="`${f.note ? 'Modifier la' : 'Ajouter une'} note : ${f.libelle}`" @click="ouvrirNote(f)">
+              {{ f.note ? 'Modifier la note' : 'Ajouter une note' }}
+            </button>
+            <button v-if="!f.quantite" class="btn small danger" type="button" :aria-label="`Supprimer la référence ${f.libelle}`" @click="supprimer(f)">
+              <AppIcon name="trash" :size="14" />
+            </button>
+          </div>
+
+          <form v-if="estOuvert(f, 'ajuster')" class="move" novalidate @submit.prevent="appliquer(f)">
+            <div class="field wide">
+              <span class="mode-label muted">Mouvement</span>
+              <div class="chips" role="radiogroup" :aria-label="`Mouvement pour ${f.libelle}`">
+                <button type="button" class="chip" :aria-pressed="move.mode === 'entree'" @click="choisirMode(f, 'entree')">Entrée</button>
+                <button type="button" class="chip" :aria-pressed="move.mode === 'sortie'" @click="choisirMode(f, 'sortie')">Sortie</button>
+                <button type="button" class="chip" :aria-pressed="move.mode === 'inventaire'" @click="choisirMode(f, 'inventaire')">Compter</button>
+              </div>
+            </div>
+            <div class="field">
+              <label :for="`m-${f.id}`">{{ move.mode === 'entree' ? 'Morceaux reçus' : move.mode === 'sortie' ? 'Morceaux sortis' : 'Quantité comptée' }}</label>
+              <input :id="`m-${f.id}`" v-model="move.valeur" class="input mono" inputmode="numeric" :aria-invalid="!!move.erreur" :aria-describedby="move.erreur ? `m-${f.id}-e` : undefined" />
+            </div>
+            <div v-if="move.mode !== 'inventaire'" class="field">
+              <label :for="`mm-${f.id}`">Motif</label>
+              <select :id="`mm-${f.id}`" v-model="move.motif" class="input">
+                <option v-for="m in motifs" :key="m" :value="m">{{ MOTIFS[m] }}</option>
+              </select>
+            </div>
+            <div class="field grow">
+              <label :for="`mn-${f.id}`">Note (n° de commande, fournisseur…)</label>
+              <input :id="`mn-${f.id}`" v-model="move.note" class="input" maxlength="300" autocomplete="off" />
+            </div>
+            <div class="move-actions">
+              <button class="btn primary" type="submit" :disabled="move.busy">Valider</button>
+              <button class="btn" type="button" @click="openPanel = null">Annuler</button>
+            </div>
+            <span v-if="move.erreur" :id="`m-${f.id}-e`" class="field-error full" role="alert">{{ move.erreur }}</span>
+          </form>
+
+          <form v-if="estOuvert(f, 'note')" class="move" novalidate @submit.prevent="validerNote(f)">
+            <div class="field wide">
+              <label :for="`note-${f.id}`">Note (petite instruction : pièce d’origine, découpe…)</label>
+              <input :id="`note-${f.id}`" v-model="noteDraft.valeur" class="input" maxlength="300" autocomplete="off" />
+            </div>
+            <div class="move-actions">
+              <button class="btn primary" type="submit" :disabled="noteDraft.busy">Valider</button>
+              <button class="btn" type="button" @click="openPanel = null">Annuler</button>
+            </div>
+          </form>
+        </article>
+      </div>
+    </section>
+  </template>
 
   <section v-if="mouvements.length" class="card hist" aria-labelledby="hist">
     <h2 id="hist">
@@ -403,6 +593,13 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
   font-family: var(--f-display);
   font-size: 1.5rem;
   font-weight: 700;
+}
+.totaux .sub {
+  display: block;
+  font-family: initial;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted);
 }
 .totaux .alerte {
   background: var(--warn-soft);
@@ -464,14 +661,6 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
   gap: 8px;
   align-items: center;
 }
-.chips {
-  padding: 12px 16px 0;
-}
-.with-swatch {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-}
 .swatch {
   width: 16px;
   height: 16px;
@@ -479,36 +668,17 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
   border: 1px solid var(--line);
   flex: none;
 }
-.row-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: nowrap;
-  justify-content: flex-end;
-}
-.row-actions .btn {
-  white-space: nowrap;
-}
-.fmt {
-  white-space: nowrap;
-}
-.seuil {
-  width: 76px;
-}
-.note {
-  min-width: 150px;
-  width: 100%;
-}
 .hist .sub {
   display: block;
-}
-.mouvement td {
-  background: var(--surface-2);
 }
 .move {
   display: flex;
   gap: 12px;
   align-items: end;
   flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 .move .grow {
   flex: 1 1 220px;
@@ -516,12 +686,141 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
 .move .full {
   flex-basis: 100%;
 }
+.move-actions {
+  display: flex;
+  gap: 8px;
+}
 .empty {
   padding: 36px 20px;
   display: grid;
   justify-items: center;
   gap: 8px;
   text-align: center;
+}
+
+/* --- Filtres détaillés : un champ par paramètre --- */
+.filtres {
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px 16px;
+  flex-wrap: wrap;
+  align-items: end;
+}
+.filtres .field {
+  min-width: 150px;
+  flex: 1 1 150px;
+}
+.filtres .reset {
+  white-space: nowrap;
+}
+
+/* --- Sections et cartes --- */
+.section-titre {
+  font-size: 1rem;
+  margin: 20px 0 10px;
+}
+.vide-filtre {
+  padding: 16px;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.sheet-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+/* Couleur de l'état, décidée par l'API (jamais réglable ici) : noir vide, rouge critique, jaune bas, vert correct */
+.sheet-card.vide {
+  border-left-color: var(--ink);
+}
+.sheet-card.critique {
+  border-left-color: var(--bad);
+}
+.sheet-card.bas {
+  border-left-color: var(--warn);
+}
+.sheet-card.ok {
+  border-left-color: var(--ok);
+}
+/* La quantité est la première chose qu'on voit sur la carte, en grand */
+.sheet-card .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.sheet-card .qty {
+  margin: 0;
+  line-height: 1;
+}
+.sheet-card .qty b {
+  font-family: var(--f-display);
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+.sheet-card .qty .unit {
+  font-size: 0.9rem;
+  margin-left: 4px;
+}
+.sheet-card .id {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  min-width: 0;
+}
+.sheet-card .id .swatch {
+  margin-top: 3px;
+}
+.sheet-card .coloris {
+  font-size: 0.82rem;
+}
+.pill.vide {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: transparent;
+}
+.sheet-card .format {
+  margin: 0;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sheet-card .note-apercu {
+  margin: 0;
+  font-size: 0.84rem;
+  font-style: italic;
+}
+.sheet-card .mini {
+  display: grid;
+  gap: 3px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+.sheet-card .mini.seuil input {
+  width: 76px;
+}
+.mode-label {
+  display: block;
+  font-size: 0.78rem;
+  margin-bottom: 4px;
+}
+.card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.card-actions .btn {
+  white-space: nowrap;
 }
 .hist {
   padding: 18px 20px;
@@ -559,55 +858,23 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-/* Téléphone : chaque feuille devient une carte, avec ses boutons à portée de pouce (sans défilement latéral) */
+/* Téléphone : une carte par ligne, boutons à portée de pouce */
 @media (max-width: 700px) {
-  .table thead {
-    display: none;
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .table,
-  .table tbody {
-    display: block;
+  .filtres {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filtres .field {
     min-width: 0;
-    width: 100%;
   }
-  .table tbody tr {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 6px 12px;
-    align-items: center;
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--line);
+  .card-actions {
+    justify-content: stretch;
   }
-  .table tbody td {
-    display: block;
-    padding: 0;
-    border: 0;
-    text-align: left;
-  }
-  /* Alerte et note restent masquées sur téléphone : elles se règlent sur un écran plus large */
-  .table tbody td.hide-sm {
-    display: none;
-  }
-  .table tbody td:nth-child(3) {
-    grid-column: 1;
-  }
-  .table tbody td:nth-child(4) {
-    grid-column: 2;
-    grid-row: 1 / span 3;
-    text-align: right;
-  }
-  .table tbody td:last-child {
-    grid-column: 1 / -1;
-  }
-  .row-actions {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-  .mouvement td {
-    grid-column: 1 / -1;
-  }
-  .mouvement {
-    display: block !important;
+  .card-actions .btn {
+    flex: 1 1 auto;
   }
 }
 @media (max-width: 560px) {
