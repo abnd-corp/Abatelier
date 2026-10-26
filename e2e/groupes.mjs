@@ -36,6 +36,11 @@ export const GROUPES = {
     tests: ['boutique'],
     sources: [/^api\/src\/routes\/(boutique|paiement)\.ts/, /^web\/src\/views\/(Product|site\/(Boutique|Panier|Paiement))/],
   },
+  // Histoire complète touchant plusieurs domaines : rejouée dès qu'un de leurs fichiers change
+  parcours: {
+    tests: ['parcours'],
+    sources: [/^api\/src\/(billing|pdf|quote)\.ts/, /^api\/src\/routes\/(orders|production|billing|espace)\.ts/, /^web\/src\/views\/(Order|Production|Billing)/, /^web\/src\/views\/site\/Espace/],
+  },
   responsive: {
     tests: ['responsive'],
     sources: [/^web\/src\/(style\.css|components\/(AppLayout|PublicLayout))/],
