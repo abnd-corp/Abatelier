@@ -219,10 +219,14 @@ export async function renderDocument(company: Company, template: Template, logo:
 
   const colX = 330
   const colW = RIGHT - colX
+  // Le QR code du site se range à droite du titre, avec l'adresse du site écrite dessous ; le titre et les dates se calent à sa gauche
+  const QR = 56
+  const titleW = qr ? colW - QR - 14 : colW
+  if (qr) doc.image(qr, RIGHT - QR, 44, { width: QR, height: QR })
   doc.font(F.b).fontSize(24).fillColor(accent)
-  text((data.estimation ? 'Estimation' : TITRES[data.type]).toUpperCase(), colX, 44, { width: colW, align: 'right', characterSpacing: 1 })
+  text((data.estimation ? 'Estimation' : TITRES[data.type]).toUpperCase(), colX, 44, { width: titleW, align: 'right', characterSpacing: 1 })
   doc.font(F.b).fontSize(11).fillColor(INK)
-  if (!data.estimation) text(`N° ${data.numero}`, colX, doc.y + 2, { width: colW, align: 'right' })
+  if (!data.estimation) text(`N° ${data.numero}`, colX, doc.y + 2, { width: titleW, align: 'right' })
   doc.font(F.r).fontSize(9.5)
   const limite = data.echeance ?? addDays(data.date, isDevis ? template.validiteDevis : template.echeanceFacture)
   const dates = [
@@ -230,10 +234,18 @@ export async function renderDocument(company: Company, template: Template, logo:
     isAvoir ? `Facture : ${data.avoir?.facture ?? ''}` : data.estimation ? 'Prix indicatif, non contractuel' : `${isDevis ? 'Valable jusqu’au' : 'Échéance'} : ${day(limite)}`,
     ...(data.references ?? []),
   ]
-  text(dates.join('\n'), colX, doc.y + 2, { width: colW, align: 'right', lineGap: 1 })
+  text(dates.join('\n'), colX, doc.y + 2, { width: titleW, align: 'right', lineGap: 1 })
+  // Adresse du site sous le QR code, sous les dates pour ne rien chevaucher
+  let urlBottom = 0
+  if (qr) {
+    const urlY = Math.max(44 + QR + 4, doc.y + 4)
+    doc.font(F.r).fontSize(7).fillColor(MUTED)
+    text(company.siteWeb.replace(/^https?:\/\//i, '').replace(/\/$/, ''), RIGHT - 160, urlY, { width: 160, align: 'right', lineBreak: false, ellipsis: true })
+    urlBottom = urlY + 10
+  }
 
   // Bloc client, sous les références
-  const boxY = Math.max(132, doc.y + 12)
+  const boxY = Math.max(132, doc.y + 12, urlBottom + 8)
   doc.font(F.b).fontSize(10.5)
   const nameH = doc.heightOfString(clean(data.client.nom), { width: colW - 24 })
   doc.font(F.r).fontSize(9.5)
@@ -307,16 +319,8 @@ export async function renderDocument(company: Company, template: Template, logo:
 
   // --- Totaux ---
   const t = data.totaux ?? totals(data.lignes, data.tva)
-  // Le QR code du site (avec son adresse en clair dessous) se place à gauche des totaux, là où la page est vide
-  const QR = 64
-  ensure(qr ? QR + 38 : 80)
+  ensure(80)
   y += 12
-  const totauxTop = y
-  if (qr) {
-    doc.image(qr, PAGE.m, y - 2, { width: QR, height: QR })
-    doc.font(F.r).fontSize(7.5).fillColor(MUTED)
-    text(company.siteWeb.replace(/^https?:\/\//i, '').replace(/\/$/, ''), PAGE.m, y + QR + 4, { width: colX - PAGE.m - 24, lineBreak: false, ellipsis: true })
-  }
   const rows: [string, string, boolean][] = [
     ['Total HT', eur(t.ht), false],
     [`TVA ${qty(data.tva)} %`, eur(t.tva), false],
@@ -331,8 +335,6 @@ export async function renderDocument(company: Company, template: Template, logo:
     text(value, colX + colW / 2, y + (strong ? 3 : 0), { width: colW / 2 - 12, align: 'right' })
     y += strong ? 28 : 18
   }
-  // Le QR code et son adresse peuvent descendre plus bas que les totaux
-  if (qr) y = Math.max(y, totauxTop + QR + 22)
   y += 14
 
   // --- Conditions et textes ---
