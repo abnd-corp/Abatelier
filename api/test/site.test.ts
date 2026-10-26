@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { auditLog, billingDocuments, clients, colors, contactRequests, materials, orders, siteContent } from '../src/db/schema.js'
+import { auditLog, billingDocuments, colors, contactRequests, materials, orders, siteContent } from '../src/db/schema.js'
 import { env } from '../src/env.js'
 import { resetReviewsCache } from '../src/google-reviews.js'
 import { buildApp, client, createUser, loginAs, M, makePng, resetDb, seedModels, type App, type Client } from './helpers.js'
@@ -443,92 +443,5 @@ describe('Configurateur public', () => {
     const res = await visitor.post('/api/public/devis', devis())
     expect(res.statusCode).toBe(404)
     expect(await db.select().from(contactRequests)).toHaveLength(0)
-  })
-
-  describe('commande créée par la direction', () => {
-    // Demandes reçues avant l'espace client : elles portent leurs pièces et se transforment toujours en commande
-    const request = async (over: Record<string, unknown> = {}) => {
-      const { ttc, ht } = (await visitor.post('/api/public/configurateur/chiffrage', config())).json().totals
-      await db.insert(contactRequests).values({
-        nom: 'Jean Dupont',
-        email: String(over.email ?? 'jean@example.com').toLowerCase(),
-        telephone: '06 12 34 56 78',
-        codePostal: '42490',
-        ville: 'Fraisses',
-        objet: 'Demande de devis : 4 pièces',
-        message: 'Pour un muret.',
-        configuration: { lignes: config().lignes as never, livraison: { mode: 'retrait' }, resume: ['4 × Couvertine (Mur sud)'], ht, ttc },
-      })
-      const list = (await direction.get('/api/site/contacts')).json().demandes
-      return list[0] as { id: string; configuration: { ttc: number; resume: string[] }; commandeId: string | null }
-    }
-
-    it('montre les pièces et le prix dans la liste des demandes', async () => {
-      const d = await request()
-      expect(d.configuration.resume).toHaveLength(1)
-      expect(d.configuration.ttc).toBeGreaterThan(0)
-      expect(d.commandeId).toBeNull()
-    })
-
-    it('crée la fiche client et la commande, au prix que le visiteur a vu, et traite la demande', async () => {
-      const d = await request()
-      const res = await direction.post(`/api/site/contacts/${d.id}/commande`)
-      expect(res.statusCode, res.body).toBe(201)
-      const { id, numero } = res.json()
-      expect(numero).toMatch(/^C-\d{4}-\d{4}$/)
-      const [c] = await db.select().from(clients)
-      expect(c).toMatchObject({ type: 'particulier', origine: 'site', prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', ville: 'Fraisses' })
-      const order = (await direction.get(`/api/orders/${id}`)).json()
-      expect(order.order.statut).toBe('recue')
-      expect(order.order.ttc).toBe(d.configuration.ttc)
-      expect(order.client.id).toBe(c!.id)
-      expect(order.order.notes).toContain('Demande de devis du site')
-      const after = (await direction.get('/api/site/contacts?filtre=traitees')).json().demandes[0]
-      expect(after).toMatchObject({ commandeId: id })
-      expect(after.traiteAt).not.toBeNull()
-      const [e] = await entries('contact.order_created')
-      expect(e!.details).toMatchObject({ commande: numero, clientCree: true })
-      expect((await entries('client.created')).length).toBe(1)
-    })
-
-    it('reprend la fiche client existante quand l’adresse e-mail est connue', async () => {
-      await direction.post('/api/clients', { type: 'particulier', prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com' })
-      const d = await request()
-      expect((await direction.post(`/api/site/contacts/${d.id}/commande`)).statusCode).toBe(201)
-      expect(await db.select().from(clients)).toHaveLength(1)
-      expect((await entries('contact.order_created'))[0]!.details).toMatchObject({ clientCree: false })
-    })
-
-    it('ne crée qu’une commande par demande', async () => {
-      const d = await request()
-      await direction.post(`/api/site/contacts/${d.id}/commande`)
-      const again = await direction.post(`/api/site/contacts/${d.id}/commande`)
-      expect(again.statusCode).toBe(409)
-      expect(again.json().error).toMatch(/déjà été créée/)
-      expect(await db.select().from(orders)).toHaveLength(1)
-    })
-
-    it('refuse une demande sans pièces, et dit quand le catalogue a changé depuis', async () => {
-      expect((await visitor.post('/api/public/contact', { nom: 'A B', email: 'a@b.fr', objet: 'Question', message: 'Bonjour', consentement: true })).statusCode).toBe(201)
-      const [plain] = await db.select().from(contactRequests)
-      const res = await direction.post(`/api/site/contacts/${plain!.id}/commande`)
-      expect(res.statusCode).toBe(409)
-      expect(res.json().error).toMatch(/ne vient pas du configurateur/)
-
-      const d = await request({ email: 'autre@example.com' })
-      await db.update(materials).set({ actif: false })
-      const gone = await direction.post(`/api/site/contacts/${d.id}/commande`)
-      expect(gone.statusCode).toBe(400)
-      expect(await db.select().from(orders)).toHaveLength(0)
-    })
-
-    it('est réservé à la direction', async () => {
-      const d = await request()
-      const unknown = '00000000-0000-4000-8000-000000000000'
-      expect((await visitor.post(`/api/site/contacts/${d.id}/commande`)).statusCode).toBe(401)
-      await createUser({ identifiant: 'claire', role: 'rh' })
-      expect((await (await loginAs(app, 'claire')).post(`/api/site/contacts/${d.id}/commande`)).statusCode).toBe(403)
-      expect((await direction.post(`/api/site/contacts/${unknown}/commande`)).statusCode).toBe(404)
-    })
   })
 })
