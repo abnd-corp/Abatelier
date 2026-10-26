@@ -1,0 +1,1 @@
+ALTER TABLE "document_template" ADD COLUMN "qr_code" boolean DEFAULT true NOT NULL;

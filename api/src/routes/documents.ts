@@ -8,7 +8,7 @@ import { inspectImage, renderDocument, sampleDocument } from '../pdf.js'
 import { getPricingSettings } from '../pricing.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
-import { facturxMissing } from '../facturx.js'
+import { facturxChecklist, facturxMissing } from '../facturx.js'
 import { diff, digits, formatSiret, integer, invalid, luhn } from '../validation.js'
 
 const LOGO_MAX = 1024 * 1024
@@ -90,6 +90,8 @@ const templateFields = {
   noteFacture: block(1000, 'Note de la facture'),
   mentionsLegales: block(2000, 'Mentions légales'),
   piedDePage: block(300, 'Pied de page'),
+  // Imprimé sur les devis, factures, avoirs et fiches de fabrication, seulement si un site web est renseigné
+  qrCode: z.preprocess((v) => (typeof v === 'string' ? v === 'true' : v), z.boolean()),
 }
 
 const nextNumber = (label: string) =>
@@ -129,6 +131,21 @@ export async function documentRoutes(app: FastifyInstance) {
     const before = await getCompany()
     const changes = diff(before as Record<string, unknown>, parsed.data as Record<string, unknown>)
     if (!Object.keys(changes).length) return { company: publicCompany(before) }
+
+    // Une entreprise déjà conforme pour la facturation électronique ne doit jamais régresser : on refuse
+    // l'enregistrement plutôt que de rendre les prochaines factures non conformes à la norme (obligation légale).
+    // Tant que l'entreprise n'est pas encore entièrement conforme, corriger un champ à la fois reste permis.
+    if (!facturxMissing(before).length) {
+      const merged = { ...before, ...parsed.data }
+      const nowMissing = facturxChecklist(merged).filter((c) => !c.ok)
+      if (nowMissing.length) {
+        return reply.code(409).send({
+          error: `Cette modification romprait la conformité Factur-X : il manquerait alors ${nowMissing.map((c) => c.label).join(', ')}. Les prochaines factures ne seraient plus conformes à la norme.`,
+          field: nowMissing[0]!.key,
+        })
+      }
+    }
+
     const [company] = await db
       .update(companySettings)
       .set({ ...parsed.data, updatedAt: new Date() })

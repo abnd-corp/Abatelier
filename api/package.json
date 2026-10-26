@@ -20,6 +20,7 @@
     "nodemailer": "^10.1.7",
     "pdfkit": "0.20.2",
     "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -27,6 +28,7 @@
     "@types/nodemailer": "^8.0.2",
     "@types/pdfkit": "0.17.6",
     "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.6",
     "drizzle-kit": "^0.31.11",
     "pdfjs-dist": "^6.3.289",
     "tsx": "^4.23.15",

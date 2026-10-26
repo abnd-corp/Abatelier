@@ -28,6 +28,8 @@ export interface Template {
   noteFacture: string
   mentionsLegales: string
   piedDePage: string
+  // Imprimé sur les devis, factures, avoirs et fiches de fabrication, si un site web est renseigné
+  qrCode: boolean
 }
 
 export interface NextNumber {
@@ -52,7 +54,7 @@ export interface DocumentSettings {
 }
 
 export const COMPANY_FIELDS = ['raisonSociale', 'formeJuridique', 'capital', 'adresse', 'telephone', 'email', 'siteWeb', 'siret', 'rcs', 'tvaIntra', 'iban', 'bic'] as const
-export const TEMPLATE_FIELDS = ['couleur', 'entete', 'conditionsPaiement', 'validiteDevis', 'echeanceFacture', 'noteDevis', 'noteFacture', 'mentionsLegales', 'piedDePage'] as const
+export const TEMPLATE_FIELDS = ['couleur', 'entete', 'conditionsPaiement', 'validiteDevis', 'echeanceFacture', 'noteDevis', 'noteFacture', 'mentionsLegales', 'piedDePage', 'qrCode'] as const
 
 // Préfixes fixes, comme dans l'API
 export const PREFIXES: Record<DocumentType, string> = { devis: 'D', facture: 'F' }
@@ -62,18 +64,34 @@ export const formatNumber = (type: DocumentType, annee: number, n: number) => `$
 
 export const LOGO_MAX = 1024 * 1024
 
+export interface FacturxCheck {
+  // Champ à corriger (identifiant du champ dans COMPANY_FIELDS)
+  key: 'siret' | 'tvaIntra' | 'adresse'
+  label: string
+  ok: boolean
+}
+
 /**
- * Ce qui manque à l'entreprise pour émettre des factures électroniques conformes.
+ * Chaque mention obligatoire d'une facture électronique conforme, point par point.
  * Mêmes règles que l'API (api/src/facturx.ts) : on les refait ici pour réagir pendant la saisie.
  */
-export function facturxMissing(c: Pick<Company, 'siret' | 'tvaIntra' | 'adresse'>) {
-  const out: string[] = []
-  if (c.siret.replace(/\D/g, '').length !== 14) out.push('le SIRET')
-  if (!c.tvaIntra.trim()) out.push('le numéro de TVA intracommunautaire')
+export function facturxChecklist(c: Pick<Company, 'siret' | 'tvaIntra' | 'adresse'>): FacturxCheck[] {
   const lines = c.adresse
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean)
-  if (lines.length < 2 || !/^\d{5}\s+\S/.test(lines.at(-1) ?? '')) out.push('l’adresse complète (rue, code postal et ville)')
-  return out
+  return [
+    { key: 'siret', label: 'SIRET valide (14 chiffres)', ok: c.siret.replace(/\D/g, '').length === 14 },
+    { key: 'tvaIntra', label: 'Numéro de TVA intracommunautaire', ok: !!c.tvaIntra.trim() },
+    { key: 'adresse', label: 'Adresse complète (rue, code postal et ville)', ok: lines.length >= 2 && /^\d{5}\s+\S/.test(lines.at(-1) ?? '') },
+  ]
+}
+
+const FACTURX_LABELS: Record<FacturxCheck['key'], string> = { siret: 'le SIRET', tvaIntra: 'le numéro de TVA intracommunautaire', adresse: 'l’adresse complète (rue, code postal et ville)' }
+
+/** Ce qui manque à l'entreprise pour émettre des factures électroniques conformes. */
+export function facturxMissing(c: Pick<Company, 'siret' | 'tvaIntra' | 'adresse'>) {
+  return facturxChecklist(c)
+    .filter((check) => !check.ok)
+    .map((check) => FACTURX_LABELS[check.key])
 }

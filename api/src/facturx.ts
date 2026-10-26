@@ -214,17 +214,33 @@ export const FACTURX_XMP = `
         </rdf:Description>
         `
 
+export interface FacturxCheck {
+  key: 'siret' | 'tvaIntra' | 'adresse'
+  label: string
+  ok: boolean
+}
+
 /**
- * Ce qui manque à l'entreprise pour émettre une facture électronique conforme (SIRET, TVA, adresse).
+ * Chaque mention obligatoire d'une facture électronique conforme, point par point (SIRET, TVA, adresse).
+ * Mêmes règles et même ordre que web/src/lib/documents.ts, qui les refait pour réagir pendant la saisie.
+ */
+export function facturxChecklist(c: Pick<CompanySettings, 'siret' | 'tvaIntra' | 'adresse'>): FacturxCheck[] {
+  const a = splitAddress(c.adresse)
+  return [
+    { key: 'siret', label: 'le SIRET', ok: siren(c.siret).length === 9 && c.siret.replace(/\D/g, '').length === 14 },
+    { key: 'tvaIntra', label: 'le numéro de TVA intracommunautaire', ok: !!c.tvaIntra },
+    { key: 'adresse', label: 'l’adresse complète (rue, code postal et ville)', ok: !!(a.rue && a.codePostal && a.ville) },
+  ]
+}
+
+/**
+ * Ce qui manque à l'entreprise pour émettre une facture électronique conforme.
  * Vide quand tout est renseigné ; sinon une liste lisible, montrée à la direction.
  */
 export function facturxMissing(c: Pick<CompanySettings, 'siret' | 'tvaIntra' | 'adresse'>) {
-  const out: string[] = []
-  if (siren(c.siret).length !== 9 || c.siret.replace(/\D/g, '').length !== 14) out.push('le SIRET')
-  if (!c.tvaIntra) out.push('le numéro de TVA intracommunautaire')
-  const a = splitAddress(c.adresse)
-  if (!a.rue || !a.codePostal || !a.ville) out.push('l’adresse complète (rue, code postal et ville)')
-  return out
+  return facturxChecklist(c)
+    .filter((check) => !check.ok)
+    .map((check) => check.label)
 }
 
 /** Idem pour une facture à émettre : l'entreprise, plus ce qu'on sait du client (règle française BR-FR-12 : adresse électronique de l'acheteur). */

@@ -297,6 +297,8 @@ export const documentTemplate = pgTable(
     noteFacture: txt('note_facture'),
     mentionsLegales: txt('mentions_legales'),
     piedDePage: txt('pied_de_page'),
+    // QR code vers le site web de l'entreprise, imprimé sur les devis, factures et bons (si un site web est renseigné)
+    qrCode: boolean('qr_code').notNull().default(true),
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },
   (t) => [check('document_template_single_row', sql`${t.id} = 1`)],

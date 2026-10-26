@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module'
 import PDFDocument from 'pdfkit'
+import QRCode from 'qrcode'
 import { FACTURX_FILENAME, FACTURX_XMP, MENTIONS_FACTURE } from './facturx.js'
 import type { CompanySettings, DocumentTemplate, DocumentType } from './db/schema.js'
 
@@ -60,6 +61,16 @@ export function clean(s: string) {
     .replace(/[    ]/g, ' ')
     .replace(/−/g, '-')
     .replace(/[^\n\t -~ -ÿ]/g, (c) => (WIN_ANSI_EXTRA.has(c) ? c : '?'))
+}
+
+/** Un lecteur de QR code a besoin d'une URI complète : on ajoute https:// si l'adresse n'a pas de protocole. */
+const qrUrl = (site: string) => (/^https?:\/\//i.test(site) ? site : `https://${site}`)
+
+/** QR code (PNG) vers le site web de l'entreprise, à imprimer sur les documents. Null si aucun site renseigné. */
+export async function siteQrPng(siteWeb: string): Promise<Buffer | null> {
+  const site = siteWeb.trim()
+  if (!site) return null
+  return QRCode.toBuffer(qrUrl(site), { type: 'png', margin: 0, width: 160 })
 }
 
 const eurFmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' })
@@ -153,7 +164,8 @@ const requireFont = createRequire(import.meta.url)
 const FONTS = { regular: requireFont.resolve('@fontsource/inter/files/inter-latin-400-normal.woff'), bold: requireFont.resolve('@fontsource/inter/files/inter-latin-700-normal.woff') }
 
 /** `facturx` : XML à embarquer ; le document devient alors un PDF/A-3 (facture ou avoir électronique). */
-export function renderDocument(company: Company, template: Template, logo: Buffer | null, data: DocData, facturx?: { xml: string }): Promise<Buffer> {
+export async function renderDocument(company: Company, template: Template, logo: Buffer | null, data: DocData, facturx?: { xml: string }): Promise<Buffer> {
+  const qr = template.qrCode ? await siteQrPng(company.siteWeb) : null
   const doc = new PDFDocument({
     size: 'A4',
     margin: PAGE.m,
@@ -392,8 +404,11 @@ export function renderDocument(company: Company, template: Template, logo: Buffe
     doc.moveTo(PAGE.m, fy).lineTo(RIGHT, fy).lineWidth(0.6).strokeColor(LINE).stroke()
     doc.font(F.r).fontSize(7.5).fillColor(MUTED)
     const lines = [template.piedDePage, identity].filter((s) => s.trim()).join('\n')
-    text(lines, PAGE.m, fy + 8, { width: WIDTH - 50, lineGap: 1 })
-    text(`${i + 1} / ${range.count}`, RIGHT - 50, fy + 8, { width: 50, align: 'right' })
+    // Le QR code (vers le site web) prend la place habituelle du numéro de page, qui se décale à sa gauche
+    const reserved = 50 + (qr ? 38 : 0)
+    text(lines, PAGE.m, fy + 8, { width: WIDTH - reserved, lineGap: 1 })
+    text(`${i + 1} / ${range.count}`, RIGHT - reserved, fy + 8, { width: 50, align: 'right' })
+    if (qr) doc.image(qr, RIGHT - 34, fy + 4, { width: 34, height: 34 })
     doc.page.margins.bottom = margin
   }
 

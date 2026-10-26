@@ -169,6 +169,13 @@
       "when": 1792660049802,
       "tag": "0023_pro_verifie",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793002310938,
+      "tag": "0024_open_centennial",
+      "breakpoints": true
     }
   ]
 }

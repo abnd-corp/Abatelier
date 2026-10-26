@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import DocumentsView from '@/views/DocumentsView.vue'
-import { facturxMissing, formatNumber, type DocumentSettings } from '@/lib/documents'
+import { facturxChecklist, formatNumber, type DocumentSettings } from '@/lib/documents'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 import { useAuthStore } from '@/stores/auth'
 import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
@@ -43,6 +43,7 @@ const SETTINGS: DocumentSettings = {
     noteFacture: '',
     mentionsLegales: '',
     piedDePage: '',
+    qrCode: true,
   },
   numbering: { annee: 2026, devis: { numero: 1, label: 'D-2026-0001', verrouille: false }, facture: { numero: 1, label: 'F-2026-0001', verrouille: false } },
 }
@@ -191,6 +192,19 @@ describe('Modèles de documents', () => {
     expect(wrapper.text()).toContain('Revenir au logo de l’appli')
   })
 
+  it('envoie la case QR code comme les autres réglages du modèle', async () => {
+    const { wrapper, calls } = await setup('/modeles-documents?onglet=modele', {
+      'PATCH /documents/template': [200, { template: { ...SETTINGS.template, qrCode: false } }],
+    })
+    const box = () => wrapper.get<HTMLInputElement>('#t-qr').element
+    expect(box().checked).toBe(true)
+    await wrapper.get('#t-qr').setValue(false)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PATCH' && c.path === '/documents/template')!.body.qrCode).toBe('false')
+    expect(box().checked).toBe(false)
+  })
+
   it('décrit les changements des modèles dans le journal', () => {
     const e = (action: string, details: object) => describeEntry({ action, details } as unknown as AuditEntry).text
     expect(e('documents.company_updated', { changements: { siret: { avant: '', apres: '732 829 320 00074' } } })).toBe('A modifié l’identité de l’entreprise : SIRET vide → « 732 829 320 00074 »')
@@ -203,30 +217,43 @@ describe('Modèles de documents', () => {
 })
 
 describe('Facturation électronique : informations de l’entreprise', () => {
-  it('liste ce qui manque, et se met à jour pendant la saisie', async () => {
+  it('liste chaque mention point par point, et se met à jour pendant la saisie', async () => {
     const { wrapper, val } = await setup()
     const card = () => wrapper.get('.facturx').text()
     // Départ : adresse sur une seule ligne, ni SIRET ni TVA
-    expect(card()).toContain('il manque')
-    expect(card()).toContain('le SIRET')
-    expect(card()).toContain('le numéro de TVA intracommunautaire')
-    expect(card()).toContain('l’adresse complète')
+    expect(card()).toContain('Non conforme')
+    expect(card()).toContain('SIRET valide')
+    expect(card()).toContain('Numéro de TVA intracommunautaire')
+    expect(card()).toContain('Adresse complète')
+    expect(wrapper.findAll('.facturx-list li.ok')).toHaveLength(0)
+    expect(wrapper.findAll('.facturx-list button')).toHaveLength(3)
+
+    // Corriger un champ y emmène directement
+    await wrapper.findAll('.facturx-list button')[0]!.trigger('click')
+    expect((document.activeElement as HTMLElement | null)?.id).toBe('c-siret')
+
     await wrapper.get('#c-siret').setValue('732 829 320 00074')
     await wrapper.get('#c-tva').setValue('FR44732829320')
     await wrapper.get('#c-adresse').setValue('12 rue de l’Atelier\n42000 Saint-Étienne')
-    expect(card()).toContain('sont complètes')
+    expect(card()).toContain('Conforme')
     expect(wrapper.get('.facturx').classes()).toContain('ok')
+    expect(wrapper.findAll('.facturx-list li.ok')).toHaveLength(3)
+    expect(wrapper.findAll('.facturx-list button')).toHaveLength(0)
     expect(val('#c-siret')).toBe('732 829 320 00074')
   })
 })
 
-describe('facturxMissing', () => {
+describe('facturxChecklist', () => {
   it('applique les mêmes règles que l’API', () => {
     const ok = { siret: '732 829 320 00074', tvaIntra: 'FR44732829320', adresse: '12 rue X\n42000 St-Étienne' }
-    expect(facturxMissing(ok)).toEqual([])
-    expect(facturxMissing({ ...ok, siret: '732 829 320' })).toEqual(['le SIRET'])
-    expect(facturxMissing({ ...ok, tvaIntra: '  ' })).toEqual(['le numéro de TVA intracommunautaire'])
-    expect(facturxMissing({ ...ok, adresse: '42000 St-Étienne' })).toEqual(['l’adresse complète (rue, code postal et ville)'])
-    expect(facturxMissing({ ...ok, adresse: '12 rue X\nSaint-Étienne' })).toEqual(['l’adresse complète (rue, code postal et ville)'])
+    const keysOf = (c: typeof ok) =>
+      facturxChecklist(c)
+        .filter((x) => !x.ok)
+        .map((x) => x.key)
+    expect(keysOf(ok)).toEqual([])
+    expect(keysOf({ ...ok, siret: '732 829 320' })).toEqual(['siret'])
+    expect(keysOf({ ...ok, tvaIntra: '  ' })).toEqual(['tvaIntra'])
+    expect(keysOf({ ...ok, adresse: '42000 St-Étienne' })).toEqual(['adresse'])
+    expect(keysOf({ ...ok, adresse: '12 rue X\nSaint-Étienne' })).toEqual(['adresse'])
   })
 })
