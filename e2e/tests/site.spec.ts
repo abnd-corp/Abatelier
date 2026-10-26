@@ -512,6 +512,34 @@ test.describe('Site vitrine : direction', () => {
     await expect(adminPage.getByText('Textes enregistrés')).toBeVisible()
   })
 
+  test('les pages légales ont leur onglet, séparées des textes, et se rétablissent', async ({ adminPage, browser, uid }, info) => {
+    // Un champ par navigateur : les deux tournent en parallèle sur la même base
+    const page = { chromium: { label: 'Cookies', url: '/cookies' }, firefox: { label: 'Mentions légales', url: '/mentions-legales' } }[info.project.name as 'chromium' | 'firefox']
+    const visitor = await (await browser.newContext()).newPage()
+
+    // Pas dans l'onglet Textes, mais dans Pages légales
+    await adminPage.goto('/site-vitrine?onglet=textes')
+    await expect(adminPage.getByLabel(page.label, { exact: true })).toHaveCount(0)
+    await adminPage.getByRole('tab', { name: 'Pages légales' }).click()
+    await expect(adminPage).toHaveURL(/onglet=legal/)
+    await expect(adminPage.getByLabel('Titre principal')).toHaveCount(0)
+    const box = adminPage.getByLabel(page.label, { exact: true })
+    const original = await box.inputValue()
+
+    // Une phrase ajoutée est tout de suite en ligne
+    await box.fill(`${original}\n\nPhrase de test ${uid}`)
+    await adminPage.getByRole('button', { name: 'Enregistrer' }).click()
+    await expect(adminPage.getByText('Pages légales enregistrées')).toBeVisible()
+    await visitor.goto(page.url)
+    await expect(visitor.getByText(`Phrase de test ${uid}`)).toBeVisible()
+
+    // Rétablie d'un clic
+    await adminPage.locator('.field').filter({ has: box }).getByRole('button', { name: 'Rétablir le texte d’origine' }).click()
+    await expect(box).not.toHaveValue(new RegExp(uid))
+    await visitor.reload()
+    await expect(visitor.getByText(`Phrase de test ${uid}`)).toHaveCount(0)
+  })
+
   test('l’onglet E-mails vérifie la messagerie : essai reçu, historique, alerte de contact', async ({ adminPage, uid }) => {
     await adminPage.goto('/site-vitrine?onglet=emails')
     await expect(adminPage.getByText('Configuré : les messages partent de')).toBeVisible()
@@ -597,7 +625,7 @@ test.describe('Site vitrine : écrans @responsive', () => {
   })
 
   test('/site-vitrine (direction) : onglets lisibles, sans défilement horizontal', async ({ adminPage }) => {
-    for (const onglet of ['', '?onglet=textes', '?onglet=photos', '?onglet=emails']) {
+    for (const onglet of ['', '?onglet=textes', '?onglet=legal', '?onglet=photos', '?onglet=emails']) {
       await adminPage.goto(`/site-vitrine${onglet}`)
       await expect(adminPage.getByRole('heading', { level: 1, name: 'Site vitrine' })).toBeInViewport()
       expect(await noHorizontalScroll(adminPage)).toBe(true)
