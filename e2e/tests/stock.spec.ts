@@ -25,40 +25,44 @@ test.describe('Stock de feuilles', () => {
     await expect(atelier.getByRole('heading', { level: 1, name: 'Stock de feuilles' })).toBeVisible()
 
     // Le formulaire d'ajout et l'historique sont fermés : la page reste légère
+    // Scopé à #ajout : les filtres détaillés (R7) ont aussi un champ « Coloris »
+    const ajoutForm = atelier.locator('#ajout')
     await expect(atelier.getByLabel('Matière et épaisseur')).toHaveCount(0)
-    await atelier.getByRole('button', { name: 'Ajouter une feuille' }).click()
-    await expect(atelier.getByLabel('Matière et épaisseur')).toBeVisible()
+    await atelier.getByRole('button', { name: 'Ajouter des feuilles' }).click()
+    await expect(ajoutForm.getByLabel('Matière et épaisseur')).toBeVisible()
 
     // Saisie : erreur claire, puis une feuille entière et une chute (tailles propres à ce test, pour ne pas gêner les autres)
-    // La pièce commandée plus bas a 480 mm de développé : une feuille plus étroite ne convient pas et la fabrication dirait « aucune feuille ».
+    // Au moins 500 mm : la pièce testée plus bas a un développé de 480 mm, la feuille doit pouvoir la contenir
     const l = 500 + Math.floor(Math.random() * 2400)
-    await atelier.getByLabel('Matière et épaisseur').selectOption(matiere.id)
-    await atelier.getByLabel('Coloris').selectOption(coloris.id)
-    await atelier.getByLabel('Largeur (mm)').fill('10')
-    await atelier.getByLabel('Longueur (mm)').fill('3000')
-    await atelier.getByLabel('Quantité en stock').fill('6')
+    await ajoutForm.getByLabel('Matière et épaisseur').selectOption(matiere.id)
+    await ajoutForm.getByLabel('Coloris').selectOption(coloris.id)
+    await ajoutForm.getByLabel('Largeur (mm)').fill('10')
+    await ajoutForm.getByLabel('Longueur (mm)').fill('3000')
+    await ajoutForm.getByLabel('Quantité en stock').fill('6')
     await atelier.getByRole('button', { name: 'Ajouter au stock' }).click()
     await expect(atelier.getByText('50 mm minimum')).toBeVisible()
-    await atelier.getByLabel('Largeur (mm)').fill(String(l))
-    await atelier.getByLabel('Alerte stock bas (0 = aucune)').fill('4')
+    await ajoutForm.getByLabel('Largeur (mm)').fill(String(l))
+    await ajoutForm.getByLabel('Alerte stock bas (0 = aucune)').fill('4')
     await atelier.getByRole('button', { name: 'Ajouter au stock' }).click()
     await expect(atelier.getByRole('status')).toContainText('Feuille ajoutée')
     await expect(atelier.getByLabel('Matière et épaisseur')).toHaveCount(0)
-    const ligne = atelier.getByRole('row').filter({ hasText: `${l.toLocaleString('fr-FR')}` })
+    const ligne = atelier.getByRole('article').filter({ hasText: `${l.toLocaleString('fr-FR')}` })
     await expect(ligne).toContainText(matiere.label.split(' ')[0])
     await expect(ligne.locator('b.mono')).toHaveText('6')
     // Le même format ne se crée pas deux fois
-    await atelier.getByRole('button', { name: 'Ajouter une feuille' }).click()
-    await atelier.getByLabel('Matière et épaisseur').selectOption(matiere.id)
-    await atelier.getByLabel('Coloris').selectOption(coloris.id)
-    await atelier.getByLabel('Largeur (mm)').fill(String(l))
-    await atelier.getByLabel('Longueur (mm)').fill('3000')
+    await atelier.getByRole('button', { name: 'Ajouter des feuilles' }).click()
+    await ajoutForm.getByLabel('Matière et épaisseur').selectOption(matiere.id)
+    await ajoutForm.getByLabel('Coloris').selectOption(coloris.id)
+    await ajoutForm.getByLabel('Largeur (mm)').fill(String(l))
+    await ajoutForm.getByLabel('Longueur (mm)').fill('3000')
     await atelier.getByRole('button', { name: 'Ajouter au stock' }).click()
     await expect(atelier.getByText(/existe déjà dans le stock/)).toBeVisible()
     await atelier.getByRole('button', { name: 'Fermer le formulaire' }).click()
 
-    // Sortie trop grande refusée, sortie normale acceptée : le stock bas apparaît
+    // Un seul bouton « Ajuster le stock », qui ouvre le choix entrée / sortie / inventaire
+    await ligne.getByRole('button', { name: 'Ajuster le stock' }).click()
     await ligne.getByRole('button', { name: 'Sortie' }).click()
+    // Sortie trop grande refusée, sortie normale acceptée : le stock bas apparaît
     await atelier.getByLabel('Feuilles sorties').fill('9')
     await atelier.getByRole('button', { name: 'Valider' }).click()
     await expect(atelier.getByRole('alert')).toContainText('Il n’y a que 6 feuilles')
@@ -69,7 +73,8 @@ test.describe('Stock de feuilles', () => {
     await expect(ligne.locator('b.mono')).toHaveText('3')
     await expect(ligne).toContainText('Stock bas')
     // Inventaire et historique
-    await ligne.getByRole('button', { name: /^Inventaire/ }).click()
+    await ligne.getByRole('button', { name: 'Ajuster le stock' }).click()
+    await ligne.getByRole('button', { name: 'Compter' }).click()
     await atelier.getByLabel('Quantité comptée').fill('8')
     await atelier.getByRole('button', { name: 'Valider' }).click()
     await expect(ligne.locator('b.mono')).toHaveText('8')
@@ -103,8 +108,7 @@ test.describe('Stock de feuilles', () => {
     const conseil = atelier.getByRole('region', { name: 'Feuilles à prendre' })
     await expect(conseil).toContainText('Prendre')
     await expect(conseil).toContainText(`${l.toLocaleString('fr-FR')} × 3 000 mm`.replace(/ /g, ' '))
-    // « 1 pièce » au singulier quand la feuille n'en contient qu'une : la largeur de la feuille de ce test est tirée au hasard
-    await expect(conseil).toContainText(/pièces? par feuille/)
+    await expect(conseil).toContainText('pièces par feuille')
     await expect(conseil).toContainText('% de perte')
 
     // La direction voit aussi le stock, et le journal le raconte
