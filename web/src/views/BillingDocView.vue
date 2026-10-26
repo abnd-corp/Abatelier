@@ -44,6 +44,24 @@ const isFacture = computed(() => d.value?.type === 'facture')
 const canSend = computed(() => !!d.value && !d.value.envoyeLe && ['emis', 'emise'].includes(d.value.statut))
 const canAnswer = computed(() => isDevis.value && !d.value!.reponse)
 const canAccept = computed(() => canAnswer.value && d.value!.statut !== 'expire')
+// Devis accepté (par le client ou noté ici) : un clic le transforme en commande validée, qui part chez l'atelier
+const canValidate = computed(() => isDevis.value && detail.value?.order.statut === 'recue' && d.value!.statut !== 'expire' && d.value!.statut !== 'refuse' && d.value!.statut !== 'annulee')
+async function validateOrder(accept: boolean) {
+  actionError.value = null
+  notice.value = ''
+  busy.value = true
+  try {
+    if (accept) await api(`/billing/${id.value}/reponse`, { method: 'POST', body: { reponse: 'accepte' } })
+    await api(`/orders/${detail.value!.order.id}/status`, { method: 'POST', body: { statut: 'validee' } })
+    notice.value = accept ? 'Devis accepté et commande validée : elle est chez l’atelier.' : 'Commande validée : elle est chez l’atelier.'
+    await load()
+  } catch (e) {
+    actionError.value = e instanceof ApiError ? { msg: e.message, field: e.field } : { msg: 'L’action a échoué.' }
+    await load()
+  } finally {
+    busy.value = false
+  }
+}
 const canPay = computed(() => isFacture.value && ['emise', 'envoyee', 'en_retard'].includes(d.value!.statut))
 const canCredit = computed(() => isFacture.value && d.value!.statut !== 'annulee')
 
@@ -171,9 +189,7 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
         </div>
       </dl>
       <p v-if="d.motif" class="motif"><b>Motif :</b> {{ d.motif }}</p>
-      <p v-if="d.statut === 'accepte' && detail.order.statut === 'recue'" class="hint">
-        Devis accepté : pensez à <RouterLink :to="{ name: 'order', params: { id: detail.order.id } }">valider la commande</RouterLink>.
-      </p>
+      <p v-if="d.statut === 'accepte' && detail.order.statut === 'recue'" class="hint">Devis accepté : validez la commande pour la lancer à l’atelier.</p>
       <p v-if="d.statut === 'expire'" class="hint">Ce devis a expiré. Pour le proposer à nouveau, émettez un nouveau devis depuis la commande, aux tarifs actuels.</p>
       <p v-if="d.statut === 'annulee'" class="hint">
         Pour refacturer, émettez une nouvelle facture depuis la <RouterLink :to="{ name: 'order', params: { id: detail.order.id } }">commande</RouterLink>.
@@ -272,9 +288,13 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
         <button v-if="canSend" class="btn" type="button" :disabled="busy" @click="act('envoi', {}, isDevis ? 'Devis marqué comme envoyé.' : 'Facture marquée comme envoyée.')">
           <AppIcon name="mail" :size="16" />{{ sendLabel }}
         </button>
-        <button v-if="canAccept" class="btn primary" type="button" :disabled="busy" @click="act('reponse', { reponse: 'accepte' }, 'Devis accepté.')">
-          <AppIcon name="check" :size="16" />Accepté par le client
+        <button v-if="canAccept && canValidate" class="btn primary" type="button" :disabled="busy" @click="validateOrder(true)">
+          <AppIcon name="check" :size="16" />Accepté : valider la commande
         </button>
+        <button v-else-if="canValidate && d.statut === 'accepte'" class="btn primary" type="button" :disabled="busy" @click="validateOrder(false)">
+          <AppIcon name="check" :size="16" />Valider la commande
+        </button>
+        <button v-if="canAccept" class="btn" type="button" :disabled="busy" @click="act('reponse', { reponse: 'accepte' }, 'Devis accepté.')">Accepté par le client (sans valider)</button>
         <button v-if="canAnswer" class="btn" type="button" :disabled="busy" @click="act('reponse', { reponse: 'refuse' }, 'Devis refusé.')">Refusé</button>
         <button v-if="canPay" class="btn primary" type="button" @click="openPay">Enregistrer le paiement</button>
         <button v-if="isFacture && d.payeLe" class="btn" type="button" :disabled="busy" @click="act('paiement', undefined, 'Paiement annulé.', 'DELETE')">Annuler le paiement</button>
