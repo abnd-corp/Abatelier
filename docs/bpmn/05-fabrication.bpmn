@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P5_fabrication_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P5_fabrication_collab">
+    <bpmn:participant id="P5_fabrication_pool" name="Fabrication à l’atelier" processRef="P5_fabrication" />
+  </bpmn:collaboration>
+  <bpmn:process id="P5_fabrication" name="Fabrication à l’atelier" isExecutable="false">
+    <bpmn:documentation>L’atelier prend la commande validée, choisit la feuille, plie, puis la remet au client. Il ne voit jamais le client ni les prix.</bpmn:documentation>
+    <bpmn:laneSet id="P5_fabrication_voies">
+      <bpmn:lane id="P5_fabrication_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P5_fabrication_d</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P5_fabrication_voie_atelier" name="Atelier">
+        <bpmn:flowNodeRef>P5_fabrication_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P5_fabrication_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P5_fabrication_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P5_fabrication_t5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P5_fabrication_t6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P5_fabrication_t7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P5_fabrication_t8</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P5_fabrication_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P5_fabrication_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P5_fabrication_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P5_fabrication_t9</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P5_fabrication_voie_client" name="Visiteur / Client">
+
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P5_fabrication_d" name="Commande validée"><bpmn:outgoing>P5_fabrication_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="P5_fabrication_t1" name="Voir la commande dans Fabrication (sans client, sans prix)"><bpmn:documentation>Dans l’application : Fabrication (les plus urgentes d’abord)</bpmn:documentation><bpmn:incoming>P5_fabrication_flux1</bpmn:incoming><bpmn:outgoing>P5_fabrication_flux2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P5_fabrication_t2" name="Imprimer la fiche de fabrication (QR code du site, option)"><bpmn:documentation>Dans l’application : Fabrication › Imprimer la fiche (PDF)</bpmn:documentation><bpmn:incoming>P5_fabrication_flux2</bpmn:incoming><bpmn:outgoing>P5_fabrication_flux3</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P5_fabrication_t3" name="Conseiller la feuille à prendre : chutes d’abord, moins de perte"><bpmn:documentation>Dans l’application : Fabrication › Feuilles à prendre</bpmn:documentation><bpmn:incoming>P5_fabrication_flux3</bpmn:incoming><bpmn:outgoing>P5_fabrication_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P5_fabrication_t4" name="Lancer la fabrication"><bpmn:documentation>Dans l’application : Bouton « Lancer la fabrication »</bpmn:documentation><bpmn:incoming>P5_fabrication_flux4</bpmn:incoming><bpmn:outgoing>P5_fabrication_flux5</bpmn:outgoing></bpmn:userTask>
+    <bpmn:manualTask id="P5_fabrication_t5" name="Découper et plier les pièces"><bpmn:documentation>Hors application : Travail sur machine</bpmn:documentation><bpmn:incoming>P5_fabrication_flux5</bpmn:incoming><bpmn:outgoing>P5_fabrication_flux6</bpmn:outgoing></bpmn:manualTask>
+    <bpmn:userTask id="P5_fabrication_t6" name="Mettre à jour le stock : feuilles utilisées, chute récupérée"><bpmn:documentation>En partie : Saisie à la main dans Stock de feuilles : pas de décompte automatique</bpmn:documentation><bpmn:incoming>P5_fabrication_flux6</bpmn:incoming><bpmn:outgoing>P5_fabrication_flux7</bpmn:outgoing></bpmn:userTask>
+    <bpmn:manualTask id="P5_fabrication_t7" name="Contrôler les pièces (cotes, angles)"><bpmn:documentation>Hors application : Aucun contrôle qualité enregistré</bpmn:documentation><bpmn:incoming>P5_fabrication_flux7</bpmn:incoming><bpmn:outgoing>P5_fabrication_flux8</bpmn:outgoing></bpmn:manualTask>
+    <bpmn:userTask id="P5_fabrication_t8" name="Marquer la commande prête"><bpmn:documentation>Dans l’application : Le client voit « Prête » dans son espace</bpmn:documentation><bpmn:incoming>P5_fabrication_flux8</bpmn:incoming><bpmn:outgoing>P5_fabrication_flux9</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P5_fabrication_t9" name="Mettre le suivi du client à jour, avec qui et quand"><bpmn:documentation>Dans l’application : Journal d’activité</bpmn:documentation><bpmn:incoming>P5_fabrication_flux9</bpmn:incoming><bpmn:outgoing>P5_fabrication_flux10</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="P5_fabrication_f" name="Pièces prêtes : voir « Livraison et retrait »"><bpmn:incoming>P5_fabrication_flux10</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P5_fabrication_flux1" sourceRef="P5_fabrication_d" targetRef="P5_fabrication_t1" />
+    <bpmn:sequenceFlow id="P5_fabrication_flux2" sourceRef="P5_fabrication_t1" targetRef="P5_fabrication_t2" />
+    <bpmn:sequenceFlow id="P5_fabrication_flux3" sourceRef="P5_fabrication_t2" targetRef="P5_fabrication_t3" />
+    <bpmn:sequenceFlow id="P5_fabrication_flux4" sourceRef="P5_fabrication_t3" targetRef="P5_fabrication_t4" />
+    <bpmn:sequenceFlow id="P5_fabrication_flux5" sourceRef="P5_fabrication_t4" targetRef="P5_fabrication_t5" />
+    <bpmn:sequenceFlow id="P5_fabrication_flux6" sourceRef="P5_fabrication_t5" targetRef="P5_fabrication_t6" />
+    <bpmn:sequenceFlow id="P5_fabrication_flux7" sourceRef="P5_fabrication_t6" targetRef="P5_fabrication_t7" />
+    <bpmn:sequenceFlow id="P5_fabrication_flux8" sourceRef="P5_fabrication_t7" targetRef="P5_fabrication_t8" />
+    <bpmn:sequenceFlow id="P5_fabrication_flux9" sourceRef="P5_fabrication_t8" targetRef="P5_fabrication_t9" />
+    <bpmn:sequenceFlow id="P5_fabrication_flux10" sourceRef="P5_fabrication_t9" targetRef="P5_fabrication_f" />
+    <bpmn:textAnnotation id="P5_fabrication_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P5_fabrication_diagram">
+    <bpmndi:BPMNPlane id="P5_fabrication_plane" bpmnElement="P5_fabrication_collab">
+      <bpmndi:BPMNShape id="P5_fabrication_pool_di" bpmnElement="P5_fabrication_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="2200" height="480" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_voie_direction_di" bpmnElement="P5_fabrication_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="2170" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_voie_atelier_di" bpmnElement="P5_fabrication_voie_atelier" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="2170" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_voie_systeme_di" bpmnElement="P5_fabrication_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="2170" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_voie_client_di" bpmnElement="P5_fabrication_voie_client" isHorizontal="true">
+        <dc:Bounds x="70" y="400" width="2170" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_d_di" bpmnElement="P5_fabrication_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_t1_di" bpmnElement="P5_fabrication_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="330" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_t2_di" bpmnElement="P5_fabrication_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="520" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_t3_di" bpmnElement="P5_fabrication_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="710" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_t4_di" bpmnElement="P5_fabrication_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="900" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_t5_di" bpmnElement="P5_fabrication_t5" bioc:stroke="#616161" bioc:fill="#e8e8e8">
+        <dc:Bounds x="1090" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_t6_di" bpmnElement="P5_fabrication_t6" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
+        <dc:Bounds x="1280" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_t7_di" bpmnElement="P5_fabrication_t7" bioc:stroke="#616161" bioc:fill="#e8e8e8">
+        <dc:Bounds x="1470" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_t8_di" bpmnElement="P5_fabrication_t8" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1660" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_t9_di" bpmnElement="P5_fabrication_t9" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1850" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P5_fabrication_f_di" bpmnElement="P5_fabrication_f">
+        <dc:Bounds x="2097" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P5_fabrication_flux1_di" bpmnElement="P5_fabrication_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="305" y="100" />
+        <di:waypoint x="305" y="220" />
+        <di:waypoint x="330" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P5_fabrication_flux2_di" bpmnElement="P5_fabrication_flux2">
+        <di:waypoint x="480" y="220" />
+        <di:waypoint x="520" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P5_fabrication_flux3_di" bpmnElement="P5_fabrication_flux3">
+        <di:waypoint x="670" y="220" />
+        <di:waypoint x="685" y="220" />
+        <di:waypoint x="685" y="340" />
+        <di:waypoint x="710" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P5_fabrication_flux4_di" bpmnElement="P5_fabrication_flux4">
+        <di:waypoint x="860" y="340" />
+        <di:waypoint x="875" y="340" />
+        <di:waypoint x="875" y="220" />
+        <di:waypoint x="900" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P5_fabrication_flux5_di" bpmnElement="P5_fabrication_flux5">
+        <di:waypoint x="1050" y="220" />
+        <di:waypoint x="1090" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P5_fabrication_flux6_di" bpmnElement="P5_fabrication_flux6">
+        <di:waypoint x="1240" y="220" />
+        <di:waypoint x="1280" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P5_fabrication_flux7_di" bpmnElement="P5_fabrication_flux7">
+        <di:waypoint x="1430" y="220" />
+        <di:waypoint x="1470" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P5_fabrication_flux8_di" bpmnElement="P5_fabrication_flux8">
+        <di:waypoint x="1620" y="220" />
+        <di:waypoint x="1660" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P5_fabrication_flux9_di" bpmnElement="P5_fabrication_flux9">
+        <di:waypoint x="1810" y="220" />
+        <di:waypoint x="1825" y="220" />
+        <di:waypoint x="1825" y="340" />
+        <di:waypoint x="1850" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P5_fabrication_flux10_di" bpmnElement="P5_fabrication_flux10">
+        <di:waypoint x="2000" y="340" />
+        <di:waypoint x="2072" y="340" />
+        <di:waypoint x="2072" y="220" />
+        <di:waypoint x="2097" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P5_fabrication_legende_di" bpmnElement="P5_fabrication_legende">
+        <dc:Bounds x="70" y="540" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

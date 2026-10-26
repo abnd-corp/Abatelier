@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P8_boutique_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P8_boutique_collab">
+    <bpmn:participant id="P8_boutique_pool" name="Boutique en ligne : achat d’un article standard" processRef="P8_boutique" />
+  </bpmn:collaboration>
+  <bpmn:process id="P8_boutique" name="Boutique en ligne : achat d’un article standard" isExecutable="false">
+    <bpmn:documentation>Le client achète un article du catalogue (couvertine, bavette, accessoire), le paie et suit sa commande.</bpmn:documentation>
+    <bpmn:laneSet id="P8_boutique_voies">
+      <bpmn:lane id="P8_boutique_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P8_boutique_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P8_boutique_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P8_boutique_g2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P8_boutique_t7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P8_boutique_f1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P8_boutique_f2</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P8_boutique_voie_client" name="Visiteur / Client">
+        <bpmn:flowNodeRef>P8_boutique_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P8_boutique_t3</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P8_boutique_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P8_boutique_g1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P8_boutique_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P8_boutique_t6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P8_boutique_f3</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P8_boutique_voie_atelier" name="Atelier">
+        <bpmn:flowNodeRef>P8_boutique_t5</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P8_boutique_d" name="Produit mis en ligne par la direction"><bpmn:outgoing>P8_boutique_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="P8_boutique_t1" name="Créer le produit, ses déclinaisons, ses prix et sa photo"><bpmn:documentation>Dans l’application : Produits (import de catalogue, copie, prix en lot)</bpmn:documentation><bpmn:incoming>P8_boutique_flux1</bpmn:incoming><bpmn:outgoing>P8_boutique_flux2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P8_boutique_t2" name="Choisir un article et l’ajouter au panier"><bpmn:documentation>Dans l’application : Site public › Boutique › Panier</bpmn:documentation><bpmn:incoming>P8_boutique_flux2</bpmn:incoming><bpmn:outgoing>P8_boutique_flux3</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P8_boutique_t3" name="Se connecter et payer par carte"><bpmn:documentation>En partie : Faux prestataire en test ; Stripe en mode test à brancher (M5)</bpmn:documentation><bpmn:incoming>P8_boutique_flux3</bpmn:incoming><bpmn:outgoing>P8_boutique_flux4</bpmn:outgoing></bpmn:userTask>
+    <bpmn:exclusiveGateway id="P8_boutique_g1" name="Paiement réussi ?"><bpmn:incoming>P8_boutique_flux4</bpmn:incoming><bpmn:outgoing>P8_boutique_flux5</bpmn:outgoing><bpmn:outgoing>P8_boutique_flux6</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P8_boutique_t4" name="Créer la commande déjà validée"><bpmn:documentation>Dans l’application : La commande n’existe qu’après le paiement</bpmn:documentation><bpmn:incoming>P8_boutique_flux5</bpmn:incoming><bpmn:outgoing>P8_boutique_flux7</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P8_boutique_t5" name="Préparer l’article (voir « Fabrication »)"><bpmn:documentation>Dans l’application : Même suivi que le sur-mesure</bpmn:documentation><bpmn:incoming>P8_boutique_flux7</bpmn:incoming><bpmn:outgoing>P8_boutique_flux8</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P8_boutique_t6" name="Garder le panier, ne rien débiter"><bpmn:documentation>Dans l’application : Message clair au client</bpmn:documentation><bpmn:incoming>P8_boutique_flux6</bpmn:incoming><bpmn:outgoing>P8_boutique_flux12</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P8_boutique_g2" name="La direction doit-elle refuser ?"><bpmn:incoming>P8_boutique_flux8</bpmn:incoming><bpmn:outgoing>P8_boutique_flux9</bpmn:outgoing><bpmn:outgoing>P8_boutique_flux10</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:userTask id="P8_boutique_t7" name="Refuser et rembourser (la raison est gardée)"><bpmn:documentation>Dans l’application : Commande › Refuser et rembourser</bpmn:documentation><bpmn:incoming>P8_boutique_flux10</bpmn:incoming><bpmn:outgoing>P8_boutique_flux11</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P8_boutique_f1" name="Article remis : voir « Livraison » et « Facturation »"><bpmn:incoming>P8_boutique_flux9</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="P8_boutique_f2" name="Remboursé"><bpmn:incoming>P8_boutique_flux11</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="P8_boutique_f3" name="Panier conservé"><bpmn:incoming>P8_boutique_flux12</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P8_boutique_flux1" sourceRef="P8_boutique_d" targetRef="P8_boutique_t1" />
+    <bpmn:sequenceFlow id="P8_boutique_flux2" sourceRef="P8_boutique_t1" targetRef="P8_boutique_t2" />
+    <bpmn:sequenceFlow id="P8_boutique_flux3" sourceRef="P8_boutique_t2" targetRef="P8_boutique_t3" />
+    <bpmn:sequenceFlow id="P8_boutique_flux4" sourceRef="P8_boutique_t3" targetRef="P8_boutique_g1" />
+    <bpmn:sequenceFlow id="P8_boutique_flux5" name="Oui" sourceRef="P8_boutique_g1" targetRef="P8_boutique_t4" />
+    <bpmn:sequenceFlow id="P8_boutique_flux6" name="Non" sourceRef="P8_boutique_g1" targetRef="P8_boutique_t6" />
+    <bpmn:sequenceFlow id="P8_boutique_flux7" sourceRef="P8_boutique_t4" targetRef="P8_boutique_t5" />
+    <bpmn:sequenceFlow id="P8_boutique_flux8" sourceRef="P8_boutique_t5" targetRef="P8_boutique_g2" />
+    <bpmn:sequenceFlow id="P8_boutique_flux9" name="Non" sourceRef="P8_boutique_g2" targetRef="P8_boutique_f1" />
+    <bpmn:sequenceFlow id="P8_boutique_flux10" name="Oui" sourceRef="P8_boutique_g2" targetRef="P8_boutique_t7" />
+    <bpmn:sequenceFlow id="P8_boutique_flux11" sourceRef="P8_boutique_t7" targetRef="P8_boutique_f2" />
+    <bpmn:sequenceFlow id="P8_boutique_flux12" sourceRef="P8_boutique_t6" targetRef="P8_boutique_f3" />
+    <bpmn:textAnnotation id="P8_boutique_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P8_boutique_diagram">
+    <bpmndi:BPMNPlane id="P8_boutique_plane" bpmnElement="P8_boutique_collab">
+      <bpmndi:BPMNShape id="P8_boutique_pool_di" bpmnElement="P8_boutique_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="2010" height="720" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_voie_direction_di" bpmnElement="P8_boutique_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1980" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_voie_client_di" bpmnElement="P8_boutique_voie_client" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="1980" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_voie_systeme_di" bpmnElement="P8_boutique_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="400" width="1980" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_voie_atelier_di" bpmnElement="P8_boutique_voie_atelier" isHorizontal="true">
+        <dc:Bounds x="70" y="640" width="1980" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_d_di" bpmnElement="P8_boutique_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_t1_di" bpmnElement="P8_boutique_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_t2_di" bpmnElement="P8_boutique_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="520" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_t3_di" bpmnElement="P8_boutique_t3" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
+        <dc:Bounds x="710" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_g1_di" bpmnElement="P8_boutique_g1" isMarkerVisible="true">
+        <dc:Bounds x="950" y="435" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="870" y="403" width="110" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_t4_di" bpmnElement="P8_boutique_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1090" y="420" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_t5_di" bpmnElement="P8_boutique_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1280" y="660" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_t6_di" bpmnElement="P8_boutique_t6" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="900" y="540" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_g2_di" bpmnElement="P8_boutique_g2" isMarkerVisible="true">
+        <dc:Bounds x="1520" y="75" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1440" y="43" width="110" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_t7_di" bpmnElement="P8_boutique_t7" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1660" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_f1_di" bpmnElement="P8_boutique_f1">
+        <dc:Bounds x="1717" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_f2_di" bpmnElement="P8_boutique_f2">
+        <dc:Bounds x="1907" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P8_boutique_f3_di" bpmnElement="P8_boutique_f3">
+        <dc:Bounds x="1147" y="562" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P8_boutique_flux1_di" bpmnElement="P8_boutique_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P8_boutique_flux2_di" bpmnElement="P8_boutique_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="495" y="100" />
+        <di:waypoint x="495" y="340" />
+        <di:waypoint x="520" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P8_boutique_flux3_di" bpmnElement="P8_boutique_flux3">
+        <di:waypoint x="670" y="340" />
+        <di:waypoint x="710" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P8_boutique_flux4_di" bpmnElement="P8_boutique_flux4">
+        <di:waypoint x="860" y="340" />
+        <di:waypoint x="925" y="340" />
+        <di:waypoint x="925" y="460" />
+        <di:waypoint x="950" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P8_boutique_flux5_di" bpmnElement="P8_boutique_flux5">
+        <di:waypoint x="1000" y="460" />
+        <di:waypoint x="1090" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P8_boutique_flux6_di" bpmnElement="P8_boutique_flux6">
+        <di:waypoint x="975" y="485" />
+        <di:waypoint x="975" y="518" />
+        <di:waypoint x="975" y="518" />
+        <di:waypoint x="975" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P8_boutique_flux7_di" bpmnElement="P8_boutique_flux7">
+        <di:waypoint x="1240" y="460" />
+        <di:waypoint x="1255" y="460" />
+        <di:waypoint x="1255" y="700" />
+        <di:waypoint x="1280" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P8_boutique_flux8_di" bpmnElement="P8_boutique_flux8">
+        <di:waypoint x="1430" y="700" />
+        <di:waypoint x="1495" y="700" />
+        <di:waypoint x="1495" y="100" />
+        <di:waypoint x="1520" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P8_boutique_flux9_di" bpmnElement="P8_boutique_flux9">
+        <di:waypoint x="1570" y="100" />
+        <di:waypoint x="1717" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P8_boutique_flux10_di" bpmnElement="P8_boutique_flux10">
+        <di:waypoint x="1570" y="100" />
+        <di:waypoint x="1635" y="100" />
+        <di:waypoint x="1635" y="220" />
+        <di:waypoint x="1660" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P8_boutique_flux11_di" bpmnElement="P8_boutique_flux11">
+        <di:waypoint x="1810" y="220" />
+        <di:waypoint x="1907" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P8_boutique_flux12_di" bpmnElement="P8_boutique_flux12">
+        <di:waypoint x="1050" y="580" />
+        <di:waypoint x="1147" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P8_boutique_legende_di" bpmnElement="P8_boutique_legende">
+        <dc:Bounds x="70" y="780" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
