@@ -15,11 +15,18 @@ export interface Feuille {
   note: string
   libelle: string
   bas: boolean
+  // Noir (vide), rouge (critique), jaune (bas) ou vert (ok) : calculé par l'API, jamais réglable ici (R7)
+  etat: EtatStock
 }
+export type EtatStock = 'vide' | 'critique' | 'bas' | 'ok'
+export const ETAT_LABELS: Record<EtatStock, string> = { vide: 'Vide', critique: 'Critique', bas: 'Stock bas', ok: 'Correct' }
 export interface StockTotaux {
   references: number
-  feuilles: number
-  m2: number
+  // Une chute n'est pas une feuille entière : comptées à part, jamais mélangées dans un même total
+  feuillesEntieres: number
+  chutes: number
+  m2Entieres: number
+  m2Chutes: number
   bas: number
 }
 export interface Mouvement {

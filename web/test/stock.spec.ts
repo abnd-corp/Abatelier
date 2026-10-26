@@ -24,6 +24,7 @@ const F1: Feuille = {
   note: 'Palette 2',
   libelle: 'Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 1 250 × 3 000 mm',
   bas: false,
+  etat: 'ok',
 }
 const F2: Feuille = {
   ...F1,
@@ -42,6 +43,7 @@ const F2: Feuille = {
   note: '',
   libelle: 'Aluminium 1 mm · brut · 450 × 3 000 mm (chute)',
   bas: true,
+  etat: 'critique',
 }
 const MV: Mouvement = { id: 'x1', at: '2026-10-22T08:30:00Z', libelle: F1.libelle, delta: -3, apres: 7, motif: 'fabrication', note: 'C-2026-0004', par: 'Plieur' }
 const OPTIONS = {
@@ -51,8 +53,11 @@ const OPTIONS = {
   ],
   colors: [{ id: 'c1', label: 'Gris anthracite (RAL 7016)', hex: '#383e42' }],
 }
-const ouvrirAjout = (w: ReturnType<typeof mount>) => w.get('button[aria-controls="ajout"]').trigger('click')
-const LIST = { feuilles: [F1, F2], totaux: { references: 2, feuilles: 12, m2: 38.4, bas: 1 } }
+const btn = (w: ReturnType<typeof mount>, text: string) => w.findAll('button').find((b) => b.text() === text)!
+const chip = (w: ReturnType<typeof mount>, text: string) => w.findAll('.chip').find((c) => c.text() === text)!
+const ouvrirAjoutFeuilles = (w: ReturnType<typeof mount>) => btn(w, 'Ajouter des feuilles').trigger('click')
+const ouvrirAjoutChutes = (w: ReturnType<typeof mount>) => btn(w, 'Ajouter des chutes').trigger('click')
+const LIST = { feuilles: [F1, F2], totaux: { references: 2, feuillesEntieres: 10, chutes: 2, m2Entieres: 37.5, m2Chutes: 2.7, bas: 1 } }
 
 beforeEach(() => localStorage.clear())
 
@@ -69,46 +74,59 @@ async function mountStock(extra: Parameters<typeof mockApi>[0] = {}) {
 }
 
 describe('Stock de feuilles', () => {
-  it('liste les feuilles avec matière, épaisseur, coloris, format, quantité et alerte, et résume le stock', async () => {
+  it('affiche une carte par feuille, répartie entre feuilles entières et chutes, et résume le stock', async () => {
     const { wrapper } = await mountStock()
-    const rows = wrapper.findAll('tbody tr')
-    expect(rows).toHaveLength(2)
-    expect(norm(rows[0]!.text())).toContain('Aluminium 1,5 mm')
-    expect(rows[0]!.text()).toContain('Gris anthracite')
-    expect(norm(rows[0]!.text())).toContain('1 250 × 3 000 mm')
-    expect(rows[0]!.get('b').text()).toBe('10')
-    expect(rows[1]!.text()).toContain('Brut')
-    expect(rows[1]!.text()).toContain('Chute')
-    expect(rows[1]!.text()).toContain('Stock bas')
-    expect(rows[0]!.text()).not.toContain('Stock bas')
+    // F1 (entière) dans « Feuilles entières », F2 (chute) dans « Chutes »
+    const entieres = wrapper.get('#entieres-titre').element.parentElement!
+    const card1 = entieres.querySelector('.sheet-card')!
+    expect(norm(card1.textContent!)).toContain('Aluminium')
+    expect(card1.textContent).toContain('Gris anthracite')
+    expect(norm(card1.textContent!)).toContain('1 250 × 3 000 mm')
+    expect(card1.querySelector('.qty b')!.textContent).toBe('10')
+    expect(card1.textContent).toContain('Correct')
+
+    const chutesSection = wrapper.get('#chutes-titre').element.parentElement!
+    const card2 = chutesSection.querySelector('.sheet-card')!
+    expect(card2.textContent).toContain('Brut')
+    expect(norm(card2.querySelector('.qty')!.textContent!)).toContain('2 morceaux')
+    expect(card2.textContent).toContain('Critique')
+
     const t = norm(wrapper.get('.totaux').text())
     expect(t).toContain('Références2')
-    expect(t).toContain('Feuilles12')
-    expect(t).toContain('38,4 m²')
+    // Les chutes ne sont pas des feuilles entières : des totaux séparés, jamais mélangés
+    expect(t).toContain('Feuilles entières10')
+    expect(t).toContain('37,5 m²')
+    expect(t).toContain('Chutes2')
+    expect(t).toContain('2,7 m²')
     expect(t).toContain('Stock bas1')
-    expect(wrapper.get('#liste ~ .chips, .chips').text()).toContain('Aluminium 1 mm')
+    expect(wrapper.get('#f-matiere').text()).toContain('Aluminium')
   })
 
-  it('filtre par matière', async () => {
+  it('filtre en détail (matière, épaisseur, coloris, format, état)', async () => {
     const { wrapper } = await mountStock()
-    await wrapper
-      .findAll('.chip')
-      .find((c) => c.text() === 'Aluminium 1 mm')!
-      .trigger('click')
-    expect(wrapper.findAll('tbody tr')).toHaveLength(1)
-    expect(wrapper.findAll('tbody tr')[0]!.text()).toContain('Brut')
+    expect(wrapper.find('.reset').exists()).toBe(false)
+    await wrapper.get('#f-etat').setValue('critique')
+    expect(wrapper.findAll('.sheet-card')).toHaveLength(1)
+    expect(wrapper.get('.sheet-card').text()).toContain('Brut')
+    expect(wrapper.find('.reset').exists()).toBe(true)
+    await wrapper.get('.reset').trigger('click')
+    expect(wrapper.findAll('.sheet-card')).toHaveLength(2)
   })
 
   it('garde le formulaire d’ajout et l’historique fermés, et les ouvre à la demande', async () => {
     const { wrapper } = await mountStock()
     expect(wrapper.find('#ajout').exists()).toBe(false)
     expect(wrapper.find('#hist-liste').exists()).toBe(false)
-    expect(wrapper.get('button[aria-controls="ajout"]').attributes('aria-expanded')).toBe('false')
+    expect(btn(wrapper, 'Ajouter des feuilles').attributes('aria-expanded')).toBe('false')
     expect(wrapper.get('button[aria-controls="hist-liste"]').text()).toContain('Derniers mouvements (1)')
-    await ouvrirAjout(wrapper)
+    await ouvrirAjoutFeuilles(wrapper)
     expect(wrapper.find('#ajout').exists()).toBe(true)
-    expect(wrapper.get('button[aria-controls="ajout"]').attributes('aria-expanded')).toBe('true')
-    await wrapper.get('button[aria-controls="ajout"]').trigger('click')
+    expect(wrapper.get('#ajout-titre').text()).toBe('Ajouter des feuilles')
+    expect(btn(wrapper, 'Fermer le formulaire').attributes('aria-expanded')).toBe('true')
+    // L'autre bouton bascule sur l'autre type sans fermer
+    await btn(wrapper, 'Ajouter des chutes').trigger('click')
+    expect(wrapper.get('#ajout-titre').text()).toBe('Ajouter des chutes')
+    await btn(wrapper, 'Fermer le formulaire').trigger('click')
     expect(wrapper.find('#ajout').exists()).toBe(false)
     await wrapper.get('button[aria-controls="hist-liste"]').trigger('click')
     expect(wrapper.find('#hist-liste').exists()).toBe(true)
@@ -116,7 +134,7 @@ describe('Stock de feuilles', () => {
 
   it('ajoute une feuille, referme le formulaire, et montre l’erreur du champ concerné', async () => {
     const { wrapper, calls } = await mountStock({ 'POST /stock/feuilles': [201, { feuille: F1 }] })
-    await ouvrirAjout(wrapper)
+    await ouvrirAjoutFeuilles(wrapper)
     await wrapper.get('#s-matiere').setValue('m1')
     await wrapper.get('#s-coloris').setValue('c1')
     await wrapper.get('#s-largeur').setValue('1250')
@@ -128,7 +146,7 @@ describe('Stock de feuilles', () => {
     expect(wrapper.get('[role="status"]').text()).toContain('Feuille ajoutée')
     expect(wrapper.find('#ajout').exists()).toBe(false)
     const bad = await mountStock({ 'POST /stock/feuilles': [400, { error: 'Largeur : 50 mm minimum.', field: 'largeur' }] })
-    await ouvrirAjout(bad.wrapper)
+    await ouvrirAjoutFeuilles(bad.wrapper)
     await bad.wrapper.get('#s-matiere').setValue('m1')
     await bad.wrapper.get('form.grid').trigger('submit')
     await flushPromises()
@@ -136,9 +154,12 @@ describe('Stock de feuilles', () => {
     expect(bad.wrapper.get('#s-largeur').attributes('aria-invalid')).toBe('true')
   })
 
-  it('enregistre une sortie avec son motif, puis une entrée, puis un inventaire', async () => {
+  it('enregistre une sortie avec son motif, puis une entrée, puis un inventaire, via un seul bouton « Ajuster »', async () => {
     const { wrapper, calls } = await mountStock({ 'POST /stock/feuilles/f1/mouvement': [200, { quantite: 7, bas: false }] })
-    await wrapper.get(`button[aria-label="Sortie de feuilles : ${F1.libelle}"]`).trigger('click')
+    const ajuster = () => wrapper.get(`button[aria-label="Ajuster le stock : ${F1.libelle}"]`).trigger('click')
+
+    await ajuster()
+    await chip(wrapper, 'Sortie').trigger('click')
     await wrapper.get('#m-f1').setValue('3')
     await wrapper.get('#mm-f1').setValue('fabrication')
     await wrapper.get('#mn-f1').setValue('C-2026-0004')
@@ -146,12 +167,17 @@ describe('Stock de feuilles', () => {
     await flushPromises()
     expect(calls.filter((c) => c.path === '/stock/feuilles/f1/mouvement')[0]!.body).toEqual({ delta: -3, motif: 'fabrication', note: 'C-2026-0004' })
     expect(wrapper.get('[role="status"]').text()).toContain('7 feuilles')
-    await wrapper.get(`button[aria-label="Entrée de feuilles : ${F1.libelle}"]`).trigger('click')
+    // Le panneau s'est refermé : un nouvel « Ajuster » repart par défaut sur une entrée
+    expect(wrapper.find('form.move').exists()).toBe(false)
+
+    await ajuster()
     await wrapper.get('#m-f1').setValue('20')
     await wrapper.get('form.move').trigger('submit')
     await flushPromises()
     expect(calls.filter((c) => c.path === '/stock/feuilles/f1/mouvement')[1]!.body).toEqual({ delta: 20, motif: 'reception', note: '' })
-    await wrapper.get(`button[aria-label="Inventaire : ${F1.libelle}"]`).trigger('click')
+
+    await ajuster()
+    await chip(wrapper, 'Compter').trigger('click')
     expect((wrapper.get('#m-f1').element as HTMLInputElement).value).toBe('10')
     await wrapper.get('#m-f1').setValue('8')
     await wrapper.get('form.move').trigger('submit')
@@ -161,7 +187,8 @@ describe('Stock de feuilles', () => {
 
   it('refuse une quantité vide ou nulle sans appeler le serveur, et affiche le refus du serveur', async () => {
     const { wrapper, calls } = await mountStock({ 'POST /stock/feuilles/f1/mouvement': [409, { error: 'Il n’y a que 10 feuilles en stock : impossible d’en sortir 30.', field: 'delta' }] })
-    await wrapper.get(`button[aria-label="Sortie de feuilles : ${F1.libelle}"]`).trigger('click')
+    await wrapper.get(`button[aria-label="Ajuster le stock : ${F1.libelle}"]`).trigger('click')
+    await chip(wrapper, 'Sortie').trigger('click')
     await wrapper.get('form.move').trigger('submit')
     expect(wrapper.get('[role="alert"]').text()).toContain('supérieur à 0')
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0)
@@ -171,8 +198,28 @@ describe('Stock de feuilles', () => {
     expect(wrapper.get('[role="alert"]').text()).toContain('Il n’y a que 10 feuilles')
   })
 
+  it('ajoute une note derrière un bouton, sans la mélanger avec le panneau d’ajustement', async () => {
+    const { wrapper, calls } = await mountStock({ 'PATCH /stock/feuilles/f1': [200, { ok: true }] })
+    expect(wrapper.get(`button[aria-label^="Modifier la note : "]`).text()).toBe('Modifier la note')
+    await wrapper.get(`button[aria-label^="Modifier la note : "]`).trigger('click')
+    await wrapper.get(`input#note-f1`).setValue('Rack B')
+    await wrapper.get('form.move').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PATCH')!.body).toEqual({ note: 'Rack B' })
+    // F2 n'a pas encore de note : le bouton invite à en ajouter une
+    expect(wrapper.get(`button[aria-label^="Ajouter une note : "]`).text()).toBe('Ajouter une note')
+  })
+
+  it('n’affiche pas d’alerte de stock bas sur une chute', async () => {
+    const { wrapper } = await mountStock()
+    const chutesSection = wrapper.get('#chutes-titre').element.parentElement!
+    expect(chutesSection.querySelector('.seuil')).toBeNull()
+    await ouvrirAjoutChutes(wrapper)
+    expect(wrapper.find('#s-seuil').exists()).toBe(false)
+  })
+
   it('ne propose de supprimer qu’une référence vide, modifie le seuil et la note, et montre l’historique', async () => {
-    const vide = { ...F2, id: 'f3', quantite: 0, bas: false, libelle: 'Aluminium 1 mm · brut · 450 × 3 000 mm' }
+    const vide = { ...F2, id: 'f3', quantite: 0, bas: false, etat: 'vide' as const, libelle: 'Aluminium 1 mm · brut · 450 × 3 000 mm' }
     const { wrapper, calls } = await mountStock({
       'GET /stock/feuilles': [200, { ...LIST, feuilles: [F1, vide] }],
       'DELETE /stock/feuilles/f3': [200, { ok: true }],
@@ -194,7 +241,7 @@ describe('Stock de feuilles', () => {
   })
 
   it('invite à ajouter des feuilles quand le stock est vide, et dit les erreurs', async () => {
-    const empty = await mountStock({ 'GET /stock/feuilles': [200, { feuilles: [], totaux: { references: 0, feuilles: 0, m2: 0, bas: 0 } }] })
+    const empty = await mountStock({ 'GET /stock/feuilles': [200, { feuilles: [], totaux: { references: 0, feuillesEntieres: 0, chutes: 0, m2Entieres: 0, m2Chutes: 0, bas: 0 } }] })
     expect(empty.wrapper.text()).toContain('Aucune feuille en stock pour l’instant')
     const down = await mountStock({ 'GET /stock/feuilles': [500, { error: 'Le serveur a rencontré un problème.' }] })
     expect(down.wrapper.get('[role="alert"]').text()).toContain('problème')

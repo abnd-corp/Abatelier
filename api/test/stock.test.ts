@@ -71,13 +71,34 @@ describe('Saisie des feuilles', () => {
   it('enregistre une feuille avec sa matière, son épaisseur, son coloris et son format, trace la première saisie et le journal', async () => {
     const f = await add({ note: 'Palette 2' })
     expect(norm(f.libelle)).toBe('Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 1 250 × 3 000 mm')
-    expect(f).toMatchObject({ quantite: 10, bas: false })
+    expect(f).toMatchObject({ quantite: 10, bas: false, etat: 'ok' })
     const list = (await atelier.get('/api/stock/feuilles')).json()
     expect(list.feuilles[0]).toMatchObject({ matiere: 'Aluminium', epaisseur: 1.5, coloris: 'Gris anthracite', largeur: 1250, longueur: 3000, chute: false, note: 'Palette 2' })
-    expect(list.totaux).toEqual({ references: 1, feuilles: 10, m2: 37.5, bas: 0 })
+    expect(list.totaux).toEqual({ references: 1, feuillesEntieres: 10, chutes: 0, m2Entieres: 37.5, m2Chutes: 0, bas: 0 })
     const [mv] = await db.select().from(sheetMovements)
     expect(mv).toMatchObject({ delta: 10, apres: 10, motif: 'reception', note: 'Première saisie' })
     expect((await entries('stock.sheet_created'))[0]!.details).toMatchObject({ quantite: 10 })
+  })
+
+  it('ne mélange jamais les chutes et les feuilles entières dans les totaux (une chute n’est pas une feuille)', async () => {
+    await add({ quantite: 10 }) // entière : 1 250 × 3 000, 10 feuilles
+    await add({ chute: true, largeur: 300, longueur: 400, quantite: 3 }) // chute : 300 × 400, 3 morceaux
+    const { totaux } = (await atelier.get('/api/stock/feuilles')).json()
+    expect(totaux).toEqual({ references: 2, feuillesEntieres: 10, chutes: 3, m2Entieres: 37.5, m2Chutes: 0.4, bas: 0 })
+  })
+
+  it('refuse une alerte de stock bas sur une chute : elle n’est pas réapprovisionnée', async () => {
+    const bad = await atelier.post('/api/stock/feuilles', feuille({ chute: true, largeur: 300, longueur: 400, seuil: 2 }))
+    expect(bad.statusCode).toBe(400)
+    expect(bad.json()).toMatchObject({ field: 'seuil', error: expect.stringMatching(/alerte.*chute/) })
+
+    const f = await add({ chute: true, largeur: 300, longueur: 400 })
+    expect((await atelier.patch(`/api/stock/feuilles/${f.id}`, { seuil: 2 })).statusCode).toBe(400)
+    // Rendre une feuille entière chute alors qu'elle a déjà une alerte est refusé aussi
+    const g = await add({ largeur: 500, longueur: 600, seuil: 5 })
+    expect((await atelier.patch(`/api/stock/feuilles/${g.id}`, { chute: true })).statusCode).toBe(400)
+    // Mais retirer l'alerte en même temps passe
+    expect((await atelier.patch(`/api/stock/feuilles/${g.id}`, { chute: true, seuil: 0 })).statusCode).toBe(200)
   })
 
   it('accepte une tôle brute (sans coloris), remet la largeur et la longueur dans l’ordre, et marque une chute', async () => {
@@ -126,9 +147,9 @@ describe('Entrées, sorties et inventaire', () => {
   it('ajoute et retire des feuilles, trace chaque mouvement avec son auteur, et signale le stock bas', async () => {
     const f = await add({ seuil: 4 })
     const out = await atelier.post(`/api/stock/feuilles/${f.id}/mouvement`, { delta: -7, motif: 'fabrication', note: 'C-2026-0001' })
-    expect(out.json()).toEqual({ quantite: 3, bas: true })
+    expect(out.json()).toEqual({ quantite: 3, bas: true, etat: 'bas' })
     const inn = await atelier.post(`/api/stock/feuilles/${f.id}/mouvement`, { delta: 20, motif: 'reception' })
-    expect(inn.json()).toEqual({ quantite: 23, bas: false })
+    expect(inn.json()).toEqual({ quantite: 23, bas: false, etat: 'ok' })
     const list = (await atelier.get('/api/stock/feuilles')).json()
     expect(list.feuilles[0].quantite).toBe(23)
     const h = (await atelier.get(`/api/stock/mouvements?feuille=${f.id}`)).json().mouvements
@@ -139,6 +160,18 @@ describe('Entrées, sorties et inventaire', () => {
     ])
     expect(h[1].note).toBe('C-2026-0001')
     expect(await entries('stock.moved')).toHaveLength(2)
+  })
+
+  it('calcule l’état à 4 niveaux (vide, critique, bas, ok) à partir du seuil (R7)', async () => {
+    const f = await add({ seuil: 10, quantite: 0 })
+    const etatApres = async (delta: number) => (await atelier.post(`/api/stock/feuilles/${f.id}/mouvement`, { delta, motif: 'reception' })).json().etat
+    expect((await atelier.get('/api/stock/feuilles')).json().feuilles[0].etat).toBe('vide')
+    expect(await etatApres(4)).toBe('critique') // 4 ≤ 10/2
+    expect(await etatApres(2)).toBe('bas') // 6 ≤ 10, mais > 5
+    expect(await etatApres(5)).toBe('ok') // 11 > 10
+    // Sans seuil réglé, seul le vide est détecté
+    const g = await add({ colorId: null, seuil: 0, quantite: 1 })
+    expect((await atelier.post(`/api/stock/feuilles/${g.id}/mouvement`, { delta: -1, motif: 'perte' })).json().etat).toBe('vide')
   })
 
   it('refuse de sortir plus de feuilles qu’il n’y en a, sans rien changer', async () => {
