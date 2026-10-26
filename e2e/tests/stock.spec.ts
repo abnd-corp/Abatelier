@@ -133,3 +133,52 @@ test.describe('Stock de feuilles', () => {
     await expect(rh).toHaveURL('/tableau-de-bord')
   })
 })
+
+test.describe('Stock de feuilles : seuil, note et suppression', () => {
+  test('l’atelier règle l’alerte, note une instruction, puis supprime une référence vide', async ({ adminPage, baseURL, uid }) => {
+    const options = await (await adminPage.request.get('/api/stock/options')).json()
+    // Largeur propre à ce test : la carte se retrouve sans gêner les autres
+    const largeur = 1100 + Math.floor(Math.random() * 900)
+    const res = await adminPage.request.post('/api/stock/feuilles', {
+      data: { materialId: options.materials[0].id, colorId: options.colors[0].id, largeur, longueur: 2500, quantite: 0, seuil: 0, chute: false, note: '' },
+      headers: { Origin: baseURL! },
+    })
+    expect(res.status(), await res.text()).toBe(201)
+
+    await adminPage.goto('/stock')
+    const carte = () => adminPage.locator('article.sheet-card').filter({ hasText: `${largeur.toLocaleString('fr-FR')} × 2 500 mm` })
+    await expect(carte()).toHaveCount(1)
+
+    // Alerte de stock bas : enregistrée et gardée après rechargement
+    await carte()
+      .getByLabel(/^Alerte stock bas de/)
+      .fill('7')
+    await carte()
+      .getByLabel(/^Alerte stock bas de/)
+      .blur()
+    await expect
+      .poll(async () => ((await (await adminPage.request.get('/api/stock/feuilles')).json()).feuilles as { largeur: number; seuil: number }[]).find((f) => f.largeur === largeur)?.seuil)
+      .toBe(7)
+    await adminPage.reload()
+    await expect(carte().getByLabel(/^Alerte stock bas de/)).toHaveValue('7')
+
+    // Note : cachée derrière un bouton, puis visible sur la carte
+    const note = `Palette ${uid.slice(-5)}`
+    await carte()
+      .getByRole('button', { name: /^Ajouter une note/ })
+      .click()
+    await carte()
+      .getByLabel(/^Note \(petite instruction/)
+      .fill(note)
+    await carte().getByRole('button', { name: 'Valider' }).click()
+    await expect(carte()).toContainText(note)
+
+    // La référence est vide : on peut la supprimer
+    await carte()
+      .getByRole('button', { name: /^Supprimer la référence/ })
+      .click()
+    await expect(carte()).toHaveCount(0)
+    await adminPage.reload()
+    await expect(carte()).toHaveCount(0)
+  })
+})
