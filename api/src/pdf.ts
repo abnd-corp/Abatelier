@@ -219,14 +219,10 @@ export async function renderDocument(company: Company, template: Template, logo:
 
   const colX = 330
   const colW = RIGHT - colX
-  // Le QR code du site se range à droite du titre, avec l'adresse du site écrite dessous ; le titre et les dates se calent à sa gauche
-  const QR = 56
-  const titleW = qr ? colW - QR - 14 : colW
-  if (qr) doc.image(qr, RIGHT - QR, 44, { width: QR, height: QR })
   doc.font(F.b).fontSize(24).fillColor(accent)
-  text((data.estimation ? 'Estimation' : TITRES[data.type]).toUpperCase(), colX, 44, { width: titleW, align: 'right', characterSpacing: 1 })
+  text((data.estimation ? 'Estimation' : TITRES[data.type]).toUpperCase(), colX, 44, { width: colW, align: 'right', characterSpacing: 1 })
   doc.font(F.b).fontSize(11).fillColor(INK)
-  if (!data.estimation) text(`N° ${data.numero}`, colX, doc.y + 2, { width: titleW, align: 'right' })
+  if (!data.estimation) text(`N° ${data.numero}`, colX, doc.y + 2, { width: colW, align: 'right' })
   doc.font(F.r).fontSize(9.5)
   const limite = data.echeance ?? addDays(data.date, isDevis ? template.validiteDevis : template.echeanceFacture)
   const dates = [
@@ -234,18 +230,10 @@ export async function renderDocument(company: Company, template: Template, logo:
     isAvoir ? `Facture : ${data.avoir?.facture ?? ''}` : data.estimation ? 'Prix indicatif, non contractuel' : `${isDevis ? 'Valable jusqu’au' : 'Échéance'} : ${day(limite)}`,
     ...(data.references ?? []),
   ]
-  text(dates.join('\n'), colX, doc.y + 2, { width: titleW, align: 'right', lineGap: 1 })
-  // Adresse du site sous le QR code, sous les dates pour ne rien chevaucher
-  let urlBottom = 0
-  if (qr) {
-    const urlY = Math.max(44 + QR + 4, doc.y + 4)
-    doc.font(F.r).fontSize(7).fillColor(MUTED)
-    text(company.siteWeb.replace(/^https?:\/\//i, '').replace(/\/$/, ''), RIGHT - 160, urlY, { width: 160, align: 'right', lineBreak: false, ellipsis: true })
-    urlBottom = urlY + 10
-  }
+  text(dates.join('\n'), colX, doc.y + 2, { width: colW, align: 'right', lineGap: 1 })
 
   // Bloc client, sous les références
-  const boxY = Math.max(132, doc.y + 12, urlBottom + 8)
+  const boxY = Math.max(132, doc.y + 12)
   doc.font(F.b).fontSize(10.5)
   const nameH = doc.heightOfString(clean(data.client.nom), { width: colW - 24 })
   doc.font(F.r).fontSize(9.5)
@@ -416,9 +404,16 @@ export async function renderDocument(company: Company, template: Template, logo:
     doc.moveTo(PAGE.m, fy).lineTo(RIGHT, fy).lineWidth(0.6).strokeColor(LINE).stroke()
     doc.font(F.r).fontSize(7.5).fillColor(MUTED)
     const lines = [template.piedDePage, identity].filter((s) => s.trim()).join('\n')
-    const reserved = 50
+    // Le QR code (vers le site web) prend la place habituelle du numéro de page, qui se décale à sa gauche
+    // Coordonnées à gauche, QR code du site à droite (avec son adresse dessous), numéro de page au centre, tout en bas
+    const reserved = qr ? 40 : 0
     text(lines, PAGE.m, fy + 8, { width: WIDTH - reserved, lineGap: 1 })
-    text(`${i + 1} / ${range.count}`, RIGHT - reserved, fy + 8, { width: 50, align: 'right' })
+    text(`${i + 1} / ${range.count}`, PAGE.m, fy + 35, { width: WIDTH, align: 'center' })
+    if (qr) {
+      doc.image(qr, RIGHT - 30, fy + 3, { width: 30, height: 30 })
+      doc.font(F.r).fontSize(6.5).fillColor(MUTED)
+      text(company.siteWeb.replace(/^https?:\/\//i, '').replace(/\/$/, ''), RIGHT - 130, fy + 35, { width: 130, align: 'right', lineBreak: false, ellipsis: true })
+    }
     doc.page.margins.bottom = margin
   }
 
