@@ -5,15 +5,20 @@ import type { PricedLine } from '../quote.js'
 const ts = (name: string) => timestamp(name, { withTimezone: true })
 
 // direction : tout ; rh : salariés et journal ; atelier : production et stock
-export const ROLES = ['direction', 'rh', 'atelier'] as const
-export type Role = (typeof ROLES)[number]
+// Droits d'un compte : des sections cumulables (Ventes, Atelier, Direction) et, à part, l'administration (comptes, salariés, journal)
+export const SECTIONS = ['ventes', 'atelier', 'direction'] as const
+export type Section = (typeof SECTIONS)[number]
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   identifiant: text('identifiant').notNull().unique(),
   nom: text('nom').notNull(),
   passwordHash: text('password_hash').notNull(),
-  role: text('role', { enum: ROLES }).notNull().default('atelier'),
+  sections: text('sections', { enum: SECTIONS })
+    .array()
+    .notNull()
+    .default(sql`'{}'`),
+  admin: boolean('admin').notNull().default(false),
   // Mot de passe temporaire donné par un admin : à changer à la prochaine connexion
   mustChangePassword: boolean('must_change_password').notNull().default(false),
   // Compte désactivé (départ d'un employé) : plus de connexion, historique conservé

@@ -233,7 +233,7 @@ export async function clientRoutes(app: FastifyInstance) {
     const activity = rows.map(({ userAgent, ...r }) => ({ ...r, device: describeDevice(userAgent), targetName: clientName(c) }))
     // Commandes et total dépensé : pour qui gère les commandes (pas la RH)
     let commandes = null
-    if (can(req.user!.role, 'orders.manage')) {
+    if (can(req.user!, 'orders.manage')) {
       const list = await db
         .select({ id: orders.id, numero: orders.numero, statut: orders.statut, ttc: orders.ttc, createdAt: orders.createdAt })
         .from(orders)

@@ -1,4 +1,4 @@
-import type { Role } from '@/stores/auth'
+import type { Section } from '@/stores/auth'
 
 export type Contrat = 'cdi' | 'cdd' | 'apprentissage' | 'interim' | 'stage'
 
@@ -13,7 +13,8 @@ export const CONTRAT_LABELS: Record<Contrat, string> = {
 export interface EmployeeAccount {
   id: string
   identifiant: string
-  role: Role
+  sections: Section[]
+  admin: boolean
   disabledAt: string | null
   mustChangePassword: boolean
   lastLoginAt: string | null

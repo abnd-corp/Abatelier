@@ -17,9 +17,10 @@ export const publicUser = (u: SessionUser) => ({
   id: u.id,
   identifiant: u.identifiant,
   nom: u.nom,
-  role: u.role,
+  sections: u.sections,
+  admin: u.admin,
   mustChangePassword: u.mustChangePassword,
-  permissions: permissionsOf(u.role),
+  permissions: permissionsOf(u),
 })
 
 const loginBody = z.object({

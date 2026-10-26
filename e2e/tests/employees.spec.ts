@@ -115,7 +115,7 @@ test.describe('Salariés', () => {
     const { id, tempPassword } = await addEmployee(adminPage.request, baseURL!, {
       prenom: 'Sophie',
       nom: `Depart${uid.slice(-5)}`,
-      compte: { identifiant: uid, role: 'atelier' },
+      compte: { identifiant: uid, sections: ['atelier'], admin: false },
     })
     const sophie = await (await browser.newContext()).newPage()
     await apiLogin(sophie.request, baseURL!, uid, tempPassword!)

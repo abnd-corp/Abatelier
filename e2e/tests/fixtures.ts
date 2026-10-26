@@ -17,8 +17,17 @@ export async function apiLogin(request: APIRequestContext, baseURL: string, iden
   expect(res.status(), await res.text()).toBe(200)
 }
 
-export async function createUser(request: APIRequestContext, baseURL: string, user: { identifiant: string; nom: string; role?: 'direction' | 'rh' | 'atelier' }) {
-  const res = await request.post('/api/users', { data: { role: 'atelier', ...user }, headers: { Origin: baseURL } })
+/** Comptes types des tests : « direction » = tout, « rh » = administration seule, « atelier » = section Atelier. */
+const ACCES = {
+  direction: { sections: ['ventes', 'atelier', 'direction'], admin: true },
+  rh: { sections: [], admin: true },
+  atelier: { sections: ['atelier'], admin: false },
+}
+
+export async function createUser(request: APIRequestContext, baseURL: string, user: { identifiant: string; nom: string; role?: keyof typeof ACCES; sections?: string[]; admin?: boolean }) {
+  const { role = 'atelier', sections, admin, ...base } = user
+  const acces = sections || admin !== undefined ? { sections: sections ?? [], admin: admin ?? false } : ACCES[role]
+  const res = await request.post('/api/users', { data: { ...base, ...acces }, headers: { Origin: baseURL } })
   expect(res.status(), await res.text()).toBe(201)
   return (await res.json()).tempPassword as string
 }

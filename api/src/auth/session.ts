@@ -15,7 +15,7 @@ const TOUCH_EVERY_MS = 60 * 1000
 const ttl = (remember: boolean) => (remember ? REMEMBER_MS : IDLE_MS)
 const hashToken = (token: string) => createHash('sha256').update(token).digest('hex')
 
-export type SessionUser = Pick<User, 'id' | 'identifiant' | 'nom' | 'role' | 'mustChangePassword'>
+export type SessionUser = Pick<User, 'id' | 'identifiant' | 'nom' | 'sections' | 'admin' | 'mustChangePassword'>
 export interface CurrentSession {
   id: string
   publicId: string
@@ -39,7 +39,7 @@ export async function validateSession(token: string) {
       remember: sessions.remember,
       lastSeenAt: sessions.lastSeenAt,
       expiresAt: sessions.expiresAt,
-      user: { id: users.id, identifiant: users.identifiant, nom: users.nom, role: users.role, mustChangePassword: users.mustChangePassword },
+      user: { id: users.id, identifiant: users.identifiant, nom: users.nom, sections: users.sections, admin: users.admin, mustChangePassword: users.mustChangePassword },
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))

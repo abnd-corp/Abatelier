@@ -50,6 +50,6 @@ export function requirePerm(perm: Permission) {
   return async (req: FastifyRequest, reply: FastifyReply) => {
     await requireAuth(req, reply)
     if (reply.sent) return
-    if (!can(req.user!.role, perm)) return reply.code(403).send({ error: 'Vous n’avez pas accès à cette fonction.' })
+    if (!can(req.user!, perm)) return reply.code(403).send({ error: 'Vous n’avez pas accès à cette fonction.' })
   }
 }

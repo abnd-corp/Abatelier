@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '@/api'
 
-export type Role = 'direction' | 'rh' | 'atelier'
+export type Section = 'ventes' | 'atelier' | 'direction'
 export type Permission =
   | 'users.manage'
   | 'employees.manage'
@@ -22,25 +22,28 @@ export interface User {
   id: string
   identifiant: string
   nom: string
-  role: Role
+  sections: Section[]
+  admin: boolean
   mustChangePassword: boolean
   permissions: Permission[]
 }
 
-export const ROLE_LABELS: Record<Role, string> = { direction: 'Direction', rh: 'RH', atelier: 'Atelier' }
-
-/** Rôles proposés dans les listes de choix, du moins au plus étendu. */
-export const ROLE_OPTIONS: { value: Role; label: string; description: string }[] = [
-  { value: 'atelier', label: 'Atelier', description: 'commandes à fabriquer, sans les clients ni les prix' },
-  { value: 'rh', label: 'RH', description: 'salariés, journal, clients en lecture' },
-  { value: 'direction', label: 'Direction', description: 'tout, dont les comptes, tarifs, clients et commandes' },
+/** Les sections qu'on coche pour un compte : elles se cumulent, et reprennent les rubriques du menu. */
+export const SECTION_OPTIONS: { value: Section; label: string; description: string }[] = [
+  { value: 'ventes', label: 'Ventes', description: 'commandes, devis et factures, clients' },
+  { value: 'atelier', label: 'Atelier', description: 'fabrication et stock de feuilles, sans les clients ni les prix' },
+  { value: 'direction', label: 'Direction', description: 'tarifs et catalogue, modèles de documents, boutique, site vitrine' },
 ]
+export const ADMIN_OPTION = { label: 'Administration', description: 'comptes de connexion, fiches salariés, journal d’activité' }
 
-/**
- * Rôles proposés à la création d'un compte. Pour l'instant : un compte « gestion » (direction, qui a aussi les droits de la RH)
- * et un compte atelier. Le rôle RH reste dans le code et l'API pour une V2 : on ne le propose plus, sauf pour un compte qui l'a déjà.
- */
-export const roleOptions = (current?: Role) => ROLE_OPTIONS.filter((r) => r.value !== 'rh' || r.value === current)
+export interface Access {
+  sections: Section[]
+  admin: boolean
+}
+
+/** « Ventes · Atelier · Administration », ou « Aucun accès ». */
+export const accessLabels = (a: Access): string[] => [...SECTION_OPTIONS.filter((o) => a.sections.includes(o.value)).map((o) => o.label), ...(a.admin ? [ADMIN_OPTION.label] : [])]
+export const accessLabel = (a: Access) => accessLabels(a).join(' · ') || 'Aucun accès'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)

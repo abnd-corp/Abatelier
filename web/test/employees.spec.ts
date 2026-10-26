@@ -19,7 +19,7 @@ const PAUL: Employee = {
   telephone: '06 12 34 56 78',
   email: 'paul@exemple.fr',
   notes: 'Permis cariste',
-  account: { id: 'u1', identifiant: 'paul', role: 'atelier', disabledAt: null, mustChangePassword: false, lastLoginAt: null, activeSessions: 2 },
+  account: { id: 'u1', identifiant: 'paul', sections: ['atelier'], admin: false, disabledAt: null, mustChangePassword: false, lastLoginAt: null, activeSessions: 2 },
 }
 const MARIE: Employee = { ...PAUL, id: 'e2', prenom: 'Marie', nom: 'Durand', poste: null, contrat: null, telephone: null, account: null }
 
@@ -127,10 +127,10 @@ describe('Ajout d’un salarié', () => {
     await wrapper.get('#f-nom').setValue('Martin')
     await wrapper.get('#f-poste').setValue('Plieur')
     await wrapper.get('#f-contrat').setValue('cdi')
-    await wrapper.get('#f-role').setValue('direction')
+    await wrapper.get('#f-direction').setValue(true)
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(calls[0]!.body).toMatchObject({ prenom: 'Paul', nom: 'Martin', poste: 'Plieur', contrat: 'cdi', compte: { identifiant: 'paul', role: 'direction' } })
+    expect(calls[0]!.body).toMatchObject({ prenom: 'Paul', nom: 'Martin', poste: 'Plieur', contrat: 'cdi', compte: { identifiant: 'paul', sections: ['atelier', 'direction'], admin: false } })
     expect(router.currentRoute.value.fullPath).toBe('/salaries/e9')
     expect(useUiStore().tempPassword).toEqual({ for: '/salaries/e9', nom: 'Paul Martin', identifiant: 'paul', password: 'aaaa-bbbb-cccc-dddd' })
   })
@@ -256,7 +256,7 @@ describe('Fiche salarié', () => {
     expect((wrapper.get('#new-identifiant').element as HTMLInputElement).value).toBe('marie')
     await wrapper.get('.account-form').trigger('submit')
     await flushPromises()
-    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ identifiant: 'marie', role: 'atelier' })
+    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ identifiant: 'marie', sections: ['atelier'], admin: false })
     expect(wrapper.text()).toContain('eeee-ffff-gggg-hhhh')
   })
 
@@ -284,7 +284,7 @@ describe('Fiche salarié', () => {
     const { wrapper } = await mountAt(EmployeeView, '/salaries/e1', { 'GET /employees/e1': [200, FICHE(mine)] })
     expect(wrapper.text()).toContain('C’est votre compte')
     expect(wrapper.findAll('button').some((b) => b.text() === 'Désactiver le compte')).toBe(false)
-    expect(wrapper.get('#account-role').attributes('disabled')).toBeDefined()
+    expect(wrapper.findAll('button').some((b) => b.text() === 'Modifier les droits')).toBe(false)
   })
 
   it('affiche une erreur si la fiche n’existe pas', async () => {
@@ -322,7 +322,7 @@ describe('Rôle RH', () => {
     const { wrapper } = await asRh(EmployeeView, '/salaries/e1', { 'GET /employees/e1': [200, fiche] })
     expect(wrapper.text()).toContain('paul')
     expect(wrapper.text()).toContain('réservée à la direction')
-    expect(wrapper.find('#account-role').exists()).toBe(false)
+    expect(wrapper.findAll('button').some((b) => b.text() === 'Modifier les droits')).toBe(false)
     expect(wrapper.findAll('button').some((b) => ['Désactiver le compte', 'Nouveau mot de passe'].includes(b.text()))).toBe(false)
   })
 

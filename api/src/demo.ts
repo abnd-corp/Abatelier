@@ -50,15 +50,22 @@ const rh = session()
 const atelier = session()
 {
   const equipe = [
-    { prenom: 'Camille', nom: 'Rousset', poste: 'Gérante', contrat: 'cdi', dateEntree: '2012-03-01', compte: { identifiant: 'demo-direction', role: 'direction' } },
-    { prenom: 'Sophie', nom: 'Blanchard', poste: 'Assistante administrative et RH', contrat: 'cdi', dateEntree: '2019-09-02', compte: { identifiant: 'demo-rh', role: 'rh' } },
-    { prenom: 'Lucas', nom: 'Martinon', poste: 'Plieur sur presse numérique', contrat: 'cdi', dateEntree: '2021-01-11', compte: { identifiant: 'demo-atelier', role: 'atelier' } },
+    {
+      prenom: 'Camille',
+      nom: 'Rousset',
+      poste: 'Gérante',
+      contrat: 'cdi',
+      dateEntree: '2012-03-01',
+      compte: { identifiant: 'demo-direction', sections: ['ventes', 'atelier', 'direction'], admin: true },
+    },
+    { prenom: 'Sophie', nom: 'Blanchard', poste: 'Assistante administrative et RH', contrat: 'cdi', dateEntree: '2019-09-02', compte: { identifiant: 'demo-rh', sections: ['ventes'], admin: true } },
+    { prenom: 'Lucas', nom: 'Martinon', poste: 'Plieur sur presse numérique', contrat: 'cdi', dateEntree: '2021-01-11', compte: { identifiant: 'demo-atelier', sections: ['atelier'], admin: false } },
     { prenom: 'Hugo', nom: 'Faure', poste: 'Opérateur cisaille', contrat: 'apprentissage', dateEntree: '2025-09-01', compte: null },
   ]
   // Les comptes se créent avec un mot de passe provisoire : on le remplace par celui de la démo
   const [admin] = await db
     .insert(users)
-    .values({ identifiant: 'demo-bootstrap', nom: 'Démo', role: 'direction', passwordHash: await hashPassword(PASSWORD) })
+    .values({ identifiant: 'demo-bootstrap', nom: 'Démo', sections: ['ventes', 'atelier', 'direction'], admin: true, passwordHash: await hashPassword(PASSWORD) })
     .returning()
   const boot = session()
   await boot.post('/api/auth/login', { identifiant: 'demo-bootstrap', password: PASSWORD })

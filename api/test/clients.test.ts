@@ -35,23 +35,24 @@ const entries = (action: string) => db.select().from(auditLog).where(eq(auditLog
 const create = async (body: object) => (await direction.post('/api/clients', body)).json().id as string
 
 describe('Accès', () => {
-  it('refuse l’atelier, et laisse la RH consulter sans rien modifier', async () => {
+  it('refuse l’atelier et l’administration seule : les clients sont dans la section Ventes', async () => {
     await createUser({ identifiant: 'paul', role: 'atelier' })
     await createUser({ identifiant: 'rh', role: 'rh' })
-    const [atelier, rh] = [await loginAs(app, 'paul'), await loginAs(app, 'rh')]
     const id = await create(DUPONT)
-    for (const res of await Promise.all([atelier.get('/api/clients'), atelier.get(`/api/clients/${id}`)])) expect(res.statusCode).toBe(403)
-    expect((await rh.get('/api/clients')).json().clients).toHaveLength(1)
-    expect((await rh.get(`/api/clients/${id}`)).statusCode).toBe(200)
-    for (const res of await Promise.all([
-      rh.post('/api/clients', DUPONT),
-      rh.patch(`/api/clients/${id}`, { nom: 'x' }),
-      rh.post(`/api/clients/${id}/archive`),
-      rh.post(`/api/clients/${id}/sites`, CHANTIER),
-      rh.patch(`/api/clients/${id}/sites/${UUID}`, { ville: 'x' }),
-      rh.delete(`/api/clients/${id}/sites/${UUID}`),
-    ]))
-      expect(res.statusCode).toBe(403)
+    for (const who of ['paul', 'rh']) {
+      const c = await loginAs(app, who)
+      for (const res of await Promise.all([
+        c.get('/api/clients'),
+        c.get(`/api/clients/${id}`),
+        c.post('/api/clients', DUPONT),
+        c.patch(`/api/clients/${id}`, { nom: 'x' }),
+        c.post(`/api/clients/${id}/archive`),
+        c.post(`/api/clients/${id}/sites`, CHANTIER),
+        c.patch(`/api/clients/${id}/sites/${UUID}`, { ville: 'x' }),
+        c.delete(`/api/clients/${id}/sites/${UUID}`),
+      ]))
+        expect(res.statusCode, who).toBe(403)
+    }
   })
 })
 

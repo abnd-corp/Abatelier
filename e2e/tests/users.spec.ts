@@ -7,8 +7,11 @@ test.describe('Arrivée et départ d’un employé', () => {
     // 1. L'admin crée le compte depuis l'interface
     await adminPage.goto('/utilisateurs')
     await adminPage.getByRole('button', { name: 'Ajouter un compte' }).click()
-    // Le rôle RH n'est plus proposé (gardé dans le code pour une V2)
-    await expect(adminPage.locator('#new-role option')).toHaveText([/^Atelier/, /^Direction/])
+    // Les droits se cochent : Atelier est proposé par défaut, l'administration est à part
+    await expect(adminPage.getByLabel(/^Atelier/)).toBeChecked()
+    await expect(adminPage.getByLabel(/^Ventes/)).not.toBeChecked()
+    await expect(adminPage.getByLabel(/^Direction/)).not.toBeChecked()
+    await expect(adminPage.getByLabel(/^Administration/)).not.toBeChecked()
     await adminPage.getByLabel('Nom affiché').fill(nom)
     await adminPage.getByLabel('Identifiant de connexion').fill(uid)
     await adminPage.getByRole('button', { name: 'Créer le compte' }).click()

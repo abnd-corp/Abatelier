@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
-import { ROLE_LABELS, useAuthStore } from '@/stores/auth'
+import { accessLabel, useAuthStore } from '@/stores/auth'
 import { checkPassword } from '@/lib/password'
 import { relative, dateTime } from '@/lib/format'
 import PasswordInput from '@/components/PasswordInput.vue'
@@ -77,7 +77,7 @@ onMounted(loadSessions)
 <template>
   <div class="page-head">
     <div>
-      <span class="eyebrow">{{ auth.user?.identifiant }} · {{ auth.user ? ROLE_LABELS[auth.user.role] : '' }}</span>
+      <span class="eyebrow">{{ auth.user?.identifiant }} · {{ auth.user ? accessLabel(auth.user) : '' }}</span>
       <h1>Mon compte</h1>
     </div>
   </div>
