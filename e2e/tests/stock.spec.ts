@@ -108,7 +108,7 @@ test.describe('Stock de feuilles', () => {
     const conseil = atelier.getByRole('region', { name: 'Feuilles à prendre' })
     await expect(conseil).toContainText('Prendre')
     await expect(conseil).toContainText(`${l.toLocaleString('fr-FR')} × 3 000 mm`.replace(/ /g, ' '))
-    await expect(conseil).toContainText('pièces par feuille')
+    await expect(conseil).toContainText(/pièces? par feuille/)
     await expect(conseil).toContainText('% de perte')
 
     // La direction voit aussi le stock, et le journal le raconte
