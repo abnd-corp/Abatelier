@@ -46,44 +46,34 @@ describe('Accès', () => {
       paul.post('/api/employees', PAUL),
       paul.get(`/api/employees/${id}`),
       paul.patch(`/api/employees/${id}`, { poste: 'x' }),
-      paul.post(`/api/employees/${id}/account`, { identifiant: 'x', role: 'atelier' }),
+      paul.post(`/api/employees/${id}/account`, { identifiant: 'x', sections: ['atelier'] }),
     ]))
       expect(res.statusCode).toBe(403)
   })
 })
 
-describe('Rôle RH', () => {
-  let rh: Client
+describe('Compte sans la case administration', () => {
+  let ventes: Client
   beforeEach(async () => {
-    await createUser({ identifiant: 'rh', role: 'rh' })
-    rh = await loginAs(app, 'rh')
+    await createUser({ identifiant: 'vendeuse', sections: ['ventes', 'atelier', 'direction'] })
+    ventes = await loginAs(app, 'vendeuse')
   })
 
-  it('gère les fiches salariés et lit le journal', async () => {
-    const res = await rh.post('/api/employees', PAUL)
+  it('n’a accès ni aux fiches salariés, ni au journal, ni aux comptes', async () => {
+    for (const url of ['/api/employees', '/api/audit', '/api/users']) expect((await ventes.get(url)).statusCode, url).toBe(403)
+    expect((await ventes.post('/api/employees', PAUL)).statusCode).toBe(403)
+    expect((await ventes.post('/api/users', { identifiant: 'x', nom: 'X', sections: ['direction'], admin: true })).statusCode).toBe(403)
+  })
+
+  it('avec la case administration seule, gère les fiches, les comptes et lit le journal', async () => {
+    await createUser({ identifiant: 'rh', sections: [], admin: true })
+    const rh = await loginAs(app, 'rh')
+    const res = await rh.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', sections: ['atelier'] } })
     expect(res.statusCode).toBe(201)
-    expect((await rh.patch(`/api/employees/${res.json().id}`, { poste: 'Chef d’atelier' })).statusCode).toBe(200)
     expect((await rh.get('/api/employees')).statusCode).toBe(200)
     expect((await rh.get('/api/audit')).statusCode).toBe(200)
-  })
-
-  it('ne crée pas de compte de connexion, ni avec la fiche ni après', async () => {
-    const withAccount = await rh.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })
-    expect(withAccount.statusCode).toBe(403)
-    expect(await db.select().from(employees)).toHaveLength(0)
-    const { id } = (await rh.post('/api/employees', PAUL)).json()
-    expect((await rh.post(`/api/employees/${id}/account`, { identifiant: 'paul', role: 'atelier' })).statusCode).toBe(403)
-  })
-
-  it('n’a pas accès à la gestion des comptes', async () => {
-    expect((await rh.get('/api/users')).statusCode).toBe(403)
-    expect((await rh.post('/api/users', { identifiant: 'x', nom: 'X', role: 'direction' })).statusCode).toBe(403)
-  })
-
-  it('voit le compte lié sur la fiche, en lecture', async () => {
-    const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })).json()
-    const fiche = (await rh.get(`/api/employees/${id}`)).json()
-    expect(fiche.employee.account).toMatchObject({ identifiant: 'paul' })
+    // ... mais pas les clients, ni les commandes
+    expect((await rh.get('/api/clients')).statusCode).toBe(403)
   })
 })
 
@@ -98,20 +88,20 @@ describe('Ajout d’un salarié', () => {
   })
 
   it('crée la fiche et le compte en une fois, le compte porte le nom complet', async () => {
-    const res = await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'Paul', role: 'atelier' } })
+    const res = await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'Paul', sections: ['atelier'] } })
     expect(res.statusCode).toBe(201)
     const { id, tempPassword } = res.json()
     expect(tempPassword).toMatch(/^[A-Za-z0-9]{4}(-[A-Za-z0-9]{4}){3}$/)
     const login = await client(app).post('/api/auth/login', { identifiant: 'paul', password: tempPassword })
-    expect(login.json().user).toMatchObject({ nom: 'Paul Martin', role: 'atelier', mustChangePassword: true })
+    expect(login.json().user).toMatchObject({ nom: 'Paul Martin', sections: ['atelier'], admin: false, mustChangePassword: true })
     const fiche = (await admin.get(`/api/employees/${id}`)).json().employee
-    expect(fiche.account).toMatchObject({ identifiant: 'paul', role: 'atelier', mustChangePassword: true })
+    expect(fiche.account).toMatchObject({ identifiant: 'paul', sections: ['atelier'], admin: false, mustChangePassword: true })
     expect(await auditActions(adminId)).toEqual(expect.arrayContaining(['employee.created', 'user.created']))
   })
 
   it('ne crée rien si l’identifiant est déjà pris', async () => {
     await createUser({ identifiant: 'paul' })
-    const res = await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })
+    const res = await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', sections: ['atelier'] } })
     expect(res.statusCode).toBe(409)
     expect(res.json().field).toBe('identifiant')
     expect(await db.select().from(employees)).toHaveLength(0)
@@ -131,8 +121,9 @@ describe('Ajout d’un salarié', () => {
     [{ contrat: 'freelance' }, 'contrat', /contrat/],
     [{ dateEntree: '2024-13-45' }, 'dateEntree', /Date invalide/],
     [{ dateEntree: '2025-01-01', dateSortie: '2024-01-01' }, 'dateSortie', /après la date d’entrée/],
-    [{ compte: { identifiant: 'Paul Martin', role: 'atelier' } }, 'identifiant', /identifiant/i],
-    [{ compte: { identifiant: 'paul', role: 'patron' } }, 'role', /.+/],
+    [{ compte: { identifiant: 'Paul Martin', sections: ['atelier'] } }, 'identifiant', /identifiant/i],
+    [{ compte: { identifiant: 'paul', sections: ['patron'] } }, 'sections', /.+/],
+    [{ compte: { identifiant: 'paul', sections: [], admin: false } }, 'sections', /au moins une section/],
   ])('refuse %o et désigne le champ', async (override, field, msg) => {
     const res = await admin.post('/api/employees', { ...PAUL, ...override })
     expect(res.statusCode).toBe(400)
@@ -143,7 +134,7 @@ describe('Ajout d’un salarié', () => {
 
 describe('Liste', () => {
   beforeEach(async () => {
-    await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })
+    await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', sections: ['atelier'] } })
     await admin.post('/api/employees', { prenom: 'Marie', nom: 'Durand', poste: 'Commerciale' })
     await admin.post('/api/employees', { prenom: 'Jean', nom: 'Ancien', dateEntree: '2020-01-01', dateSortie: '2023-06-30' })
     await admin.post('/api/employees', { prenom: 'Léa', nom: 'Bientôt', dateSortie: shift(10) })
@@ -172,7 +163,7 @@ describe('Liste', () => {
   it('indique le compte lié sans jamais exposer de hash', async () => {
     const res = await admin.get('/api/employees')
     const paul = res.json().employees.find((e: { prenom: string }) => e.prenom === 'Paul')
-    expect(paul.account).toMatchObject({ identifiant: 'paul', role: 'atelier' })
+    expect(paul.account).toMatchObject({ identifiant: 'paul', sections: ['atelier'], admin: false })
     expect(res.body).not.toMatch(/argon2|passwordHash|password_hash/)
   })
 
@@ -188,7 +179,7 @@ describe('Fiche et modification', () => {
   })
 
   it('modifie la fiche, renomme le compte, et note les champs sans copier les notes', async () => {
-    const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })).json()
+    const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', sections: ['atelier'] } })).json()
     const res = await admin.patch(`/api/employees/${id}`, { nom: 'Martin-Roux', notes: 'Information confidentielle' })
     expect(res.statusCode).toBe(200)
     const fiche = (await admin.get(`/api/employees/${id}`)).json()
@@ -216,14 +207,14 @@ describe('Fiche et modification', () => {
 
   it('crée un compte pour un salarié qui n’en a pas, une seule fois', async () => {
     const { id } = (await admin.post('/api/employees', PAUL)).json()
-    const res = await admin.post(`/api/employees/${id}/account`, { identifiant: 'pmartin', role: 'atelier' })
+    const res = await admin.post(`/api/employees/${id}/account`, { identifiant: 'pmartin', sections: ['atelier'] })
     expect(res.statusCode).toBe(201)
     expect((await client(app).post('/api/auth/login', { identifiant: 'pmartin', password: res.json().tempPassword })).statusCode).toBe(200)
-    expect((await admin.post(`/api/employees/${id}/account`, { identifiant: 'autre', role: 'atelier' })).statusCode).toBe(409)
+    expect((await admin.post(`/api/employees/${id}/account`, { identifiant: 'autre', sections: ['atelier'] })).statusCode).toBe(409)
   })
 
   it('les comptes listent le salarié lié', async () => {
-    const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })).json()
+    const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', sections: ['atelier'] } })).json()
     const list = (await admin.get('/api/users')).json().users
     expect(list.find((u: { identifiant: string }) => u.identifiant === 'paul').employeeId).toBe(id)
     expect(list.find((u: { identifiant: string }) => u.identifiant === 'chef').employeeId).toBeNull()
@@ -232,7 +223,7 @@ describe('Fiche et modification', () => {
 
 describe('Date de sortie', () => {
   it('une date de sortie aujourd’hui désactive le compte et déconnecte la personne', async () => {
-    const { id, tempPassword } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })).json()
+    const { id, tempPassword } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', sections: ['atelier'] } })).json()
     const paul = await loginAs(app, 'paul', tempPassword)
     const res = await admin.patch(`/api/employees/${id}`, { dateSortie: todayParis() })
     expect(res.json().accountDisabled).toBe(true)
@@ -243,7 +234,7 @@ describe('Date de sortie', () => {
   })
 
   it('une date de sortie future ne désactive rien… jusqu’au jour venu', async () => {
-    const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })).json()
+    const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', sections: ['atelier'] } })).json()
     await admin.patch(`/api/employees/${id}`, { dateSortie: shift(5) })
     expect((await admin.get(`/api/employees/${id}`)).json().employee.account.disabledAt).toBeNull()
     // Le temps passe : la date est atteinte, la tâche horaire désactive le compte
@@ -257,12 +248,12 @@ describe('Date de sortie', () => {
   })
 
   it('un salarié saisi déjà parti a son compte désactivé dès la création', async () => {
-    const { tempPassword } = (await admin.post('/api/employees', { ...PAUL, dateSortie: '2025-01-31', compte: { identifiant: 'paul', role: 'atelier' } })).json()
+    const { tempPassword } = (await admin.post('/api/employees', { ...PAUL, dateSortie: '2025-01-31', compte: { identifiant: 'paul', sections: ['atelier'] } })).json()
     expect((await client(app).post('/api/auth/login', { identifiant: 'paul', password: tempPassword })).statusCode).toBe(403)
   })
 
   it('deux applications simultanées ne désactivent et ne notent le compte qu’une fois', async () => {
-    const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', role: 'atelier' } })).json()
+    const { id } = (await admin.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', sections: ['atelier'] } })).json()
     await db
       .update(employees)
       .set({ dateSortie: shift(0) })

@@ -2,18 +2,18 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { and, asc, count, eq, gt, isNull, ne } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { employees, ROLES, sessions, users } from '../db/schema.js'
+import { employees, sessions, users } from '../db/schema.js'
 import { hashPassword } from '../auth/password.js'
 import { generateTempPassword } from '../auth/password-policy.js'
-import { createAccount, IdentifiantTaken, identifiantSchema } from '../accounts.js'
+import { ACCESS_ERROR, accessChanges, accessOk, accessShape, createAccount, IdentifiantTaken, identifiantSchema } from '../accounts.js'
 import { requirePerm } from '../auth/plugin.js'
 import { deleteUserSessions } from '../auth/session.js'
 import { audit } from '../audit.js'
 
 const nomSchema = z.string().trim().min(1, 'Le nom est requis.').max(80)
 
-const createBody = z.object({ identifiant: identifiantSchema, nom: nomSchema, role: z.enum(ROLES) })
-const updateBody = z.object({ nom: nomSchema.optional(), role: z.enum(ROLES).optional() })
+const createBody = z.object({ identifiant: identifiantSchema, nom: nomSchema, ...accessShape }).refine(accessOk, { message: ACCESS_ERROR, path: ['sections'] })
+const updateBody = z.object({ nom: nomSchema.optional(), ...accessChanges })
 
 const firstError = (e: z.ZodError) => e.issues[0]?.message ?? 'Données invalides.'
 
@@ -27,12 +27,12 @@ async function findUser(id: string, reply: FastifyReply) {
   return u ?? null
 }
 
-/** Nombre de comptes Direction actifs autres que userId : on refuse de retirer le dernier. */
+/** Nombre de comptes administrateurs actifs autres que userId : on refuse de retirer le dernier. */
 async function otherActiveAdmins(userId: string) {
   const [row] = await db
     .select({ n: count() })
     .from(users)
-    .where(and(eq(users.role, 'direction'), isNull(users.disabledAt), ne(users.id, userId)))
+    .where(and(eq(users.admin, true), isNull(users.disabledAt), ne(users.id, userId)))
   return row?.n ?? 0
 }
 
@@ -51,7 +51,8 @@ export async function userRoutes(app: FastifyInstance) {
         id: users.id,
         identifiant: users.identifiant,
         nom: users.nom,
-        role: users.role,
+        sections: users.sections,
+        admin: users.admin,
         mustChangePassword: users.mustChangePassword,
         disabledAt: users.disabledAt,
         createdAt: users.createdAt,
@@ -69,11 +70,11 @@ export async function userRoutes(app: FastifyInstance) {
   app.post('/', async (req, reply) => {
     const parsed = createBody.safeParse(req.body)
     if (!parsed.success) return reply.code(400).send({ error: firstError(parsed.error) })
-    const { identifiant, nom, role } = parsed.data
+    const { identifiant, nom, sections, admin } = parsed.data
 
     try {
-      const { id, tempPassword } = await createAccount(db, { identifiant, nom, role })
-      await audit(req, 'user.created', { targetType: 'user', targetId: id, details: { identifiant, nom, role } })
+      const { id, tempPassword } = await createAccount(db, { identifiant, nom, sections, admin })
+      await audit(req, 'user.created', { targetType: 'user', targetId: id, details: { identifiant, nom, sections, admin } })
       // Le mot de passe temporaire n'est renvoyé qu'ici, une seule fois
       return reply.code(201).send({ id, tempPassword })
     } catch (e) {
@@ -89,15 +90,25 @@ export async function userRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: firstError(parsed.error) })
     const changes = parsed.data
 
-    if (changes.role && changes.role !== 'direction' && u.role === 'direction' && !u.disabledAt && (await otherActiveAdmins(u.id)) === 0) {
-      return reply.code(400).send({ error: 'Il doit rester au moins un compte Direction actif.' })
+    const sections = changes.sections ?? u.sections
+    const admin = changes.admin ?? u.admin
+    if (!accessOk({ sections, admin })) return reply.code(400).send({ error: ACCESS_ERROR, field: 'sections' })
+    // Personne ne modifie ses propres droits : on ne se coupe pas l'accès par erreur, on ne s'en donne pas d'autres
+    if (u.id === req.user!.id && (changes.sections || changes.admin !== undefined)) {
+      return reply.code(400).send({ error: 'Vous ne pouvez pas modifier vos propres droits.' })
     }
-    const diff: Record<string, { avant: string; apres: string }> = {}
+    if (u.admin && !admin && !u.disabledAt && (await otherActiveAdmins(u.id)) === 0) {
+      return reply.code(400).send({ error: 'Il doit rester au moins un compte administrateur actif.', field: 'admin' })
+    }
+    const diff: Record<string, { avant: unknown; apres: unknown }> = {}
     if (changes.nom && changes.nom !== u.nom) diff.nom = { avant: u.nom, apres: changes.nom }
-    if (changes.role && changes.role !== u.role) diff.role = { avant: u.role, apres: changes.role }
+    if (sections.join() !== u.sections.join() || admin !== u.admin) diff.droits = { avant: { sections: u.sections, admin: u.admin }, apres: { sections, admin } }
     if (!Object.keys(diff).length) return { ok: true }
 
-    await db.update(users).set(changes).where(eq(users.id, u.id))
+    await db
+      .update(users)
+      .set({ ...(changes.nom ? { nom: changes.nom } : {}), sections, admin })
+      .where(eq(users.id, u.id))
     await audit(req, 'user.updated', { targetType: 'user', targetId: u.id, details: { identifiant: u.identifiant, ...diff } })
     return { ok: true }
   })
@@ -107,8 +118,8 @@ export async function userRoutes(app: FastifyInstance) {
     if (!u) return
     if (u.id === req.user!.id) return reply.code(400).send({ error: 'Vous ne pouvez pas désactiver votre propre compte.' })
     if (u.disabledAt) return { ok: true }
-    if (u.role === 'direction' && (await otherActiveAdmins(u.id)) === 0) {
-      return reply.code(400).send({ error: 'Il doit rester au moins un compte Direction actif.' })
+    if (u.admin && (await otherActiveAdmins(u.id)) === 0) {
+      return reply.code(400).send({ error: 'Il doit rester au moins un compte administrateur actif.' })
     }
     await db.update(users).set({ disabledAt: new Date() }).where(eq(users.id, u.id))
     const closed = await deleteUserSessions(u.id)

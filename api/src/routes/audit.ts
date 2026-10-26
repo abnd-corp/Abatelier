@@ -36,7 +36,7 @@ export async function auditRoutes(app: FastifyInstance) {
       userId ? eq(auditLog.userId, userId) : undefined,
       before ? lt(auditLog.id, before) : undefined,
       // La RH lit le journal, mais ne voit ni les devis, ni les factures
-      can(req.user!.role, 'billing.manage') ? undefined : notLike(auditLog.action, 'billing.%'),
+      can(req.user!, 'billing.manage') ? undefined : notLike(auditLog.action, 'billing.%'),
     ]
     const rows = await db
       .select({

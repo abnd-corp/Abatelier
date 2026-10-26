@@ -1,6 +1,6 @@
 import { count } from 'drizzle-orm'
 import { db } from './db/index.js'
-import { users } from './db/schema.js'
+import { SECTIONS, users } from './db/schema.js'
 import { hashPassword } from './auth/password.js'
 import { env } from './env.js'
 
@@ -17,7 +17,8 @@ export async function seedAdmin(log: { info: (msg: string) => void; warn: (msg: 
     identifiant: env.ADMIN_IDENTIFIANT.trim().toLowerCase(),
     nom: env.ADMIN_NOM,
     passwordHash: await hashPassword(env.ADMIN_PASSWORD),
-    role: 'direction',
+    sections: [...SECTIONS],
+    admin: true,
   })
   log.info(`Compte admin « ${env.ADMIN_IDENTIFIANT} » créé.`)
 }

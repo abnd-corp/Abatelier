@@ -15,7 +15,15 @@ export interface AuditEntry {
 
 export type Tone = 'neutral' | 'bad' | 'accent'
 
+// Anciennes écritures du journal (avant les sections) : le rôle
 const ROLE: Record<string, string> = { direction: 'direction', admin: 'direction', rh: 'RH', atelier: 'atelier' }
+
+const SECTION: Record<string, string> = { ventes: 'Ventes', atelier: 'Atelier', direction: 'Direction' }
+/** « Ventes, Atelier + administration » à partir des détails d'une écriture du journal. */
+const droits = (sections: unknown, admin: unknown) => {
+  const noms = (Array.isArray(sections) ? sections : []).map((x) => SECTION[String(x)] ?? String(x))
+  return [noms.join(', ') || null, admin ? 'administration' : null].filter(Boolean).join(' + ') || 'aucun accès'
+}
 
 const eur = (n: unknown) => (typeof n === 'number' ? n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : String(n))
 
@@ -145,10 +153,11 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
     case 'session.revoked_all':
       return { text: `A déconnecté ses autres appareils (${d.nombre})`, tone: 'neutral' }
     case 'user.created':
-      return { text: `A créé le compte de ${d.nom} (${ROLE[d.role] ?? d.role})`, tone: 'accent' }
+      return { text: `A créé le compte de ${d.nom} (${d.role ? (ROLE[d.role] ?? d.role) : droits(d.sections, d.admin)})`, tone: 'accent' }
     case 'user.updated': {
       const parts = []
       if (d.role) parts.push(`rôle ${ROLE[d.role.avant] ?? d.role.avant} → ${ROLE[d.role.apres] ?? d.role.apres}`)
+      if (d.droits) parts.push(`droits : ${droits(d.droits.avant.sections, d.droits.avant.admin)} → ${droits(d.droits.apres.sections, d.droits.apres.admin)}`)
       if (d.nom) parts.push(`nom « ${d.nom.avant} » → « ${d.nom.apres} »`)
       return { text: `A modifié le compte de ${cible} : ${parts.join(', ')}`, tone: 'accent' }
     }

@@ -24,11 +24,11 @@ describe('GET /api/audit', () => {
   })
 
   it('montre qui a fait quoi, du plus récent au plus ancien', async () => {
-    const created = (await admin.post('/api/users', { identifiant: 'paul', nom: 'Paul Martin', role: 'atelier' })).json()
+    const created = (await admin.post('/api/users', { identifiant: 'paul', nom: 'Paul Martin', sections: ['atelier'] })).json()
     const entries = (await admin.get('/api/audit')).json().entries
     expect(entries.map((e: { action: string }) => e.action)).toEqual(['user.created', 'login.success'])
     expect(entries[0]).toMatchObject({ nom: 'Le Chef', identifiant: 'chef', targetId: created.id, targetName: 'Paul Martin' })
-    expect(entries[0].details).toMatchObject({ identifiant: 'paul', role: 'atelier' })
+    expect(entries[0].details).toMatchObject({ identifiant: 'paul', sections: ['atelier'], admin: false })
   })
 
   it('filtre les échecs', async () => {

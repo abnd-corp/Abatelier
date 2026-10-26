@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { api, ApiError } from '@/api'
-import { ROLE_LABELS, roleOptions, useAuthStore, type Role } from '@/stores/auth'
+import { accessLabels, useAuthStore, type Access } from '@/stores/auth'
 import { relative, dateTime } from '@/lib/format'
+import AccessEditor from '@/components/AccessEditor.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import TempPasswordPanel from '@/components/TempPasswordPanel.vue'
 
@@ -10,7 +11,8 @@ interface UserRow {
   id: string
   identifiant: string
   nom: string
-  role: Role
+  sections: Access['sections']
+  admin: boolean
   mustChangePassword: boolean
   disabledAt: string | null
   createdAt: string
@@ -35,7 +37,7 @@ onMounted(load)
 
 // Création d'un compte
 const showForm = ref(false)
-const form = reactive({ identifiant: '', nom: '', role: 'atelier' as Role })
+const form = reactive({ identifiant: '', nom: '', access: { sections: ['atelier'], admin: false } as Access })
 const formError = ref('')
 const creating = ref(false)
 // Mot de passe temporaire affiché une seule fois
@@ -45,9 +47,9 @@ async function create() {
   formError.value = ''
   creating.value = true
   try {
-    const res = await api<{ tempPassword: string }>('/users', { method: 'POST', body: { ...form } })
+    const res = await api<{ tempPassword: string }>('/users', { method: 'POST', body: { identifiant: form.identifiant, nom: form.nom, ...form.access } })
     temp.value = { nom: form.nom, identifiant: form.identifiant.trim().toLowerCase(), password: res.tempPassword }
-    Object.assign(form, { identifiant: '', nom: '', role: 'atelier' })
+    Object.assign(form, { identifiant: '', nom: '', access: { sections: ['atelier'], admin: false } })
     showForm.value = false
     await load()
   } catch (e) {
@@ -82,13 +84,25 @@ async function run(u: UserRow, kind: Kind) {
   }
 }
 
-async function changeRole(u: UserRow, role: Role) {
+// Droits : on coche les sections, puis on enregistre
+const editing = ref<{ id: string; access: Access } | null>(null)
+const savingAccess = ref(false)
+function editAccess(u: UserRow) {
   error.value = notice.value = ''
+  editing.value = { id: u.id, access: { sections: [...u.sections], admin: u.admin } }
+}
+async function saveAccess(u: UserRow) {
+  if (!editing.value) return
+  error.value = notice.value = ''
+  savingAccess.value = true
   try {
-    await api(`/users/${u.id}`, { method: 'PATCH', body: { role } })
-    notice.value = `${u.nom} a maintenant le rôle ${ROLE_LABELS[role]}.`
+    await api(`/users/${u.id}`, { method: 'PATCH', body: { ...editing.value.access } })
+    notice.value = `Les droits de ${u.nom} sont enregistrés.`
+    editing.value = null
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : 'Modification impossible.'
+  } finally {
+    savingAccess.value = false
   }
   await load()
 }
@@ -128,13 +142,8 @@ const CONFIRM: Record<Kind, string> = {
         <label for="new-identifiant">Identifiant de connexion</label>
         <input id="new-identifiant" v-model="form.identifiant" class="input mono" placeholder="paul" autocomplete="off" autocapitalize="none" spellcheck="false" />
       </div>
-      <div class="field">
-        <label for="new-role">Rôle</label>
-        <select id="new-role" v-model="form.role" class="input">
-          <option v-for="r in roleOptions()" :key="r.value" :value="r.value">{{ r.label }} : {{ r.description }}</option>
-        </select>
-      </div>
     </div>
+    <AccessEditor v-model="form.access" id-prefix="new" />
     <div class="row">
       <button class="btn primary" type="submit" :disabled="creating || !form.nom || !form.identifiant">{{ creating ? 'Création…' : 'Créer le compte' }}</button>
       <button class="btn" type="button" @click="showForm = false">Annuler</button>
@@ -151,7 +160,7 @@ const CONFIRM: Record<Kind, string> = {
           <tr>
             <th>Compte</th>
             <th class="hide-sm">Salarié</th>
-            <th class="hide-sm">Rôle</th>
+            <th class="hide-sm">Droits</th>
             <th>Statut</th>
             <th class="hide-sm">Dernière connexion</th>
             <th class="n hide-sm">Appareils</th>
@@ -170,15 +179,18 @@ const CONFIRM: Record<Kind, string> = {
               <span v-else class="muted">Compte technique</span>
             </td>
             <td class="hide-sm">
-              <select
-                class="input compact"
-                :value="u.role"
-                :disabled="u.id === auth.user?.id || !!u.disabledAt"
-                :aria-label="`Rôle de ${u.nom}`"
-                @change="changeRole(u, ($event.target as HTMLSelectElement).value as Role)"
-              >
-                <option v-for="r in roleOptions(u.role)" :key="r.value" :value="r.value">{{ r.label }}</option>
-              </select>
+              <template v-if="editing?.id === u.id">
+                <AccessEditor v-model="editing.access" :id-prefix="`droits-${u.id}`" />
+                <div class="row">
+                  <button class="btn small primary" type="button" :disabled="savingAccess" :aria-label="`Enregistrer les droits de ${u.nom}`" @click="saveAccess(u)">Enregistrer</button>
+                  <button class="btn small" type="button" @click="editing = null">Annuler</button>
+                </div>
+              </template>
+              <template v-else>
+                <span v-for="l in accessLabels(u)" :key="l" class="pill neutral rights">{{ l }}</span>
+                <span v-if="!accessLabels(u).length" class="muted">Aucun accès</span>
+                <button v-if="u.id !== auth.user?.id && !u.disabledAt" class="btn small" type="button" :aria-label="`Modifier les droits de ${u.nom}`" @click="editAccess(u)">Modifier</button>
+              </template>
             </td>
             <td>
               <span v-if="u.disabledAt" class="pill" :title="dateTime(u.disabledAt)">Désactivé</span>
@@ -258,5 +270,8 @@ tr.off td {
 .foot {
   font-size: 0.84rem;
   max-width: 70ch;
+}
+.rights {
+  margin: 0 4px 4px 0;
 }
 </style>

@@ -2,7 +2,7 @@ import { crc32, deflateSync, inflateSync } from 'node:zlib'
 import { sql, eq } from 'drizzle-orm'
 import { buildApp } from '../src/app.js'
 import { db } from '../src/db/index.js'
-import { auditLog, pieceModels, users, type Role } from '../src/db/schema.js'
+import { auditLog, pieceModels, users, type Section } from '../src/db/schema.js'
 import { hashPassword } from '../src/auth/password.js'
 
 export type App = Awaited<ReturnType<typeof buildApp>>
@@ -45,8 +45,18 @@ export async function seedModels() {
   ])
 }
 
+// Anciens rôles, gardés comme raccourcis dans les tests : direction = tout, rh = administration seule, atelier = section Atelier
+export type Preset = 'direction' | 'rh' | 'atelier'
+const PRESETS: Record<Preset, { sections: Section[]; admin: boolean }> = {
+  direction: { sections: ['ventes', 'atelier', 'direction'], admin: true },
+  rh: { sections: [], admin: true },
+  atelier: { sections: ['atelier'], admin: false },
+}
+
 let counter = 0
-export async function createUser(o: Partial<{ identifiant: string; nom: string; role: Role; password: string; mustChangePassword: boolean; disabled: boolean }> = {}) {
+export async function createUser(
+  o: Partial<{ identifiant: string; nom: string; role: Preset; sections: Section[]; admin: boolean; password: string; mustChangePassword: boolean; disabled: boolean }> = {},
+) {
   counter++
   const identifiant = o.identifiant ?? `user${counter}`
   const password = o.password ?? PASSWORD
@@ -55,7 +65,7 @@ export async function createUser(o: Partial<{ identifiant: string; nom: string; 
     .values({
       identifiant,
       nom: o.nom ?? `Utilisateur ${counter}`,
-      role: o.role ?? 'atelier',
+      ...(o.sections || o.admin !== undefined ? { sections: o.sections ?? [], admin: o.admin ?? false } : PRESETS[o.role ?? 'atelier']),
       passwordHash: await hashPassword(password),
       mustChangePassword: o.mustChangePassword ?? false,
       disabledAt: o.disabled ? new Date() : null,

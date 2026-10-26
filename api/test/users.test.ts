@@ -23,8 +23,8 @@ describe('Accès', () => {
     const c = await loginAs(app, 'paul')
     const responses = await Promise.all([
       c.get('/api/users'),
-      c.post('/api/users', { identifiant: 'x', nom: 'X', role: 'direction' }),
-      c.patch(`/api/users/${u.id}`, { role: 'direction' }),
+      c.post('/api/users', { identifiant: 'x', nom: 'X', sections: ['direction'], admin: true }),
+      c.patch(`/api/users/${u.id}`, { sections: ['direction'], admin: true }),
       c.post(`/api/users/${adminId}/disable`),
       c.post(`/api/users/${u.id}/enable`),
       c.post(`/api/users/${adminId}/reset-password`),
@@ -41,7 +41,7 @@ describe('Accès', () => {
 
 describe('Création', () => {
   it('crée un compte avec un mot de passe temporaire à changer', async () => {
-    const res = await admin.post('/api/users', { identifiant: 'Paul', nom: 'Paul Martin', role: 'atelier' })
+    const res = await admin.post('/api/users', { identifiant: 'Paul', nom: 'Paul Martin', sections: ['atelier'] })
     expect(res.statusCode).toBe(201)
     const { tempPassword } = res.json()
     expect(tempPassword).toMatch(/^[A-Za-z0-9]{4}(-[A-Za-z0-9]{4}){3}$/)
@@ -53,7 +53,7 @@ describe('Création', () => {
 
   it('refuse un identifiant déjà pris, quelle que soit la casse', async () => {
     await createUser({ identifiant: 'paul' })
-    const res = await admin.post('/api/users', { identifiant: 'PAUL', nom: 'Autre', role: 'atelier' })
+    const res = await admin.post('/api/users', { identifiant: 'PAUL', nom: 'Autre', sections: ['atelier'] })
     expect(res.statusCode).toBe(409)
   })
 
@@ -72,17 +72,40 @@ describe('Création', () => {
 describe('Modification', () => {
   it('change le rôle et le nom, et le note dans le journal', async () => {
     const u = await createUser({ identifiant: 'paul', nom: 'Paul' })
-    const res = await admin.patch(`/api/users/${u.id}`, { role: 'direction', nom: 'Paul Martin' })
+    const res = await admin.patch(`/api/users/${u.id}`, { sections: ['direction'], admin: true, nom: 'Paul Martin' })
     expect(res.statusCode).toBe(200)
     const paul = await loginAs(app, 'paul')
-    expect((await paul.get('/api/auth/me')).json().user).toMatchObject({ role: 'direction', nom: 'Paul Martin' })
+    expect((await paul.get('/api/auth/me')).json().user).toMatchObject({ sections: ['direction'], admin: true, nom: 'Paul Martin' })
     expect(await auditActions(adminId)).toContain('user.updated')
   })
 
-  it('empêche de retirer le rôle au dernier administrateur', async () => {
-    const res = await admin.patch(`/api/users/${adminId}`, { role: 'atelier' })
-    expect(res.statusCode).toBe(400)
-    expect(res.json().error).toMatch(/au moins un compte Direction/)
+  it('ne laisse personne modifier ses propres droits, et garde toujours un administrateur', async () => {
+    const soi = await admin.patch(`/api/users/${adminId}`, { admin: false })
+    expect(soi.statusCode).toBe(400)
+    expect(soi.json().error).toMatch(/propres droits/)
+    // Un compte doit avoir au moins une section ou l'administration
+    const u = await createUser({ identifiant: 'paul', sections: ['atelier'] })
+    const vide = await admin.patch(`/api/users/${u.id}`, { sections: [] })
+    expect(vide.statusCode).toBe(400)
+    expect(vide.json()).toMatchObject({ field: 'sections' })
+    // Le dernier administrateur actif ne peut pas être désactivé
+    const seul = await admin.post(`/api/users/${adminId}/disable`)
+    expect(seul.statusCode).toBe(400)
+  })
+
+  it('cumule les sections sans doublon et les range dans l’ordre du menu', async () => {
+    const u = await createUser({ identifiant: 'paul', sections: ['atelier'] })
+    expect((await admin.patch(`/api/users/${u.id}`, { sections: ['direction', 'atelier', 'ventes', 'atelier'] })).statusCode).toBe(200)
+    const liste = (await admin.get('/api/users')).json().users.find((x: { id: string }) => x.id === u.id)
+    expect(liste).toMatchObject({ sections: ['ventes', 'atelier', 'direction'], admin: false })
+    expect((await admin.patch(`/api/users/${u.id}`, { sections: ['atelier', 'compta'] })).statusCode).toBe(400)
+  })
+
+  it('un compte sans la case administration n’a ni les comptes, ni les salariés, ni le journal', async () => {
+    await createUser({ identifiant: 'vendeuse', sections: ['ventes', 'direction'] })
+    const c = await loginAs(app, 'vendeuse')
+    for (const url of ['/api/users', '/api/employees', '/api/audit']) expect((await c.get(url)).statusCode, url).toBe(403)
+    expect((await c.get('/api/clients')).statusCode).toBe(200)
   })
 
   it('répond 404 pour un utilisateur inconnu ou un id invalide', async () => {

@@ -20,23 +20,25 @@ describe('POST /api/auth/login', () => {
     const res = await client(app).post('/api/auth/login', { identifiant: 'paul', password: PASSWORD })
     expect(res.statusCode).toBe(200)
     const body = res.json()
-    expect(body.user).toMatchObject({ id: u.id, identifiant: 'paul', role: 'direction', mustChangePassword: false })
-    expect(body.user.permissions).toEqual([
-      'users.manage',
-      'employees.manage',
-      'audit.read',
-      'catalog.manage',
-      'documents.manage',
-      'clients.manage',
-      'clients.read',
-      'orders.manage',
-      'orders.production',
-      'billing.manage',
-      'site.manage',
-      'products.manage',
-      'stock.manage',
-    ])
-    expect(body.user.role).toBe('direction')
+    expect(body.user).toMatchObject({ id: u.id, identifiant: 'paul', sections: ['ventes', 'atelier', 'direction'], admin: true, mustChangePassword: false })
+    expect([...body.user.permissions].sort()).toEqual(
+      [
+        'users.manage',
+        'employees.manage',
+        'audit.read',
+        'catalog.manage',
+        'documents.manage',
+        'clients.manage',
+        'clients.read',
+        'orders.manage',
+        'orders.production',
+        'billing.manage',
+        'site.manage',
+        'products.manage',
+        'stock.manage',
+      ].sort(),
+    )
+    expect(body.user.role).toBeUndefined()
     expect(res.body).not.toContain('argon2')
     expect(res.body).not.toContain('passwordHash')
   })

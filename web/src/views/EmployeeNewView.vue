@@ -3,7 +3,8 @@ import { reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
 import { emptyFields, fullName, suggestIdentifiant } from '@/lib/employees'
-import { roleOptions, useAuthStore, type Role } from '@/stores/auth'
+import AccessEditor from '@/components/AccessEditor.vue'
+import { useAuthStore, type Access } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import EmployeeForm from '@/components/EmployeeForm.vue'
 
@@ -15,7 +16,7 @@ const canAccounts = auth.can('users.manage')
 
 const fields = reactive(emptyFields())
 const withAccount = ref(canAccounts)
-const account = reactive({ identifiant: '', role: 'atelier' as Role })
+const account = reactive({ identifiant: '', access: { sections: ['atelier'], admin: false } as Access })
 const error = ref<{ field?: string; msg: string } | null>(null)
 const saving = ref(false)
 
@@ -32,7 +33,7 @@ async function save() {
   error.value = null
   saving.value = true
   try {
-    const body = { ...fields, compte: withAccount.value ? { ...account } : null }
+    const body = { ...fields, compte: withAccount.value ? { identifiant: account.identifiant, ...account.access } : null }
     const res = await api<{ id: string; tempPassword: string | null }>('/employees', { method: 'POST', body })
     const to = router.resolve({ name: 'employee', params: { id: res.id } })
     if (res.tempPassword) {
@@ -83,12 +84,7 @@ async function save() {
             />
             <span v-if="error?.field === 'identifiant'" class="field-error">{{ error.msg }}</span>
           </div>
-          <div class="field">
-            <label for="f-role">Rôle</label>
-            <select id="f-role" v-model="account.role" class="input">
-              <option v-for="r in roleOptions()" :key="r.value" :value="r.value">{{ r.label }} : {{ r.description }}</option>
-            </select>
-          </div>
+          <AccessEditor v-model="account.access" id-prefix="f" />
         </div>
       </fieldset>
     </EmployeeForm>

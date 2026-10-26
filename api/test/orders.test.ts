@@ -339,7 +339,7 @@ describe('Commandes', () => {
     expect((await direction.get('/api/orders/abc')).json().error).toBe('Commande introuvable.')
   })
 
-  it('montre les commandes et le total dépensé sur la fiche client, pas à la RH', async () => {
+  it('montre les commandes et le total dépensé sur la fiche client, pas sans la section Ventes', async () => {
     const a = await create()
     const b = await create()
     await direction.post(`/api/orders/${b.id}/status`, { statut: 'annulee', note: 'Doublon' })
@@ -348,7 +348,7 @@ describe('Commandes', () => {
     // Les commandes annulées ne comptent pas
     expect(fiche.commandes.totalTtc).toBe(518.54)
     const rh = await login('rh')
-    expect((await rh.get(`/api/clients/${ids.dupont}`)).json().commandes).toBeNull()
+    expect((await rh.get(`/api/clients/${ids.dupont}`)).statusCode).toBe(403)
   })
 
   it('filtre les commandes dans le journal', async () => {

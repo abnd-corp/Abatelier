@@ -5,8 +5,9 @@ import { api, ApiError } from '@/api'
 import { accountStatus, CONTRAT_LABELS, employmentStatus, formatDay, fullName, suggestIdentifiant, type Employee, type EmployeeFields } from '@/lib/employees'
 import { describe, type AuditEntry } from '@/lib/audit-labels'
 import { dateTime, relative } from '@/lib/format'
-import { ROLE_LABELS, roleOptions, useAuthStore, type Role } from '@/stores/auth'
+import { accessLabels, useAuthStore, type Access } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
+import AccessEditor from '@/components/AccessEditor.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import EmployeeForm from '@/components/EmployeeForm.vue'
@@ -98,13 +99,13 @@ async function saveEdit() {
 }
 
 // --- Compte de connexion ---
-const newAccount = reactive({ identifiant: '', role: 'atelier' as Role })
+const newAccount = reactive({ identifiant: '', access: { sections: ['atelier'], admin: false } as Access })
 const accountError = ref<{ field?: string; msg: string } | null>(null)
 const showAccountForm = ref(false)
 
 function openAccountForm() {
   newAccount.identifiant = suggestIdentifiant(employee.value!.prenom, employee.value!.nom)
-  newAccount.role = 'atelier'
+  newAccount.access = { sections: ['atelier'], admin: false }
   accountError.value = null
   showAccountForm.value = true
 }
@@ -112,7 +113,7 @@ function openAccountForm() {
 async function createAccount() {
   accountError.value = null
   try {
-    const res = await api<{ tempPassword: string }>(`/employees/${id.value}/account`, { method: 'POST', body: { ...newAccount } })
+    const res = await api<{ tempPassword: string }>(`/employees/${id.value}/account`, { method: 'POST', body: { identifiant: newAccount.identifiant, ...newAccount.access } })
     ui.tempPassword = { for: route.fullPath, nom: name.value, identifiant: newAccount.identifiant.trim().toLowerCase(), password: res.tempPassword }
     showAccountForm.value = false
     await load()
@@ -151,11 +152,18 @@ async function run(kind: Kind) {
   }
 }
 
-async function changeRole(role: Role) {
+// Droits du compte : sections à cocher, enregistrées d'un coup
+const editingAccess = ref<Access | null>(null)
+function editAccess() {
+  actionError.value = notice.value = ''
+  editingAccess.value = { sections: [...employee.value!.account!.sections], admin: employee.value!.account!.admin }
+}
+async function saveAccess() {
   actionError.value = notice.value = ''
   try {
-    await api(`/users/${employee.value!.account!.id}`, { method: 'PATCH', body: { role } })
-    notice.value = `${name.value} a maintenant le rôle ${ROLE_LABELS[role]}.`
+    await api(`/users/${employee.value!.account!.id}`, { method: 'PATCH', body: { ...editingAccess.value } })
+    notice.value = `Les droits de ${name.value} sont enregistrés.`
+    editingAccess.value = null
   } catch (e) {
     actionError.value = e instanceof ApiError ? e.message : 'Modification impossible.'
   }
@@ -247,18 +255,18 @@ async function changeRole(role: Role) {
               <dd>
                 <span class="pill" :class="accountStatus(employee.account).tone">{{ accountStatus(employee.account).label }}</span>
               </dd>
-              <dt><label v-if="canAccounts" for="account-role">Rôle</label><template v-else>Rôle</template></dt>
-              <dd v-if="!canAccounts">{{ ROLE_LABELS[employee.account.role] }}</dd>
+              <dt>Droits</dt>
+              <dd v-if="editingAccess">
+                <AccessEditor v-model="editingAccess" id-prefix="account" />
+                <span class="account-actions">
+                  <button class="btn small primary" type="button" @click="saveAccess">Enregistrer les droits</button>
+                  <button class="btn small" type="button" @click="editingAccess = null">Annuler</button>
+                </span>
+              </dd>
               <dd v-else>
-                <select
-                  id="account-role"
-                  class="input compact"
-                  :value="employee.account.role"
-                  :disabled="isMe || !!employee.account.disabledAt"
-                  @change="changeRole(($event.target as HTMLSelectElement).value as Role)"
-                >
-                  <option v-for="r in roleOptions(employee.account.role)" :key="r.value" :value="r.value">{{ r.label }}</option>
-                </select>
+                <span v-for="l in accessLabels(employee.account)" :key="l" class="pill neutral rights">{{ l }}</span>
+                <span v-if="!accessLabels(employee.account).length" class="muted">Aucun accès</span>
+                <button v-if="canAccounts && !isMe && !employee.account.disabledAt" class="btn small" type="button" @click="editAccess">Modifier les droits</button>
               </dd>
               <dt>Dernière connexion</dt>
               <dd :title="employee.account.lastLoginAt ? dateTime(employee.account.lastLoginAt) : ''">{{ relative(employee.account.lastLoginAt) }}</dd>
@@ -300,12 +308,7 @@ async function changeRole(role: Role) {
                 />
                 <span v-if="accountError?.field === 'identifiant'" class="field-error" role="alert">{{ accountError.msg }}</span>
               </div>
-              <div class="field">
-                <label for="new-role">Rôle</label>
-                <select id="new-role" v-model="newAccount.role" class="input">
-                  <option v-for="r in roleOptions()" :key="r.value" :value="r.value">{{ r.label }} : {{ r.description }}</option>
-                </select>
-              </div>
+              <AccessEditor v-model="newAccount.access" id-prefix="new" />
               <div class="account-actions">
                 <button class="btn primary small" type="submit" :disabled="!newAccount.identifiant">Créer le compte</button>
                 <button class="btn small" type="button" @click="showAccountForm = false">Annuler</button>
@@ -492,5 +495,8 @@ async function changeRole(role: Role) {
   .edit {
     margin-left: 0;
   }
+}
+.rights {
+  margin: 0 4px 4px 0;
 }
 </style>

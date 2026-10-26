@@ -2,11 +2,11 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { and, asc, count, desc, eq, gt, ilike, isNull, lte, or, sql, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { auditLog, CONTRATS, employees, ROLES, sessions, users, type Employee } from '../db/schema.js'
+import { auditLog, CONTRATS, employees, sessions, users, type Employee } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
 import { can } from '../auth/permissions.js'
 import { audit, describeDevice } from '../audit.js'
-import { createAccount, IdentifiantTaken, identifiantSchema } from '../accounts.js'
+import { ACCESS_ERROR, accessOk, accessShape, createAccount, IdentifiantTaken, identifiantSchema } from '../accounts.js'
 import { applyDepartures, todayParis } from '../departures.js'
 
 // Champ texte facultatif : vide ou espaces → null
@@ -35,7 +35,7 @@ const fields = {
   notes: optText(5000),
 }
 
-const accountBody = z.object({ identifiant: identifiantSchema, role: z.enum(ROLES) })
+const accountBody = z.object({ identifiant: identifiantSchema, ...accessShape }).refine(accessOk, { message: ACCESS_ERROR, path: ['sections'] })
 
 const datesOk = (d: { dateEntree?: string | null; dateSortie?: string | null }) => !d.dateEntree || !d.dateSortie || d.dateSortie >= d.dateEntree
 const DATES_MSG = { message: 'La date de sortie doit être après la date d’entrée.', path: ['dateSortie'] }
@@ -74,14 +74,33 @@ const LABELS: Record<string, string> = {
 const accountColumns = {
   accountId: users.id,
   identifiant: users.identifiant,
-  role: users.role,
+  sections: users.sections,
+  admin: users.admin,
   disabledAt: users.disabledAt,
   mustChangePassword: users.mustChangePassword,
   lastLoginAt: users.lastLoginAt,
 }
 
-const accountOf = (r: { accountId: string | null; identifiant: string | null; role: string | null; disabledAt: Date | null; mustChangePassword: boolean | null; lastLoginAt: Date | null }) =>
-  r.accountId ? { id: r.accountId, identifiant: r.identifiant, role: r.role, disabledAt: r.disabledAt, mustChangePassword: r.mustChangePassword, lastLoginAt: r.lastLoginAt } : null
+const accountOf = (r: {
+  accountId: string | null
+  identifiant: string | null
+  sections: string[] | null
+  admin: boolean | null
+  disabledAt: Date | null
+  mustChangePassword: boolean | null
+  lastLoginAt: Date | null
+}) =>
+  r.accountId
+    ? {
+        id: r.accountId,
+        identifiant: r.identifiant,
+        sections: r.sections ?? [],
+        admin: r.admin ?? false,
+        disabledAt: r.disabledAt,
+        mustChangePassword: r.mustChangePassword,
+        lastLoginAt: r.lastLoginAt,
+      }
+    : null
 
 async function findEmployee(id: string, reply: FastifyReply) {
   if (!z.uuid().safeParse(id).success) {
@@ -139,9 +158,9 @@ export async function employeeRoutes(app: FastifyInstance) {
       .from(employees)
 
     return {
-      employees: rows.map(({ accountId, identifiant, role, disabledAt, mustChangePassword, lastLoginAt, ...e }) => ({
+      employees: rows.map(({ accountId, identifiant, sections, admin, disabledAt, mustChangePassword, lastLoginAt, ...e }) => ({
         ...e,
-        account: accountOf({ accountId, identifiant, role, disabledAt, mustChangePassword, lastLoginAt }),
+        account: accountOf({ accountId, identifiant, sections, admin, disabledAt, mustChangePassword, lastLoginAt }),
       })),
       totals: { actifs: Number(totals?.actifs ?? 0), partis: Number(totals?.partis ?? 0) },
     }
@@ -151,14 +170,14 @@ export async function employeeRoutes(app: FastifyInstance) {
     const parsed = createBody.safeParse(req.body)
     if (!parsed.success) return invalid(reply, parsed.error)
     const { compte, ...data } = parsed.data
-    if (compte && !can(req.user!.role, 'users.manage')) {
+    if (compte && !can(req.user!, 'users.manage')) {
       return reply.code(403).send({ error: 'Seule la direction peut créer des comptes de connexion.' })
     }
 
     try {
       const result = await db.transaction(async (tx) => {
         let account: { id: string; tempPassword: string } | null = null
-        if (compte) account = await createAccount(tx, { identifiant: compte.identifiant, nom: fullName(data), role: compte.role })
+        if (compte) account = await createAccount(tx, { identifiant: compte.identifiant, nom: fullName(data), sections: compte.sections, admin: compte.admin })
         const [e] = await tx
           .insert(employees)
           .values({ ...data, userId: account?.id ?? null })
@@ -175,7 +194,7 @@ export async function employeeRoutes(app: FastifyInstance) {
         await audit(req, 'user.created', {
           targetType: 'user',
           targetId: result.account.id,
-          details: { identifiant: compte!.identifiant, nom: fullName(data), role: compte!.role, salarie: result.id },
+          details: { identifiant: compte!.identifiant, nom: fullName(data), sections: compte!.sections, admin: compte!.admin, salarie: result.id },
         })
       }
       // Salarié saisi avec une date de sortie déjà passée : son compte est désactivé tout de suite
@@ -267,7 +286,7 @@ export async function employeeRoutes(app: FastifyInstance) {
 
   // Créer un compte de connexion pour un salarié qui n'en a pas
   app.post('/:id/account', async (req, reply) => {
-    if (!can(req.user!.role, 'users.manage')) return reply.code(403).send({ error: 'Seule la direction peut créer des comptes de connexion.' })
+    if (!can(req.user!, 'users.manage')) return reply.code(403).send({ error: 'Seule la direction peut créer des comptes de connexion.' })
     const e = await findEmployee((req.params as { id: string }).id, reply)
     if (!e) return
     if (e.userId) return reply.code(409).send({ error: 'Ce salarié a déjà un compte.' })
@@ -276,14 +295,14 @@ export async function employeeRoutes(app: FastifyInstance) {
 
     try {
       const account = await db.transaction(async (tx) => {
-        const a = await createAccount(tx, { identifiant: parsed.data.identifiant, nom: fullName(e), role: parsed.data.role })
+        const a = await createAccount(tx, { identifiant: parsed.data.identifiant, nom: fullName(e), sections: parsed.data.sections, admin: parsed.data.admin })
         await tx.update(employees).set({ userId: a.id, updatedAt: new Date() }).where(eq(employees.id, e.id))
         return a
       })
       await audit(req, 'user.created', {
         targetType: 'user',
         targetId: account.id,
-        details: { identifiant: parsed.data.identifiant, nom: fullName(e), role: parsed.data.role, salarie: e.id },
+        details: { identifiant: parsed.data.identifiant, nom: fullName(e), sections: parsed.data.sections, admin: parsed.data.admin, salarie: e.id },
       })
       await applyDepartures()
       return reply.code(201).send({ id: account.id, tempPassword: account.tempPassword })

@@ -176,6 +176,20 @@
       "when": 1793002310938,
       "tag": "0024_open_centennial",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793025288065,
+      "tag": "0025_sad_gwen_stacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793025310139,
+      "tag": "0026_soft_rhino",
+      "breakpoints": true
     }
   ]
 }

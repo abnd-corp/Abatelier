@@ -117,7 +117,8 @@ export const ADMIN: User = {
   id: '11111111-1111-4111-8111-111111111111',
   identifiant: 'chef',
   nom: 'Le Chef',
-  role: 'direction',
+  sections: ['ventes', 'atelier', 'direction'],
+  admin: true,
   mustChangePassword: false,
   permissions: [
     'users.manage',
@@ -139,7 +140,8 @@ export const ATELIER: User = {
   id: '22222222-2222-4222-8222-222222222222',
   identifiant: 'paul',
   nom: 'Paul Martin',
-  role: 'atelier',
+  sections: ['atelier'],
+  admin: false,
   mustChangePassword: false,
   permissions: ['orders.production'],
 }
@@ -148,7 +150,8 @@ export const RH: User = {
   id: '33333333-3333-4333-8333-333333333333',
   identifiant: 'rh',
   nom: 'Claire Petit',
-  role: 'rh',
+  sections: [],
+  admin: true,
   mustChangePassword: false,
   permissions: ['employees.manage', 'audit.read', 'clients.read'],
 }
