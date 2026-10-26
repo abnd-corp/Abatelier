@@ -155,6 +155,56 @@ test.describe('Boutique : de la fiche produit au remboursement', () => {
     await expect(visitor.getByText(nom)).toHaveCount(0)
   })
 
+  test('la direction retire la photo d’un produit, modifie ses déclinaisons puis en supprime une', async ({ adminPage: page, uid }) => {
+    const nom = `Bavette e2e ${uid.slice(-8)}`
+    await page.goto('/produits')
+    await page.getByLabel('Nouveau produit').fill(nom)
+    await page.getByRole('button', { name: 'Créer le produit' }).click()
+    await expect(page).toHaveURL(/\/produits\/[0-9a-f-]{36}$/)
+
+    // Photo : ajoutée, puis retirée
+    await page.locator('#p-file').setInputFiles({ name: 'bavette.png', mimeType: 'image/png', buffer: makePng(600, 400) })
+    await page.getByLabel(/^Description de la photo \(pour/).fill('Bavette grise')
+    await page.getByRole('button', { name: 'Envoyer la photo' }).click()
+    await expect(page.getByText('Photo enregistrée.')).toBeVisible()
+    await page.getByRole('button', { name: 'Retirer la photo' }).click()
+    await expect(page.getByText('Photo retirée.')).toBeVisible()
+    await expect(page.locator('.empty-photo')).toBeVisible()
+
+    // Deux déclinaisons
+    for (const [libelle, prix] of [
+      ['150 mm', '12,00'],
+      ['200 mm', '15,50'],
+    ]) {
+      await page.getByLabel('Libellé *').fill(libelle!)
+      await page.getByLabel('Prix TTC (€) *').fill(prix!)
+      await page.getByRole('button', { name: 'Ajouter', exact: true }).click()
+      await expect(page.getByLabel(`Prix TTC de ${libelle}`)).toHaveValue(prix!)
+    }
+
+    // Prix, référence et libellé modifiés à même le tableau, un à la fois (le tableau se recharge à chaque enregistrement)
+    const modifie = async (label: string, valeur: string) => {
+      const enregistre = page.waitForResponse((r) => r.url().includes('/api/boutique/variantes/') && r.request().method() === 'PATCH')
+      await page.getByLabel(label).fill(valeur)
+      await page.getByLabel(label).blur()
+      expect((await enregistre).status()).toBe(200)
+    }
+    await modifie('Prix TTC de 150 mm', '13,40')
+    await modifie('Référence de 150 mm', `REF-${uid.slice(-5)}`)
+    await modifie('Libellé de 200 mm', '210 mm')
+    await expect(page.getByLabel('Libellé de 210 mm')).toHaveValue('210 mm')
+    await page.reload()
+    await expect(page.getByLabel('Prix TTC de 150 mm')).toHaveValue('13,40')
+    await expect(page.getByLabel('Référence de 150 mm')).toHaveValue(`REF-${uid.slice(-5)}`)
+
+    // Une déclinaison hors vente, puis supprimée
+    await page.getByLabel('210 mm en vente').uncheck()
+    await expect(page.getByLabel('210 mm en vente')).not.toBeChecked()
+    await page.getByRole('button', { name: 'Supprimer la déclinaison 210 mm' }).click()
+    await expect(page.getByLabel('Libellé de 210 mm')).toHaveCount(0)
+    await expect(page.getByLabel('Libellé de 150 mm')).toBeVisible()
+  })
+
   test('un article retiré du site est signalé dans le panier, et un visiteur ne peut ni payer ni voir la gestion', async ({ browser, baseURL, uid }) => {
     const admin = await (await browser.newContext()).newPage()
     await apiLogin(admin.request, baseURL!, ADMIN.identifiant, ADMIN.password)

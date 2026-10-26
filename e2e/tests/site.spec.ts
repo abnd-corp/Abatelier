@@ -473,7 +473,6 @@ test.describe('Site vitrine : direction', () => {
 
     await adminPage.goto('/site-vitrine?onglet=textes')
     const box = adminPage.getByLabel(field.label, { exact: true })
-    const original = await box.inputValue()
     await box.fill(`Texte de test ${uid}`)
     await adminPage.getByRole('button', { name: 'Enregistrer' }).click()
     await expect(adminPage.getByText('Textes enregistrés')).toBeVisible()
@@ -506,10 +505,68 @@ test.describe('Site vitrine : direction', () => {
     await visitor.goto('/')
     await expect(visitor.getByRole('img', { name: alt })).toHaveCount(0)
 
+    // Le texte d'origine revient d'un clic, sans avoir à le retaper (même champ que ci-dessus : un seul test le modifie à la fois)
     await adminPage.goto('/site-vitrine?onglet=textes')
-    await adminPage.getByLabel(field.label, { exact: true }).fill(original)
-    await adminPage.getByRole('button', { name: 'Enregistrer' }).click()
-    await expect(adminPage.getByText('Textes enregistrés')).toBeVisible()
+    const box2 = adminPage.getByLabel(field.label, { exact: true })
+    await expect(box2).toHaveValue(`Texte de test ${uid}`)
+    await adminPage.locator('.field').filter({ has: box2 }).getByRole('button', { name: 'Rétablir le texte d’origine' }).click()
+    await expect(box2).not.toHaveValue(`Texte de test ${uid}`)
+    await adminPage.reload()
+    await expect(adminPage.getByLabel(field.label, { exact: true })).not.toHaveValue(`Texte de test ${uid}`)
+    await visitor.goto(field.key === 'pliage.intro' ? '/pliage-aluminium' : '/contact')
+    await expect(visitor.getByText(`Texte de test ${uid}`)).toHaveCount(0)
+  })
+
+  test('range les photos : décrire, monter, déplacer vers une autre page, supprimer', async ({ adminPage, baseURL, uid }) => {
+    const headers = { Origin: baseURL!, 'Content-Type': 'image/png' }
+    const envoie = async (alt: string) => {
+      const res = await adminPage.request.post(`/api/site/photos?emplacement=bandeau&alt=${encodeURIComponent(alt)}`, { data: makePng(400, 300), headers })
+      expect(res.status(), await res.text()).toBe(201)
+    }
+    const premiere = `Première ${uid}`
+    const seconde = `Seconde ${uid}`
+    await envoie(premiere)
+    await envoie(seconde)
+    const ordre = async () => ((await (await adminPage.request.get('/api/site/photos')).json()).photos as { alt: string }[]).map((p) => p.alt).filter((a) => a.endsWith(uid))
+
+    await adminPage.goto('/site-vitrine?onglet=photos')
+    const carte = (alt: string) => adminPage.locator('li.ph').filter({ has: adminPage.locator(`input[value="${alt}"]`) })
+    expect(await ordre()).toEqual([premiere, seconde])
+
+    // La seconde monte d'un cran
+    await carte(seconde)
+      .getByRole('button', { name: /^Monter la photo/ })
+      .click()
+    await expect.poll(ordre).toEqual([seconde, premiere])
+    // ... puis redescend
+    await carte(seconde)
+      .getByRole('button', { name: /^Descendre la photo/ })
+      .click()
+    await expect.poll(ordre).toEqual([premiere, seconde])
+
+    // Nouvelle description : gardée après rechargement
+    const nouvelle = `Renommée ${uid}`
+    await carte(premiere).getByLabel('Description de la photo').fill(nouvelle)
+    await carte(premiere).getByLabel('Description de la photo').blur()
+    await expect.poll(ordre).toContain(nouvelle)
+    await adminPage.reload()
+    await expect(carte(nouvelle)).toBeVisible()
+
+    // Déplacée vers « Couvertine »
+    await carte(nouvelle)
+      .getByLabel(/^Déplacer la photo/)
+      .selectOption('couvertine')
+    const groupe = adminPage.getByRole('region', { name: /^Couvertine/ })
+    await expect(groupe.locator(`input[value="${nouvelle}"]`)).toBeVisible()
+
+    // Ménage : les deux photos sont supprimées
+    for (const alt of [nouvelle, seconde]) {
+      await carte(alt)
+        .getByRole('button', { name: /^Supprimer la photo/ })
+        .click()
+      await carte(alt).getByRole('button', { name: 'Supprimer', exact: true }).click()
+      await expect(adminPage.locator(`input[value="${alt}"]`)).toHaveCount(0)
+    }
   })
 
   test('l’onglet E-mails vérifie la messagerie : essai reçu, historique, alerte de contact', async ({ adminPage, uid }) => {

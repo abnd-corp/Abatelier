@@ -115,4 +115,41 @@ test.describe('Commandes', () => {
     await adminPage.goto('/commandes?filtre=annulee')
     await expect(adminPage.getByRole('cell', { name: new RegExp(`Annule${uid.slice(-4)}`) })).toBeVisible()
   })
+
+  test('la direction modifie les pièces d’une commande reçue, et le montant suit', async ({ adminPage, baseURL, uid }) => {
+    const h = { Origin: baseURL! }
+    const clientId = await addClient(adminPage.request, baseURL!, { type: 'particulier', prenom: 'Modif', nom: `Pièces ${uid.slice(-5)}` })
+    const cfg = await (await adminPage.request.get('/api/public/configurateur')).json()
+    const m = cfg.models.find((x: { nom: string }) => x.nom === 'Couvertine') ?? cfg.models[0]
+    const options = await (await adminPage.request.get('/api/stock/options')).json()
+    const res = await adminPage.request.post('/api/orders', {
+      data: {
+        clientId,
+        lignes: [
+          { modelId: m.id, materialId: options.materials[0].id, colorId: options.colors[0].id, cotes: [20, 70, 300, 70, 20], angles: [135, 90, 90, 135], longueur: 3000, quantite: 2, accessoires: [] },
+        ],
+        livraison: { mode: 'retrait' },
+      },
+      headers: h,
+    })
+    expect(res.status(), await res.text()).toBe(201)
+    const order = await res.json()
+
+    await adminPage.goto(`/commandes/${order.id}`)
+    await expect(adminPage.getByText('2 × 3 000 mm')).toBeVisible()
+    await adminPage.getByRole('button', { name: 'Modifier les pièces' }).click()
+    const piece = adminPage.getByRole('region', { name: 'Pièce 1' })
+    await piece.getByLabel('Repère').fill('Pignon est')
+    await piece.getByLabel('Quantité').fill('5')
+    await adminPage.getByRole('button', { name: 'Enregistrer les modifications' }).click()
+    await expect(adminPage.getByText('Commande modifiée.')).toBeVisible()
+    await expect(adminPage.getByText('5 × 3 000 mm')).toBeVisible()
+    await expect(adminPage.getByText('Pignon est')).toBeVisible()
+
+    // Une fois validée, la commande ne se modifie plus
+    await adminPage.getByRole('button', { name: 'Valider la commande' }).click()
+    await expect(adminPage.getByText('Commande passée à l’étape « Validée »')).toBeVisible()
+    const refus = await adminPage.request.patch(`/api/orders/${order.id}`, { data: { lignes: [], livraison: { mode: 'retrait' } }, headers: h })
+    expect(refus.status()).toBeGreaterThanOrEqual(400)
+  })
 })
