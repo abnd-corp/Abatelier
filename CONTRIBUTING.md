@@ -26,7 +26,7 @@ feature/xxx ──PR──▶ dev ──PR──▶ staging ──PR──▶ ma
 | Tests API | Toutes les routes, sur une vraie base Postgres |
 | Front | Types et build |
 | Tests front | Composants Vue |
-| E2E (Chromium + Firefox) | Parcours complets sur une stack de production jetable |
+| E2E (Chromium + Firefox) | Parcours complets sur une stack de production jetable, répartis sur 3 machines. Vers `dev`, seuls les groupes touchés par la PR tournent ; vers `staging` et `main`, tout tourne |
 | Sauvegardes | Sauvegarde, vérification, puis restauration réelle après perte de données |
 | Sécurité | Failles dans les dépendances, secrets dans l'historique Git |
 | Branche source autorisée | Respect du chemin feature → dev → staging → main |
@@ -47,6 +47,7 @@ make feature nom=commandes      # crée feature/commandes depuis dev à jour
 # … commits …
 make check                      # types et builds
 make test-vite                  # pendant le dev : seulement les tests touchés par les fichiers modifiés
+make e2e GROUPE=stock,auth      # seulement ces groupes (liste : make e2e-groupes)
 make e2e PAGE=catalogue         # un seul parcours (ajouter ECRAN=firefox pour un seul écran)
 make test-api test-web          # avant la PR : tous les tests d'API et de composants (« make dev-d » avant)
 make e2e                        # avant la PR : tout Playwright, Chromium, Firefox, téléphone et tablette
@@ -129,3 +130,7 @@ Avant de considérer un travail fini, lancer `make check`, `make test-api`, `mak
   - le menu de gauche (façon GitLab) se configure dans `SECTIONS`, dans `web/src/components/AppLayout.vue`. Une nouvelle page y ajoute son lien, avec sa permission ; les sections pas encore développées ne sont pas affichées ;
   - chaque route déclare `meta.section` et `meta.title` pour le fil d'Ariane, plus `meta.parent` et `meta.menu` pour une sous-page ;
   - les appels à l'API passent par `api()` dans `web/src/api.ts`.
+
+## Groupes de tests e2e
+
+Chaque fichier de `e2e/tests/` appartient à un groupe dans `e2e/groupes.mjs`, avec les fichiers du code qu'il concerne. Un nouveau test doit être rangé dans un groupe (`make check` le vérifie). Un changement hors de tout groupe connu, ou transverse (base, authentification, mise en page, CI), rejoue toute la suite : dans le doute, on teste tout.
