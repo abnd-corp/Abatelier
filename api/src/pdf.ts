@@ -374,8 +374,8 @@ export async function renderDocument(company: Company, template: Template, logo:
   }
 
   // --- Pied de page et filigrane, sur chaque page ---
+  // Sans le nom de l'entreprise : il est déjà en tête du document
   const identity = [
-    company.raisonSociale,
     [company.formeJuridique, company.capital && `au capital de ${company.capital}`].filter(Boolean).join(' '),
     company.siret && `SIRET ${company.siret}`,
     company.rcs && `RCS ${company.rcs}`,
@@ -383,6 +383,9 @@ export async function renderDocument(company: Company, template: Template, logo:
   ]
     .filter(Boolean)
     .join(' · ')
+  // Les conditions générales de vente sont en ligne : on en donne l'adresse en bas de chaque page (devis et factures)
+  const site = company.siteWeb.replace(/^https?:\/\//i, '').replace(/\/$/, '')
+  const cgv = site && !isAvoir ? `${site}/conditions-generales-de-vente` : ''
   const range = doc.bufferedPageRange()
   for (let i = 0; i < range.count; i++) {
     doc.switchToPage(range.start + i)
@@ -409,6 +412,10 @@ export async function renderDocument(company: Company, template: Template, logo:
     const reserved = qr ? 40 : 0
     text(lines, PAGE.m, fy + 8, { width: WIDTH - reserved, lineGap: 1 })
     text(`${i + 1} / ${range.count}`, PAGE.m, fy + 35, { width: WIDTH, align: 'center' })
+    if (cgv) {
+      doc.font(F.r).fontSize(6.5).fillColor(MUTED)
+      text(`CGV : ${cgv}`, PAGE.m, fy + 35, { width: 230, lineBreak: false, ellipsis: true })
+    }
     if (qr) {
       doc.image(qr, RIGHT - 30, fy + 3, { width: 30, height: 30 })
       doc.font(F.r).fontSize(6.5).fillColor(MUTED)
