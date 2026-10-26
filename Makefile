@@ -5,9 +5,10 @@ BASE = docker compose -f compose.yaml
 BK = $(BASE) exec -T backup /bin/sh /opt/backup/backup.sh
 # Filtres de « make e2e » : PAGE=catalogue (cherché dans le nom du fichier et le titre des tests),
 # ECRAN=chromium | firefox | telephone | tablette
-PW_ARGS = $(if $(PAGE),--grep "$(PAGE)") $(if $(ECRAN),--project=$(ECRAN))
+# GROUPE=stock,auth : seulement ces groupes (voir e2e/groupes.mjs, « make e2e-groupes »)
+PW_ARGS = $(if $(PAGE),--grep "$(PAGE)") $(if $(ECRAN),--project=$(ECRAN)) $(if $(GROUPE),$(shell cd e2e && node select.mjs --groupes $(GROUPE)))
 
-.PHONY: help setup secrets dev dev-d down logs prod prod-down check lint format bdd-minimale bdd-demo mdp demo demo-boutique mails test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
+.PHONY: e2e-groupes help setup secrets dev dev-d down logs prod prod-down check lint format bdd-minimale bdd-demo mdp demo demo-boutique mails test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
 
 help: ## Liste les commandes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -45,7 +46,7 @@ prod-down: ## Arrête la prod
 check: ## Vérifie les types et compile l'API, le front et les tests e2e
 	cd api && npm run typecheck && npm run build
 	cd web && npm run build
-	cd e2e && npm run typecheck
+	cd e2e && npm run typecheck && node select.mjs --verifier
 	for f in scripts/*.sh scripts/backup/*.sh; do bash -n $$f || exit 1; done
 
 lint: ## Linter (ESLint) et vérification de la mise en forme (Prettier) : les mêmes contrôles que la CI
@@ -65,7 +66,7 @@ test-api: ## Tests des routes API (base abatelier_test, lancer « make dev-d » 
 test-web: ## Tests des composants Vue
 	cd web && npm test
 
-e2e: ## Tests Playwright sur une stack de prod jetable (filtres : PAGE=catalogue ECRAN=firefox)
+e2e: ## Tests Playwright sur une stack de prod jetable (filtres : GROUPE=stock,auth PAGE=catalogue ECRAN=firefox)
 	$(E2E) up -d --build --wait
 	cd e2e && npx playwright test $(PW_ARGS); status=$$?; cd .. && $(E2E) down -v; exit $$status
 
@@ -93,6 +94,10 @@ demo: ## Remplit la base de dev vide avec des clients, commandes, devis et factu
 
 mails: ## Ouvre la boîte de réception de test des e-mails (Mailpit, http://localhost:8025)
 	@echo "http://localhost:$${MAILPIT_PORT:-8025}"; xdg-open http://localhost:$${MAILPIT_PORT:-8025} >/dev/null 2>&1 || true
+
+e2e-groupes: ## Liste les groupes de tests e2e et ce que « make e2e-diff » lancerait
+	@cd e2e && node -e "import('./groupes.mjs').then(({GROUPES})=>{for(const[n,g]of Object.entries(GROUPES))console.log(n.padEnd(12),g.tests.join(', '))})"
+	@echo "Selon vos changements depuis origin/dev : $$(cd e2e && node select.mjs --diff origin/dev)"
 
 e2e-up: ## Démarre seulement la stack e2e (pour « cd e2e && npm run test:ui »)
 	$(E2E) up -d --build --wait
