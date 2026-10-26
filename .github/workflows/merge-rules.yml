@@ -1,50 +1,17 @@
 name: Règles de merge
 
 # Chemin imposé : feature/** (ou dependabot/**) → dev → staging → main.
-# Ce contrôle est obligatoire pour merger (règles de branche GitHub).
+# Ce contrôle est obligatoire pour merger (règles de branche GitHub, qui attendent
+# le nom « Branche source autorisée / Branche source autorisée » d'un workflow partagé).
 on:
   pull_request:
     branches: [dev, staging, main]
     types: [opened, edited, reopened, synchronize]
 
+permissions:
+  contents: read
+
 jobs:
   source:
     name: Branche source autorisée
-    runs-on: ubuntu-latest
-    steps:
-      - name: Vérifier la branche source
-        env:
-          BASE: ${{ github.base_ref }}
-          HEAD: ${{ github.head_ref }}
-        run: |
-          case "$BASE" in
-            # Dependabot ouvre aussi ses PR de mises à jour vers dev
-            dev)     allowed='feature/* ou dependabot/*'; ok=false; case "$HEAD" in feature/* | dependabot/*) ok=true ;; esac ;;
-            staging) allowed='dev';       ok=false; [ "$HEAD" = dev ] && ok=true ;;
-            main)    allowed='staging';   ok=false; [ "$HEAD" = staging ] && ok=true ;;
-          esac
-          if [ "$ok" != true ]; then
-            echo "::error::« $HEAD » ne peut pas être mergée dans « $BASE ». Seule « $allowed » est acceptée (feature/** → dev → staging → main)."
-            exit 1
-          fi
-          echo "✓ $HEAD → $BASE autorisé"
-
-      # Une promotion ne doit rien apporter qui ne soit pas déjà passé par l'étape précédente
-      - name: Vérifier que la promotion est à jour
-        if: github.base_ref != 'dev'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Comparer avec la branche cible
-        if: github.base_ref != 'dev'
-        env:
-          BASE: ${{ github.base_ref }}
-          HEAD: ${{ github.head_ref }}
-        run: |
-          if ! git merge-base --is-ancestor "origin/$BASE" "origin/$HEAD" && \
-             [ -n "$(git log --no-merges --format=%H "origin/$HEAD..origin/$BASE")" ]; then
-            echo "::error::« $BASE » contient des commits absents de « $HEAD ». Quelqu'un a modifié « $BASE » sans passer par « $HEAD » : il faut d'abord les ramener dans dev."
-            git log --no-merges --oneline "origin/$HEAD..origin/$BASE"
-            exit 1
-          fi
-          echo "✓ $HEAD contient tout le travail de $BASE"
+    uses: abnd-corp/gouvernance/.github/workflows/branche-source.yml@ee24d45972d9de0fda9256e93c4f68065560c7d1 # gouvernance, 26 octobre 2026
