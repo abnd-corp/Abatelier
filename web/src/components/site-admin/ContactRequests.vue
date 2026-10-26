@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
 import { eur } from '@/lib/catalog'
 import AppIcon from '@/components/AppIcon.vue'
@@ -8,7 +7,6 @@ import { dateTime } from '@/lib/format'
 import type { Demande } from '@/lib/site-admin'
 
 const emit = defineEmits<{ count: [n: number] }>()
-const router = useRouter()
 
 type Filtre = 'a_traiter' | 'traitees' | 'toutes'
 const filtre = ref<Filtre>('a_traiter')
@@ -47,19 +45,6 @@ async function mark(d: Demande, traite: boolean) {
     await load()
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : 'Action impossible.'
-  } finally {
-    busy.value = null
-  }
-}
-// Commande de l'atelier créée d'après les pièces du configurateur (et la fiche client si besoin)
-async function createOrder(d: Demande) {
-  busy.value = d.id
-  error.value = ''
-  try {
-    const res = await api<{ id: string }>(`/site/contacts/${d.id}/commande`, { method: 'POST' })
-    await router.push({ name: 'order', params: { id: res.id } })
-  } catch (e) {
-    error.value = e instanceof ApiError ? e.message : 'Création de la commande impossible.'
   } finally {
     busy.value = null
   }
@@ -155,7 +140,6 @@ const FILTERS: { value: Filtre; label: string }[] = [
           <p v-if="d.fichierNom" class="muted note">Le plan vient d’un inconnu : ouvrez-le seulement si vous êtes à l’aise avec ce fichier.</p>
           <div class="actions">
             <RouterLink v-if="d.commandeId" class="btn primary small" :to="{ name: 'order', params: { id: d.commandeId } }"><AppIcon name="box" :size="15" />Voir la commande</RouterLink>
-            <button v-else-if="d.configuration" type="button" class="btn primary small" :disabled="busy === d.id" @click="createOrder(d)"><AppIcon name="box" :size="15" />Créer la commande</button>
             <button v-if="!d.traiteAt" type="button" class="btn small" :class="{ primary: !d.configuration && !d.commandeId }" :disabled="busy === d.id" @click="mark(d, true)">
               <AppIcon name="check" :size="15" />Marquer comme traitée
             </button>

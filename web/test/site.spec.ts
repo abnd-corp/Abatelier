@@ -763,36 +763,17 @@ describe('Configurateur public', () => {
       return { wrapper, router, calls }
     }
 
-    it('montre les pièces et le prix, et crée la commande puis l’ouvre', async () => {
-      const { wrapper, router, calls } = await mountList(DEMANDE, { 'POST /site/contacts/d1/commande': [201, { id: 'o9', numero: 'C-2026-0009' }] })
+    it('montre les pièces et le prix des anciennes demandes, sans proposer de créer une commande', async () => {
+      const { wrapper } = await mountList(DEMANDE)
       expect(wrapper.text()).toContain('Pièces choisies dans le configurateur')
       expect(wrapper.text()).toContain('4 × Couvertine')
       expect(wrapper.text().replace(/[\u202f\u00a0]/g, ' ')).toContain('518,54 € TTC')
-      await wrapper
-        .findAll('button')
-        .find((b) => b.text().includes('Créer la commande'))!
-        .trigger('click')
-      await flushPromises()
-      expect(calls.find((c) => c.method === 'POST')!.path).toBe('/site/contacts/d1/commande')
-      expect(router.currentRoute.value.path).toBe('/commandes/o9')
+      expect(wrapper.text()).not.toContain('Créer la commande')
     })
 
-    it('propose de voir la commande déjà créée, et affiche l’erreur sinon', async () => {
+    it('propose de voir la commande déjà créée', async () => {
       const done = await mountList({ ...DEMANDE, commandeId: 'o9', traiteAt: '2026-10-20T09:00:00Z' })
       expect(done.wrapper.find('a[href="/commandes/o9"]').text()).toContain('Voir la commande')
-      expect(done.wrapper.text()).not.toContain('Créer la commande')
-      const fail = await mountList(DEMANDE, { 'POST /site/contacts/d1/commande': [409, { error: 'Les pièces de cette demande ne passent plus les contrôles actuels.' }] })
-      await fail.wrapper
-        .findAll('button')
-        .find((b) => b.text().includes('Créer la commande'))!
-        .trigger('click')
-      await flushPromises()
-      expect(fail.wrapper.get('[role="alert"]').text()).toContain('ne passent plus')
-    })
-
-    it('n’offre pas de commande pour une simple demande de contact', async () => {
-      const { wrapper } = await mountList({ ...DEMANDE, configuration: null, objet: 'Question' })
-      expect(wrapper.text()).not.toContain('Créer la commande')
     })
 
     it('décrit la création de commande dans le journal', () => {

@@ -1,9 +1,8 @@
 import type { FastifyInstance, FastifyReply } from 'fastify'
-import { and, asc, count, desc, eq, gt, isNotNull, isNull, lt, max, sql, type SQL } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gt, isNotNull, isNull, lt, max, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { clients, contactRequests, PHOTO_PLACES, sitePhotos } from '../db/schema.js'
-import { orderBody, placeOrder } from './orders.js'
+import { contactRequests, PHOTO_PLACES, sitePhotos } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
 import { inspectImage } from '../pdf.js'
@@ -236,43 +235,6 @@ export async function siteRoutes(app: FastifyInstance) {
       .where(eq(contactRequests.id, c.id))
     await audit(req, parsed.data.traite ? 'contact.handled' : 'contact.reopened', { targetType: 'contact', targetId: c.id, details: { objet: c.objet } })
     return { ok: true }
-  })
-
-  // Crée la commande de l'atelier à partir d'une demande de devis du configurateur (et la fiche client si elle n'existe pas)
-  app.post('/contacts/:id/commande', async (req, reply) => {
-    const c = await findContact((req.params as { id: string }).id, reply)
-    if (!c) return
-    if (!c.configuration) return reply.code(409).send({ error: 'Cette demande ne vient pas du configurateur : il n’y a pas de pièces à commander.' })
-    if (c.commandeId) return reply.code(409).send({ error: 'Une commande a déjà été créée pour cette demande.', commandeId: c.commandeId })
-    let [client] = await db
-      .select()
-      .from(clients)
-      .where(sql`lower(${clients.email}) = ${c.email.toLowerCase()}`)
-    let created = false
-    if (!client) {
-      // « Jean Dupont » devient prénom et nom ; un seul mot est pris comme nom
-      const [first, ...rest] = c.nom.trim().split(/\s+/)
-      const [prenom, nom] = rest.length ? [first!, rest.join(' ')] : [null, first!]
-      ;[client] = await db
-        .insert(clients)
-        .values({ type: 'particulier', origine: 'site', prenom, nom, email: c.email.toLowerCase(), telephone: c.telephone, adresse: c.adresse, codePostal: c.codePostal, ville: c.ville })
-        .returning()
-      created = true
-      await audit(req, 'client.created', { targetType: 'client', targetId: client!.id, details: { nom: c.nom, type: 'particulier', origine: 'site' } })
-    }
-    if (client!.archivedAt) return reply.code(409).send({ error: 'Ce client est archivé : sortez-le des archives, puis recommencez.' })
-    const body = orderBody.safeParse({
-      clientId: client!.id,
-      lignes: c.configuration.lignes,
-      livraison: c.configuration.livraison,
-      notes: `Demande de devis du site : ${c.objet}${c.message ? `\n${c.message}` : ''}`.slice(0, 2000),
-    })
-    if (!body.success) return reply.code(409).send({ error: 'Les pièces de cette demande ne passent plus les contrôles actuels (catalogue ou limites modifiés) : saisissez la commande à la main.' })
-    const placed = await placeOrder(req, body.data)
-    if ('error' in placed) return reply.code(placed.status).send({ error: placed.error })
-    await db.update(contactRequests).set({ commandeId: placed.id, traiteAt: new Date(), traitePar: req.user!.id }).where(eq(contactRequests.id, c.id))
-    await audit(req, 'contact.order_created', { targetType: 'contact', targetId: c.id, details: { objet: c.objet, commande: placed.numero, clientCree: created } })
-    return reply.code(201).send({ id: placed.id, numero: placed.numero })
   })
 
   // Suppression à la demande de la personne (RGPD)
