@@ -15,7 +15,7 @@ export default tseslint.config(
     languageOptions: { parserOptions: { parser: tseslint.parser } },
   },
   {
-    files: ['api/**/*.ts', 'e2e/**/*.{ts,mjs}', 'scripts/**/*.{ts,mts}', '*.js'],
+    files: ['api/**/*.ts', 'e2e/**/*.{ts,mjs}', 'scripts/**/*.{ts,mts,mjs}', '*.js'],
     languageOptions: { globals: globals.node },
   },
   {
