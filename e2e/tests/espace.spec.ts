@@ -40,7 +40,7 @@ test.describe('Espace client : inscription et connexion', () => {
 
     // Déconnexion : l'espace est de nouveau protégé
     await page.getByRole('button', { name: 'Me déconnecter' }).click()
-    expect((await page.request.get('/api/espace/commandes')).status()).toBe(401)
+    await expect.poll(async () => (await page.request.get('/api/espace/commandes')).status()).toBe(401)
     await page.goto('/espace')
     await expect(page).toHaveURL(/\/espace\/(connexion|inscription)/)
 

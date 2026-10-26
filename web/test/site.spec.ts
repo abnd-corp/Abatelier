@@ -351,12 +351,11 @@ describe('Administration du site', () => {
     expect(sent(calls)).toEqual([{ method: 'DELETE', path: '/site/contacts/d1', body: undefined }])
   })
 
-  it('modifie un texte, signale ce qui reste à compléter, et enregistre seulement ce qui a changé', async () => {
+  it('modifie un texte et enregistre seulement ce qui a changé', async () => {
     const { wrapper, calls } = await mountAdmin('/site-vitrine?onglet=textes', {
       'GET /site/content': [200, { champs: CHAMPS }],
       'PATCH /site/content': (body) => [200, { champs: CHAMPS.map((c) => (c.key in body.valeurs ? { ...c, valeur: body.valeurs[c.key], modifie: true } : c)) }],
     })
-    expect(wrapper.text()).toContain('À compléter avant la mise en ligne')
     expect(wrapper.get('.bar .btn.primary').attributes('disabled')).toBeDefined()
     await wrapper.get('#f-accueil\\.titre').setValue('Nouveau titre')
     await wrapper.get('form').trigger('submit')
@@ -364,6 +363,26 @@ describe('Administration du site', () => {
     expect(sent(calls)).toEqual([{ method: 'PATCH', path: '/site/content', body: { valeurs: { 'accueil.titre': 'Nouveau titre' } } }])
     expect(wrapper.text()).toContain('Textes enregistrés')
     expect(wrapper.text()).toContain('Rétablir le texte d’origine')
+  })
+
+  it('sépare les pages légales des textes du site', async () => {
+    const textes = await mountAdmin('/site-vitrine?onglet=textes', { 'GET /site/content': [200, { champs: CHAMPS }] })
+    expect(textes.wrapper.find('#f-accueil\\.titre').exists()).toBe(true)
+    expect(textes.wrapper.find('#f-legal\\.cgv').exists()).toBe(false)
+    expect(textes.wrapper.text()).not.toContain('À compléter avant la mise en ligne')
+
+    const legal = await mountAdmin('/site-vitrine?onglet=legal', {
+      'GET /site/content': [200, { champs: CHAMPS }],
+      'PATCH /site/content': (body) => [200, { champs: CHAMPS.map((c) => (c.key in body.valeurs ? { ...c, valeur: body.valeurs[c.key], modifie: true } : c)) }],
+    })
+    expect(legal.wrapper.find('#f-accueil\\.titre').exists()).toBe(false)
+    expect(legal.wrapper.find('#f-legal\\.cgv').exists()).toBe(true)
+    expect(legal.wrapper.text()).toContain('À compléter avant la mise en ligne')
+    await legal.wrapper.get('#f-legal\\.cgv').setValue('Nouvelles conditions')
+    await legal.wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(sent(legal.calls)).toEqual([{ method: 'PATCH', path: '/site/content', body: { valeurs: { 'legal.cgv': 'Nouvelles conditions' } } }])
+    expect(legal.wrapper.text()).toContain('Pages légales enregistrées')
   })
 
   it('affiche l’erreur du serveur sur un texte refusé', async () => {
