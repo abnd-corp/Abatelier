@@ -113,9 +113,40 @@ jobs:
       - name: Tests des composants
         run: npm test
 
-  e2e:
-    name: E2E (Chromium + Firefox)
+  e2e-selection:
+    name: E2E (sélection)
     runs-on: ubuntu-latest
+    outputs:
+      fichiers: ${{ steps.choix.outputs.fichiers }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Groupes touchés par la PR (suite complète vers staging, main et après un merge)
+        id: choix
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "$BASE" != "staging" ] && [ "$BASE" != "main" ]; then
+            fichiers=$(cd e2e && node select.mjs --diff "origin/$BASE")
+          else
+            fichiers=tout
+          fi
+          echo "Tests e2e : $fichiers"
+          echo "fichiers=$fichiers" >> "$GITHUB_OUTPUT"
+
+  e2e-tests:
+    name: E2E partie ${{ matrix.partie }}/3
+    needs: e2e-selection
+    if: needs.e2e-selection.outputs.fichiers != 'rien'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        partie: [1, 2, 3]
     env:
       COMPOSE: docker compose -p abatelier-e2e -f compose.yaml -f compose.e2e.yaml
     steps:
@@ -131,20 +162,35 @@ jobs:
         run: $COMPOSE up -d --build --wait
       - name: Playwright
         working-directory: e2e
+        env:
+          FICHIERS: ${{ needs.e2e-selection.outputs.fichiers }}
         run: |
           npm ci
           npm run typecheck
           npx playwright install --with-deps chromium firefox
-          npx playwright test
+          if [ "$FICHIERS" = "tout" ]; then FICHIERS=""; fi
+          npx playwright test --shard=${{ matrix.partie }}/3 $FICHIERS
       - name: Logs des containers
         if: failure()
         run: $COMPOSE logs --no-color
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: rapport-playwright
+          name: rapport-playwright-${{ matrix.partie }}
           path: e2e/playwright-report
           retention-days: 7
+
+  # Nom conservé : c'est le contrôle exigé avant de merger une PR
+  e2e:
+    name: E2E (Chromium + Firefox)
+    needs: [e2e-selection, e2e-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Résultat
+        run: |
+          echo "sélection : ${{ needs.e2e-selection.result }}, tests : ${{ needs.e2e-tests.result }}"
+          [ "${{ needs.e2e-selection.result }}" = "success" ] && { [ "${{ needs.e2e-tests.result }}" = "success" ] || [ "${{ needs.e2e-tests.result }}" = "skipped" ]; }
 
   backup:
     name: Sauvegardes
