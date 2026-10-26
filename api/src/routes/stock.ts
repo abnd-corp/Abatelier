@@ -1,8 +1,8 @@
-import type { FastifyInstance, FastifyReply } from 'fastify'
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { and, asc, desc, eq, gte, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { colors, materials, SHEET_MOTIFS, sheetMovements, sheetStock, users } from '../db/schema.js'
+import { colors, materials, SHEET_MOTIFS, sheetBarcodes, sheetMovements, sheetStock, users } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
 import { colorLabel, materialLabel } from '../quote.js'
@@ -29,6 +29,14 @@ const qty = (label: string, max = 100000) =>
     .max(max, `${label} : ${max} maximum.`)
 const note = z.string().trim().max(300, 'Note : 300 caractères maximum.')
 
+// Un code-barres de fournisseur (EAN, Code 128…) : chiffres et lettres, avec parfois des tirets ou des points
+const code = z
+  .string({ error: 'Scannez ou saisissez le code-barres.' })
+  .trim()
+  .min(4, 'Code-barres : 4 caractères minimum.')
+  .max(64, 'Code-barres : 64 caractères maximum.')
+  .regex(/^[A-Za-z0-9._\-/]+$/, 'Code-barres : chiffres, lettres, point, tiret ou barre oblique seulement.')
+  .transform((c) => c.toUpperCase())
 const createBody = z.object({
   materialId: z.uuid('Choisissez la matière.'),
   colorId: z.uuid('Coloris inconnu.').nullish(),
@@ -38,6 +46,8 @@ const createBody = z.object({
   quantite: qty('Quantité').default(0),
   seuil: qty('Seuil d’alerte', 10000).default(0),
   note: note.default(''),
+  // Code-barres du fournisseur, pour la réception au scan
+  code: code.optional(),
 })
 const patchBody = z.object({
   largeur: dim('Largeur').optional(),
@@ -55,6 +65,13 @@ const moveBody = z
   })
   .refine((b) => (b.delta === undefined) !== (b.quantite === undefined), { message: 'Indiquez soit l’entrée ou la sortie, soit la quantité comptée.', path: ['delta'] })
   .refine((b) => b.delta !== 0, { message: 'Une entrée ou une sortie ne peut pas être nulle.', path: ['delta'] })
+
+const codeBody = z.object({ code, sheetId: z.uuid('Choisissez la référence.') })
+const receptionBody = z.object({
+  code,
+  quantite: z.number({ error: 'Indiquez le nombre de feuilles reçues.' }).int('Nombre entier de feuilles.').min(1, 'Au moins une feuille.').max(100000, '100 000 feuilles maximum.'),
+  note: note.default(''),
+})
 
 const isUuid = (id: string) => z.uuid().safeParse(id).success
 const fmt = (n: number) => n.toLocaleString('fr-FR')
@@ -115,7 +132,8 @@ export async function stockRoutes(app: FastifyInstance) {
 
   app.get('/feuilles', async () => {
     const rows = await base().orderBy(asc(materials.nom), asc(materials.epaisseur), asc(colors.nom), asc(sheetStock.chute), asc(sheetStock.largeur), asc(sheetStock.longueur))
-    const feuilles = rows.map(out)
+    const links = await db.select({ code: sheetBarcodes.code, sheetId: sheetBarcodes.sheetId }).from(sheetBarcodes).orderBy(asc(sheetBarcodes.createdAt))
+    const feuilles = rows.map((r) => ({ ...out(r), codes: links.filter((l) => l.sheetId === r.id).map((l) => l.code) }))
     // Une chute n'est pas une feuille entière (un reste de découpe, parfois trop petit pour être réutilisé) :
     // on les compte à part, pour ne jamais les mélanger dans un même total.
     const m2 = (list: typeof feuilles) => Math.round(list.reduce((s, f) => s + (f.quantite * f.largeur * f.longueur) / 1_000_000, 0) * 10) / 10
@@ -156,6 +174,7 @@ export async function stockRoutes(app: FastifyInstance) {
           .insert(sheetStock)
           .values({ materialId: d.materialId, colorId: d.colorId ?? null, largeur, longueur, chute: d.chute, quantite: d.quantite, seuil: d.seuil, note: d.note })
           .returning({ id: sheetStock.id })
+        if (d.code) await tx.insert(sheetBarcodes).values({ code: d.code, sheetId: s!.id, createdBy: req.user!.id })
         return s!.id
       })
       const r = (await base().where(eq(sheetStock.id, id)))[0]!
@@ -164,7 +183,11 @@ export async function stockRoutes(app: FastifyInstance) {
       await audit(req, 'stock.sheet_created', { targetType: 'sheet', targetId: id, details: { libelle: libelle(r), quantite: d.quantite } })
       return reply.code(201).send({ feuille: out(r) })
     } catch (e) {
-      if (isUniqueViolation(e)) return reply.code(409).send({ error: 'Cette feuille existe déjà dans le stock : ajoutez-lui des feuilles plutôt que de la recréer.', field: 'largeur' })
+      if (isUniqueViolation(e)) {
+        const taken = d.code ? (await db.select({ code: sheetBarcodes.code }).from(sheetBarcodes).where(eq(sheetBarcodes.code, d.code))).length > 0 : false
+        if (taken) return reply.code(409).send({ error: 'Ce code-barres est déjà associé à une autre référence.', field: 'code' })
+        return reply.code(409).send({ error: 'Cette feuille existe déjà dans le stock : ajoutez-lui des feuilles plutôt que de la recréer.', field: 'largeur' })
+      }
       throw e
     }
   })
@@ -202,6 +225,21 @@ export async function stockRoutes(app: FastifyInstance) {
     return { ok: true }
   })
 
+  // Applique une entrée ou une sortie sur la quantité du moment (le calcul se fait en base : deux saisies en même temps ne s'écrasent pas), et la trace
+  async function move(req: FastifyRequest, r: Row, delta: number, motif: (typeof SHEET_MOTIFS)[number], noteText: string, extra: Record<string, unknown> = {}) {
+    const [u] = await db
+      .update(sheetStock)
+      .set({ quantite: sql`${sheetStock.quantite} + ${delta}`, updatedAt: new Date() })
+      .where(and(eq(sheetStock.id, r.id), gte(sql`${sheetStock.quantite} + ${delta}`, 0)))
+      .returning({ quantite: sheetStock.quantite })
+    if (!u) return null
+    if (delta !== 0) await db.insert(sheetMovements).values({ sheetId: r.id, libelle: libelle(r), delta, apres: u.quantite, motif, note: noteText, userId: req.user!.id })
+    await audit(req, 'stock.moved', { targetType: 'sheet', targetId: r.id, details: { libelle: libelle(r), delta, apres: u.quantite, motif, ...extra } })
+    return u.quantite
+  }
+  const tooMany = (reply: FastifyReply, r: Row, delta: number) =>
+    reply.code(409).send({ error: `Il n’y a que ${fmt(r.quantite)} feuille${r.quantite > 1 ? 's' : ''} en stock : impossible d’en sortir ${fmt(-delta)}.`, field: 'delta' })
+
   // Entrée (réception, chute récupérée), sortie (fabrication, perte) ou inventaire (quantité comptée) : toujours tracé
   app.post('/feuilles/:id/mouvement', async (req, reply) => {
     const r = await find((req.params as { id: string }).id, reply)
@@ -210,16 +248,61 @@ export async function stockRoutes(app: FastifyInstance) {
     if (!parsed.success) return invalid(reply, parsed.error)
     const d = parsed.data
     const delta = d.delta ?? d.quantite! - r.quantite
-    // Le calcul se fait en base, sur la quantité du moment : deux saisies en même temps ne s'écrasent pas
-    const [u] = await db
-      .update(sheetStock)
-      .set({ quantite: sql`${sheetStock.quantite} + ${delta}`, updatedAt: new Date() })
-      .where(and(eq(sheetStock.id, r.id), gte(sql`${sheetStock.quantite} + ${delta}`, 0)))
-      .returning({ quantite: sheetStock.quantite })
-    if (!u) return reply.code(409).send({ error: `Il n’y a que ${fmt(r.quantite)} feuille${r.quantite > 1 ? 's' : ''} en stock : impossible d’en sortir ${fmt(-delta)}.`, field: 'delta' })
-    if (delta !== 0) await db.insert(sheetMovements).values({ sheetId: r.id, libelle: libelle(r), delta, apres: u.quantite, motif: d.motif, note: d.note, userId: req.user!.id })
-    await audit(req, 'stock.moved', { targetType: 'sheet', targetId: r.id, details: { libelle: libelle(r), delta, apres: u.quantite, motif: d.motif } })
-    return { quantite: u.quantite, bas: r.seuil > 0 && u.quantite <= r.seuil, etat: etatOf(r.seuil, u.quantite) }
+    const apres = await move(req, r, delta, d.motif, d.note)
+    if (apres === null) return tooMany(reply, r, delta)
+    return { quantite: apres, bas: r.seuil > 0 && apres <= r.seuil, etat: etatOf(r.seuil, apres) }
+  })
+
+  // --- Codes-barres des fournisseurs et réception de marchandise ---
+
+  /** La référence du stock désignée par un code-barres, ou null. */
+  async function byCode(c: string) {
+    const [link] = await db.select({ sheetId: sheetBarcodes.sheetId }).from(sheetBarcodes).where(eq(sheetBarcodes.code, c))
+    return link ? ((await base().where(eq(sheetStock.id, link.sheetId)))[0] ?? null) : null
+  }
+
+  app.get('/codes/:code', async (req, reply) => {
+    const parsed = code.safeParse((req.params as { code: string }).code)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const r = await byCode(parsed.data)
+    if (!r) return reply.code(404).send({ error: 'Code-barres inconnu : associez-le à une référence du stock.', code: parsed.data })
+    return { code: parsed.data, feuille: out(r) }
+  })
+
+  // Associe un code-barres à une référence (plusieurs codes possibles pour une même référence : paquet, palette…)
+  app.post('/codes', async (req, reply) => {
+    const parsed = codeBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const r = await find(parsed.data.sheetId, reply)
+    if (!r) return
+    const existing = await byCode(parsed.data.code)
+    if (existing) {
+      if (existing.id === r.id) return { ok: true }
+      return reply.code(409).send({ error: `Ce code-barres est déjà associé à « ${libelle(existing)} ».`, field: 'code' })
+    }
+    await db.insert(sheetBarcodes).values({ code: parsed.data.code, sheetId: r.id, createdBy: req.user!.id })
+    await audit(req, 'stock.code_linked', { targetType: 'sheet', targetId: r.id, details: { libelle: libelle(r), code: parsed.data.code } })
+    return reply.code(201).send({ ok: true })
+  })
+
+  app.delete('/codes/:code', async (req, reply) => {
+    const parsed = code.safeParse((req.params as { code: string }).code)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const r = await byCode(parsed.data)
+    if (!r) return reply.code(404).send({ error: 'Code-barres inconnu.' })
+    await db.delete(sheetBarcodes).where(eq(sheetBarcodes.code, parsed.data))
+    await audit(req, 'stock.code_unlinked', { targetType: 'sheet', targetId: r.id, details: { libelle: libelle(r), code: parsed.data } })
+    return { ok: true }
+  })
+
+  // Réception : on scanne (ou saisit) le code, puis on indique le nombre de feuilles reçues
+  app.post('/reception', async (req, reply) => {
+    const parsed = receptionBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const r = await byCode(parsed.data.code)
+    if (!r) return reply.code(404).send({ error: 'Code-barres inconnu : associez-le à une référence du stock.', code: parsed.data.code })
+    const apres = await move(req, r, parsed.data.quantite, 'reception', parsed.data.note || 'Réception', { code: parsed.data.code })
+    return { feuille: out({ ...r, quantite: apres! }), recu: parsed.data.quantite }
   })
 
   app.delete('/feuilles/:id', async (req, reply) => {

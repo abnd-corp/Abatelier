@@ -283,3 +283,93 @@ describe('Choix de la feuille', () => {
     expect((await visitor.get(`/api/production/${order.id}/feuilles`)).statusCode).toBe(401)
   })
 })
+
+describe('Codes-barres et réception de marchandise', () => {
+  const EAN = '3760123456789'
+  const receive = (body: Record<string, unknown>, who: Client = atelier) => who.post('/api/stock/reception', body)
+
+  it('associe un code-barres à une référence, puis la retrouve en le scannant', async () => {
+    const f = await add()
+    const res = await atelier.post('/api/stock/codes', { code: EAN, sheetId: f.id })
+    expect(res.statusCode, res.body).toBe(201)
+    const found = await atelier.get(`/api/stock/codes/${EAN}`)
+    expect(found.statusCode).toBe(200)
+    expect(found.json()).toMatchObject({ code: EAN, feuille: { id: f.id, quantite: 10 } })
+    // La liste du stock porte les codes de chaque référence
+    expect((await atelier.get('/api/stock/feuilles')).json().feuilles[0].codes).toEqual([EAN])
+    expect((await entries('stock.code_linked'))[0]!.details).toMatchObject({ code: EAN })
+    // Deux fois le même code sur la même référence : sans effet. Sur une autre : refusé
+    expect((await atelier.post('/api/stock/codes', { code: EAN, sheetId: f.id })).statusCode).toBe(200)
+    const autre = await add({ largeur: 1000 })
+    const conflit = await atelier.post('/api/stock/codes', { code: EAN, sheetId: autre.id })
+    expect(conflit.statusCode).toBe(409)
+    expect(conflit.json()).toMatchObject({ field: 'code' })
+  })
+
+  it('met le code en majuscules, refuse les codes invalides et les codes inconnus', async () => {
+    const f = await add()
+    expect((await atelier.post('/api/stock/codes', { code: ' ab-12.34 ', sheetId: f.id })).statusCode).toBe(201)
+    expect((await atelier.get('/api/stock/codes/AB-12.34')).statusCode).toBe(200)
+    for (const code of ['', 'ab', 'x'.repeat(65), 'code avec espace', 'é€$$']) expect((await atelier.post('/api/stock/codes', { code, sheetId: f.id })).statusCode, code).toBe(400)
+    expect((await atelier.post('/api/stock/codes', { code: EAN, sheetId: '00000000-0000-4000-8000-000000000000' })).statusCode).toBe(404)
+    const inconnu = await atelier.get('/api/stock/codes/9999999999999')
+    expect(inconnu.statusCode).toBe(404)
+    expect(inconnu.json()).toMatchObject({ code: '9999999999999' })
+  })
+
+  it('réceptionne : le code désigne la référence, le nombre entre en stock et le mouvement est tracé', async () => {
+    const f = await add({ quantite: 4 })
+    await atelier.post('/api/stock/codes', { code: EAN, sheetId: f.id })
+    const res = await receive({ code: EAN, quantite: 12, note: 'Livraison du 27/10' })
+    expect(res.statusCode, res.body).toBe(200)
+    expect(res.json()).toMatchObject({ recu: 12, feuille: { id: f.id, quantite: 16 } })
+    const [mouvement] = await db.select().from(sheetMovements).where(eq(sheetMovements.motif, 'reception')).orderBy(sheetMovements.createdAt)
+    expect(mouvement).toBeDefined()
+    const dernier = (await atelier.get('/api/stock/mouvements')).json().mouvements[0]
+    expect(dernier).toMatchObject({ delta: 12, apres: 16, motif: 'reception', note: 'Livraison du 27/10', par: 'Plieur' })
+    expect((await entries('stock.moved')).at(-1)!.details).toMatchObject({ delta: 12, apres: 16, motif: 'reception', code: EAN })
+  })
+
+  it('refuse une réception sans code connu ou avec une quantité fausse, sans rien changer', async () => {
+    const f = await add({ quantite: 4 })
+    await atelier.post('/api/stock/codes', { code: EAN, sheetId: f.id })
+    expect((await receive({ code: '1111111111111', quantite: 3 })).statusCode).toBe(404)
+    for (const quantite of [0, -2, 1.5, 100001, '3', null]) expect((await receive({ code: EAN, quantite })).statusCode, String(quantite)).toBe(400)
+    expect((await atelier.get('/api/stock/feuilles')).json().feuilles[0].quantite).toBe(4)
+  })
+
+  it('supprime un code, et le supprime avec sa référence', async () => {
+    const f = await add({ quantite: 0 })
+    await atelier.post('/api/stock/codes', { code: EAN, sheetId: f.id })
+    await atelier.post('/api/stock/codes', { code: 'PALETTE-1', sheetId: f.id })
+    expect((await atelier.delete(`/api/stock/codes/${EAN}`)).statusCode).toBe(200)
+    expect((await atelier.get(`/api/stock/codes/${EAN}`)).statusCode).toBe(404)
+    expect((await atelier.delete(`/api/stock/codes/${EAN}`)).statusCode).toBe(404)
+    expect((await entries('stock.code_unlinked'))).toHaveLength(1)
+    expect((await atelier.delete(`/api/stock/feuilles/${f.id}`)).statusCode).toBe(200)
+    expect((await atelier.get('/api/stock/codes/PALETTE-1')).statusCode).toBe(404)
+  })
+
+  it('crée une référence avec son code-barres, et refuse un code déjà pris', async () => {
+    const f = await add({ code: EAN })
+    expect((await atelier.get(`/api/stock/codes/${EAN}`)).json().feuille.id).toBe(f.id)
+    const doublon = await atelier.post('/api/stock/feuilles', feuille({ largeur: 900, code: EAN }))
+    expect(doublon.statusCode).toBe(409)
+    expect(doublon.json()).toMatchObject({ field: 'code' })
+    expect((await atelier.get('/api/stock/feuilles')).json().feuilles).toHaveLength(1)
+  })
+
+  it('est réservé à l’atelier et à la direction', async () => {
+    await createUser({ identifiant: 'claire', role: 'rh' })
+    const rh = await loginAs(app, 'claire')
+    for (const [method, url, body] of [
+      ['get', `/api/stock/codes/${EAN}`],
+      ['post', '/api/stock/codes', { code: EAN, sheetId: '00000000-0000-4000-8000-000000000000' }],
+      ['delete', `/api/stock/codes/${EAN}`],
+      ['post', '/api/stock/reception', { code: EAN, quantite: 1 }],
+    ] as const) {
+      expect((await visitor[method](url, body as never)).statusCode, `${method} ${url}`).toBe(401)
+      expect((await rh[method](url, body as never)).statusCode, `${method} ${url}`).toBe(403)
+    }
+  })
+})
