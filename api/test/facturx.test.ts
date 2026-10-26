@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { accessories, billingDocuments, colors, materials } from '../src/db/schema.js'
+import { accessories, billingDocuments, colors, companySettings, materials } from '../src/db/schema.js'
 import { buildFacturxXml, facturxMissing, facturxMissingFor, MENTIONS_FACTURE, siren, splitAddress, type FacturxInput } from '../src/facturx.js'
 import { totals } from '../src/pdf.js'
 import { buildApp, createUser, loginAs, M, pdfAttachments, pdfTextEmbedded, resetDb, seedModels, type App, type Client } from './helpers.js'
@@ -254,7 +254,9 @@ describe('Factures émises par l’application', () => {
 
   it('dit ce qui manque à l’entreprise pour émettre des factures électroniques conformes', async () => {
     expect((await direction.get('/api/documents/settings')).json().facturx).toEqual({ manque: [] })
-    await direction.patch('/api/documents/company', { siret: '', tvaIntra: '', iban: '' })
+    // L'API refuse de faire régresser une entreprise déjà conforme (voir documents.test.ts) : on simule
+    // ici une entreprise jamais complétée, en écrivant directement en base.
+    await db.update(companySettings).set({ siret: '', tvaIntra: '', iban: '' }).where(eq(companySettings.id, 1))
     expect((await direction.get('/api/documents/settings')).json().facturx.manque).toEqual(['le SIRET', 'le numéro de TVA intracommunautaire'])
   })
 
@@ -270,7 +272,8 @@ describe('Factures émises par l’application', () => {
     expect((await direction.get(`/api/orders/${o.id}`)).json().facturx).toEqual({ manque: ['l’adresse e-mail du client'] })
     await direction.patch(`/api/clients/${ids.toitures}`, { email: 'compta@forez.test' })
     expect((await direction.get(`/api/orders/${o.id}`)).json().facturx).toEqual({ manque: [] })
-    await direction.patch('/api/documents/company', { siret: '', tvaIntra: '' })
+    // Idem : entreprise jamais complétée, simulée directement en base (l'API refuse la régression)
+    await db.update(companySettings).set({ siret: '', tvaIntra: '' }).where(eq(companySettings.id, 1))
     expect((await direction.get(`/api/orders/${o.id}`)).json().facturx.manque).toEqual(['le SIRET', 'le numéro de TVA intracommunautaire'])
   })
 

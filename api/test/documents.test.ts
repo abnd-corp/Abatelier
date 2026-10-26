@@ -118,6 +118,25 @@ describe('Entreprise', () => {
     await direction.patch('/api/documents/company', { raisonSociale: 'Alu Pliage Service' })
     expect(await entries('documents.company_updated')).toHaveLength(0)
   })
+
+  it('refuse de rendre une entreprise déjà conforme pour la facturation électronique non conforme', async () => {
+    // Rendre l'entreprise entièrement conforme (SIRET, TVA, adresse complète)
+    const ok = await direction.patch('/api/documents/company', { siret: '73282932000074', tvaIntra: 'FR44732829320', adresse: 'ZA du Parc\n42490 Fraisses' })
+    expect(ok.statusCode).toBe(200)
+
+    const res = await direction.patch('/api/documents/company', { siret: '' })
+    expect(res.statusCode).toBe(409)
+    expect(res.json()).toMatchObject({ field: 'siret', error: expect.stringMatching(/romprait la conformité Factur-X/) })
+    // Rien n'a été enregistré : toujours conforme
+    expect((await settings()).company.siret).toBe('732 829 320 00074')
+    expect(await entries('documents.company_updated')).toHaveLength(1)
+  })
+
+  it('autorise encore de corriger un champ tant que l’entreprise n’est pas entièrement conforme', async () => {
+    // Seul le SIRET est renseigné : l'entreprise n'est pas encore conforme, on peut le vider sans blocage
+    await direction.patch('/api/documents/company', { siret: '73282932000074' })
+    expect((await direction.patch('/api/documents/company', { siret: '' })).statusCode).toBe(200)
+  })
 })
 
 describe('Modèle', () => {
@@ -143,6 +162,15 @@ describe('Modèle', () => {
     expect(res.statusCode).toBe(400)
     expect(res.json().field).toBe(field)
     expect(res.json().error).toMatch(msg)
+  })
+
+  it('active le QR code par défaut, et accepte de le désactiver', async () => {
+    expect((await settings()).template.qrCode).toBe(true)
+    const res = await direction.patch('/api/documents/template', { qrCode: 'false' })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().template.qrCode).toBe(false)
+    const [entry] = await entries('documents.template_updated')
+    expect(entry!.details).toEqual({ changements: { qrCode: { avant: true, apres: false } } })
   })
 })
 
@@ -233,7 +261,7 @@ describe('Aperçu PDF', () => {
   it('passe à la page suivante quand il y a beaucoup de lignes, et calcule les totaux au centime', async () => {
     const data = sampleDocument('devis', 'D-2026-0001', 20)
     data.lignes = Array.from({ length: 40 }, (_, i) => ({ designation: `Pièce ${i + 1}`, detail: 'RAL 7016', quantite: 3, prixUnitaire: 10.335 }))
-    const tpl = { couleur: '#5b34c4', entete: '', conditionsPaiement: '', validiteDevis: 30, echeanceFacture: 30, noteDevis: '', noteFacture: '', mentionsLegales: '', piedDePage: '' }
+    const tpl = { couleur: '#5b34c4', entete: '', conditionsPaiement: '', validiteDevis: 30, echeanceFacture: 30, noteDevis: '', noteFacture: '', mentionsLegales: '', piedDePage: '', qrCode: false }
     const company = { raisonSociale: 'Alu Pliage Service', formeJuridique: '', capital: '', adresse: '', telephone: '', email: '', siteWeb: '', siret: '', rcs: '', tvaIntra: '', iban: '', bic: '' }
     const pdf = await renderDocument(company, tpl, null, data)
     expect(isPdf(pdf)).toBe(true)
@@ -244,6 +272,30 @@ describe('Aperçu PDF', () => {
 
   it('remplace les caractères que les polices du PDF ne savent pas écrire', () => {
     expect(clean('1 234,50 € — « œuvre » −5 ✓')).toBe('1 234,50 € — « œuvre » -5 ?')
+  })
+
+  it('imprime un QR code vers le site web, sauf si desactive ou sans site renseigne', async () => {
+    const data = sampleDocument('devis', 'D-2026-0001', 20)
+    const tpl = { couleur: '#5b34c4', entete: '', conditionsPaiement: '', validiteDevis: 30, echeanceFacture: 30, noteDevis: '', noteFacture: '', mentionsLegales: '', piedDePage: '', qrCode: true }
+    const company = {
+      raisonSociale: 'Alu Pliage Service',
+      formeJuridique: '',
+      capital: '',
+      adresse: '',
+      telephone: '',
+      email: '',
+      siteWeb: 'alupliageservice.fr',
+      siret: '',
+      rcs: '',
+      tvaIntra: '',
+      iban: '',
+      bic: '',
+    }
+    const nbImages = (pdf: Buffer) => (pdf.toString('latin1').match(/\/Subtype\s*\/Image/g) ?? []).length
+
+    expect(nbImages(await renderDocument(company, tpl, null, data))).toBeGreaterThan(0)
+    expect(nbImages(await renderDocument(company, { ...tpl, qrCode: false }, null, data))).toBe(0)
+    expect(nbImages(await renderDocument({ ...company, siteWeb: '' }, tpl, null, data))).toBe(0)
   })
 })
 

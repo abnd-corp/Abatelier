@@ -6,6 +6,7 @@ import { colors, materials, ORDER_STATUTS, orderLines, orders, sheetStock } from
 import { requirePerm } from '../auth/plugin.js'
 import { changeStatus, eventsOf, NEXT, PRODUCTION_STATUTS, PRODUCTION_STEPS, STATUT_LABELS } from '../orders.js'
 import { getCompany, getTemplate } from '../documents.js'
+import { siteQrPng } from '../pdf.js'
 import { renderProductionSheet } from '../production-sheet.js'
 import { audit } from '../audit.js'
 import { adviseSheets, type SheetOption } from '../cutting.js'
@@ -129,9 +130,10 @@ export async function productionRoutes(app: FastifyInstance) {
     const o = await findOrder((req.params as { id: string }).id, reply)
     if (!o) return
     const [lignes, company, template] = await Promise.all([linesOf(o.id), getCompany(), getTemplate()])
+    const qr = template.qrCode ? await siteQrPng(company.siteWeb) : null
     const pdf = await renderProductionSheet(
       { numero: o.numero, statutLabel: STATUT_LABELS[o.statut], datePrevue: o.datePrevue, livraisonMode: o.livraisonMode, imprimeLe: new Date(), lignes },
-      { accent: template.couleur, logo: company.logo },
+      { accent: template.couleur, logo: company.logo, qr },
     )
     await audit(req, 'order.sheet_printed', { targetType: 'order', targetId: o.id, details: { numero: o.numero, statut: o.statut } })
     return reply.header('Content-Type', 'application/pdf').header('Content-Disposition', `inline; filename="fiche-${o.numero}.pdf"`).header('Cache-Control', 'no-store').send(pdf)

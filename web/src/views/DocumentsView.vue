@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
-import { COMPANY_FIELDS, facturxMissing, formatNumber, LOGO_MAX, TEMPLATE_FIELDS, type Company, type DocumentSettings, type DocumentType, type Numbering, type Template } from '@/lib/documents'
+import { COMPANY_FIELDS, facturxChecklist, formatNumber, LOGO_MAX, TEMPLATE_FIELDS, type Company, type DocumentSettings, type DocumentType, type Numbering, type Template } from '@/lib/documents'
 import AppIcon from '@/components/AppIcon.vue'
 import BrandMark from '@/components/BrandMark.vue'
 import PdfPreview from '@/components/documents/PdfPreview.vue'
@@ -31,7 +31,21 @@ type CompanyForm = Record<(typeof COMPANY_FIELDS)[number], string>
 type TemplateForm = Record<(typeof TEMPLATE_FIELDS)[number], string>
 const company = reactive({} as CompanyForm)
 // Mis à jour pendant la saisie
-const facturxManque = computed(() => (company.siret === undefined ? [] : facturxMissing(company)))
+const facturxChecks = computed(() => (company.siret === undefined ? [] : facturxChecklist(company)))
+const facturxOk = computed(() => facturxChecks.value.every((c) => c.ok))
+// Les trois champs sont dans l'onglet « Entreprise » ; leurs identifiants n'ont pas tous le même suffixe que la clé
+const FACTURX_FIELD_IDS: Record<ReturnType<typeof facturxChecklist>[number]['key'], string> = { siret: 'c-siret', tvaIntra: 'c-tva', adresse: 'c-adresse' }
+async function goToField(key: ReturnType<typeof facturxChecklist>[number]['key']) {
+  tab.value = 'entreprise'
+  await nextTick()
+  document.getElementById(FACTURX_FIELD_IDS[key])?.focus()
+}
+
+// Case à cocher : le formulaire garde toutes les valeurs du modèle en texte (voir toTemplate)
+const qrCodeOn = computed<boolean>({
+  get: () => template.qrCode === 'true',
+  set: (v) => (template.qrCode = v ? 'true' : 'false'),
+})
 const template = reactive({} as TemplateForm)
 const numbering = reactive({ devis: '', facture: '' })
 
@@ -203,13 +217,17 @@ async function removeLogo() {
 
       <!-- Entreprise -->
       <section v-show="tab === 'entreprise'" id="panel-entreprise" role="tabpanel" aria-labelledby="tab-entreprise" class="groups">
-        <div class="card group facturx" :class="{ ok: !facturxManque.length }" role="status">
+        <div class="card group facturx" :class="{ ok: facturxOk }" role="status">
           <h3>Facturation électronique</h3>
-          <p v-if="!facturxManque.length">Les informations de l’entreprise sont complètes : les factures et avoirs sont émis au format Factur-X.</p>
-          <p v-else>
-            Pour des factures électroniques conformes, il manque : <b>{{ facturxManque.join(', ') }}</b
-            >.
-          </p>
+          <p v-if="facturxOk">Conforme : les factures et avoirs sont émis au format Factur-X.</p>
+          <p v-else>Non conforme : les factures et avoirs sont quand même émis, mais le fichier Factur-X ne respectera pas la norme tant que ces informations manquent.</p>
+          <ul class="facturx-list">
+            <li v-for="c in facturxChecks" :key="c.key" :class="{ ok: c.ok }">
+              <AppIcon :name="c.ok ? 'check' : 'x'" :size="15" />
+              <span>{{ c.label }}</span>
+              <button v-if="!c.ok" type="button" class="link" @click="goToField(c.key)">Corriger</button>
+            </li>
+          </ul>
         </div>
 
         <fieldset class="card group">
@@ -328,6 +346,15 @@ async function removeLogo() {
             </span>
             <span v-if="err('couleur')" class="field-error">{{ err('couleur') }}</span>
             <span class="hint muted">Titre du document, en-tête du tableau et total.</span>
+          </div>
+          <div class="field">
+            <label class="check">
+              <input id="t-qr" v-model="qrCodeOn" type="checkbox" />
+              <span>
+                QR code vers le site web
+                <small class="muted">Imprimé sur les devis, factures, avoirs et fiches de fabrication, si un site web est renseigné.</small>
+              </span>
+            </label>
           </div>
         </fieldset>
 
@@ -467,6 +494,40 @@ async function removeLogo() {
 .facturx h3 {
   font-size: 1rem;
   margin-bottom: 4px;
+}
+.facturx-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.facturx-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.facturx-list li.ok {
+  color: var(--ink);
+}
+.facturx-list li :deep(svg) {
+  flex: none;
+  color: var(--bad);
+}
+.facturx-list li.ok :deep(svg) {
+  color: var(--ok);
+}
+.facturx-list .link {
+  background: none;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+  text-decoration: underline;
+  font-size: inherit;
 }
 .intro {
   margin-top: 6px;

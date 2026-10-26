@@ -60,7 +60,7 @@ export function accessoryTotals(lignes: SheetLine[]) {
   return [...map.values()]
 }
 
-export function renderProductionSheet(data: SheetData, opts: { accent: string; logo: Buffer | null }): Promise<Buffer> {
+export function renderProductionSheet(data: SheetData, opts: { accent: string; logo: Buffer | null; qr?: Buffer | null }): Promise<Buffer> {
   const doc = new PDFDocument({ size: 'A4', margin: PAGE.m, bufferPages: true, info: { Title: clean(`Fiche de fabrication ${data.numero}`) } })
   const chunks: Buffer[] = []
   doc.on('data', (c: Buffer) => chunks.push(c))
@@ -313,8 +313,11 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     const fy = PAGE.h - PAGE.m - FOOTER_H + 14
     doc.moveTo(PAGE.m, fy).lineTo(RIGHT, fy).lineWidth(0.6).strokeColor(LINE).stroke()
     doc.font('Helvetica').fontSize(7.5).fillColor(MUTED)
-    text(`${data.numero} · Fiche de fabrication · imprimée le ${stamp(data.imprimeLe)}`, PAGE.m, fy + 8, { width: WIDTH - 60, lineBreak: false })
-    text(`${i + 1} / ${range.count}`, RIGHT - 60, fy + 8, { width: 60, align: 'right', lineBreak: false })
+    // Le QR code (vers le site web) prend la place habituelle du numéro de page, qui se décale à sa gauche
+    const reserved = 60 + (opts.qr ? 38 : 0)
+    text(`${data.numero} · Fiche de fabrication · imprimée le ${stamp(data.imprimeLe)}`, PAGE.m, fy + 8, { width: WIDTH - reserved, lineBreak: false })
+    text(`${i + 1} / ${range.count}`, RIGHT - reserved, fy + 8, { width: 60, align: 'right', lineBreak: false })
+    if (opts.qr) doc.image(opts.qr, RIGHT - 34, fy + 4, { width: 34, height: 34 })
     doc.page.margins.bottom = margin
   }
 
