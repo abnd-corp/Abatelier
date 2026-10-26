@@ -297,10 +297,11 @@ describe('Aperçu PDF', () => {
     expect(nbImages(await renderDocument(company, { ...tpl, qrCode: false }, null, data))).toBe(0)
     expect(nbImages(await renderDocument({ ...company, siteWeb: '' }, tpl, null, data))).toBe(0)
 
-    // L'adresse du site s'écrit sous le QR code, en plus des coordonnées de l'en-tête
+    // L'adresse du site s'écrit sous le QR code, en plus de l'en-tête et de l'adresse des conditions générales de vente
     const occurrences = (pdf: Buffer) => (pdfText(pdf).match(/alupliageservice\.fr/g) ?? []).length
-    expect(occurrences(await renderDocument(company, { ...tpl, qrCode: false }, null, data))).toBe(1)
-    expect(occurrences(await renderDocument(company, tpl, null, data))).toBe(2)
+    expect(occurrences(await renderDocument(company, { ...tpl, qrCode: false }, null, data))).toBe(2)
+    expect(occurrences(await renderDocument(company, tpl, null, data))).toBe(3)
+    expect(pdfText(await renderDocument(company, tpl, null, data))).toContain('CGV : alupliageservice.fr/conditions-generales-de-vente')
   })
 })
 
