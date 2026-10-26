@@ -173,6 +173,31 @@ test.describe('Devis et factures', () => {
     expect(text).toContain('<ram:ID schemeID="0002">732829320</ram:ID>')
   })
 
+  test('la direction annule un paiement enregistré par erreur', async ({ adminPage: page, baseURL, uid }) => {
+    const headers = { Origin: baseURL! }
+    const client = await (
+      await page.request.post('/api/clients', {
+        data: { type: 'particulier', prenom: 'Léa', nom: `Annul${uid.slice(-6)}`, adresse: '3 rue des Lilas', codePostal: '42490', ville: 'Fraisses' },
+        headers,
+      })
+    ).json()
+    const cat = await (await page.request.get('/api/orders/catalog')).json()
+    const m = cat.models[0]
+    const ligne = { modelId: m.id, materialId: cat.materials[0].id, colorId: cat.colors[0].id, cotes: m.cotes, angles: m.angles, longueur: 2000, quantite: 1, accessoires: [] }
+    const order = await (await page.request.post('/api/orders', { data: { clientId: client.id, lignes: [ligne], livraison: { mode: 'retrait' } }, headers })).json()
+    await page.request.post(`/api/orders/${order.id}/status`, { data: { statut: 'validee' }, headers })
+    const facture = await (await page.request.post(`/api/billing/orders/${order.id}/facture`, { headers })).json()
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date())
+    await page.request.post(`/api/billing/${facture.id}/paiement`, { data: { date: today, mode: 'virement' }, headers })
+
+    await page.goto(`/factures/${facture.id}`)
+    await expect(page.locator('.identity .pill')).toHaveText('Payée')
+    await page.getByRole('button', { name: 'Annuler le paiement' }).click()
+    await expect(page.getByText('Paiement annulé.')).toBeVisible()
+    await expect(page.locator('.identity .pill')).not.toHaveText('Payée')
+    await expect(page.getByRole('button', { name: 'Enregistrer le paiement' })).toBeVisible()
+  })
+
   test('la direction exporte les ventes et les encaissements en CSV pour son comptable', async ({ adminPage: page, baseURL, uid }) => {
     const headers = { Origin: baseURL! }
     const nom = `Export${uid.slice(-6)}`

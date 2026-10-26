@@ -27,6 +27,28 @@ test.describe('Mon compte', () => {
   })
 })
 
+test.describe('Mon compte : un seul appareil', () => {
+  test('déconnecte un appareil précis, et /api/auth/me suit la session', async ({ adminPage, browser, baseURL, uid }) => {
+    const temp = await createUser(adminPage.request, baseURL!, { identifiant: uid, nom: `Un appareil ${uid.slice(-4)}` })
+    const pc = await (await browser.newContext()).newPage()
+    await apiLogin(pc.request, baseURL!, uid, temp)
+    await pc.request.post('/api/auth/password', { data: { current: temp, next: NEW_PASSWORD }, headers: { Origin: baseURL! } })
+    const phone = await (await browser.newContext()).newPage()
+    await apiLogin(phone.request, baseURL!, uid, NEW_PASSWORD)
+    expect((await phone.request.get('/api/auth/me')).status()).toBe(200)
+
+    await pc.goto('/mon-compte')
+    const sessions = pc.locator('.sessions li')
+    await expect(sessions).toHaveCount(2)
+    await sessions.filter({ hasNotText: 'Cet appareil' }).getByRole('button', { name: 'Déconnecter' }).click()
+    await expect(sessions).toHaveCount(1)
+    expect((await phone.request.get('/api/auth/me')).status()).toBe(401)
+    expect((await pc.request.get('/api/auth/me')).status()).toBe(200)
+    await pc.context().close()
+    await phone.context().close()
+  })
+})
+
 test.describe('Journal d’activité', () => {
   test('montre la création d’un compte et les échecs de connexion', async ({ adminPage, baseURL, uid, request }) => {
     const nom = `Journal ${uid.slice(-5)}`

@@ -79,4 +79,36 @@ test.describe('Arrivée et départ d’un employé', () => {
     await expect(employee).toHaveURL('/mon-compte')
     await employee.context().close()
   })
+
+  test('la direction change le rôle d’un compte, le désactive puis le réactive', async ({ adminPage, browser, baseURL, uid }) => {
+    const nom = `Rôle ${uid.slice(-4)}`
+    const temp = await createUser(adminPage.request, baseURL!, { identifiant: uid, nom })
+    await adminPage.goto('/utilisateurs')
+    const row = adminPage.getByRole('row', { name: new RegExp(uid) })
+
+    // Atelier → direction : ses droits changent tout de suite
+    const employee = await (await browser.newContext()).newPage()
+    await apiLogin(employee.request, baseURL!, uid, temp)
+    await employee.request.post('/api/auth/password', { data: { current: temp, next: NEW_PASSWORD }, headers: { Origin: baseURL! } })
+    expect((await employee.request.get('/api/clients')).status()).toBe(403)
+    await row.getByLabel(`Rôle de ${nom}`).selectOption('direction')
+    await expect(adminPage.getByText(`${nom} a maintenant le rôle`)).toBeVisible()
+    expect((await employee.request.get('/api/clients')).status()).toBe(200)
+
+    // Désactivé : plus de connexion, et le rôle ne se change plus
+    await row.getByRole('button', { name: 'Désactiver' }).click()
+    await row.getByRole('button', { name: 'Confirmer' }).click()
+    await expect(row).toContainText('Désactivé')
+    await expect(row.getByLabel(`Rôle de ${nom}`)).toBeDisabled()
+    const refus = await employee.request.post('/api/auth/login', { data: { identifiant: uid, password: NEW_PASSWORD }, headers: { Origin: baseURL! } })
+    expect(refus.status()).toBe(403)
+
+    // Réactivé : il peut se reconnecter
+    await row.getByRole('button', { name: 'Activer' }).click()
+    await row.getByRole('button', { name: 'Confirmer' }).click()
+    await expect(adminPage.getByText(`Le compte de ${nom} est réactivé.`)).toBeVisible()
+    await expect(row).not.toContainText('Désactivé')
+    await apiLogin(employee.request, baseURL!, uid, NEW_PASSWORD)
+    await employee.context().close()
+  })
 })

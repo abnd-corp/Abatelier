@@ -64,6 +64,26 @@ test.describe('Tarifs et catalogue', () => {
     await expect(coloris.getByText('Cette référence de coloris existe déjà.')).toBeVisible()
   })
 
+  test('la direction désactive un coloris puis le réactive', async ({ adminPage, baseURL, uid }) => {
+    await adminPage.request.post('/api/catalog/colors', {
+      data: { reference: `RAL ${uid.slice(-6)}`, nom: 'Coloris à éteindre', hex: '#336699', majoration: 0, delaiSup: 0 },
+      headers: { Origin: baseURL! },
+    })
+    await adminPage.goto('/catalogue?onglet=coloris')
+    const coloris = adminPage.getByRole('tabpanel', { name: 'Coloris' })
+    const ligne = coloris.getByRole('row', { name: new RegExp(`RAL ${uid.slice(-6)}`) })
+    await expect(ligne).toContainText('Actif')
+    await ligne.getByRole('button', { name: 'Désactiver' }).click()
+    await expect(coloris.getByText(/désactivé : il ne sera plus proposé dans les nouveaux devis/)).toBeVisible()
+    // Les coloris désactivés sont cachés jusqu'à ce qu'on les affiche
+    await expect(ligne).toHaveCount(0)
+    await coloris.getByLabel(/désactivés/).check()
+    await expect(ligne).toContainText('Désactivé')
+    await ligne.getByRole('button', { name: 'Activer' }).click()
+    await expect(coloris.getByText(/réactivé\./)).toBeVisible()
+    await expect(ligne).toContainText('Actif')
+  })
+
   test('la direction ajoute un accessoire pour les bandeaux, change sa règle de quantité et le retrouve au journal', async ({ adminPage, uid }) => {
     const nom = `Patte ${uid.slice(-6)}`
     await adminPage.goto('/catalogue')
