@@ -96,6 +96,7 @@ function onKey(e: KeyboardEvent) {
   display: flex;
   gap: 4px;
   border-bottom: 1px solid var(--line);
+  overflow-x: auto;
   scrollbar-width: none;
 }
 .tab {

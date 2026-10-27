@@ -55,6 +55,7 @@ function select(t: Tab) {
   display: flex;
   gap: 4px;
   border-bottom: 1px solid var(--line);
+  overflow-x: auto;
 }
 .tab {
   border: 0;
