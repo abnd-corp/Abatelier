@@ -53,9 +53,9 @@ function select(t: Tab) {
 <style scoped>
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   border-bottom: 1px solid var(--line);
-  overflow-x: auto;
 }
 .tab {
   border: 0;
