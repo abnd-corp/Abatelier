@@ -374,8 +374,8 @@ export async function renderDocument(company: Company, template: Template, logo:
   }
 
   // --- Pied de page et filigrane, sur chaque page ---
+  // Sans le nom de l'entreprise : il est déjà en tête du document
   const identity = [
-    company.raisonSociale,
     [company.formeJuridique, company.capital && `au capital de ${company.capital}`].filter(Boolean).join(' '),
     company.siret && `SIRET ${company.siret}`,
     company.rcs && `RCS ${company.rcs}`,
@@ -383,6 +383,9 @@ export async function renderDocument(company: Company, template: Template, logo:
   ]
     .filter(Boolean)
     .join(' · ')
+  // Les conditions générales de vente sont en ligne : on en donne l'adresse en bas de chaque page (devis et factures)
+  const site = company.siteWeb.replace(/^https?:\/\//i, '').replace(/\/$/, '')
+  const cgv = site && !isAvoir ? `${site}/conditions-generales-de-vente` : ''
   const range = doc.bufferedPageRange()
   for (let i = 0; i < range.count; i++) {
     doc.switchToPage(range.start + i)
@@ -405,10 +408,19 @@ export async function renderDocument(company: Company, template: Template, logo:
     doc.font(F.r).fontSize(7.5).fillColor(MUTED)
     const lines = [template.piedDePage, identity].filter((s) => s.trim()).join('\n')
     // Le QR code (vers le site web) prend la place habituelle du numéro de page, qui se décale à sa gauche
-    const reserved = 50 + (qr ? 38 : 0)
+    // Coordonnées à gauche, QR code du site à droite (avec son adresse dessous), numéro de page au centre, tout en bas
+    const reserved = qr ? 40 : 0
     text(lines, PAGE.m, fy + 8, { width: WIDTH - reserved, lineGap: 1 })
-    text(`${i + 1} / ${range.count}`, RIGHT - reserved, fy + 8, { width: 50, align: 'right' })
-    if (qr) doc.image(qr, RIGHT - 34, fy + 4, { width: 34, height: 34 })
+    text(`${i + 1} / ${range.count}`, PAGE.m, fy + 35, { width: WIDTH, align: 'center' })
+    if (cgv) {
+      doc.font(F.r).fontSize(6.5).fillColor(MUTED)
+      text(`CGV : ${cgv}`, PAGE.m, fy + 35, { width: 230, lineBreak: false, ellipsis: true })
+    }
+    if (qr) {
+      doc.image(qr, RIGHT - 30, fy + 3, { width: 30, height: 30 })
+      doc.font(F.r).fontSize(6.5).fillColor(MUTED)
+      text(company.siteWeb.replace(/^https?:\/\//i, '').replace(/\/$/, ''), RIGHT - 130, fy + 35, { width: 130, align: 'right', lineBreak: false, ellipsis: true })
+    }
     doc.page.margins.bottom = margin
   }
 
