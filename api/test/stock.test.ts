@@ -345,7 +345,7 @@ describe('Codes-barres et réception de marchandise', () => {
     expect((await atelier.delete(`/api/stock/codes/${EAN}`)).statusCode).toBe(200)
     expect((await atelier.get(`/api/stock/codes/${EAN}`)).statusCode).toBe(404)
     expect((await atelier.delete(`/api/stock/codes/${EAN}`)).statusCode).toBe(404)
-    expect((await entries('stock.code_unlinked'))).toHaveLength(1)
+    expect(await entries('stock.code_unlinked')).toHaveLength(1)
     expect((await atelier.delete(`/api/stock/feuilles/${f.id}`)).statusCode).toBe(200)
     expect((await atelier.get('/api/stock/codes/PALETTE-1')).statusCode).toBe(404)
   })

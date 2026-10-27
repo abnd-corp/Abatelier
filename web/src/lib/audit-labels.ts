@@ -303,9 +303,13 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A ajouté au stock la feuille ${d.libelle} (${d.quantite})`, tone: 'accent' }
     case 'stock.sheet_updated':
       return { text: `A modifié la feuille ${d.libelle} (${(d.champs as string[]).join(', ')})`, tone: 'neutral' }
+    case 'stock.code_linked':
+      return { text: `A associé le code-barres ${d.code} à la feuille ${d.libelle}`, tone: 'accent' }
+    case 'stock.code_unlinked':
+      return { text: `A retiré le code-barres ${d.code} de la feuille ${d.libelle}`, tone: 'neutral' }
     case 'stock.moved':
       return {
-        text: `${d.motif === 'inventaire' ? 'Inventaire' : d.delta > 0 ? 'Entrée' : 'Sortie'} de ${Math.abs(d.delta)} feuille${Math.abs(d.delta) > 1 ? 's' : ''} : ${d.libelle} (reste ${d.apres})`,
+        text: `${d.motif === 'inventaire' ? 'Inventaire' : d.delta > 0 ? 'Entrée' : 'Sortie'} de ${Math.abs(d.delta)} feuille${Math.abs(d.delta) > 1 ? 's' : ''} : ${d.libelle} (reste ${d.apres})${d.code ? ` · code ${d.code}` : ''}`,
         tone: d.delta > 0 ? 'accent' : 'neutral',
       }
     case 'stock.sheet_deleted':

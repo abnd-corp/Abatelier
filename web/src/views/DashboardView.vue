@@ -110,10 +110,27 @@ const departures = computed(() => team.value?.employees.filter((e) => e.dateSort
     </div>
   </template>
 
-  <section v-else class="card welcome">
-    <h2>Bienvenue sur l’espace atelier</h2>
-    <p class="muted">Les commandes, le planning et les devis arriveront ici prochainement.</p>
-    <RouterLink :to="{ name: 'account' }" class="btn"><AppIcon name="user" :size="16" />Gérer mon compte</RouterLink>
+  <section v-else class="shortcuts" aria-label="Raccourcis de l’atelier">
+    <RouterLink v-if="auth.can('orders.production')" :to="{ name: 'production' }" class="card shortcut">
+      <AppIcon name="layers" :size="28" class="tile-icon" />
+      <b>Commandes à faire</b>
+      <span class="muted">Fabrication, fiches de travail</span>
+    </RouterLink>
+    <RouterLink v-if="auth.can('stock.manage')" :to="{ name: 'reception' }" class="card shortcut">
+      <AppIcon name="truck" :size="28" class="tile-icon" />
+      <b>Réception de marchandise</b>
+      <span class="muted">Scanner un code-barres, indiquer le nombre</span>
+    </RouterLink>
+    <RouterLink v-if="auth.can('stock.manage')" :to="{ name: 'stock' }" class="card shortcut">
+      <AppIcon name="inbox" :size="28" class="tile-icon" />
+      <b>Stock de feuilles</b>
+      <span class="muted">Voir ce qu’il reste</span>
+    </RouterLink>
+    <RouterLink :to="{ name: 'account' }" class="card shortcut">
+      <AppIcon name="user" :size="28" class="tile-icon" />
+      <b>Mon compte</b>
+      <span class="muted">Mot de passe, appareils</span>
+    </RouterLink>
   </section>
 </template>
 
@@ -242,5 +259,22 @@ const departures = computed(() => team.value?.employees.filter((e) => e.dateSort
   .grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+.shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.shortcut {
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+  min-height: 112px;
+  color: inherit;
+  text-decoration: none;
+  align-content: start;
+}
+.shortcut b {
+  font-size: 1.1rem;
 }
 </style>

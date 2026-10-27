@@ -203,7 +203,6 @@ const docWord = computed(() => ({ devis: ['devis', 'devis'], facture: ['facture'
   gap: 4px;
   border-bottom: 1px solid var(--line);
   margin-bottom: 16px;
-  overflow-x: auto;
 }
 .tab {
   border: 0;

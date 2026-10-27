@@ -57,7 +57,7 @@ test.describe('Commandes', () => {
     await atelier.request.post('/api/auth/password', { data: { current: temp, next: NEW_PASSWORD }, headers: { Origin: baseURL! } })
     await atelier.goto('/tableau-de-bord')
     const nav = atelier.getByRole('navigation', { name: 'Navigation principale' })
-    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication', 'Stock de feuilles'])
+    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication', 'Réception', 'Stock de feuilles'])
     await nav.getByRole('link', { name: 'Fabrication' }).click()
     await atelier.getByRole('link', { name: numero, exact: true }).click()
     await expect(atelier.getByRole('heading', { level: 1 })).toHaveText(numero)
