@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit'
 import { clean, drawBrandMark } from './pdf.js'
 import { isPince, profilePoints } from './profile.js'
+import type { SheetAdvice } from './cutting.js'
 
 // Fiche de fabrication imprimable (A4) pour l'atelier : les pièces à plier avec leur profil coté.
 // Jamais de client ni de prix : les données reçues n'en contiennent pas.
@@ -18,6 +19,8 @@ export interface SheetLine {
   longueur: number
   quantite: number
   accessoires: { nom: string; unite: 'piece' | 'paire'; quantite: number }[]
+  // Feuille conseillée d'après le stock (null : rien en stock qui convienne, ou article de la boutique)
+  decoupe?: SheetAdvice | null
 }
 
 export interface SheetData {
@@ -84,7 +87,7 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
   const cells: [string, string][] = [
     ['PRÉVUE LE', data.datePrevue ? longDay(data.datePrevue) : 'Non fixée'],
     ['PIÈCES', `${pieces} pièce${pieces > 1 ? 's' : ''} · ${data.lignes.length} ligne${data.lignes.length > 1 ? 's' : ''}`],
-    ['DÉPART', data.livraisonMode === 'retrait' ? 'Retrait à l’atelier' : 'Livraison sur chantier'],
+    ['REMISE', data.livraisonMode === 'retrait' ? 'Retrait à l’atelier' : 'Livraison sur chantier'],
     ['ÉTAPE', data.statutLabel],
   ]
   const cw = WIDTH / cells.length
@@ -108,6 +111,7 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
   // --- Pièces ---
   const SK_W = 190
   const SK_H = 134
+  const DG_H = 56
   const PAD = 12
   const infoX = PAGE.m + PAD + SK_W + 16
   const infoW = RIGHT - PAD - infoX
@@ -195,6 +199,14 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     }
     const dev = `${num(l.cotes.reduce((s, v) => s + v, 0))} mm`
     rows.push({ label: 'Développé', h: 13, draw: (y0) => (doc.font('Helvetica').fontSize(9.5).fillColor(INK), text(dev, valueX, y0)) })
+    const d = l.decoupe
+    if (d) {
+      const dev = l.cotes.reduce((s, v) => s + v, 0)
+      const txt = `${d.feuilles} feuille${d.feuilles > 1 ? 's' : ''} ${num(d.feuilleLargeur)} × ${num(d.feuilleLongueur)} mm${d.chute ? ' (chute)' : ''}\n${d.parFeuille} bande${d.parFeuille > 1 ? 's' : ''} de ${num(dev)} mm par feuille · perte ${num(d.perte)} %`
+      doc.font('Helvetica').fontSize(9.5)
+      const h = doc.heightOfString(clean(txt), { width: valueW })
+      rows.push({ label: 'Découpe', h, draw: (y0) => (doc.font('Helvetica').fontSize(9.5).fillColor(INK), text(txt, valueX, y0, { width: valueW })) })
+    }
     const acc = accessoryText(l)
     if (acc) {
       doc.font('Helvetica').fontSize(9.5)
@@ -211,7 +223,9 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     const rows = rowsOf(l)
     const titleH = 52
     const infoH = titleH + rows.reduce((s, r) => s + r.h + 5, 0) + 18 + tallyHeight(l.quantite)
-    const h = Math.max(SK_H, infoH) + 2 * PAD
+    // Sous le profil : le plan de découpe de la feuille conseillée
+    const leftH = SK_H + (l.decoupe ? DG_H + 8 : 0)
+    const h = Math.max(leftH, infoH) + 2 * PAD
     if (y + h > BOTTOM) continued()
     const top = y
     doc.roundedRect(PAGE.m, top, WIDTH, h, 6).lineWidth(0.8).strokeColor(LINE).stroke()
@@ -231,6 +245,8 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
       doc.font('Helvetica-Bold').fontSize(9).fillColor(MUTED)
       text('ARTICLE DE LA BOUTIQUE', PAGE.m + PAD, top + PAD + SK_H / 2 - 5, { width: SK_W, align: 'center', characterSpacing: 0.6 })
     }
+
+    if (l.decoupe) drawCutting(doc, l, l.decoupe, PAGE.m + PAD, top + PAD + SK_H + 8, SK_W, DG_H, accent)
 
     // Titre et quantité
     let yy = top + PAD
@@ -279,22 +295,79 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     y = top + h + 10
   })
 
-  // --- Récapitulatif et visa ---
-  const acc = accessoryTotals(data.lignes)
-  if (acc.length) {
-    const h = 26 + acc.length * 15
-    if (y + h > BOTTOM) continued()
-    doc.font('Helvetica-Bold').fontSize(10).fillColor(accent)
-    text('Accessoires à préparer', PAGE.m, y)
-    y += 18
-    for (const a of acc) {
-      doc.rect(PAGE.m, y, 10, 10).lineWidth(0.8).strokeColor(INK).stroke()
-      doc.font('Helvetica').fontSize(9.5).fillColor(INK)
-      text(`${a.quantite} × ${a.nom}${a.unite === 'paire' ? ' (paires)' : ''}`, PAGE.m + 18, y + 1)
-      y += 15
-    }
-    y += 10
+  // --- Étapes en atelier : de la feuille à la remise, avec une case et un visa par étape ---
+  const mesures = data.lignes.map((l, i) => ({ l, i })).filter(({ l }) => l.cotes.length)
+  const developpe = (l: SheetLine) => l.cotes.reduce((s, v) => s + v, 0)
+  const accAll = accessoryTotals(data.lignes)
+  const etapes: { titre: string; detail: string }[] = []
+  if (mesures.length) {
+    etapes.push({
+      titre: 'Préparer la matière',
+      detail: mesures
+        .map(
+          ({ l, i }) =>
+            `Pièce ${i + 1} : ${l.decoupe ? `${l.decoupe.feuilles} × ${l.decoupe.libelle}` : `${l.materialLabel}, ${l.colorLabel}`}${l.decoupe ? '' : ' (aucune feuille conseillée en stock : à choisir)'}`,
+        )
+        .join('\n'),
+    })
+    etapes.push({
+      titre: 'Découper à la cisaille',
+      detail: mesures.map(({ l, i }) => `Pièce ${i + 1} : ${num(l.quantite)} bande${l.quantite > 1 ? 's' : ''} de ${num(developpe(l))} mm de large × ${num(l.longueur)} mm de long`).join('\n'),
+    })
+    etapes.push({
+      titre: 'Plier à la presse',
+      detail: mesures
+        .map(({ l, i }) => `Pièce ${i + 1} : ${l.angles.length} pli${l.angles.length > 1 ? 's' : ''}, dans l’ordre 1 à ${l.angles.length} (voir le profil) · cochez chaque pièce pliée`)
+        .join('\n'),
+    })
+    etapes.push({
+      titre: 'Contrôler',
+      detail: mesures
+        .map(({ l, i }) => `Pièce ${i + 1} : cotes ${l.cotes.map((c, j) => `${letter(j)} ${num(c)}`).join(' · ')} · longueur ${num(l.longueur)} mm · angles · aspect du laquage`)
+        .join('\n'),
+    })
   }
+  if (accAll.length) etapes.push({ titre: 'Préparer les accessoires', detail: accAll.map((a) => `${num(a.quantite)} × ${a.nom}${a.unite === 'paire' ? ' (paires)' : ''}`).join('\n') })
+  etapes.push({ titre: 'Étiqueter et emballer', detail: `N° ${data.numero} et repère de chaque pièce sur le colis` })
+  if (mesures.length) etapes.push({ titre: 'Mettre à jour le stock de feuilles', detail: 'Noter dans « Stock de feuilles » : feuilles utilisées ______ · chute récupérée (format) ____________' })
+  etapes.push({
+    titre: data.livraisonMode === 'retrait' ? 'Remise : retrait à l’atelier' : 'Remise : livraison sur chantier',
+    detail: 'Passer la commande à l’étape « Prête » puis « Livrée / retirée »',
+  })
+
+  if (y + 60 > BOTTOM) continued()
+  doc.font('Helvetica-Bold').fontSize(10).fillColor(accent)
+  text('Étapes en atelier', PAGE.m, y)
+  y += 20
+  const VISA_W = 70
+  etapes.forEach((e, k) => {
+    doc.font('Helvetica').fontSize(9)
+    const dh = doc.heightOfString(clean(e.detail), { width: WIDTH - 22 - VISA_W - 10 })
+    const h = Math.max(30, 18 + dh + 8)
+    if (y + h > BOTTOM) continued()
+    doc.roundedRect(PAGE.m, y, WIDTH, h, 4).lineWidth(0.6).strokeColor(LINE).stroke()
+    doc
+      .rect(PAGE.m + 8, y + 8, 11, 11)
+      .lineWidth(1)
+      .strokeColor(INK)
+      .stroke()
+    doc.font('Helvetica-Bold').fontSize(9.5).fillColor(INK)
+    text(`${k + 1}. ${e.titre}`, PAGE.m + 28, y + 7, { width: WIDTH - 28 - VISA_W - 10, lineBreak: false })
+    doc.font('Helvetica').fontSize(9).fillColor(MUTED)
+    text(e.detail, PAGE.m + 28, y + 20, { width: WIDTH - 22 - VISA_W - 10 })
+    doc.font('Helvetica-Bold').fontSize(7).fillColor(MUTED)
+    text('VISA', RIGHT - VISA_W, y + 7, { characterSpacing: 0.6 })
+    doc
+      .moveTo(RIGHT - VISA_W, y + h - 8)
+      .lineTo(RIGHT - 8, y + h - 8)
+      .lineWidth(0.6)
+      .strokeColor(LINE)
+      .stroke()
+    y += h + 5
+  })
+  y += 8
+
+  // --- Récapitulatif et visa ---
   if (y + 60 > BOTTOM) continued()
   const vw = (WIDTH - 20) / 3
   ;['Plié par', 'Contrôlé par', 'Date'].forEach((label, i) => {
@@ -420,4 +493,38 @@ function drawProfile(doc: PDFKit.PDFDocument, l: SheetLine, cap: number, bx: num
   })
 
   doc.restore()
+}
+
+/** Plan de découpe : la feuille conseillée (longueur à l'horizontale) avec les bandes de la pièce posées dedans, à l'échelle. */
+function drawCutting(doc: PDFKit.PDFDocument, l: SheetLine, d: SheetAdvice, bx: number, by: number, bw: number, bh: number, accent: string) {
+  doc.roundedRect(bx, by, bw, bh, 5).fill(ZEBRA)
+  const pad = 6
+  const s = Math.min((bw - 2 * pad) / d.feuilleLongueur, (bh - 2 * pad - 9) / d.feuilleLargeur)
+  const sw = d.feuilleLongueur * s
+  const sh = d.feuilleLargeur * s
+  const ox = bx + (bw - sw) / 2
+  const oy = by + pad
+  const dev = l.cotes.reduce((t, v) => t + v, 0)
+  doc.rect(ox, oy, sw, sh).fillAndStroke('#ffffff', STROKE)
+  // Sens 1 : la longueur de la pièce suit la longueur de la feuille ; sens 2 : quart de tour
+  const cellW = (d.disposition.sensLongueur ? l.longueur : dev) * s
+  const cellH = (d.disposition.sensLongueur ? dev : l.longueur) * s
+  const nx = d.disposition.sensLongueur ? d.disposition.rangees : d.disposition.colonnes
+  const ny = d.disposition.sensLongueur ? d.disposition.colonnes : d.disposition.rangees
+  doc.fillOpacity(0.3)
+  let left = d.parFeuille
+  for (let j = 0; j < ny && left > 0; j++)
+    for (let i = 0; i < nx && left > 0; i++, left--) {
+      doc
+        .rect(ox + i * cellW, oy + j * cellH, cellW, cellH)
+        .lineWidth(0.6)
+        .fillAndStroke(accent, STROKE)
+    }
+  doc.fillOpacity(1)
+  doc.font('Helvetica').fontSize(6.5).fillColor(MUTED)
+  doc.text(clean(`Feuille ${d.feuilleLargeur.toLocaleString('fr-FR')} × ${d.feuilleLongueur.toLocaleString('fr-FR')} mm · ${d.parFeuille} bande${d.parFeuille > 1 ? 's' : ''}`), bx, oy + sh + 3, {
+    width: bw,
+    align: 'center',
+    lineBreak: false,
+  })
 }

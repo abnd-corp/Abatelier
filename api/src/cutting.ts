@@ -22,6 +22,9 @@ export interface SheetAdvice {
   sheetId: string
   libelle: string
   chute: boolean
+  /** Dimensions de la feuille, en mm */
+  feuilleLargeur: number
+  feuilleLongueur: number
   /** Pièces que l'on tire d'une feuille */
   parFeuille: number
   /** Feuilles à prendre pour toute la ligne */
@@ -59,6 +62,8 @@ export function adviseSheets(piece: PieceNeed, sheets: SheetOption[]): SheetAdvi
       sheetId: s.id,
       libelle: s.libelle,
       chute: s.chute,
+      feuilleLargeur: s.largeur,
+      feuilleLongueur: s.longueur,
       parFeuille: f.n,
       feuilles,
       disposition: { sensLongueur: f.sensLongueur, colonnes: f.colonnes, rangees: f.rangees },

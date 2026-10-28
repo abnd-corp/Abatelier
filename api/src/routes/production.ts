@@ -49,6 +49,36 @@ async function linesOf(orderId: string) {
   return rows.map((l) => ({ ...l, accessoires: l.accessoires.map((a) => ({ nom: a.nom, unite: a.unite, quantite: a.quantite })) }))
 }
 
+/** Pour chaque ligne de la commande, la feuille à prendre d'après le stock (les trois meilleures), ou la raison s'il n'y en a pas. */
+async function sheetAdvice(orderId: string) {
+  const lignes = await db.select().from(orderLines).where(eq(orderLines.orderId, orderId)).orderBy(asc(orderLines.position))
+  const stock = await db
+    .select({ s: sheetStock, m: materials, c: colors })
+    .from(sheetStock)
+    .innerJoin(materials, eq(materials.id, sheetStock.materialId))
+    .leftJoin(colors, eq(colors.id, sheetStock.colorId))
+  const options = (materialId: string | null, colorId: string | null): SheetOption[] =>
+    stock
+      .filter((r) => r.s.materialId === materialId && (r.s.colorId ?? null) === (colorId ?? null))
+      .map((r) => ({
+        id: r.s.id,
+        largeur: r.s.largeur,
+        longueur: r.s.longueur,
+        chute: r.s.chute,
+        quantite: r.s.quantite,
+        libelle: `${materialLabel(r.m)} · ${r.c ? colorLabel(r.c) : 'brut'} · ${r.s.largeur.toLocaleString('fr-FR')} × ${r.s.longueur.toLocaleString('fr-FR')} mm${r.s.chute ? ' (chute)' : ''}`,
+      }))
+  return lignes.map((l) => {
+    // Un article de la boutique n'a pas de pièce dessinée : rien à découper
+    if (!l.cotes.length) return { ligneId: l.id, repere: l.repere, modeleLabel: l.modeleLabel, besoin: null, conseils: [], raison: 'Article standard : pas de calcul de découpe.' }
+    const developpe = l.cotes.reduce((a, b) => a + b, 0)
+    const besoin = { developpe, longueur: l.longueur, quantite: l.quantite }
+    const conseils = adviseSheets(besoin, options(l.materialId, l.colorId)).slice(0, 3)
+    const raison = conseils.length ? null : 'Aucune feuille en stock pour cette matière et ce coloris dans un format qui convient. Vérifiez le stock ou commandez des feuilles.'
+    return { ligneId: l.id, repere: l.repere, modeleLabel: l.modeleLabel, besoin, conseils, raison }
+  })
+}
+
 const next = (statut: (typeof ORDER_STATUTS)[number]) => NEXT[statut].find((s) => PRODUCTION_STEPS.includes(s)) ?? null
 
 export async function productionRoutes(app: FastifyInstance) {
@@ -95,44 +125,24 @@ export async function productionRoutes(app: FastifyInstance) {
   app.get('/:id/feuilles', async (req, reply) => {
     const o = await findOrder((req.params as { id: string }).id, reply)
     if (!o) return
-    const lignes = await db.select().from(orderLines).where(eq(orderLines.orderId, o.id)).orderBy(asc(orderLines.position))
-    const stock = await db
-      .select({ s: sheetStock, m: materials, c: colors })
-      .from(sheetStock)
-      .innerJoin(materials, eq(materials.id, sheetStock.materialId))
-      .leftJoin(colors, eq(colors.id, sheetStock.colorId))
-    const options = (materialId: string | null, colorId: string | null): SheetOption[] =>
-      stock
-        .filter((r) => r.s.materialId === materialId && (r.s.colorId ?? null) === (colorId ?? null))
-        .map((r) => ({
-          id: r.s.id,
-          largeur: r.s.largeur,
-          longueur: r.s.longueur,
-          chute: r.s.chute,
-          quantite: r.s.quantite,
-          libelle: `${materialLabel(r.m)} · ${r.c ? colorLabel(r.c) : 'brut'} · ${r.s.largeur.toLocaleString('fr-FR')} × ${r.s.longueur.toLocaleString('fr-FR')} mm${r.s.chute ? ' (chute)' : ''}`,
-        }))
-    return {
-      lignes: lignes.map((l) => {
-        // Un article de la boutique n'a pas de pièce dessinée : rien à découper
-        if (!l.cotes.length) return { ligneId: l.id, repere: l.repere, modeleLabel: l.modeleLabel, besoin: null, conseils: [], raison: 'Article standard : pas de calcul de découpe.' }
-        const developpe = l.cotes.reduce((a, b) => a + b, 0)
-        const besoin = { developpe, longueur: l.longueur, quantite: l.quantite }
-        const conseils = adviseSheets(besoin, options(l.materialId, l.colorId)).slice(0, 3)
-        const raison = conseils.length ? null : 'Aucune feuille en stock pour cette matière et ce coloris dans un format qui convient. Vérifiez le stock ou commandez des feuilles.'
-        return { ligneId: l.id, repere: l.repere, modeleLabel: l.modeleLabel, besoin, conseils, raison }
-      }),
-    }
+    return { lignes: await sheetAdvice(o.id) }
   })
 
   // Fiche imprimable : ouverte dans un nouvel onglet, le navigateur l'imprime
   app.get('/:id/fiche.pdf', async (req, reply) => {
     const o = await findOrder((req.params as { id: string }).id, reply)
     if (!o) return
-    const [lignes, company, template] = await Promise.all([linesOf(o.id), getCompany(), getTemplate()])
+    const [lignes, company, template, conseils] = await Promise.all([linesOf(o.id), getCompany(), getTemplate(), sheetAdvice(o.id)])
     const qr = template.qrCode ? await siteQrPng(company.siteWeb) : null
     const pdf = await renderProductionSheet(
-      { numero: o.numero, statutLabel: STATUT_LABELS[o.statut], datePrevue: o.datePrevue, livraisonMode: o.livraisonMode, imprimeLe: new Date(), lignes },
+      {
+        numero: o.numero,
+        statutLabel: STATUT_LABELS[o.statut],
+        datePrevue: o.datePrevue,
+        livraisonMode: o.livraisonMode,
+        imprimeLe: new Date(),
+        lignes: lignes.map((l, i) => ({ ...l, decoupe: conseils[i]?.conseils[0] ?? null })),
+      },
       { accent: template.couleur, logo: company.logo, qr },
     )
     await audit(req, 'order.sheet_printed', { targetType: 'order', targetId: o.id, details: { numero: o.numero, statut: o.statut } })
