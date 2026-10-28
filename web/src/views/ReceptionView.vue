@@ -393,7 +393,6 @@ h2 {
   inset: 22% 10%;
   border: 3px solid rgb(255 255 255 / 0.85);
   border-radius: 12px;
-  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.25);
   pointer-events: none;
 }
 .link-btn {
