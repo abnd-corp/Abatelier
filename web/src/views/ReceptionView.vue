@@ -222,139 +222,151 @@ const bump = (d: number) => {
   <p v-if="notice" class="alert ok" role="status">{{ notice }}</p>
   <p v-if="error" class="alert bad" role="alert">{{ error }}</p>
 
-  <!-- 1. Scanner le code avec la caméra (saisie à la main en secours) -->
-  <section v-if="step === 'scan'" class="card pane" aria-labelledby="scan-titre">
-    <h2 id="scan-titre">1. Scannez le code-barres</h2>
-    <div v-show="camera" class="viewer">
-      <video ref="video" class="video" playsinline muted aria-label="Caméra : placez le code-barres dans le cadre" />
-      <span class="frame" aria-hidden="true" />
-    </div>
-    <p v-if="camera" class="muted hint">Placez le code-barres dans le cadre : la lecture est automatique.</p>
-    <p v-if="cameraError" class="alert bad" role="alert">{{ cameraError }}</p>
-    <button v-if="!camera" class="btn primary big" type="button" @click="openCamera"><AppIcon name="eye" :size="18" />{{ cameraError ? 'Relancer la caméra' : 'Scanner avec la caméra' }}</button>
-    <button v-if="!manual" class="link-btn" type="button" @click="showManual">Le code ne se lit pas ? Le saisir à la main</button>
-    <form v-if="manual" class="scan" novalidate @submit.prevent="lookup">
-      <label for="r-code">Code-barres saisi à la main</label>
-      <input
-        id="r-code"
-        ref="codeInput"
-        v-model="saisie"
-        class="input big mono"
-        inputmode="text"
-        autocomplete="off"
-        autocapitalize="characters"
-        spellcheck="false"
-        placeholder="Saisissez le code"
-        enterkeyhint="search"
-      />
-      <button class="btn big" type="submit" :disabled="busy || !saisie.trim()">Chercher</button>
-    </form>
-  </section>
+  <div class="layout">
+    <!-- 1. Scanner le code avec la caméra (saisie à la main en secours) -->
+    <section v-if="step === 'scan'" class="card pane" aria-labelledby="scan-titre">
+      <h2 id="scan-titre">1. Scannez le code-barres</h2>
+      <div v-show="camera" class="viewer">
+        <video ref="video" class="video" playsinline muted aria-label="Caméra : placez le code-barres dans le cadre" />
+        <span class="frame" aria-hidden="true" />
+      </div>
+      <p v-if="camera" class="muted hint">Placez le code-barres dans le cadre : la lecture est automatique.</p>
+      <p v-if="cameraError" class="alert bad" role="alert">{{ cameraError }}</p>
+      <button v-if="!camera" class="btn primary big" type="button" @click="openCamera"><AppIcon name="eye" :size="18" />{{ cameraError ? 'Relancer la caméra' : 'Scanner avec la caméra' }}</button>
+      <button v-if="!manual" class="link-btn" type="button" @click="showManual">Le code ne se lit pas ? Le saisir à la main</button>
+      <form v-if="manual" class="scan" novalidate @submit.prevent="lookup">
+        <label for="r-code">Code-barres saisi à la main</label>
+        <input
+          id="r-code"
+          ref="codeInput"
+          v-model="saisie"
+          class="input big mono"
+          inputmode="text"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          placeholder="Saisissez le code"
+          enterkeyhint="search"
+        />
+        <button class="btn big" type="submit" :disabled="busy || !saisie.trim()">Chercher</button>
+      </form>
+    </section>
 
-  <!-- 2. Référence trouvée : le nombre reçu -->
-  <section v-else-if="step === 'trouve' && feuille" class="card pane" aria-labelledby="trouve-titre">
-    <h2 id="trouve-titre">2. Combien de feuilles reçues ?</h2>
-    <div class="ref">
-      <span v-if="feuille.hex" class="swatch" :style="{ background: feuille.hex }" aria-hidden="true" />
-      <div>
-        <b>{{ feuille.libelle }}</b>
-        <span class="sub mono">Code {{ code }} · en stock : {{ feuille.quantite }}</span>
+    <!-- 2. Référence trouvée : le nombre reçu -->
+    <section v-else-if="step === 'trouve' && feuille" class="card pane" aria-labelledby="trouve-titre">
+      <h2 id="trouve-titre">2. Combien de feuilles reçues ?</h2>
+      <div class="ref">
+        <span v-if="feuille.hex" class="swatch" :style="{ background: feuille.hex }" aria-hidden="true" />
+        <div>
+          <b>{{ feuille.libelle }}</b>
+          <span class="sub mono">Code {{ code }} · en stock : {{ feuille.quantite }}</span>
+        </div>
       </div>
-    </div>
-    <form class="recv" novalidate @submit.prevent="receive">
-      <label for="r-qty">Feuilles reçues</label>
-      <div class="stepper">
-        <button class="btn big" type="button" aria-label="Une feuille de moins" @click="bump(-1)">−</button>
-        <input id="r-qty" ref="qtyInput" v-model="quantite" class="input big mono" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" />
-        <button class="btn big" type="button" aria-label="Une feuille de plus" @click="bump(1)">+</button>
-      </div>
-      <div class="quick">
-        <button v-for="n in [5, 10, 20, 50]" :key="n" class="chip" type="button" @click="quantite = String(n)">{{ n }}</button>
-      </div>
-      <label for="r-note">Note (n° de bon de livraison, fournisseur…)</label>
-      <input id="r-note" v-model="note" class="input" maxlength="300" autocomplete="off" />
+      <form class="recv" novalidate @submit.prevent="receive">
+        <label for="r-qty">Feuilles reçues</label>
+        <div class="stepper">
+          <button class="btn big" type="button" aria-label="Une feuille de moins" @click="bump(-1)">−</button>
+          <input id="r-qty" ref="qtyInput" v-model="quantite" class="input big mono" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="0" />
+          <button class="btn big" type="button" aria-label="Une feuille de plus" @click="bump(1)">+</button>
+        </div>
+        <div class="quick">
+          <button v-for="n in [5, 10, 20, 50]" :key="n" class="chip" type="button" @click="quantite = String(n)">{{ n }}</button>
+        </div>
+        <label for="r-note">Note (n° de bon de livraison, fournisseur…)</label>
+        <input id="r-note" v-model="note" class="input" maxlength="300" autocomplete="off" />
+        <div class="actions">
+          <button class="btn primary big" type="submit" :disabled="busy || !quantite">Valider l’entrée en stock</button>
+          <button class="btn big" type="button" @click="cancel">Annuler</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 3. Code inconnu -->
+    <section v-else-if="step === 'inconnu'" class="card pane" aria-labelledby="inconnu-titre">
+      <h2 id="inconnu-titre">Code inconnu</h2>
+      <p>
+        Le code <b class="mono">{{ code }}</b> n’est pas encore associé à une référence du stock. Choisissez la référence qui lui correspond : il sera reconnu à la prochaine réception.
+      </p>
+      <label for="r-filtre">Chercher une référence</label>
+      <input id="r-filtre" v-model="filtre" class="input" placeholder="Aluminium, Blanc, 1 250…" autocomplete="off" />
+      <ul class="choices">
+        <li v-for="f in choices" :key="f.id">
+          <button class="choice" type="button" :disabled="busy" @click="link(f)">
+            <span v-if="f.hex" class="swatch" :style="{ background: f.hex }" aria-hidden="true" />
+            <span>{{ f.libelle }}</span>
+            <span class="muted mono">{{ f.quantite }}</span>
+          </button>
+        </li>
+        <li v-if="!choices.length" class="muted">Aucune référence ne correspond.</li>
+      </ul>
       <div class="actions">
-        <button class="btn primary big" type="submit" :disabled="busy || !quantite">Valider l’entrée en stock</button>
+        <button class="btn big" type="button" @click="step = 'nouvelle'"><AppIcon name="plus" :size="18" />Créer une nouvelle référence</button>
         <button class="btn big" type="button" @click="cancel">Annuler</button>
       </div>
-    </form>
-  </section>
+    </section>
 
-  <!-- 3. Code inconnu -->
-  <section v-else-if="step === 'inconnu'" class="card pane" aria-labelledby="inconnu-titre">
-    <h2 id="inconnu-titre">Code inconnu</h2>
-    <p>
-      Le code <b class="mono">{{ code }}</b> n’est pas encore associé à une référence du stock. Choisissez la référence qui lui correspond : il sera reconnu à la prochaine réception.
-    </p>
-    <label for="r-filtre">Chercher une référence</label>
-    <input id="r-filtre" v-model="filtre" class="input" placeholder="Aluminium, Blanc, 1 250…" autocomplete="off" />
-    <ul class="choices">
-      <li v-for="f in choices" :key="f.id">
-        <button class="choice" type="button" :disabled="busy" @click="link(f)">
-          <span v-if="f.hex" class="swatch" :style="{ background: f.hex }" aria-hidden="true" />
-          <span>{{ f.libelle }}</span>
-          <span class="muted mono">{{ f.quantite }}</span>
-        </button>
-      </li>
-      <li v-if="!choices.length" class="muted">Aucune référence ne correspond.</li>
-    </ul>
-    <div class="actions">
-      <button class="btn big" type="button" @click="step = 'nouvelle'"><AppIcon name="plus" :size="18" />Créer une nouvelle référence</button>
-      <button class="btn big" type="button" @click="cancel">Annuler</button>
-    </div>
-  </section>
-
-  <!-- 4. Nouvelle référence pour ce code -->
-  <section v-else-if="step === 'nouvelle'" class="card pane" aria-labelledby="nouvelle-titre">
-    <h2 id="nouvelle-titre">Nouvelle référence pour le code {{ code }}</h2>
-    <form class="recv" novalidate @submit.prevent="create">
-      <label for="n-mat">Matière et épaisseur</label>
-      <select id="n-mat" v-model="nouvelle.materialId" class="input">
-        <option value="" disabled>Choisir…</option>
-        <option v-for="m in options.materials" :key="m.id" :value="m.id">{{ m.label }}</option>
-      </select>
-      <label for="n-col">Coloris</label>
-      <select id="n-col" v-model="nouvelle.colorId" class="input">
-        <option value="">Brut, sans laquage</option>
-        <option v-for="c in options.colors" :key="c.id" :value="c.id">{{ c.label }}</option>
-      </select>
-      <div class="two">
-        <div>
-          <label for="n-l">Largeur (mm)</label>
-          <input id="n-l" v-model="nouvelle.largeur" class="input mono" inputmode="numeric" />
+    <!-- 4. Nouvelle référence pour ce code -->
+    <section v-else-if="step === 'nouvelle'" class="card pane" aria-labelledby="nouvelle-titre">
+      <h2 id="nouvelle-titre">Nouvelle référence pour le code {{ code }}</h2>
+      <form class="recv" novalidate @submit.prevent="create">
+        <label for="n-mat">Matière et épaisseur</label>
+        <select id="n-mat" v-model="nouvelle.materialId" class="input">
+          <option value="" disabled>Choisir…</option>
+          <option v-for="m in options.materials" :key="m.id" :value="m.id">{{ m.label }}</option>
+        </select>
+        <label for="n-col">Coloris</label>
+        <select id="n-col" v-model="nouvelle.colorId" class="input">
+          <option value="">Brut, sans laquage</option>
+          <option v-for="c in options.colors" :key="c.id" :value="c.id">{{ c.label }}</option>
+        </select>
+        <div class="two">
+          <div>
+            <label for="n-l">Largeur (mm)</label>
+            <input id="n-l" v-model="nouvelle.largeur" class="input mono" inputmode="numeric" />
+          </div>
+          <div>
+            <label for="n-h">Longueur (mm)</label>
+            <input id="n-h" v-model="nouvelle.longueur" class="input mono" inputmode="numeric" />
+          </div>
         </div>
-        <div>
-          <label for="n-h">Longueur (mm)</label>
-          <input id="n-h" v-model="nouvelle.longueur" class="input mono" inputmode="numeric" />
+        <p v-if="fieldError" class="alert bad" role="alert">{{ fieldError }}</p>
+        <div class="actions">
+          <button class="btn primary big" type="submit" :disabled="busy || !nouvelle.materialId">Créer et continuer</button>
+          <button class="btn big" type="button" @click="step = 'inconnu'">Retour</button>
         </div>
-      </div>
-      <p v-if="fieldError" class="alert bad" role="alert">{{ fieldError }}</p>
-      <div class="actions">
-        <button class="btn primary big" type="submit" :disabled="busy || !nouvelle.materialId">Créer et continuer</button>
-        <button class="btn big" type="button" @click="step = 'inconnu'">Retour</button>
-      </div>
-    </form>
-  </section>
+      </form>
+    </section>
 
-  <section v-if="recents.length && step === 'scan'" class="card pane recents" aria-labelledby="recents-titre">
-    <h2 id="recents-titre">Dernières réceptions</h2>
-    <ul>
-      <li v-for="m in recents" :key="m.id">
-        <span>{{ m.libelle }}</span>
-        <b class="mono">+{{ m.delta }}</b>
-        <span class="muted">{{ m.par ?? '' }}</span>
-      </li>
-    </ul>
-    <RouterLink :to="{ name: 'stock' }" class="btn">Voir le stock</RouterLink>
-  </section>
+    <section v-if="recents.length" class="card pane recents" aria-labelledby="recents-titre">
+      <h2 id="recents-titre">Dernières réceptions</h2>
+      <ul>
+        <li v-for="m in recents" :key="m.id">
+          <span>{{ m.libelle }}</span>
+          <b class="mono">+{{ m.delta }}</b>
+          <span class="muted">{{ m.par ?? '' }}</span>
+        </li>
+      </ul>
+      <RouterLink :to="{ name: 'stock' }" class="btn">Voir le stock</RouterLink>
+    </section>
+  </div>
 </template>
 
 <style scoped>
+.layout {
+  display: grid;
+  gap: 20px;
+  align-items: start;
+}
+/* Ordinateur : l'étape en cours à gauche, les dernières réceptions à droite */
+@media (min-width: 1000px) {
+  .layout {
+    grid-template-columns: minmax(0, 1.3fr) minmax(320px, 1fr);
+  }
+}
 .pane {
   display: grid;
   gap: 14px;
   padding: 20px;
-  max-width: 560px;
 }
 h2 {
   margin: 0;

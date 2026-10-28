@@ -2,6 +2,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { api, ApiError } from '@/api'
 import AppIcon from '@/components/AppIcon.vue'
+import CodeField from '@/components/CodeField.vue'
+import SheetCodes from '@/components/SheetCodes.vue'
 import { jour } from '@/lib/espace'
 import { ETAT_LABELS, MOTIFS, MOTIFS_ENTREE, MOTIFS_SORTIE, type EtatStock, type Feuille, type Motif, type Mouvement, type StockOptions, type StockTotaux } from '@/lib/stock'
 
@@ -41,7 +43,7 @@ onMounted(async () => {
 // réutilisé) : on garde un seul formulaire, mais pas les mêmes valeurs de départ ni le même intitulé.
 const ajoutType = ref<'entiere' | 'chute' | null>(null)
 const histOuvert = ref(false)
-const draft = reactive({ materialId: '', colorId: '', largeur: '1250', longueur: '3000', quantite: '0', seuil: '0', chute: false, note: '' })
+const draft = reactive({ materialId: '', colorId: '', largeur: '1250', longueur: '3000', quantite: '0', seuil: '0', chute: false, note: '', code: '' })
 const errors = reactive<Record<string, string>>({})
 const adding = ref(false)
 const num = (v: string) => (v.trim() === '' ? NaN : Number(v.replace(',', '.')))
@@ -62,6 +64,7 @@ function ouvrirAjout(type: 'entiere' | 'chute') {
     seuil: '0',
     chute: type === 'chute',
     note: '',
+    code: '',
   })
 }
 
@@ -82,10 +85,11 @@ async function add() {
         seuil: num(draft.seuil),
         chute: draft.chute,
         note: draft.note,
+        ...(draft.code.trim() ? { code: draft.code } : {}),
       },
     })
     info.value = draft.chute ? 'Chute ajoutée au stock.' : 'Feuille ajoutée au stock.'
-    Object.assign(draft, { quantite: '0', seuil: '0', note: '' })
+    Object.assign(draft, { quantite: '0', seuil: '0', note: '', code: '' })
     ajoutType.value = null
     await load()
   } catch (e) {
@@ -98,7 +102,7 @@ async function add() {
 
 // --- Ajuster le stock (entrée, sortie ou inventaire) et noter une instruction : un seul panneau par carte à la fois ---
 type Mode = 'entree' | 'sortie' | 'inventaire'
-type Panel = 'ajuster' | 'note'
+type Panel = 'ajuster' | 'note' | 'codes'
 const openPanel = ref<{ id: string; panel: Panel } | null>(null)
 const estOuvert = (f: Feuille, panel: Panel) => openPanel.value?.id === f.id && openPanel.value.panel === panel
 
@@ -115,6 +119,9 @@ function choisirMode(f: Feuille, mode: Mode) {
 function ouvrirAjuster(f: Feuille) {
   openPanel.value = estOuvert(f, 'ajuster') ? null : { id: f.id, panel: 'ajuster' }
   if (openPanel.value) choisirMode(f, 'entree')
+}
+function ouvrirCodes(f: Feuille) {
+  openPanel.value = estOuvert(f, 'codes') ? null : { id: f.id, panel: 'codes' }
 }
 const motifs = computed(() => (move.mode === 'entree' ? MOTIFS_ENTREE : move.mode === 'sortie' ? MOTIFS_SORTIE : (['inventaire'] as Motif[])))
 
@@ -327,6 +334,11 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
         <span v-if="errors.seuil" class="field-error">{{ errors.seuil }}</span>
       </div>
       <div class="field wide">
+        <label for="s-code">Code-barres du fournisseur (facultatif)</label>
+        <CodeField id="s-code" v-model="draft.code" :invalid="!!errors.code" />
+        <span v-if="errors.code" class="field-error">{{ errors.code }}</span>
+      </div>
+      <div class="field wide">
         <label for="s-note">{{ ajoutType === 'chute' ? 'Note (pièce d’origine, découpe…)' : 'Note (rack, palette, fournisseur…)' }}</label>
         <input id="s-note" v-model="draft.note" class="input" maxlength="300" autocomplete="off" />
       </div>
@@ -414,6 +426,9 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
             <button class="btn small" type="button" :aria-expanded="estOuvert(f, 'note')" :aria-label="`${f.note ? 'Modifier la' : 'Ajouter une'} note : ${f.libelle}`" @click="ouvrirNote(f)">
               {{ f.note ? 'Modifier la note' : 'Ajouter une note' }}
             </button>
+            <button class="btn small" type="button" :aria-expanded="estOuvert(f, 'codes')" :aria-label="`Codes-barres : ${f.libelle}`" @click="ouvrirCodes(f)">
+              <AppIcon name="tag" :size="14" />Codes-barres{{ f.codes?.length ? ` (${f.codes.length})` : '' }}
+            </button>
             <button v-if="!f.quantite" class="btn small danger" type="button" :aria-label="`Supprimer la référence ${f.libelle}`" @click="supprimer(f)">
               <AppIcon name="trash" :size="14" />
             </button>
@@ -459,6 +474,8 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
               <button class="btn" type="button" @click="openPanel = null">Annuler</button>
             </div>
           </form>
+
+          <SheetCodes v-if="estOuvert(f, 'codes')" :feuille="f" @changed="load" />
         </article>
       </div>
     </section>
@@ -491,6 +508,9 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
             <button class="btn small" type="button" :aria-expanded="estOuvert(f, 'ajuster')" :aria-label="`Ajuster le stock : ${f.libelle}`" @click="ouvrirAjuster(f)">Ajuster le stock</button>
             <button class="btn small" type="button" :aria-expanded="estOuvert(f, 'note')" :aria-label="`${f.note ? 'Modifier la' : 'Ajouter une'} note : ${f.libelle}`" @click="ouvrirNote(f)">
               {{ f.note ? 'Modifier la note' : 'Ajouter une note' }}
+            </button>
+            <button class="btn small" type="button" :aria-expanded="estOuvert(f, 'codes')" :aria-label="`Codes-barres : ${f.libelle}`" @click="ouvrirCodes(f)">
+              <AppIcon name="tag" :size="14" />Codes-barres{{ f.codes?.length ? ` (${f.codes.length})` : '' }}
             </button>
             <button v-if="!f.quantite" class="btn small danger" type="button" :aria-label="`Supprimer la référence ${f.libelle}`" @click="supprimer(f)">
               <AppIcon name="trash" :size="14" />
@@ -537,6 +557,8 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
               <button class="btn" type="button" @click="openPanel = null">Annuler</button>
             </div>
           </form>
+
+          <SheetCodes v-if="estOuvert(f, 'codes')" :feuille="f" @changed="load" />
         </article>
       </div>
     </section>

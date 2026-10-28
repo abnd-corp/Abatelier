@@ -44,7 +44,7 @@ test.describe('Réception de marchandise @responsive', () => {
     // Code connu : le nombre reçu entre en stock
     await saisir(page, code.toLowerCase())
     await expect(page.getByText('Combien de feuilles reçues')).toBeVisible()
-    await expect(page.getByText(`${largeur.toLocaleString('fr-FR')} × 2 500 mm`)).toBeVisible()
+    await expect(page.locator('#trouve-titre ~ .ref').getByText(`${largeur.toLocaleString('fr-FR')} × 2 500 mm`)).toBeVisible()
     await page.getByRole('button', { name: '10', exact: true }).click()
     await page.getByLabel('Note').fill('BL e2e')
     await page.getByRole('button', { name: 'Valider l’entrée en stock' }).click()
@@ -92,5 +92,48 @@ test.describe('Réception de marchandise @responsive', () => {
     await expect(page.getByRole('heading', { name: 'Code inconnu' })).toBeVisible()
     await page.getByRole('button', { name: 'Annuler' }).click()
     await expect(page.getByRole('heading', { name: '1. Scannez le code-barres' })).toBeVisible()
+  })
+
+  test('la direction enregistre le code-barres d’une référence depuis le stock, puis la réception le reconnaît', async ({ browser, baseURL, uid }) => {
+    const adminPage = await (await browser.newContext()).newPage()
+    await apiLogin(adminPage.request, baseURL!, ADMIN.identifiant, ADMIN.password)
+    const options = await (await adminPage.request.get('/api/stock/options')).json()
+    const largeur = 1100 + Math.floor(Math.random() * 900)
+    const code = `STK${uid
+      .replace(/[^a-z0-9]/gi, '')
+      .toUpperCase()
+      .slice(-12)}`
+    const res = await adminPage.request.post('/api/stock/feuilles', {
+      data: { materialId: options.materials[0].id, colorId: options.colors[0].id, largeur, longueur: 2500, quantite: 2 },
+      headers: { Origin: baseURL! },
+    })
+    expect(res.status(), await res.text()).toBe(201)
+
+    // Depuis la carte de la référence, on ajoute le code du fournisseur
+    await adminPage.goto('/stock')
+    const carte = adminPage.locator('article.sheet-card', { hasText: `${largeur.toLocaleString('fr-FR')} × 2 500 mm` })
+    await carte.getByRole('button', { name: /^Codes-barres/ }).click()
+    await expect(carte.getByText('Aucun code-barres')).toBeVisible()
+    await carte.getByLabel('Ajouter un code-barres').fill(code.toLowerCase())
+    await carte.getByRole('button', { name: 'Associer ce code' }).click()
+    await expect(carte.getByText(code, { exact: true })).toBeVisible()
+    await expect(carte.getByRole('button', { name: /^Codes-barres/ })).toContainText('(1)')
+
+    // À la réception, ce code est reconnu : on arrive directement sur le nombre de feuilles
+    await adminPage.goto('/reception')
+    await adminPage
+      .getByRole('button', { name: /à la main/ })
+      .click({ timeout: 3000 })
+      .catch(() => {})
+    await adminPage.getByLabel('Code-barres saisi à la main').fill(code)
+    await adminPage.getByRole('button', { name: 'Chercher' }).click()
+    await expect(adminPage.getByText('Combien de feuilles reçues')).toBeVisible()
+    await expect(adminPage.locator('#trouve-titre ~ .ref').getByText(`${largeur.toLocaleString('fr-FR')} × 2 500 mm`)).toBeVisible()
+
+    // Le code se retire depuis la carte
+    await adminPage.goto('/stock')
+    await carte.getByRole('button', { name: /^Codes-barres/ }).click()
+    await carte.getByRole('button', { name: new RegExp(`Retirer le code ${code}`) }).click()
+    await expect(carte.getByText('Aucun code-barres')).toBeVisible()
   })
 })
