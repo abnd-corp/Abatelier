@@ -25,6 +25,8 @@ export interface SheetLine {
 
 export interface SheetData {
   numero: string
+  // Nom du client, seul renseignement sur lui que reçoit l'atelier
+  client: string
   statutLabel: string
   datePrevue: string | null
   livraisonMode: 'retrait' | 'livraison'
@@ -82,8 +84,10 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
   text('FICHE DE FABRICATION', PAGE.m + 150, PAGE.m - 2, { width: WIDTH - 150, align: 'right', characterSpacing: 0.8 })
   doc.font('Helvetica-Bold').fontSize(13).fillColor(INK)
   text(`N° ${data.numero}`, PAGE.m + 150, doc.y + 2, { width: WIDTH - 150, align: 'right' })
+  doc.font('Helvetica').fontSize(10).fillColor(MUTED)
+  text(`Client : ${data.client}`, PAGE.m + 150, doc.y + 2, { width: WIDTH - 150, align: 'right', lineBreak: false, ellipsis: true })
 
-  let y = PAGE.m + 56
+  let y = PAGE.m + 70
   const cells: [string, string][] = [
     ['PRÉVUE LE', data.datePrevue ? longDay(data.datePrevue) : 'Non fixée'],
     ['PIÈCES', `${pieces} pièce${pieces > 1 ? 's' : ''} · ${data.lignes.length} ligne${data.lignes.length > 1 ? 's' : ''}`],

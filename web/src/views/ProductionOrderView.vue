@@ -3,17 +3,20 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, ApiError } from '@/api'
 import { dateTime } from '@/lib/format'
-import { sheetUrl, shortDay, statutOf, STEP_ACTIONS, type OrderEvent, type OrderStatut } from '@/lib/orders'
+import { sheetUrl, shortDay, statutOf, stepAction, type OrderEvent, type OrderStatut } from '@/lib/orders'
 import { useUiStore } from '@/stores/ui'
 import AppIcon from '@/components/AppIcon.vue'
 import OrderLineCard from '@/components/orders/OrderLineCard.vue'
 import type { LigneFeuilles } from '@/lib/stock'
 
-// Fiche de fabrication : les pièces à plier, sans rien sur le client ni sur les prix
+// Fiche de fabrication : les pièces à plier. Du client, seulement son nom ; ni coordonnées ni prix
 interface Detail {
   order: {
     id: string
     numero: string
+    client: string
+    prisPar: string | null
+    prisParMoi: boolean
     kind: 'sur_mesure' | 'boutique'
     statut: OrderStatut
     statutLabel: string
@@ -88,7 +91,8 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
 
   <template v-if="detail">
     <div class="identity">
-      <h1 class="mono">{{ detail.order.numero }}</h1>
+      <h1>{{ detail.order.client }}</h1>
+      <span class="numero mono">{{ detail.order.numero }}</span>
       <span class="pill" :class="statutOf(detail.order.statut).tone">{{ detail.order.statutLabel }}</span>
       <span v-if="detail.order.kind === 'boutique'" class="pill accent">Boutique</span>
     </div>
@@ -97,13 +101,16 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
         ><AppIcon name="calendar" :size="16" /> Prévue le <b>{{ shortDay(detail.order.datePrevue) }}</b></span
       >
       <span><AppIcon name="layers" :size="16" /> {{ total }} pièce{{ total > 1 ? 's' : '' }}</span>
+      <span v-if="detail.order.prisPar"
+        ><AppIcon name="user" :size="16" /> Pris en charge par <b>{{ detail.order.prisPar }}</b></span
+      >
       <span
         ><AppIcon :name="detail.order.livraisonMode === 'retrait' ? 'home' : 'truck'" :size="16" />
         {{ detail.order.livraisonMode === 'retrait' ? 'Retrait à l’atelier' : 'Livraison sur chantier' }}</span
       >
     </p>
     <div class="actions">
-      <button v-if="detail.order.next" class="btn primary" type="button" :disabled="busy" @click="advance">{{ STEP_ACTIONS[detail.order.next] }}</button>
+      <button v-if="detail.order.next" class="btn primary" type="button" :disabled="busy" @click="advance">{{ stepAction(detail.order.next, detail.order.livraisonMode) }}</button>
       <a class="btn" :href="sheetUrl(detail.order.id)" target="_blank" rel="noopener"><AppIcon name="printer" :size="16" />Imprimer la fiche</a>
     </div>
 
@@ -213,6 +220,10 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
 }
 .identity h1 {
   font-size: clamp(1.5rem, 3vw, 2rem);
+}
+.identity .numero {
+  color: var(--muted);
+  font-size: 1rem;
 }
 .meta {
   display: flex;

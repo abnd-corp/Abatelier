@@ -624,6 +624,8 @@ export const orders = pgTable(
     // Délai en jours ouvrés, et date prévue fixée à la validation
     delaiJours: integer('delai_jours').notNull(),
     datePrevue: date('date_prevue', { mode: 'string' }),
+    // Le salarié qui a pris la commande en charge à l'atelier. Rien ne l'y attache : n'importe quel collègue peut l'annuler ou la reprendre.
+    productionUserId: uuid('production_user_id').references(() => users.id, { onDelete: 'set null' }),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: ts('created_at').notNull().defaultNow(),
     updatedAt: ts('updated_at').notNull().defaultNow(),

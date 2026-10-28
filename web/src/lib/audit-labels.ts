@@ -224,6 +224,10 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
         text: d.apres === 'annulee' ? `A annulé la commande ${d.numero}${d.note ? ` : ${d.note}` : ''}` : `A passé la commande ${d.numero} à « ${ORDER_STEPS[d.apres] ?? d.apres} »`,
         tone: d.apres === 'annulee' ? 'bad' : 'neutral',
       }
+    case 'order.production_assigned':
+      return { text: `A pris en charge la commande ${d.numero}${d.avant ? ` (reprise à ${d.avant})` : ''}`, tone: 'neutral' }
+    case 'order.production_released':
+      return { text: `A annulé la prise en charge de la commande ${d.numero}${d.avant ? ` par ${d.avant}` : ''}`, tone: 'neutral' }
     case 'order.sheet_printed':
       return { text: `A imprimé la fiche de fabrication de la commande ${d.numero}`, tone: 'neutral' }
     case 'billing.devis_created':

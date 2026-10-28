@@ -29,7 +29,7 @@ test.describe('Suivi de fabrication', () => {
     const suivi = client.getByRole('region', { name: 'Suivi de la commande' })
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Commande validée')
 
-    // L'atelier la voit dans Fabrication, sans le client, et la fait avancer étape par étape
+    // L'atelier la voit dans Fabrication, avec le nom du client, et la fait avancer étape par étape
     const identifiant = `${uid}-at`
     const temp = await createUser(admin.request, baseURL!, { identifiant, nom: 'Plieur Suivi', role: 'atelier' })
     const atelier = await (await browser.newContext()).newPage()
@@ -38,20 +38,40 @@ test.describe('Suivi de fabrication', () => {
     await atelier.goto('/fabrication')
     const ligne = atelier.getByRole('article').filter({ hasText: numero })
     await expect(ligne).toBeVisible()
-    await expect(atelier.getByText(`Suivi ${uid.slice(-6)}`)).toHaveCount(0)
+    // Le nom du client est sur la carte, pas son adresse e-mail
+    await expect(ligne).toContainText(`Suivi ${uid.slice(-6)}`)
+    await expect(atelier.getByText(`${uid}@exemple.fr`)).toHaveCount(0)
+
+    await expect(ligne).toContainText('Personne ne l’a encore prise')
+    const etape = () => atelier.locator('.etape').filter({ has: ligne })
+    await expect(etape().getByRole('heading', { level: 2 })).toContainText('À lancer')
+
+    // On peut prendre la commande en charge, puis annuler tant qu'on n'a pas commencé : aucun lien durable avec le salarié
+    await ligne.getByRole('button', { name: 'Prendre en charge' }).click()
+    await expect(ligne).toContainText('Pris en charge par Plieur Suivi')
+    await ligne.getByRole('button', { name: 'Annuler la prise en charge' }).click()
+    await expect(ligne).toContainText('Personne ne l’a encore prise')
+    await expect(ligne.getByRole('button', { name: 'Annuler la prise en charge' })).toHaveCount(0)
 
     await ligne.getByRole('button', { name: 'Lancer la fabrication' }).click()
-    await expect(ligne).toContainText('En fabrication')
+    // Le nom du salarié qui l'a prise, pas un identifiant, et la commande change de colonne
+    await expect(ligne).toContainText('Pris en charge par Plieur Suivi')
+    await expect(etape().getByRole('heading', { level: 2 })).toContainText('En fabrication')
     await client.reload()
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('En fabrication')
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Vos pièces sont en cours de pliage')
 
+    // Lancée, la prise en charge ne s'annule plus (on peut seulement la reprendre)
+    await expect(ligne.getByRole('button', { name: 'Annuler la prise en charge' })).toHaveCount(0)
     await ligne.getByRole('button', { name: 'Marquer prête' }).click()
-    await expect(ligne).toContainText('Prête')
+    await expect(ligne).toContainText('terminé par Plieur Suivi')
+    // « Prête » en bandeau, puis la colonne : à faire retirer ou à livrer
+    await expect(etape().getByRole('heading', { level: 2 })).toContainText('Prête')
+    await expect(atelier.locator('section.group').filter({ has: ligne }).getByRole('heading', { level: 3 })).toContainText(/À faire retirer|À livrer/)
     await client.reload()
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Prête')
 
-    await ligne.getByRole('button', { name: 'Marquer livrée / retirée' }).click()
+    await ligne.getByRole('button', { name: 'Marquer retirée' }).click()
     // Une commande livrée quitte la liste de fabrication
     await expect(atelier.getByRole('article').filter({ hasText: numero })).toHaveCount(0)
     await client.reload()
@@ -106,8 +126,8 @@ test.describe('Suivi de fabrication', () => {
     const carte = atelier.getByRole('article').filter({ hasText: numero })
     await expect(carte).toBeVisible()
     await carte.getByRole('button', { name: 'Lancer la fabrication' }).click()
-    // On attend que l'atelier voie l'étape enregistrée avant de recharger la page du client
-    await expect(carte).toContainText('En fabrication')
+    // On attend que l'atelier voie l'étape enregistrée (la colonne) avant de recharger la page du client
+    await expect(atelier.locator('.etape').filter({ has: carte }).getByRole('heading', { level: 2 })).toContainText('En fabrication')
     await client.reload()
     await expect(client.getByRole('region', { name: 'Suivi de la commande' }).locator('li[aria-current="step"]')).toContainText('En fabrication')
   })

@@ -6,7 +6,7 @@ import { yearOf } from '../src/documents.js'
 import { addWorkingDays, quantityDiscount } from '../src/quote.js'
 import { todayParis } from '../src/departures.js'
 import { accessoryTotals, renderProductionSheet } from '../src/production-sheet.js'
-import { buildApp, createUser, loginAs, M, pdfText, resetDb, seedModels, type App, type Client } from './helpers.js'
+import { buildApp, client, createUser, loginAs, M, pdfText, resetDb, seedModels, type App, type Client } from './helpers.js'
 
 let app: App
 let direction: Client
@@ -359,13 +359,15 @@ describe('Commandes', () => {
 })
 
 describe('Fabrication (atelier)', () => {
-  it('ne montre que les commandes validées à prêtes, sans client ni prix', async () => {
+  it('ne montre que les commandes validées à prêtes, avec le seul nom du client, sans adresse ni prix', async () => {
     const recue = await create()
     const validee = await create({ clientId: ids.toitures, livraison: { mode: 'livraison', adresse: '12 chemin du Bois', codePostal: '42700', ville: 'Firminy' } })
     await direction.post(`/api/orders/${validee.id}/status`, { statut: 'validee' })
     const atelier = await login('atelier')
     const list = await atelier.get('/api/production')
-    expect(list.json().orders).toEqual([expect.objectContaining({ id: validee.id, numero: validee.numero, statut: 'validee', livraisonMode: 'livraison', pieces: 4, lignes: 1, next: 'fabrication' })])
+    expect(list.json().orders).toEqual([
+      expect.objectContaining({ id: validee.id, numero: validee.numero, client: 'Toitures du Forez', statut: 'validee', livraisonMode: 'livraison', pieces: 4, lignes: 1, next: 'fabrication' }),
+    ])
     const detail = await atelier.get(`/api/production/${validee.id}`)
     expect(detail.json().lignes[0]).toMatchObject({
       cotes: [20, 70, 300, 70, 20],
@@ -374,9 +376,99 @@ describe('Fabrication (atelier)', () => {
       accessoires: [{ nom: 'Bouchon de couvertine', unite: 'piece', quantite: 2 }],
     })
     for (const res of [list, detail]) {
-      for (const secret of ['Toitures', 'Forez', 'Firminy', 'chemin', '"clientId"', '"ttc"', '"prix"', '"ht"', '"total"', '"prixUnitaire"']) expect(res.body, secret).not.toContain(secret)
+      expect(detail.json().order.client).toBe('Toitures du Forez')
+      for (const secret of ['Firminy', 'chemin', '"clientId"', '"adresse"', '"telephone"', '"email"', '"ttc"', '"prix"', '"ht"', '"total"', '"prixUnitaire"'])
+        expect(res.body, secret).not.toContain(secret)
     }
     expect((await atelier.get(`/api/production/${recue.id}`)).statusCode).toBe(404)
+  })
+
+  it('montre qui a pris la commande et qui l’a terminée, par leur nom, avec de quoi elle parle', async () => {
+    const { id } = await create()
+    await direction.post(`/api/orders/${id}/status`, { statut: 'validee' })
+    await createUser({ identifiant: 'lucas.m', nom: 'Lucas Martinon', role: 'atelier' })
+    await createUser({ identifiant: 'marc.d', nom: 'Marc Durand', role: 'atelier' })
+    const lucas = await loginAs(app, 'lucas.m')
+    const marc = await loginAs(app, 'marc.d')
+    const ligne = async (c: Client) => (await c.get('/api/production')).json().orders[0]
+    // Pas encore lancée : personne
+    expect(await ligne(lucas)).toMatchObject({ prisPar: null, pretePar: null, modeles: expect.stringContaining('Couvertine') })
+    await lucas.post(`/api/production/${id}/status`, { statut: 'fabrication' })
+    expect(await ligne(marc)).toMatchObject({ prisPar: 'Lucas Martinon', pretePar: null })
+    await marc.post(`/api/production/${id}/status`, { statut: 'prete' })
+    const prete = await ligne(lucas)
+    expect(prete).toMatchObject({ statut: 'prete', prisPar: 'Lucas Martinon', pretePar: 'Marc Durand' })
+    // Le nom, jamais l'identifiant de connexion
+    expect(JSON.stringify(prete)).not.toMatch(/lucas\.m|marc\.d/)
+  })
+
+  describe('prise en charge', () => {
+    let id: string
+    let lucas: Client
+    let marc: Client
+    beforeEach(async () => {
+      id = (await create()).id
+      await direction.post(`/api/orders/${id}/status`, { statut: 'validee' })
+      await createUser({ identifiant: 'lucas.m', nom: 'Lucas Martinon', role: 'atelier' })
+      await createUser({ identifiant: 'marc.d', nom: 'Marc Durand', role: 'atelier' })
+      lucas = await loginAs(app, 'lucas.m')
+      marc = await loginAs(app, 'marc.d')
+    })
+    const ligne = async (c: Client) => (await c.get('/api/production')).json().orders[0]
+
+    it('se prend en charge avant de lancer, et chacun voit si c’est lui', async () => {
+      expect(await ligne(lucas)).toMatchObject({ statut: 'validee', prisPar: null, prisParMoi: false })
+      expect((await lucas.post(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(200)
+      expect(await ligne(lucas)).toMatchObject({ statut: 'validee', prisPar: 'Lucas Martinon', prisParMoi: true })
+      expect(await ligne(marc)).toMatchObject({ prisPar: 'Lucas Martinon', prisParMoi: false })
+      expect((await lucas.get(`/api/production/${id}`)).json().order).toMatchObject({ prisPar: 'Lucas Martinon', prisParMoi: true })
+      expect(await entries('order.production_assigned')).toHaveLength(1)
+      // Se la prendre deux fois ne change rien et ne journalise pas de nouveau
+      await lucas.post(`/api/production/${id}/prise-en-charge`)
+      expect(await entries('order.production_assigned')).toHaveLength(1)
+    })
+
+    it('annule la prise en charge tant que ce n’est pas lancé, même par un collègue quand la personne est absente', async () => {
+      await lucas.post(`/api/production/${id}/prise-en-charge`)
+      // Marc libère la commande de Lucas, absent : rien ne les lie
+      expect((await marc.delete(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(200)
+      expect(await ligne(marc)).toMatchObject({ prisPar: null, prisParMoi: false })
+      const [e] = await entries('order.production_released')
+      expect(e!.details).toMatchObject({ numero: expect.any(String), avant: 'Lucas Martinon' })
+      // Libérer une commande que personne n'a prise ne fait rien
+      expect((await marc.delete(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(200)
+      expect(await entries('order.production_released')).toHaveLength(1)
+      // Marc la prend à son tour
+      await marc.post(`/api/production/${id}/prise-en-charge`)
+      expect(await ligne(lucas)).toMatchObject({ prisPar: 'Marc Durand', prisParMoi: false })
+    })
+
+    it('lancer la fabrication la prend en charge, on ne peut plus annuler mais on peut la reprendre', async () => {
+      await lucas.post(`/api/production/${id}/prise-en-charge`)
+      // Marc lance : il en devient le responsable
+      expect((await marc.post(`/api/production/${id}/status`, { statut: 'fabrication' })).statusCode).toBe(200)
+      expect(await ligne(marc)).toMatchObject({ statut: 'fabrication', prisPar: 'Marc Durand', prisParMoi: true })
+      const refus = await lucas.delete(`/api/production/${id}/prise-en-charge`)
+      expect(refus.statusCode).toBe(409)
+      expect(refus.json().error).toMatch(/lancée/)
+      expect(await ligne(lucas)).toMatchObject({ prisPar: 'Marc Durand' })
+      // Marc est absent : Lucas reprend
+      expect((await lucas.post(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(200)
+      expect(await ligne(lucas)).toMatchObject({ statut: 'fabrication', prisPar: 'Lucas Martinon', prisParMoi: true })
+      const [reprise] = (await entries('order.production_assigned')).slice(-1)
+      expect(reprise!.details).toMatchObject({ avant: 'Marc Durand' })
+    })
+
+    it('ne se prend plus en charge une fois prête, et est réservée à l’atelier', async () => {
+      await lucas.post(`/api/production/${id}/status`, { statut: 'fabrication' })
+      await lucas.post(`/api/production/${id}/status`, { statut: 'prete' })
+      expect((await marc.post(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(409)
+      await createUser({ identifiant: 'claire', role: 'rh' })
+      const rh = await loginAs(app, 'claire')
+      expect((await rh.post(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(403)
+      expect((await rh.delete(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(403)
+      expect((await client(app).post(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(401)
+    })
   })
 
   it('fait avancer la commande d’une étape à la fois, sans pouvoir l’annuler', async () => {
@@ -408,7 +500,7 @@ describe('Fiche de fabrication (PDF)', () => {
     return o
   }
 
-  it('donne à l’atelier une fiche PDF avec les pièces cotées, sans client ni prix, et la note au journal', async () => {
+  it('donne à l’atelier une fiche PDF avec les pièces cotées et le nom du client, sans adresse ni prix, et la note au journal', async () => {
     const o = await validated({ clientId: ids.toitures, livraison: { mode: 'livraison', adresse: '12 chemin du Bois', codePostal: '42700', ville: 'Firminy' } })
     const atelier = await login('atelier')
     const res = await atelier.get(`/api/production/${o.id}/fiche.pdf`)
@@ -421,6 +513,7 @@ describe('Fiche de fabrication (PDF)', () => {
     for (const attendu of [
       'FICHE DE FABRICATION',
       `N° ${o.numero}`,
+      'Client : Toitures du Forez',
       'Couvertine · Mur sud',
       '4 × 3 000 mm',
       'Aluminium 1,5 mm · Gris anthracite (RAL 7016)',
@@ -430,7 +523,7 @@ describe('Fiche de fabrication (PDF)', () => {
       'Validée',
     ])
       expect(txt, attendu).toContain(attendu)
-    for (const secret of ['Toitures', 'Forez', 'Firminy', 'chemin', 'Dupont', '€', 'HT', 'TTC']) expect(txt, secret).not.toContain(secret)
+    for (const secret of ['Firminy', 'chemin', 'Dupont', '€', 'HT', 'TTC']) expect(txt, secret).not.toContain(secret)
     const [entry] = await entries('order.sheet_printed')
     expect(entry).toMatchObject({ targetType: 'order', targetId: o.id, details: { numero: o.numero, statut: 'validee' } })
   })
@@ -509,7 +602,7 @@ describe('Fiche de fabrication (PDF)', () => {
       { nom: 'Angle', unite: 'paire', quantite: 4 },
     ])
     const pdf = await renderProductionSheet(
-      { numero: 'C-2026-0042', statutLabel: 'En fabrication', datePrevue: null, livraisonMode: 'retrait', imprimeLe: new Date(), lignes },
+      { numero: 'C-2026-0042', client: 'Client Test', statutLabel: 'En fabrication', datePrevue: null, livraisonMode: 'retrait', imprimeLe: new Date(), lignes },
       { accent: '#6b3fa0', logo: null },
     )
     expect((pdf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length).toBeGreaterThan(1)

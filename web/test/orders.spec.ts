@@ -474,19 +474,228 @@ describe('Fiche commande', () => {
 
 describe('Atelier', () => {
   const ROWS = [
-    { id: 'o1', numero: 'C-2026-0001', statut: 'validee', livraisonMode: 'retrait', datePrevue: '2020-01-06', pieces: 4, lignes: 1, next: 'fabrication' },
-    { id: 'o2', numero: 'C-2026-0002', statut: 'prete', livraisonMode: 'livraison', datePrevue: '2099-01-06', pieces: 1, lignes: 1, next: 'livree' },
+    {
+      id: 'o1',
+      numero: 'C-2026-0001',
+      statut: 'validee',
+      livraisonMode: 'retrait',
+      datePrevue: '2020-01-06',
+      pieces: 4,
+      lignes: 1,
+      modeles: 'Couvertine',
+      prisPar: null,
+      prisParMoi: false,
+      pretePar: null,
+      next: 'fabrication',
+    },
+    {
+      id: 'o2',
+      numero: 'C-2026-0002',
+      statut: 'prete',
+      livraisonMode: 'livraison',
+      datePrevue: '2099-01-06',
+      pieces: 1,
+      lignes: 1,
+      modeles: 'Bavette',
+      prisPar: 'Lucas Martinon',
+      prisParMoi: false,
+      pretePar: 'Marc Durand',
+      next: 'livree',
+    },
+  ]
+  const TOUTES = [
+    ...ROWS,
+    {
+      id: 'o3',
+      numero: 'C-2026-0003',
+      client: 'Couverture Martin',
+      statut: 'fabrication',
+      livraisonMode: 'retrait',
+      datePrevue: '2099-01-07',
+      pieces: 2,
+      lignes: 2,
+      modeles: 'Couvertine, Bandeau',
+      prisPar: 'Lucas Martinon',
+      prisParMoi: false,
+      pretePar: null,
+      next: 'prete',
+    },
+    {
+      id: 'o4',
+      numero: 'C-2026-0004',
+      client: 'Mairie de Fraisses',
+      statut: 'prete',
+      livraisonMode: 'retrait',
+      datePrevue: '2099-01-08',
+      pieces: 3,
+      lignes: 1,
+      modeles: 'Bandeau',
+      prisPar: 'Marc Durand',
+      prisParMoi: false,
+      pretePar: 'Marc Durand',
+      next: 'livree',
+    },
   ]
 
   it('range les commandes par étape, signale le retard et fait avancer', async () => {
     const { wrapper, calls } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: ROWS }], 'POST /production/o1/status': [200, {}] }, ATELIER)
-    const groups = wrapper.findAll('section.group')
-    expect(groups.map((g) => g.find('h2').text())).toEqual(['À lancer 1', 'En fabrication 0', 'Prêtes, à livrer ou à faire retirer 1'])
-    expect(norm(groups[0]!.text())).toContain('en retard')
-    expect(norm(groups[2]!.text())).not.toContain('en retard')
+    // Trois étapes, « Prête » partagée en deux colonnes : à faire retirer, à livrer
+    expect(wrapper.findAll('.etape .band').map((h) => h.text())).toEqual(['À lancer 1', 'En fabrication 0', 'Prête 1'])
+    expect(wrapper.findAll('.etape h3.sub').map((h) => h.text())).toEqual(['À faire retirer 0', 'À livrer 1'])
+    expect(wrapper.findAll('.etape').map((e) => e.classes().find((c) => ['info', 'accent', 'ok'].includes(c)))).toEqual(['info', 'accent', 'ok'])
+    const col = (id: string) => wrapper.get(`section[data-colonne="${id}"]`)
+    expect(norm(col('a-lancer').text())).toMatch(/En retard de \d+ j/)
+    expect(norm(col('a-livrer').text())).not.toContain('En retard')
     await button(wrapper, 'Lancer la fabrication').trigger('click')
     await flushPromises()
     expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ statut: 'fabrication' })
+  })
+
+  it('sépare les commandes prêtes à retirer de celles à livrer', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    const col = (id: string) => wrapper.get(`section[data-colonne="${id}"]`)
+    expect(col('fabrication').text()).toContain('C-2026-0003')
+    expect(col('a-retirer').text()).toContain('C-2026-0004')
+    expect(col('a-retirer').text()).not.toContain('C-2026-0002')
+    expect(col('a-livrer').text()).toContain('C-2026-0002')
+    // « Prête » n'est écrit qu'une fois, au-dessus des deux colonnes
+    expect(wrapper.findAll('.band').filter((b) => b.text().startsWith('Prête'))).toHaveLength(1)
+  })
+
+  it('montre le nom de la personne qui a pris la commande et de quoi elle parle, jamais un identifiant', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    const carte = (numero: string) =>
+      norm(
+        wrapper
+          .findAll('article.order')
+          .find((a) => a.text().includes(numero))!
+          .text(),
+      )
+    expect(carte('C-2026-0001')).toContain('Couvertine')
+    expect(carte('C-2026-0001')).toContain('Personne ne l’a encore prise')
+    expect(carte('C-2026-0003')).toContain('Pris en charge par Lucas Martinon')
+    expect(carte('C-2026-0003')).not.toContain('terminé par')
+    expect(carte('C-2026-0003')).toContain('Couvertine, Bandeau')
+    expect(carte('C-2026-0002')).toContain('Pris en charge par Lucas Martinon, terminé par Marc Durand')
+  })
+
+  it('n’affiche pas le nom de l’étape sur la carte (la colonne le dit) : seule la pastille de retard existe', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    expect(wrapper.findAll('article.order .pill').map((p) => p.text())).toEqual([expect.stringMatching(/^En retard de \d+ j$/)])
+    const carte = wrapper.findAll('article.order').find((a) => a.text().includes('C-2026-0003'))!
+    expect(carte.find('.pill').exists()).toBe(false)
+  })
+
+  it('met le nom du client en titre de la carte, avec le numéro en plus petit, et rien d’autre sur lui', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    const carte = wrapper.findAll('article.order').find((a) => a.text().includes('C-2026-0003'))!
+    expect(carte.get('a.client').text()).toBe('Couverture Martin')
+    expect(carte.get('a.client').attributes('href')).toBe('/fabrication/o3')
+    expect(carte.get('.numero').text()).toBe('C-2026-0003')
+    expect(wrapper.text()).not.toMatch(/@|\d{2} \d{2} \d{2}/)
+  })
+
+  it('signale le retard par une pastille avec le nombre de jours, sans bordure rouge, et filtre les retards', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    // Seule la commande de 2020 est en retard : une pastille sur sa carte, pas sur les autres
+    expect(wrapper.findAll('.retard')).toHaveLength(1)
+    expect(wrapper.get('.retard').text()).toMatch(/^En retard de \d+ j$/)
+    expect(wrapper.find('article.order.late').exists()).toBe(false)
+    // Le compteur en haut de page filtre
+    const chip = wrapper.get('.retards .chip')
+    expect(chip.text()).toContain('1 commande en retard')
+    expect(wrapper.findAll('article.order')).toHaveLength(4)
+    await chip.trigger('click')
+    expect(chip.attributes('aria-pressed')).toBe('true')
+    expect(wrapper.findAll('article.order')).toHaveLength(1)
+    expect(wrapper.get('article.order').text()).toContain('C-2026-0001')
+    await chip.trigger('click')
+    expect(wrapper.findAll('article.order')).toHaveLength(4)
+  })
+
+  it('n’affiche pas de compteur quand rien n’est en retard', async () => {
+    const rien = TOUTES.map((o) => ({ ...o, datePrevue: '2099-01-01' }))
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: rien }] }, ATELIER)
+    expect(wrapper.find('.retards').exists()).toBe(false)
+    expect(wrapper.find('.retard').exists()).toBe(false)
+  })
+
+  it('propose le bon libellé pour clore une commande prête : retirée ou livrée, jamais les deux', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    const bouton = (numero: string) =>
+      wrapper
+        .findAll('article.order')
+        .find((a) => a.text().includes(numero))!
+        .findAll('button')
+        .map((b) => b.text())
+    expect(bouton('C-2026-0004')).toContain('Marquer retirée')
+    expect(bouton('C-2026-0002')).toContain('Marquer livrée')
+    expect(wrapper.text()).not.toContain('livrée / retirée')
+  })
+
+  it('met le retard en haut à droite de la carte, et rien quand la commande n’est pas en retard', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    const carte = (numero: string) => wrapper.findAll('article.order').find((a) => a.text().includes(numero))!
+    expect(carte('C-2026-0001').find('.retard').exists()).toBe(true)
+    for (const n of ['C-2026-0002', 'C-2026-0003', 'C-2026-0004']) expect(carte(n).find('.retard').exists(), n).toBe(false)
+    // Le numéro est sous le nom du client
+    const enfants = carte('C-2026-0003').element.children
+    expect(enfants[0]!.className).toContain('client')
+    expect(enfants[1]!.className).toContain('ref')
+  })
+
+  it('prend en charge, reprend à un collègue, et annule la prise en charge tant que la fabrication n’est pas lancée', async () => {
+    const A_LANCER = { ...TOUTES[0]!, id: 'o1', prisPar: null, prisParMoi: false }
+    const PRISE_PAR_UN_AUTRE = { ...TOUTES[0]!, id: 'o5', numero: 'C-2026-0005', prisPar: 'Marc Durand', prisParMoi: false }
+    const MIENNE = { ...TOUTES[0]!, id: 'o6', numero: 'C-2026-0006', prisPar: 'Lucas Martinon', prisParMoi: true }
+    const EN_FAB_AUTRE = { ...TOUTES[2]!, prisPar: 'Marc Durand', prisParMoi: false }
+    const { wrapper, calls } = await mountAt(
+      ProductionView,
+      '/fabrication',
+      {
+        'GET /production': [200, { orders: [A_LANCER, PRISE_PAR_UN_AUTRE, MIENNE, EN_FAB_AUTRE] }],
+        'POST /production/o1/prise-en-charge': [200, { ok: true }],
+        'POST /production/o5/prise-en-charge': [200, { ok: true }],
+        'DELETE /production/o5/prise-en-charge': [200, { ok: true }],
+        'DELETE /production/o6/prise-en-charge': [200, { ok: true }],
+      },
+      ATELIER,
+    )
+    const boutons = (numero: string) =>
+      wrapper
+        .findAll('article.order')
+        .find((a) => a.text().includes(numero))!
+        .findAll('button')
+    const texte = (numero: string) => boutons(numero).map((b) => b.text())
+    expect(texte('C-2026-0001')).toEqual(['Lancer la fabrication', 'Prendre en charge'])
+    expect(texte('C-2026-0005')).toEqual(['Lancer la fabrication', 'Reprendre', 'Annuler la prise en charge'])
+    // La mienne : rien à reprendre, mais je peux l'annuler
+    expect(texte('C-2026-0006')).toEqual(['Lancer la fabrication', 'Annuler la prise en charge'])
+    // Lancée par un autre : on peut la reprendre, plus l'annuler
+    expect(texte('C-2026-0003')).toEqual(['Marquer prête', 'Reprendre'])
+
+    await boutons('C-2026-0001')
+      .find((b) => b.text() === 'Prendre en charge')!
+      .trigger('click')
+    await flushPromises()
+    await boutons('C-2026-0005')
+      .find((b) => b.text() === 'Reprendre')!
+      .trigger('click')
+    await flushPromises()
+    await boutons('C-2026-0005')
+      .find((b) => b.text() === 'Annuler la prise en charge')!
+      .trigger('click')
+    await flushPromises()
+    await boutons('C-2026-0006')
+      .find((b) => b.text() === 'Annuler la prise en charge')!
+      .trigger('click')
+    await flushPromises()
+    expect(calls.filter((c) => c.path.endsWith('/prise-en-charge')).map((c) => `${c.method} ${c.path}`)).toEqual([
+      'POST /production/o1/prise-en-charge',
+      'POST /production/o5/prise-en-charge',
+      'DELETE /production/o5/prise-en-charge',
+      'DELETE /production/o6/prise-en-charge',
+    ])
   })
 
   it('donne la fiche imprimable de chaque commande', async () => {
@@ -498,7 +707,7 @@ describe('Atelier', () => {
 
   it('conseille les feuilles à prendre d’après le stock, ou dit qu’il n’y en a pas', async () => {
     const detail = {
-      order: { id: 'o1', numero: 'C-2026-0001', statut: 'fabrication', statutLabel: 'En fabrication', livraisonMode: 'retrait', datePrevue: '2026-10-26', next: 'prete' },
+      order: { id: 'o1', numero: 'C-2026-0001', client: 'Toitures du Forez', statut: 'fabrication', statutLabel: 'En fabrication', livraisonMode: 'retrait', datePrevue: '2026-10-26', next: 'prete' },
       lignes: [{ ...LINE, id: 'l1', accessoires: [] }],
       events: ORDER.events,
     }
@@ -545,7 +754,7 @@ describe('Atelier', () => {
 
   it('montre la fiche de fabrication sans prix', async () => {
     const detail = {
-      order: { id: 'o1', numero: 'C-2026-0001', statut: 'fabrication', statutLabel: 'En fabrication', livraisonMode: 'retrait', datePrevue: '2026-10-26', next: 'prete' },
+      order: { id: 'o1', numero: 'C-2026-0001', client: 'Toitures du Forez', statut: 'fabrication', statutLabel: 'En fabrication', livraisonMode: 'retrait', datePrevue: '2026-10-26', next: 'prete' },
       lignes: [{ ...LINE, id: 'l1', accessoires: [{ nom: 'Bouchon de couvertine', unite: 'piece', quantite: 2 }], prixUnitaire: undefined, total: undefined }],
       events: ORDER.events,
     }

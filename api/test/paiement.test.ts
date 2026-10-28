@@ -287,7 +287,7 @@ describe('Payer son panier', () => {
 })
 
 describe('Côté atelier', () => {
-  it('la direction voit la commande boutique payée, l’atelier la prépare sans voir le client, et sa fiche PDF se génère', async () => {
+  it('la direction voit la commande boutique payée, l’atelier la prépare en voyant le nom du client mais ni son e-mail ni les prix, et sa fiche PDF se génère', async () => {
     const c = await member()
     const { order } = await pay(c)
     const list = (await direction.get('/api/orders?filtre=toutes')).json().orders
@@ -299,13 +299,16 @@ describe('Côté atelier', () => {
     await createUser({ identifiant: 'paul', role: 'atelier' })
     const atelier = await loginAs(app, 'paul')
     const prod = (await atelier.get('/api/production')).json().orders
-    expect(prod[0]).toMatchObject({ id: order.id, kind: 'boutique', pieces: 3 })
+    expect(prod[0]).toMatchObject({ id: order.id, kind: 'boutique', pieces: 3, client: 'Jean Dupont' })
     const fiche = (await atelier.get(`/api/production/${order.id}`)).json()
-    expect(JSON.stringify(fiche)).not.toMatch(/Dupont|jean@|prix|ttc/i)
+    expect(fiche.order.client).toBe('Jean Dupont')
+    expect(JSON.stringify(fiche)).not.toMatch(/jean@|prix|ttc/i)
     const pdf = await atelier.get(`/api/production/${order.id}/fiche.pdf`)
     expect(pdf.statusCode).toBe(200)
     const text = pdfText(pdf.rawPayload)
     expect(text).toContain('ARTICLE DE LA BOUTIQUE')
+    expect(text).toContain('Client : Jean Dupont')
+    expect(text).not.toMatch(/jean@|€/)
     expect(text).toContain('Couvertine blanche')
   })
 
