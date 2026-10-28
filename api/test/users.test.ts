@@ -101,10 +101,11 @@ describe('Modification', () => {
     expect((await admin.patch(`/api/users/${u.id}`, { sections: ['atelier', 'compta'] })).statusCode).toBe(400)
   })
 
-  it('un compte sans la case administration n’a ni les comptes, ni les salariés, ni le journal', async () => {
+  it('un compte sans la case administration n’a ni les comptes, ni le journal (les salariés viennent de la section direction)', async () => {
     await createUser({ identifiant: 'vendeuse', sections: ['ventes', 'direction'] })
     const c = await loginAs(app, 'vendeuse')
-    for (const url of ['/api/users', '/api/employees', '/api/audit']) expect((await c.get(url)).statusCode, url).toBe(403)
+    for (const url of ['/api/users', '/api/audit']) expect((await c.get(url)).statusCode, url).toBe(403)
+    expect((await c.get('/api/employees')).statusCode).toBe(200)
     expect((await c.get('/api/clients')).statusCode).toBe(200)
   })
 

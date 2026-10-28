@@ -37,7 +37,7 @@ const shift = (days: number) => {
 }
 
 describe('Accès', () => {
-  it('est réservé aux administrateurs', async () => {
+  it('est refusé à un compte atelier', async () => {
     await createUser({ identifiant: 'paul' })
     const paul = await loginAs(app, 'paul')
     const id = '00000000-0000-4000-8000-000000000000'
@@ -59,10 +59,24 @@ describe('Compte sans la case administration', () => {
     ventes = await loginAs(app, 'vendeuse')
   })
 
-  it('n’a accès ni aux fiches salariés, ni au journal, ni aux comptes', async () => {
-    for (const url of ['/api/employees', '/api/audit', '/api/users']) expect((await ventes.get(url)).statusCode, url).toBe(403)
-    expect((await ventes.post('/api/employees', PAUL)).statusCode).toBe(403)
+  it('n’a accès ni au journal, ni aux comptes', async () => {
+    for (const url of ['/api/audit', '/api/users']) expect((await ventes.get(url)).statusCode, url).toBe(403)
     expect((await ventes.post('/api/users', { identifiant: 'x', nom: 'X', sections: ['direction'], admin: true })).statusCode).toBe(403)
+  })
+
+  it('avec la section direction, gère les fiches salariés mais ne crée pas de compte de connexion', async () => {
+    expect((await ventes.get('/api/employees')).statusCode).toBe(200)
+    expect((await ventes.post('/api/employees', { ...PAUL, compte: { identifiant: 'paul', sections: ['atelier'] } })).statusCode).toBe(403)
+    const res = await ventes.post('/api/employees', PAUL)
+    expect(res.statusCode).toBe(201)
+    expect((await ventes.post(`/api/employees/${res.json().id}/account`, { identifiant: 'paul', sections: ['atelier'] })).statusCode).toBe(403)
+  })
+
+  it('sans la section direction ni la case administration, n’a pas accès aux fiches salariés', async () => {
+    await createUser({ identifiant: 'commercial', sections: ['ventes', 'atelier'] })
+    const c = await loginAs(app, 'commercial')
+    expect((await c.get('/api/employees')).statusCode).toBe(403)
+    expect((await c.post('/api/employees', PAUL)).statusCode).toBe(403)
   })
 
   it('avec la case administration seule, gère les fiches, les comptes et lit le journal', async () => {
