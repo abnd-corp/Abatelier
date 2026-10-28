@@ -359,13 +359,15 @@ describe('Commandes', () => {
 })
 
 describe('Fabrication (atelier)', () => {
-  it('ne montre que les commandes validées à prêtes, sans client ni prix', async () => {
+  it('ne montre que les commandes validées à prêtes, avec le seul nom du client, sans adresse ni prix', async () => {
     const recue = await create()
     const validee = await create({ clientId: ids.toitures, livraison: { mode: 'livraison', adresse: '12 chemin du Bois', codePostal: '42700', ville: 'Firminy' } })
     await direction.post(`/api/orders/${validee.id}/status`, { statut: 'validee' })
     const atelier = await login('atelier')
     const list = await atelier.get('/api/production')
-    expect(list.json().orders).toEqual([expect.objectContaining({ id: validee.id, numero: validee.numero, statut: 'validee', livraisonMode: 'livraison', pieces: 4, lignes: 1, next: 'fabrication' })])
+    expect(list.json().orders).toEqual([
+      expect.objectContaining({ id: validee.id, numero: validee.numero, client: 'Toitures du Forez', statut: 'validee', livraisonMode: 'livraison', pieces: 4, lignes: 1, next: 'fabrication' }),
+    ])
     const detail = await atelier.get(`/api/production/${validee.id}`)
     expect(detail.json().lignes[0]).toMatchObject({
       cotes: [20, 70, 300, 70, 20],
@@ -374,7 +376,9 @@ describe('Fabrication (atelier)', () => {
       accessoires: [{ nom: 'Bouchon de couvertine', unite: 'piece', quantite: 2 }],
     })
     for (const res of [list, detail]) {
-      for (const secret of ['Toitures', 'Forez', 'Firminy', 'chemin', '"clientId"', '"ttc"', '"prix"', '"ht"', '"total"', '"prixUnitaire"']) expect(res.body, secret).not.toContain(secret)
+      expect(detail.json().order.client).toBe('Toitures du Forez')
+      for (const secret of ['Firminy', 'chemin', '"clientId"', '"adresse"', '"telephone"', '"email"', '"ttc"', '"prix"', '"ht"', '"total"', '"prixUnitaire"'])
+        expect(res.body, secret).not.toContain(secret)
     }
     expect((await atelier.get(`/api/production/${recue.id}`)).statusCode).toBe(404)
   })
@@ -427,7 +431,7 @@ describe('Fiche de fabrication (PDF)', () => {
     return o
   }
 
-  it('donne à l’atelier une fiche PDF avec les pièces cotées, sans client ni prix, et la note au journal', async () => {
+  it('donne à l’atelier une fiche PDF avec les pièces cotées et le nom du client, sans adresse ni prix, et la note au journal', async () => {
     const o = await validated({ clientId: ids.toitures, livraison: { mode: 'livraison', adresse: '12 chemin du Bois', codePostal: '42700', ville: 'Firminy' } })
     const atelier = await login('atelier')
     const res = await atelier.get(`/api/production/${o.id}/fiche.pdf`)
@@ -440,6 +444,7 @@ describe('Fiche de fabrication (PDF)', () => {
     for (const attendu of [
       'FICHE DE FABRICATION',
       `N° ${o.numero}`,
+      'Client : Toitures du Forez',
       'Couvertine · Mur sud',
       '4 × 3 000 mm',
       'Aluminium 1,5 mm · Gris anthracite (RAL 7016)',
@@ -449,7 +454,7 @@ describe('Fiche de fabrication (PDF)', () => {
       'Validée',
     ])
       expect(txt, attendu).toContain(attendu)
-    for (const secret of ['Toitures', 'Forez', 'Firminy', 'chemin', 'Dupont', '€', 'HT', 'TTC']) expect(txt, secret).not.toContain(secret)
+    for (const secret of ['Firminy', 'chemin', 'Dupont', '€', 'HT', 'TTC']) expect(txt, secret).not.toContain(secret)
     const [entry] = await entries('order.sheet_printed')
     expect(entry).toMatchObject({ targetType: 'order', targetId: o.id, details: { numero: o.numero, statut: 'validee' } })
   })
@@ -528,7 +533,7 @@ describe('Fiche de fabrication (PDF)', () => {
       { nom: 'Angle', unite: 'paire', quantite: 4 },
     ])
     const pdf = await renderProductionSheet(
-      { numero: 'C-2026-0042', statutLabel: 'En fabrication', datePrevue: null, livraisonMode: 'retrait', imprimeLe: new Date(), lignes },
+      { numero: 'C-2026-0042', client: 'Client Test', statutLabel: 'En fabrication', datePrevue: null, livraisonMode: 'retrait', imprimeLe: new Date(), lignes },
       { accent: '#6b3fa0', logo: null },
     )
     expect((pdf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length).toBeGreaterThan(1)

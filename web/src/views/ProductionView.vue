@@ -16,6 +16,7 @@ interface Row {
   pieces: number
   lignes: number
   // De quoi parle la commande (« Couvertine, Bavette »), et les noms de ceux qui l'ont prise puis terminée
+  client: string
   modeles: string
   prisPar: string | null
   pretePar: string | null
@@ -54,6 +55,11 @@ async function advance(o: Row) {
 
 const today = todayParis()
 const late = (o: Row) => !!o.datePrevue && o.datePrevue < today && o.statut !== 'prete'
+// Nombre de jours de retard sur la date prévue
+const joursRetard = (o: Row) => Math.max(1, Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${o.datePrevue}T00:00:00Z`)) / 86_400_000))
+const retards = computed(() => orders.value.filter(late).length)
+const seulementRetards = ref(false)
+const visibles = computed(() => (seulementRetards.value ? orders.value.filter(late) : orders.value))
 // Quatre colonnes : une commande prête n'attend pas la même chose selon qu'on vient la chercher ou qu'on la livre
 type Colonne = 'a-lancer' | 'fabrication' | 'a-retirer' | 'a-livrer'
 const colonneOf = (o: Row): Colonne => (o.statut === 'validee' ? 'a-lancer' : o.statut === 'fabrication' ? 'fabrication' : o.livraisonMode === 'retrait' ? 'a-retirer' : 'a-livrer')
@@ -79,7 +85,7 @@ const ETAPES: Etape[] = [
 ]
 const etapes = computed(() =>
   ETAPES.map((e) => {
-    const colonnes = e.colonnes.map((c) => ({ ...c, orders: orders.value.filter((o) => colonneOf(o) === c.id) }))
+    const colonnes = e.colonnes.map((c) => ({ ...c, orders: visibles.value.filter((o) => colonneOf(o) === c.id) }))
     return { ...e, colonnes, total: colonnes.reduce((n, c) => n + c.orders.length, 0) }
   }),
 )
@@ -94,6 +100,12 @@ const etapes = computed(() =>
   </div>
 
   <p v-if="error" class="alert bad" role="alert">{{ error }}</p>
+
+  <p v-if="retards" class="retards">
+    <button class="chip" type="button" :aria-pressed="seulementRetards" @click="seulementRetards = !seulementRetards">
+      <AppIcon name="calendar" :size="15" />{{ retards }} commande{{ retards > 1 ? 's' : '' }} en retard<span class="voir">{{ seulementRetards ? ' · tout afficher' : ' · les voir seules' }}</span>
+    </button>
+  </p>
 
   <div v-if="!loading && !orders.length && !error" class="card empty">
     <AppIcon name="box" :size="32" class="muted" />
@@ -112,13 +124,17 @@ const etapes = computed(() =>
             {{ c.titre }} <span class="count">{{ c.orders.length }}</span>
           </h3>
           <p v-if="!c.orders.length" class="muted none">Aucune.</p>
-          <article v-for="o in c.orders" :key="o.id" class="card order" :class="{ late: late(o) }">
-            <RouterLink :to="{ name: 'production-order', params: { id: o.id } }" class="numero mono">{{ o.numero }}</RouterLink>
+          <article v-for="o in c.orders" :key="o.id" class="card order">
+            <RouterLink :to="{ name: 'production-order', params: { id: o.id } }" class="client">{{ o.client }}</RouterLink>
             <span class="pill" :class="statutOf(o.statut).tone">{{ statutOf(o.statut).label }}</span>
-            <span v-if="o.kind === 'boutique'" class="pill accent">Boutique</span>
+            <span class="ref">
+              <span class="numero mono">{{ o.numero }}</span>
+              <span v-if="o.kind === 'boutique'" class="pill accent">Boutique</span>
+            </span>
+            <span v-if="late(o)" class="pill bad retard">En retard de {{ joursRetard(o) }} j</span>
             <p v-if="o.modeles" class="modeles">{{ o.modeles }}</p>
             <p class="meta">
-              <span><AppIcon name="calendar" :size="15" /> {{ shortDay(o.datePrevue) }}<b v-if="late(o)" class="late-label"> en retard</b></span>
+              <span><AppIcon name="calendar" :size="15" /> {{ shortDay(o.datePrevue) }}</span>
               <span><AppIcon name="layers" :size="15" /> {{ o.pieces }} {{ o.kind === 'boutique' ? 'article' : 'pièce' }}{{ o.pieces > 1 ? 's' : '' }} ({{ o.lignes }} réf.)</span>
               <span><AppIcon :name="o.livraisonMode === 'retrait' ? 'home' : 'truck'" :size="15" /> {{ o.livraisonMode === 'retrait' ? 'Retrait' : 'Livraison' }}</span>
             </p>
@@ -233,18 +249,48 @@ const etapes = computed(() =>
   gap: 8px;
   align-items: center;
 }
-.order.late {
-  border-color: var(--bad);
-}
-.numero {
+.client {
   font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1.25;
   color: var(--ink);
   text-decoration: none;
-  font-size: 1.05rem;
+  overflow-wrap: break-word;
 }
-.numero:hover {
+.client:hover {
   color: var(--accent);
   text-decoration: underline;
+}
+.ref {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.numero {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.retard {
+  justify-self: end;
+}
+.retards {
+  margin: 0;
+}
+.retards .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--bad);
+  background: var(--bad-soft);
+  border-color: transparent;
+  font-weight: 600;
+}
+.retards .chip[aria-pressed='true'] {
+  outline: 2px solid var(--bad);
+}
+.retards .voir {
+  font-weight: 400;
+  color: var(--muted);
 }
 .modeles {
   grid-column: 1 / -1;
@@ -273,9 +319,6 @@ const etapes = computed(() =>
   display: inline-flex;
   align-items: center;
   gap: 5px;
-}
-.late-label {
-  color: var(--bad);
 }
 .row-actions {
   grid-column: 1 / -1;

@@ -29,7 +29,7 @@ test.describe('Suivi de fabrication', () => {
     const suivi = client.getByRole('region', { name: 'Suivi de la commande' })
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Commande validée')
 
-    // L'atelier la voit dans Fabrication, sans le client, et la fait avancer étape par étape
+    // L'atelier la voit dans Fabrication, avec le nom du client, et la fait avancer étape par étape
     const identifiant = `${uid}-at`
     const temp = await createUser(admin.request, baseURL!, { identifiant, nom: 'Plieur Suivi', role: 'atelier' })
     const atelier = await (await browser.newContext()).newPage()
@@ -38,7 +38,9 @@ test.describe('Suivi de fabrication', () => {
     await atelier.goto('/fabrication')
     const ligne = atelier.getByRole('article').filter({ hasText: numero })
     await expect(ligne).toBeVisible()
-    await expect(atelier.getByText(`Suivi ${uid.slice(-6)}`)).toHaveCount(0)
+    // Le nom du client est sur la carte, pas son adresse e-mail
+    await expect(ligne).toContainText(`Suivi ${uid.slice(-6)}`)
+    await expect(atelier.getByText(`${uid}@exemple.fr`)).toHaveCount(0)
 
     await expect(ligne).toContainText('Personne ne l’a encore prise')
     const etape = () => atelier.locator('.etape').filter({ has: ligne })

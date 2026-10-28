@@ -9,11 +9,12 @@ import AppIcon from '@/components/AppIcon.vue'
 import OrderLineCard from '@/components/orders/OrderLineCard.vue'
 import type { LigneFeuilles } from '@/lib/stock'
 
-// Fiche de fabrication : les pièces à plier, sans rien sur le client ni sur les prix
+// Fiche de fabrication : les pièces à plier. Du client, seulement son nom ; ni coordonnées ni prix
 interface Detail {
   order: {
     id: string
     numero: string
+    client: string
     kind: 'sur_mesure' | 'boutique'
     statut: OrderStatut
     statutLabel: string
@@ -88,7 +89,8 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
 
   <template v-if="detail">
     <div class="identity">
-      <h1 class="mono">{{ detail.order.numero }}</h1>
+      <h1>{{ detail.order.client }}</h1>
+      <span class="numero mono">{{ detail.order.numero }}</span>
       <span class="pill" :class="statutOf(detail.order.statut).tone">{{ detail.order.statutLabel }}</span>
       <span v-if="detail.order.kind === 'boutique'" class="pill accent">Boutique</span>
     </div>
@@ -213,6 +215,10 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
 }
 .identity h1 {
   font-size: clamp(1.5rem, 3vw, 2rem);
+}
+.identity .numero {
+  color: var(--muted);
+  font-size: 1rem;
 }
 .meta {
   display: flex;

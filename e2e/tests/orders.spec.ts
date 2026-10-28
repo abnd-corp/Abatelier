@@ -8,7 +8,7 @@ async function addClient(request: APIRequestContext, baseURL: string, data: Reco
 }
 
 test.describe('Commandes', () => {
-  test('la direction saisit une commande, l’atelier la fabrique sans voir le client', async ({ adminPage, browser, baseURL, uid }) => {
+  test('la direction saisit une commande, l’atelier la fabrique en voyant le nom du client mais ni son adresse ni les prix', async ({ adminPage, browser, baseURL, uid }) => {
     const raison = `Toitures ${uid}`
     const clientId = await addClient(adminPage.request, baseURL!, { type: 'professionnel', raisonSociale: raison, adresse: '8 avenue de la Gare', codePostal: '42700', ville: 'Firminy' })
 
@@ -49,7 +49,7 @@ test.describe('Commandes', () => {
     await expect(adminPage.getByText(/Prévue le/)).toBeVisible()
     await expect(adminPage.getByRole('button', { name: 'Modifier les pièces' })).toHaveCount(0)
 
-    // L'atelier : la commande, jamais le client
+    // L'atelier : la commande et le nom du client, jamais son adresse ni les prix
     const identifiant = `${uid}-at`
     const temp = await createUser(adminPage.request, baseURL!, { identifiant, nom: 'Plieur Test', role: 'atelier' })
     const atelier = await (await browser.newContext()).newPage()
@@ -59,16 +59,20 @@ test.describe('Commandes', () => {
     const nav = atelier.getByRole('navigation', { name: 'Navigation principale' })
     await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication', 'Réception', 'Stock de feuilles'])
     await nav.getByRole('link', { name: 'Fabrication' }).click()
-    await atelier.getByRole('link', { name: numero, exact: true }).click()
-    await expect(atelier.getByRole('heading', { level: 1 })).toHaveText(numero)
+    // La carte porte le nom du client en titre et le numéro à côté
+    const carte = atelier.getByRole('article').filter({ hasText: numero })
+    await expect(carte.getByRole('link', { name: raison, exact: true })).toBeVisible()
+    await carte.getByRole('link', { name: raison, exact: true }).click()
+    await expect(atelier.getByRole('heading', { level: 1 })).toHaveText(raison)
+    await expect(atelier.locator('.identity').getByText(numero, { exact: true })).toBeVisible()
     // exact : le conseil de découpe (« Prendre 2 feuilles : … 6 × 3 000 mm ») s'affiche aussi quand un autre test a créé du stock
     await expect(atelier.getByText('6 × 3 000 mm', { exact: true })).toBeVisible()
-    await expect(atelier.getByText(raison)).toHaveCount(0)
     await expect(atelier.getByText('Firminy')).toHaveCount(0)
+    await expect(atelier.getByText('8 avenue de la Gare')).toHaveCount(0)
     await expect(atelier.getByText(/€/)).toHaveCount(0)
     await atelier.getByRole('button', { name: 'Lancer la fabrication' }).click()
     await expect(atelier.getByText('Commande passée à l’étape « En fabrication »')).toBeVisible()
-    // Fiche imprimable : un PDF ouvert dans un nouvel onglet, sans le client
+    // Fiche imprimable : un PDF ouvert dans un nouvel onglet, avec le nom du client
     const fiche = atelier.getByRole('link', { name: 'Imprimer la fiche' })
     await expect(fiche).toHaveAttribute('target', '_blank')
     const pdf = await atelier.request.get((await fiche.getAttribute('href'))!)

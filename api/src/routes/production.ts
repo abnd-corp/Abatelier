@@ -2,7 +2,8 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { colors, materials, ORDER_STATUTS, orderEvents, orderLines, orders, sheetStock, users } from '../db/schema.js'
+import { clients, colors, materials, ORDER_STATUTS, orderEvents, orderLines, orders, sheetStock, users } from '../db/schema.js'
+import { clientName } from './clients.js'
 import { requirePerm } from '../auth/plugin.js'
 import { changeStatus, eventsOf, NEXT, PRODUCTION_STATUTS, PRODUCTION_STEPS, STATUT_LABELS } from '../orders.js'
 import { getCompany, getTemplate } from '../documents.js'
@@ -12,9 +13,16 @@ import { audit } from '../audit.js'
 import { adviseSheets, type SheetOption } from '../cutting.js'
 import { colorLabel, materialLabel } from '../quote.js'
 
-// Vue de l'atelier : les commandes à fabriquer, sans rien sur le client (ni nom, ni coordonnées, ni adresse) et sans les prix.
+// Vue de l'atelier : les commandes à fabriquer. Le client n'y figure que par son nom (c'est plus parlant qu'un numéro entre collègues) :
+// jamais son adresse, son téléphone ni son e-mail, et aucun prix.
+const nomClient = (c: Parameters<typeof clientName>[0]) => clientName(c) || 'Client'
 
 const statusBody = z.object({ statut: z.enum(ORDER_STATUTS, { error: 'Étape inconnue.' }) })
+
+async function clientNameOf(clientId: string) {
+  const [c] = await db.select({ type: clients.type, raisonSociale: clients.raisonSociale, prenom: clients.prenom, nom: clients.nom }).from(clients).where(eq(clients.id, clientId))
+  return c ? nomClient(c) : 'Client'
+}
 
 async function findOrder(id: string, reply: FastifyReply) {
   const [o] = z.uuid().safeParse(id).success ? await db.select().from(orders).where(eq(orders.id, id)) : []
@@ -109,8 +117,13 @@ export async function productionRoutes(app: FastifyInstance) {
         pieces: pieces.n,
         lignes: pieces.lignes,
         modeles: pieces.modeles,
+        clientType: clients.type,
+        clientRaisonSociale: clients.raisonSociale,
+        clientPrenom: clients.prenom,
+        clientNom: clients.nom,
       })
       .from(orders)
+      .innerJoin(clients, eq(clients.id, orders.clientId))
       .leftJoin(pieces, eq(pieces.orderId, orders.id))
       .where(inArray(orders.statut, PRODUCTION_STATUTS))
       // Les plus urgentes d'abord
@@ -135,8 +148,9 @@ export async function productionRoutes(app: FastifyInstance) {
       : []
     const who = (orderId: string, statut: 'fabrication' | 'prete') => events.filter((e) => e.orderId === orderId && e.statut === statut).at(-1)?.nom ?? null
     return {
-      orders: rows.map((r) => ({
+      orders: rows.map(({ clientType, clientRaisonSociale, clientPrenom, clientNom, ...r }) => ({
         ...r,
+        client: nomClient({ type: clientType, raisonSociale: clientRaisonSociale, prenom: clientPrenom, nom: clientNom }),
         pieces: r.pieces ?? 0,
         lignes: r.lignes ?? 0,
         modeles: r.modeles ?? '',
@@ -152,7 +166,17 @@ export async function productionRoutes(app: FastifyInstance) {
     if (!o) return
     const lignes = await linesOf(o.id)
     return {
-      order: { id: o.id, numero: o.numero, kind: o.kind, statut: o.statut, statutLabel: STATUT_LABELS[o.statut], livraisonMode: o.livraisonMode, datePrevue: o.datePrevue, next: next(o.statut) },
+      order: {
+        id: o.id,
+        numero: o.numero,
+        client: await clientNameOf(o.clientId),
+        kind: o.kind,
+        statut: o.statut,
+        statutLabel: STATUT_LABELS[o.statut],
+        livraisonMode: o.livraisonMode,
+        datePrevue: o.datePrevue,
+        next: next(o.statut),
+      },
       lignes,
       events: await eventsOf(o.id),
     }
@@ -175,6 +199,7 @@ export async function productionRoutes(app: FastifyInstance) {
     const pdf = await renderProductionSheet(
       {
         numero: o.numero,
+        client: await clientNameOf(o.clientId),
         statutLabel: STATUT_LABELS[o.statut],
         datePrevue: o.datePrevue,
         livraisonMode: o.livraisonMode,
