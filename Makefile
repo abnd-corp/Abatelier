@@ -8,7 +8,7 @@ BK = $(BASE) exec -T backup /bin/sh /opt/backup/backup.sh
 # GROUPE=stock,auth : seulement ces groupes (voir e2e/groupes.mjs, « make e2e-groupes »)
 PW_ARGS = $(if $(PAGE),--grep "$(PAGE)") $(if $(ECRAN),--project=$(ECRAN)) $(if $(GROUPE),$(shell cd e2e && node select.mjs --groupes $(GROUPE)))
 
-.PHONY: e2e-groupes help setup secrets dev dev-d down logs prod prod-down check lint format bdd-minimale bdd-demo mdp demo demo-boutique mails test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
+.PHONY: stripe-ecoute e2e-groupes help setup secrets dev dev-d down logs prod prod-down check lint format bdd-minimale bdd-demo mdp demo demo-boutique mails test test-vite test-api test-web e2e e2e-up e2e-down apercu backup backups backup-verify restore backup-export feature pr promote-staging promote-main
 
 help: ## Liste les commandes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -101,6 +101,10 @@ e2e-groupes: ## Liste les groupes de tests e2e et ce que « make e2e-diff » lan
 
 e2e-up: ## Démarre seulement la stack e2e (pour « cd e2e && npm run test:ui »)
 	$(E2E) up -d --build --wait
+
+stripe-ecoute: ## Relaie les notifications de paiement Stripe (mode test) vers l'appli de dev ; affiche le secret whsec_… à copier (voir docs/stripe-test.md)
+	@test -s secrets/stripe_secret_key.txt || { echo "Mettez d'abord la clé secrète de test (sk_test_…) dans secrets/stripe_secret_key.txt"; exit 1; }
+	docker run --rm -it --network host -e STRIPE_API_KEY="$$(cat secrets/stripe_secret_key.txt)" stripe/stripe-cli listen --forward-to localhost:$${WEB_PORT:-5173}/api/paiement/stripe
 
 e2e-down: ## Supprime la stack e2e
 	$(E2E) down -v
