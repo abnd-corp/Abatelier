@@ -46,6 +46,13 @@ test.describe('Suivi de fabrication', () => {
     const etape = () => atelier.locator('.etape').filter({ has: ligne })
     await expect(etape().getByRole('heading', { level: 2 })).toContainText('À lancer')
 
+    // On peut prendre la commande en charge, puis annuler tant qu'on n'a pas commencé : aucun lien durable avec le salarié
+    await ligne.getByRole('button', { name: 'Prendre en charge' }).click()
+    await expect(ligne).toContainText('Pris en charge par Plieur Suivi')
+    await ligne.getByRole('button', { name: 'Annuler la prise en charge' }).click()
+    await expect(ligne).toContainText('Personne ne l’a encore prise')
+    await expect(ligne.getByRole('button', { name: 'Annuler la prise en charge' })).toHaveCount(0)
+
     await ligne.getByRole('button', { name: 'Lancer la fabrication' }).click()
     // Le nom du salarié qui l'a prise, pas un identifiant, et la commande change de colonne
     await expect(ligne).toContainText('Pris en charge par Plieur Suivi')
@@ -54,6 +61,8 @@ test.describe('Suivi de fabrication', () => {
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('En fabrication')
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Vos pièces sont en cours de pliage')
 
+    // Lancée, la prise en charge ne s'annule plus (on peut seulement la reprendre)
+    await expect(ligne.getByRole('button', { name: 'Annuler la prise en charge' })).toHaveCount(0)
     await ligne.getByRole('button', { name: 'Marquer prête' }).click()
     await expect(ligne).toContainText('terminé par Plieur Suivi')
     // « Prête » en bandeau, puis la colonne : à faire retirer ou à livrer
@@ -62,7 +71,7 @@ test.describe('Suivi de fabrication', () => {
     await client.reload()
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Prête')
 
-    await ligne.getByRole('button', { name: 'Marquer livrée / retirée' }).click()
+    await ligne.getByRole('button', { name: 'Marquer retirée' }).click()
     // Une commande livrée quitte la liste de fabrication
     await expect(atelier.getByRole('article').filter({ hasText: numero })).toHaveCount(0)
     await client.reload()

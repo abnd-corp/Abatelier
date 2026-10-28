@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import { clients, colors, materials, ORDER_STATUTS, orderEvents, orderLines, orders, sheetStock, users } from '../db/schema.js'
@@ -22,6 +23,11 @@ const statusBody = z.object({ statut: z.enum(ORDER_STATUTS, { error: 'Étape inc
 async function clientNameOf(clientId: string) {
   const [c] = await db.select({ type: clients.type, raisonSociale: clients.raisonSociale, prenom: clients.prenom, nom: clients.nom }).from(clients).where(eq(clients.id, clientId))
   return c ? nomClient(c) : 'Client'
+}
+
+async function userName(id: string) {
+  const [u] = await db.select({ nom: users.nom }).from(users).where(eq(users.id, id))
+  return u?.nom ?? null
 }
 
 async function findOrder(id: string, reply: FastifyReply) {
@@ -94,7 +100,7 @@ const next = (statut: (typeof ORDER_STATUTS)[number]) => NEXT[statut].find((s) =
 export async function productionRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requirePerm('orders.production'))
 
-  app.get('/', async () => {
+  app.get('/', async (req) => {
     const pieces = db
       .select({
         orderId: orderLines.orderId,
@@ -106,10 +112,13 @@ export async function productionRoutes(app: FastifyInstance) {
       .from(orderLines)
       .groupBy(orderLines.orderId)
       .as('pieces')
+    const assignee = alias(users, 'assignee')
     const rows = await db
       .select({
         id: orders.id,
         numero: orders.numero,
+        productionUserId: orders.productionUserId,
+        assigneeNom: assignee.nom,
         statut: orders.statut,
         kind: orders.kind,
         livraisonMode: orders.livraisonMode,
@@ -124,6 +133,7 @@ export async function productionRoutes(app: FastifyInstance) {
       })
       .from(orders)
       .innerJoin(clients, eq(clients.id, orders.clientId))
+      .leftJoin(assignee, eq(assignee.id, orders.productionUserId))
       .leftJoin(pieces, eq(pieces.orderId, orders.id))
       .where(inArray(orders.statut, PRODUCTION_STATUTS))
       // Les plus urgentes d'abord
@@ -148,13 +158,15 @@ export async function productionRoutes(app: FastifyInstance) {
       : []
     const who = (orderId: string, statut: 'fabrication' | 'prete') => events.filter((e) => e.orderId === orderId && e.statut === statut).at(-1)?.nom ?? null
     return {
-      orders: rows.map(({ clientType, clientRaisonSociale, clientPrenom, clientNom, ...r }) => ({
+      orders: rows.map(({ clientType, clientRaisonSociale, clientPrenom, clientNom, productionUserId, assigneeNom, ...r }) => ({
         ...r,
         client: nomClient({ type: clientType, raisonSociale: clientRaisonSociale, prenom: clientPrenom, nom: clientNom }),
         pieces: r.pieces ?? 0,
         lignes: r.lignes ?? 0,
         modeles: r.modeles ?? '',
-        prisPar: who(r.id, 'fabrication'),
+        // La prise en charge enregistrée ; à défaut (commande lancée avant qu'elle existe), celui qui l'a lancée
+        prisPar: assigneeNom ?? who(r.id, 'fabrication'),
+        prisParMoi: productionUserId === req.user!.id,
         pretePar: who(r.id, 'prete'),
         next: next(r.statut),
       })),
@@ -165,6 +177,8 @@ export async function productionRoutes(app: FastifyInstance) {
     const o = await findOrder((req.params as { id: string }).id, reply)
     if (!o) return
     const lignes = await linesOf(o.id)
+    const events = await eventsOf(o.id)
+    const assigneeNom = o.productionUserId ? await userName(o.productionUserId) : null
     return {
       order: {
         id: o.id,
@@ -173,12 +187,14 @@ export async function productionRoutes(app: FastifyInstance) {
         kind: o.kind,
         statut: o.statut,
         statutLabel: STATUT_LABELS[o.statut],
+        prisPar: assigneeNom ?? events.filter((e) => e.statut === 'fabrication').at(-1)?.nom ?? null,
+        prisParMoi: o.productionUserId === req.user!.id,
         livraisonMode: o.livraisonMode,
         datePrevue: o.datePrevue,
         next: next(o.statut),
       },
       lignes,
-      events: await eventsOf(o.id),
+      events,
     }
   })
 
@@ -221,6 +237,32 @@ export async function productionRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: `Une commande « ${STATUT_LABELS[o.statut]} » ne peut pas passer à « ${STATUT_LABELS[parsed.data.statut]} » depuis l’atelier.`, field: 'statut' })
     }
     await changeStatus(req, o, parsed.data.statut, null)
+    // Lancer la fabrication, c'est la prendre en charge : celui qui la lance en devient le responsable
+    if (parsed.data.statut === 'fabrication' && o.productionUserId !== req.user!.id) await db.update(orders).set({ productionUserId: req.user!.id }).where(eq(orders.id, o.id))
     return { statut: parsed.data.statut }
+  })
+
+  // Prendre la commande en charge, ou la reprendre à un collègue qui ne peut plus la faire. Tant qu'elle n'est pas prête.
+  app.post('/:id/prise-en-charge', async (req, reply) => {
+    const o = await findOrder((req.params as { id: string }).id, reply)
+    if (!o) return
+    if (o.statut === 'prete') return reply.code(409).send({ error: 'Cette commande est déjà prête : on ne la prend plus en charge.' })
+    if (o.productionUserId === req.user!.id) return { ok: true }
+    const avant = o.productionUserId ? await userName(o.productionUserId) : null
+    await db.update(orders).set({ productionUserId: req.user!.id, updatedAt: new Date() }).where(eq(orders.id, o.id))
+    await audit(req, 'order.production_assigned', { targetType: 'order', targetId: o.id, details: { numero: o.numero, ...(avant ? { avant } : {}) } })
+    return { ok: true }
+  })
+
+  // Annuler la prise en charge tant que la fabrication n'est pas lancée : n'importe quel collègue peut le faire (la personne peut être absente)
+  app.delete('/:id/prise-en-charge', async (req, reply) => {
+    const o = await findOrder((req.params as { id: string }).id, reply)
+    if (!o) return
+    if (o.statut !== 'validee') return reply.code(409).send({ error: 'La fabrication est lancée : on ne peut plus annuler la prise en charge, seulement reprendre la commande.' })
+    if (!o.productionUserId) return { ok: true }
+    const avant = await userName(o.productionUserId)
+    await db.update(orders).set({ productionUserId: null, updatedAt: new Date() }).where(eq(orders.id, o.id))
+    await audit(req, 'order.production_released', { targetType: 'order', targetId: o.id, details: { numero: o.numero, ...(avant ? { avant } : {}) } })
+    return { ok: true }
   })
 }

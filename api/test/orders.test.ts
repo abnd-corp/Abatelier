@@ -6,7 +6,7 @@ import { yearOf } from '../src/documents.js'
 import { addWorkingDays, quantityDiscount } from '../src/quote.js'
 import { todayParis } from '../src/departures.js'
 import { accessoryTotals, renderProductionSheet } from '../src/production-sheet.js'
-import { buildApp, createUser, loginAs, M, pdfText, resetDb, seedModels, type App, type Client } from './helpers.js'
+import { buildApp, client, createUser, loginAs, M, pdfText, resetDb, seedModels, type App, type Client } from './helpers.js'
 
 let app: App
 let direction: Client
@@ -400,6 +400,75 @@ describe('Fabrication (atelier)', () => {
     expect(prete).toMatchObject({ statut: 'prete', prisPar: 'Lucas Martinon', pretePar: 'Marc Durand' })
     // Le nom, jamais l'identifiant de connexion
     expect(JSON.stringify(prete)).not.toMatch(/lucas\.m|marc\.d/)
+  })
+
+  describe('prise en charge', () => {
+    let id: string
+    let lucas: Client
+    let marc: Client
+    beforeEach(async () => {
+      id = (await create()).id
+      await direction.post(`/api/orders/${id}/status`, { statut: 'validee' })
+      await createUser({ identifiant: 'lucas.m', nom: 'Lucas Martinon', role: 'atelier' })
+      await createUser({ identifiant: 'marc.d', nom: 'Marc Durand', role: 'atelier' })
+      lucas = await loginAs(app, 'lucas.m')
+      marc = await loginAs(app, 'marc.d')
+    })
+    const ligne = async (c: Client) => (await c.get('/api/production')).json().orders[0]
+
+    it('se prend en charge avant de lancer, et chacun voit si c’est lui', async () => {
+      expect(await ligne(lucas)).toMatchObject({ statut: 'validee', prisPar: null, prisParMoi: false })
+      expect((await lucas.post(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(200)
+      expect(await ligne(lucas)).toMatchObject({ statut: 'validee', prisPar: 'Lucas Martinon', prisParMoi: true })
+      expect(await ligne(marc)).toMatchObject({ prisPar: 'Lucas Martinon', prisParMoi: false })
+      expect((await lucas.get(`/api/production/${id}`)).json().order).toMatchObject({ prisPar: 'Lucas Martinon', prisParMoi: true })
+      expect(await entries('order.production_assigned')).toHaveLength(1)
+      // Se la prendre deux fois ne change rien et ne journalise pas de nouveau
+      await lucas.post(`/api/production/${id}/prise-en-charge`)
+      expect(await entries('order.production_assigned')).toHaveLength(1)
+    })
+
+    it('annule la prise en charge tant que ce n’est pas lancé, même par un collègue quand la personne est absente', async () => {
+      await lucas.post(`/api/production/${id}/prise-en-charge`)
+      // Marc libère la commande de Lucas, absent : rien ne les lie
+      expect((await marc.delete(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(200)
+      expect(await ligne(marc)).toMatchObject({ prisPar: null, prisParMoi: false })
+      const [e] = await entries('order.production_released')
+      expect(e!.details).toMatchObject({ numero: expect.any(String), avant: 'Lucas Martinon' })
+      // Libérer une commande que personne n'a prise ne fait rien
+      expect((await marc.delete(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(200)
+      expect(await entries('order.production_released')).toHaveLength(1)
+      // Marc la prend à son tour
+      await marc.post(`/api/production/${id}/prise-en-charge`)
+      expect(await ligne(lucas)).toMatchObject({ prisPar: 'Marc Durand', prisParMoi: false })
+    })
+
+    it('lancer la fabrication la prend en charge, on ne peut plus annuler mais on peut la reprendre', async () => {
+      await lucas.post(`/api/production/${id}/prise-en-charge`)
+      // Marc lance : il en devient le responsable
+      expect((await marc.post(`/api/production/${id}/status`, { statut: 'fabrication' })).statusCode).toBe(200)
+      expect(await ligne(marc)).toMatchObject({ statut: 'fabrication', prisPar: 'Marc Durand', prisParMoi: true })
+      const refus = await lucas.delete(`/api/production/${id}/prise-en-charge`)
+      expect(refus.statusCode).toBe(409)
+      expect(refus.json().error).toMatch(/lancée/)
+      expect(await ligne(lucas)).toMatchObject({ prisPar: 'Marc Durand' })
+      // Marc est absent : Lucas reprend
+      expect((await lucas.post(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(200)
+      expect(await ligne(lucas)).toMatchObject({ statut: 'fabrication', prisPar: 'Lucas Martinon', prisParMoi: true })
+      const [reprise] = (await entries('order.production_assigned')).slice(-1)
+      expect(reprise!.details).toMatchObject({ avant: 'Marc Durand' })
+    })
+
+    it('ne se prend plus en charge une fois prête, et est réservée à l’atelier', async () => {
+      await lucas.post(`/api/production/${id}/status`, { statut: 'fabrication' })
+      await lucas.post(`/api/production/${id}/status`, { statut: 'prete' })
+      expect((await marc.post(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(409)
+      await createUser({ identifiant: 'claire', role: 'rh' })
+      const rh = await loginAs(app, 'claire')
+      expect((await rh.post(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(403)
+      expect((await rh.delete(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(403)
+      expect((await client(app).post(`/api/production/${id}/prise-en-charge`)).statusCode).toBe(401)
+    })
   })
 
   it('fait avancer la commande d’une étape à la fois, sans pouvoir l’annuler', async () => {

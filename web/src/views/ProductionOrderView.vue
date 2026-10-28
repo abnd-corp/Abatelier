@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api, ApiError } from '@/api'
 import { dateTime } from '@/lib/format'
-import { sheetUrl, shortDay, statutOf, STEP_ACTIONS, type OrderEvent, type OrderStatut } from '@/lib/orders'
+import { sheetUrl, shortDay, statutOf, stepAction, type OrderEvent, type OrderStatut } from '@/lib/orders'
 import { useUiStore } from '@/stores/ui'
 import AppIcon from '@/components/AppIcon.vue'
 import OrderLineCard from '@/components/orders/OrderLineCard.vue'
@@ -15,6 +15,8 @@ interface Detail {
     id: string
     numero: string
     client: string
+    prisPar: string | null
+    prisParMoi: boolean
     kind: 'sur_mesure' | 'boutique'
     statut: OrderStatut
     statutLabel: string
@@ -99,13 +101,16 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
         ><AppIcon name="calendar" :size="16" /> Prévue le <b>{{ shortDay(detail.order.datePrevue) }}</b></span
       >
       <span><AppIcon name="layers" :size="16" /> {{ total }} pièce{{ total > 1 ? 's' : '' }}</span>
+      <span v-if="detail.order.prisPar"
+        ><AppIcon name="user" :size="16" /> Pris en charge par <b>{{ detail.order.prisPar }}</b></span
+      >
       <span
         ><AppIcon :name="detail.order.livraisonMode === 'retrait' ? 'home' : 'truck'" :size="16" />
         {{ detail.order.livraisonMode === 'retrait' ? 'Retrait à l’atelier' : 'Livraison sur chantier' }}</span
       >
     </p>
     <div class="actions">
-      <button v-if="detail.order.next" class="btn primary" type="button" :disabled="busy" @click="advance">{{ STEP_ACTIONS[detail.order.next] }}</button>
+      <button v-if="detail.order.next" class="btn primary" type="button" :disabled="busy" @click="advance">{{ stepAction(detail.order.next, detail.order.livraisonMode) }}</button>
       <a class="btn" :href="sheetUrl(detail.order.id)" target="_blank" rel="noopener"><AppIcon name="printer" :size="16" />Imprimer la fiche</a>
     </div>
 

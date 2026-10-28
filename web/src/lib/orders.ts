@@ -12,6 +12,9 @@ export const STATUTS: { value: OrderStatut; label: string; tone: Tone }[] = [
 export const statutOf = (s: OrderStatut) => STATUTS.find((x) => x.value === s)!
 
 // Libellé du bouton qui fait passer à l'étape
+/** Le bouton de l'atelier pour une étape : « retirée » ou « livrée » selon la commande, jamais les deux. */
+export const stepAction = (next: OrderStatut, livraisonMode: 'retrait' | 'livraison') => (next === 'livree' ? (livraisonMode === 'retrait' ? 'Marquer retirée' : 'Marquer livrée') : STEP_ACTIONS[next])
+
 export const STEP_ACTIONS: Record<OrderStatut, string> = {
   recue: '',
   validee: 'Valider la commande',

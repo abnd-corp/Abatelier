@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api, ApiError } from '@/api'
-import { sheetUrl, shortDay, STEP_ACTIONS, type OrderStatut } from '@/lib/orders'
+import { sheetUrl, shortDay, stepAction, type OrderStatut } from '@/lib/orders'
 import { todayParis } from '@/lib/employees'
 import AppIcon from '@/components/AppIcon.vue'
 
@@ -19,6 +19,7 @@ interface Row {
   client: string
   modeles: string
   prisPar: string | null
+  prisParMoi: boolean
   pretePar: string | null
   next: OrderStatut | null
 }
@@ -45,6 +46,19 @@ async function advance(o: Row) {
   busy.value = o.id
   try {
     await api(`/production/${o.id}/status`, { method: 'POST', body: { statut: o.next } })
+    await load()
+  } catch (e) {
+    error.value = e instanceof ApiError ? e.message : 'L’action a échoué.'
+  } finally {
+    busy.value = null
+  }
+}
+
+// Prendre la commande en charge, la reprendre à un collègue, ou annuler la prise en charge tant que la fabrication n'est pas lancée
+async function priseEnCharge(o: Row, action: 'prendre' | 'annuler') {
+  busy.value = o.id
+  try {
+    await api(`/production/${o.id}/prise-en-charge`, { method: action === 'prendre' ? 'POST' : 'DELETE' })
     await load()
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : 'L’action a échoué.'
@@ -126,11 +140,11 @@ const etapes = computed(() =>
           <p v-if="!c.orders.length" class="muted none">Aucune.</p>
           <article v-for="o in c.orders" :key="o.id" class="card order">
             <RouterLink :to="{ name: 'production-order', params: { id: o.id } }" class="client">{{ o.client }}</RouterLink>
+            <span v-if="late(o)" class="pill bad retard">En retard de {{ joursRetard(o) }} j</span>
             <span class="ref">
               <span class="numero mono">{{ o.numero }}</span>
               <span v-if="o.kind === 'boutique'" class="pill accent">Boutique</span>
             </span>
-            <span v-if="late(o)" class="pill bad retard">En retard de {{ joursRetard(o) }} j</span>
             <p v-if="o.modeles" class="modeles">{{ o.modeles }}</p>
             <p class="meta">
               <span><AppIcon name="calendar" :size="15" /> {{ shortDay(o.datePrevue) }}</span>
@@ -148,7 +162,13 @@ const etapes = computed(() =>
             </p>
             <p v-else-if="o.statut === 'validee'" class="qui muted"><AppIcon name="user" :size="15" /><span>Personne ne l’a encore prise</span></p>
             <div class="row-actions">
-              <button v-if="o.next" class="btn small" :class="{ primary: o.statut !== 'prete' }" type="button" :disabled="busy === o.id" @click="advance(o)">{{ STEP_ACTIONS[o.next] }}</button>
+              <button v-if="o.next" class="btn small" :class="{ primary: o.statut !== 'prete' }" type="button" :disabled="busy === o.id" @click="advance(o)">
+                {{ stepAction(o.next, o.livraisonMode) }}
+              </button>
+              <button v-if="o.statut !== 'prete' && !o.prisParMoi" class="btn small" type="button" :disabled="busy === o.id" @click="priseEnCharge(o, 'prendre')">
+                {{ o.prisPar ? 'Reprendre' : 'Prendre en charge' }}
+              </button>
+              <button v-if="o.statut === 'validee' && o.prisPar" class="btn small" type="button" :disabled="busy === o.id" @click="priseEnCharge(o, 'annuler')">Annuler la prise en charge</button>
               <a class="btn small" :href="sheetUrl(o.id)" target="_blank" rel="noopener" :aria-label="`Imprimer la fiche ${o.numero}`" title="Imprimer la fiche"
                 ><AppIcon name="printer" :size="15" />Fiche</a
               >
@@ -255,12 +275,14 @@ const etapes = computed(() =>
   color: var(--ink);
   text-decoration: none;
   overflow-wrap: break-word;
+  hyphens: auto;
 }
 .client:hover {
   color: var(--accent);
   text-decoration: underline;
 }
 .ref {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -270,8 +292,10 @@ const etapes = computed(() =>
   color: var(--muted);
 }
 .retard {
-  grid-column: 1 / -1;
-  justify-self: start;
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  align-self: start;
 }
 .retards {
   margin: 0;

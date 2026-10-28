@@ -484,6 +484,7 @@ describe('Atelier', () => {
       lignes: 1,
       modeles: 'Couvertine',
       prisPar: null,
+      prisParMoi: false,
       pretePar: null,
       next: 'fabrication',
     },
@@ -497,6 +498,7 @@ describe('Atelier', () => {
       lignes: 1,
       modeles: 'Bavette',
       prisPar: 'Lucas Martinon',
+      prisParMoi: false,
       pretePar: 'Marc Durand',
       next: 'livree',
     },
@@ -514,6 +516,7 @@ describe('Atelier', () => {
       lignes: 2,
       modeles: 'Couvertine, Bandeau',
       prisPar: 'Lucas Martinon',
+      prisParMoi: false,
       pretePar: null,
       next: 'prete',
     },
@@ -528,6 +531,7 @@ describe('Atelier', () => {
       lignes: 1,
       modeles: 'Bandeau',
       prisPar: 'Marc Durand',
+      prisParMoi: false,
       pretePar: 'Marc Durand',
       next: 'livree',
     },
@@ -614,6 +618,84 @@ describe('Atelier', () => {
     const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: rien }] }, ATELIER)
     expect(wrapper.find('.retards').exists()).toBe(false)
     expect(wrapper.find('.retard').exists()).toBe(false)
+  })
+
+  it('propose le bon libellé pour clore une commande prête : retirée ou livrée, jamais les deux', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    const bouton = (numero: string) =>
+      wrapper
+        .findAll('article.order')
+        .find((a) => a.text().includes(numero))!
+        .findAll('button')
+        .map((b) => b.text())
+    expect(bouton('C-2026-0004')).toContain('Marquer retirée')
+    expect(bouton('C-2026-0002')).toContain('Marquer livrée')
+    expect(wrapper.text()).not.toContain('livrée / retirée')
+  })
+
+  it('met le retard en haut à droite de la carte, et rien quand la commande n’est pas en retard', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    const carte = (numero: string) => wrapper.findAll('article.order').find((a) => a.text().includes(numero))!
+    expect(carte('C-2026-0001').find('.retard').exists()).toBe(true)
+    for (const n of ['C-2026-0002', 'C-2026-0003', 'C-2026-0004']) expect(carte(n).find('.retard').exists(), n).toBe(false)
+    // Le numéro est sous le nom du client
+    const enfants = carte('C-2026-0003').element.children
+    expect(enfants[0]!.className).toContain('client')
+    expect(enfants[1]!.className).toContain('ref')
+  })
+
+  it('prend en charge, reprend à un collègue, et annule la prise en charge tant que la fabrication n’est pas lancée', async () => {
+    const A_LANCER = { ...TOUTES[0]!, id: 'o1', prisPar: null, prisParMoi: false }
+    const PRISE_PAR_UN_AUTRE = { ...TOUTES[0]!, id: 'o5', numero: 'C-2026-0005', prisPar: 'Marc Durand', prisParMoi: false }
+    const MIENNE = { ...TOUTES[0]!, id: 'o6', numero: 'C-2026-0006', prisPar: 'Lucas Martinon', prisParMoi: true }
+    const EN_FAB_AUTRE = { ...TOUTES[2]!, prisPar: 'Marc Durand', prisParMoi: false }
+    const { wrapper, calls } = await mountAt(
+      ProductionView,
+      '/fabrication',
+      {
+        'GET /production': [200, { orders: [A_LANCER, PRISE_PAR_UN_AUTRE, MIENNE, EN_FAB_AUTRE] }],
+        'POST /production/o1/prise-en-charge': [200, { ok: true }],
+        'POST /production/o5/prise-en-charge': [200, { ok: true }],
+        'DELETE /production/o5/prise-en-charge': [200, { ok: true }],
+        'DELETE /production/o6/prise-en-charge': [200, { ok: true }],
+      },
+      ATELIER,
+    )
+    const boutons = (numero: string) =>
+      wrapper
+        .findAll('article.order')
+        .find((a) => a.text().includes(numero))!
+        .findAll('button')
+    const texte = (numero: string) => boutons(numero).map((b) => b.text())
+    expect(texte('C-2026-0001')).toEqual(['Lancer la fabrication', 'Prendre en charge'])
+    expect(texte('C-2026-0005')).toEqual(['Lancer la fabrication', 'Reprendre', 'Annuler la prise en charge'])
+    // La mienne : rien à reprendre, mais je peux l'annuler
+    expect(texte('C-2026-0006')).toEqual(['Lancer la fabrication', 'Annuler la prise en charge'])
+    // Lancée par un autre : on peut la reprendre, plus l'annuler
+    expect(texte('C-2026-0003')).toEqual(['Marquer prête', 'Reprendre'])
+
+    await boutons('C-2026-0001')
+      .find((b) => b.text() === 'Prendre en charge')!
+      .trigger('click')
+    await flushPromises()
+    await boutons('C-2026-0005')
+      .find((b) => b.text() === 'Reprendre')!
+      .trigger('click')
+    await flushPromises()
+    await boutons('C-2026-0005')
+      .find((b) => b.text() === 'Annuler la prise en charge')!
+      .trigger('click')
+    await flushPromises()
+    await boutons('C-2026-0006')
+      .find((b) => b.text() === 'Annuler la prise en charge')!
+      .trigger('click')
+    await flushPromises()
+    expect(calls.filter((c) => c.path.endsWith('/prise-en-charge')).map((c) => `${c.method} ${c.path}`)).toEqual([
+      'POST /production/o1/prise-en-charge',
+      'POST /production/o5/prise-en-charge',
+      'DELETE /production/o5/prise-en-charge',
+      'DELETE /production/o6/prise-en-charge',
+    ])
   })
 
   it('donne la fiche imprimable de chaque commande', async () => {

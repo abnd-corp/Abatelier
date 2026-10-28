@@ -50,7 +50,7 @@ test.describe('Parcours complet : devis, commande, fabrication, facture, paiemen
     await expect(etape()).toContainText('En fabrication')
     await carte.getByRole('button', { name: 'Marquer prête' }).click()
     await expect(etape()).toContainText('Prête')
-    await carte.getByRole('button', { name: 'Marquer livrée / retirée' }).click()
+    await carte.getByRole('button', { name: 'Marquer retirée' }).click()
     await expect(atelier.getByRole('article').filter({ hasText: numero })).toHaveCount(0)
 
     // 5. La direction facture et encaisse
