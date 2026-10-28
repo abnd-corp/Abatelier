@@ -54,7 +54,7 @@ test.describe('Arrivée et départ d’un employé', () => {
     await expect(row).toContainText('Désactivé')
 
     // L'employé est déconnecté dès sa prochaine action, et ne peut plus revenir
-    await employee.getByRole('link', { name: /^Mon compte/ }).click()
+    await employee.getByRole('link', { name: /^Mon compte :/ }).click()
     await expect(employee).toHaveURL(/\/connexion\?.*expire=1/)
     await expect(employee.getByText('Votre session a expiré')).toBeVisible()
     await employee.getByLabel('Identifiant').fill(uid)
