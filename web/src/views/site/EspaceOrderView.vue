@@ -126,7 +126,10 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
           <b class="ttc">{{ eur(data.paiement.montantTtc) }} TTC</b>
           <span v-if="data.paiement.paidAt" class="muted"> · par carte le {{ jour(data.paiement.paidAt) }}</span>
         </p>
-        <p class="muted hint">Votre commande a été passée et réglée en ligne : elle vaut contrat. Si l’atelier ne pouvait pas la réaliser, il vous préviendrait et vous rembourserait la totalité.</p>
+        <p class="muted hint">
+          Votre commande a été passée et réglée en ligne : elle vaut contrat. Dans le cas exceptionnel où elle ne pourrait pas être réalisée, nous vous préviendrions et vous rembourserions la
+          totalité.
+        </p>
       </section>
       <section v-else-if="devis" id="devis" class="card box" :class="{ highlight: attenteReponse(devis) }" aria-labelledby="titre-devis">
         <h2 id="titre-devis">Votre devis {{ devis.numero }}</h2>
