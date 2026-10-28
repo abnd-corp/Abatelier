@@ -1,10 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import StockView from '@/views/StockView.vue'
 import { describe as describeEntry, type AuditEntry } from '@/lib/audit-labels'
 import type { Feuille, Mouvement } from '@/lib/stock'
 import { useAuthStore } from '@/stores/auth'
 import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
+
+// La caméra (lecture de codes-barres) n'est pas utilisée ici
+vi.mock('@/lib/scan', () => ({ startScan: vi.fn() }))
 
 const norm = (t: string) => t.replace(/[\u202f\u00a0]/g, ' ')
 const F1: Feuille = {
@@ -154,6 +157,37 @@ describe('Stock de feuilles', () => {
     expect(bad.wrapper.get('#s-largeur').attributes('aria-invalid')).toBe('true')
   })
 
+  it('enregistre le code-barres du fournisseur avec la nouvelle référence', async () => {
+    const { wrapper, calls } = await mountStock({ 'POST /stock/feuilles': [201, { feuille: F1 }] })
+    await ouvrirAjoutFeuilles(wrapper)
+    await wrapper.get('#s-matiere').setValue('m1')
+    await wrapper.get('#s-code').setValue('3760123456789')
+    await wrapper.get('form.grid').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'POST')!.body).toMatchObject({ materialId: 'm1', code: '3760123456789' })
+    const sans = await mountStock({ 'POST /stock/feuilles': [201, { feuille: F1 }] })
+    await ouvrirAjoutFeuilles(sans.wrapper)
+    await sans.wrapper.get('#s-matiere').setValue('m1')
+    await sans.wrapper.get('form.grid').trigger('submit')
+    await flushPromises()
+    expect(sans.calls.find((c) => c.method === 'POST')!.body).not.toHaveProperty('code')
+  })
+
+  it('ouvre les codes-barres d’une référence, en associe un et recharge la liste', async () => {
+    const { wrapper, calls } = await mountStock({ 'POST /stock/codes': [201, { ok: true }] })
+    const bouton = () => wrapper.get(`button[aria-label="Codes-barres : ${F1.libelle}"]`)
+    expect(wrapper.find(`#code-${F1.id}`).exists()).toBe(false)
+    await bouton().trigger('click')
+    expect(bouton().attributes('aria-expanded')).toBe('true')
+    await wrapper.get(`#code-${F1.id}`).setValue('3760123456789')
+    await wrapper.get(`#code-${F1.id}`).element.closest('form')!.dispatchEvent(new Event('submit'))
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'POST' && c.path === '/stock/codes')!.body).toEqual({ code: '3760123456789', sheetId: F1.id })
+    expect(calls.filter((c) => c.path === '/stock/feuilles' && c.method === 'GET')).toHaveLength(2)
+    await bouton().trigger('click')
+    expect(wrapper.find(`#code-${F1.id}`).exists()).toBe(false)
+  })
+
   it('enregistre une sortie avec son motif, puis une entrée, puis un inventaire, via un seul bouton « Ajuster »', async () => {
     const { wrapper, calls } = await mountStock({ 'POST /stock/feuilles/f1/mouvement': [200, { quantite: 7, bas: false }] })
     const ajuster = () => wrapper.get(`button[aria-label="Ajuster le stock : ${F1.libelle}"]`).trigger('click')
@@ -253,6 +287,9 @@ describe('Stock de feuilles', () => {
     expect(norm(e('stock.sheet_created', { libelle: 'Alu 1,5 mm · brut · 1 250 × 3 000 mm', quantite: 10 }))).toBe('A ajouté au stock la feuille Alu 1,5 mm · brut · 1 250 × 3 000 mm (10)')
     expect(e('stock.moved', { libelle: 'X', delta: -3, apres: 7, motif: 'fabrication' })).toBe('Sortie de 3 feuilles : X (reste 7)')
     expect(e('stock.moved', { libelle: 'X', delta: 2, apres: 9, motif: 'inventaire' })).toBe('Inventaire de 2 feuilles : X (reste 9)')
+    expect(e('stock.moved', { libelle: 'X', delta: 12, apres: 22, motif: 'reception', code: '3760123456789' })).toBe('Entrée de 12 feuilles : X (reste 22) · code 3760123456789')
+    expect(e('stock.code_linked', { libelle: 'X', code: '3760123456789' })).toBe('A associé le code-barres 3760123456789 à la feuille X')
+    expect(e('stock.code_unlinked', { libelle: 'X', code: '3760123456789' })).toBe('A retiré le code-barres 3760123456789 de la feuille X')
     expect(e('stock.sheet_deleted', { libelle: 'X' })).toBe('A supprimé du stock la référence X')
   })
 })

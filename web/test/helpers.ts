@@ -95,6 +95,8 @@ export function makeRouter() {
       },
       { path: '/fabrication', name: 'production', component: page('production'), meta: { section: 'Atelier', title: 'Fabrication' } },
       { path: '/fabrication/:id', name: 'production-order', component: page('production-order'), meta: { menu: 'production' } },
+      { path: '/reception', name: 'reception', component: page('reception'), meta: { section: 'Atelier', title: 'Réception de marchandise' } },
+      { path: '/stock', name: 'stock', component: page('stock'), meta: { section: 'Atelier', title: 'Stock de feuilles' } },
       { path: '/salaries', name: 'employees', component: page('employees'), meta: { section: 'Équipe', title: 'Salariés' } },
       { path: '/salaries/nouveau', name: 'employee-new', component: page('employee-new'), meta: { menu: 'employees' } },
       {

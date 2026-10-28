@@ -42,7 +42,7 @@ test.describe('Arrivée et départ d’un employé', () => {
 
     // 4. Rôle atelier : pas d'accès à la gestion des comptes ni au journal
     const nav = employee.getByRole('navigation', { name: 'Navigation principale' })
-    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication', 'Stock de feuilles'])
+    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication', 'Réception', 'Stock de feuilles'])
     await employee.goto('/utilisateurs')
     await expect(employee).toHaveURL('/tableau-de-bord')
 
@@ -54,7 +54,7 @@ test.describe('Arrivée et départ d’un employé', () => {
     await expect(row).toContainText('Désactivé')
 
     // L'employé est déconnecté dès sa prochaine action, et ne peut plus revenir
-    await employee.getByRole('link', { name: /^Mon compte/ }).click()
+    await employee.getByRole('link', { name: /^Mon compte :/ }).click()
     await expect(employee).toHaveURL(/\/connexion\?.*expire=1/)
     await expect(employee.getByText('Votre session a expiré')).toBeVisible()
     await employee.getByLabel('Identifiant').fill(uid)

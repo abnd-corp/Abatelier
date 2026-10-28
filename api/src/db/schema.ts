@@ -561,6 +561,16 @@ export const sheetMovements = pgTable(
   (t) => [index('sheet_movements_sheet_idx').on(t.sheetId, t.createdAt)],
 )
 
+// Codes-barres des fournisseurs : un code désigne une référence du stock, pour réceptionner la marchandise en la scannant
+export const sheetBarcodes = pgTable('sheet_barcodes', {
+  code: text('code').primaryKey(),
+  sheetId: uuid('sheet_id')
+    .notNull()
+    .references(() => sheetStock.id, { onDelete: 'cascade' }),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+})
+
 // --- Commandes ---
 // Les prix sont calculés avec le catalogue au moment de l'enregistrement, puis figés dans la commande :
 // un changement de tarif ne modifie pas une commande déjà passée.

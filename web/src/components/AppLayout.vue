@@ -32,6 +32,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
     title: 'Atelier',
     items: [
       { to: { name: 'production' }, name: 'production', label: 'Fabrication', icon: 'layers', perm: 'orders.production' },
+      { to: { name: 'reception' }, name: 'reception', label: 'Réception', icon: 'truck', perm: 'stock.manage' },
       { to: { name: 'stock' }, name: 'stock', label: 'Stock de feuilles', icon: 'inbox', perm: 'stock.manage' },
     ],
   },
