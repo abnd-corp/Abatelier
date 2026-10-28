@@ -49,13 +49,26 @@ C'est ce qui permet de compter en temps machine plutôt qu'en nombre de pièces.
 - Qui décide, et sur quels critères ?
 - Qu'arrive-t-il au client : devis refusé, proposition d'une autre solution, remboursement ?
 
-## 7. Après l'entretien : ce qu'on en fait
+## 7. Paiement en ligne et banque
+
+Le client doit avoir un prestataire de paiement pour encaisser les cartes sur la boutique. L'application peut s'adapter à plusieurs (Stripe, Mollie, PayPlug, celui de la banque…) : il faut savoir lequel.
+
+- Quelle est sa **banque** ? Propose-t-elle un service de paiement en ligne (par exemple Up2pay, PayPlug, CIC Paiement, Lyra) ?
+- A-t-il déjà un **contrat de vente à distance** (paiement par carte à distance) ? Avec qui, et depuis quand ?
+- Accepte-t-il de créer un compte chez un prestataire en ligne (Mollie, Stripe…) ? Préfère-t-il rester chez sa banque ?
+- Quels **moyens de paiement** veut-il proposer : carte, virement, prélèvement SEPA, PayPal ?
+- Quels **frais** accepte-t-il (pourcentage par paiement, abonnement mensuel) ? Demandez la grille de son prestataire actuel.
+- Souhaite-t-il que ses données de paiement restent chez un prestataire **européen** ?
+- Qui ouvrira le compte, avec quels documents (extrait Kbis, pièce d'identité du dirigeant, RIB) ?
+
+## 8. Après l'entretien : ce qu'on en fait
 
 | Réponse obtenue | Réglage dans l'application |
 |---|---|
 | Limites de la plieuse par matière et épaisseur | Façonnage et conditions : plis, angles, retour minimum, développé, longueur. Quand une limite est dépassée, le configurateur dit laquelle et propose une correction |
 | Tranches de quantité et durées | Délai selon la quantité de pièces de la commande |
 | Cadence et nombre d'opérateurs | Capacité par jour : le délai annoncé s'allonge selon la charge déjà en file |
+| Prestataire de paiement et moyens proposés | Réalisation du prestataire choisi (une centaine de lignes) puis clés dans `secrets/` ; essai en mode test avant l'ouverture |
 | Plafond de pièces et délai maximal acceptable | Au-delà, le configurateur propose une demande de contact avec la fiche de la pièce, au lieu d'une commande |
 
 Il n'y a pas de colonne « À confirmer » : une commande est soit acceptée automatiquement avec un délai honnête, soit corrigée par le client avec l'aide du configurateur, soit transformée en demande de contact.
