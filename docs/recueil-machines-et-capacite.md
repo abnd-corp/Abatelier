@@ -72,7 +72,19 @@ Le client doit avoir un prestataire de paiement pour encaisser les cartes sur la
 - Souhaite-t-il que ses données de paiement restent chez un prestataire **européen** ?
 - Qui ouvrira le compte, avec quels documents (extrait Kbis, pièce d'identité du dirigeant, RIB) ?
 
-## 8. Après l'entretien : ce qu'on en fait
+## 8. Le serveur et le NAS
+
+L'application tourne sur un petit serveur (Raspberry Pi) chez le client ; les sauvegardes, et éventuellement les documents, peuvent aller sur son NAS, sur le même réseau.
+
+- Y a-t-il déjà un **NAS** ? Marque et modèle ? Combien d'espace libre ? Disques en RAID ?
+- Par quels protocoles est-il joignable (partage Windows SMB, NFS, S3, SSH) ?
+- Le NAS est-il **copié ailleurs** (autre site, nuage) ? Qui s'en occupe, à quelle fréquence ?
+- Le serveur et le NAS sont-ils sur le **même réseau**, avec une adresse fixe ? Y a-t-il un onduleur ?
+- Qui administre le réseau et le NAS, et peut créer un accès réservé à l'application ?
+- Combien de temps garde-t-il aujourd'hui ses factures et ses devis (la loi impose 10 ans pour les factures) ?
+- Faut-il pouvoir **consulter les documents depuis le NAS**, sans passer par l'application ?
+
+## 9. Après l'entretien : ce qu'on en fait
 
 | Réponse obtenue | Réglage dans l'application |
 |---|---|
