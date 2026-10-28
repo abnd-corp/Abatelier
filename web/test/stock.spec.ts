@@ -252,17 +252,14 @@ describe('Stock de feuilles', () => {
     expect(wrapper.find('#s-seuil').exists()).toBe(false)
   })
 
-  it('ne propose de supprimer qu’une référence vide, modifie le seuil et la note, et montre l’historique', async () => {
+  it('ne propose jamais de supprimer une référence, modifie le seuil et la note, et montre l’historique', async () => {
     const vide = { ...F2, id: 'f3', quantite: 0, bas: false, etat: 'vide' as const, libelle: 'Aluminium 1 mm · brut · 450 × 3 000 mm' }
     const { wrapper, calls } = await mountStock({
       'GET /stock/feuilles': [200, { ...LIST, feuilles: [F1, vide] }],
-      'DELETE /stock/feuilles/f3': [200, { ok: true }],
       'PATCH /stock/feuilles/f1': [200, { ok: true }],
     })
-    expect(wrapper.find(`button[aria-label^="Supprimer la référence ${F1.libelle}"]`).exists()).toBe(false)
-    await wrapper.get('button[aria-label^="Supprimer la référence"]').trigger('click')
-    await flushPromises()
-    expect(calls.some((c) => c.method === 'DELETE' && c.path === '/stock/feuilles/f3')).toBe(true)
+    // Même vide, une référence ne se supprime pas depuis le stock (la direction l'archive dans Matériaux)
+    expect(wrapper.find('button[aria-label^="Supprimer"]').exists()).toBe(false)
     await wrapper.get(`input[aria-label="Alerte stock bas de ${F1.libelle}"]`).setValue('6')
     await wrapper.get(`input[aria-label="Alerte stock bas de ${F1.libelle}"]`).trigger('change')
     await flushPromises()
@@ -291,5 +288,7 @@ describe('Stock de feuilles', () => {
     expect(e('stock.code_linked', { libelle: 'X', code: '3760123456789' })).toBe('A associé le code-barres 3760123456789 à la feuille X')
     expect(e('stock.code_unlinked', { libelle: 'X', code: '3760123456789' })).toBe('A retiré le code-barres 3760123456789 de la feuille X')
     expect(e('stock.sheet_deleted', { libelle: 'X' })).toBe('A supprimé du stock la référence X')
+    expect(e('stock.sheet_archived', { libelle: 'X' })).toBe('A archivé la référence X')
+    expect(e('stock.sheet_unarchived', { libelle: 'X' })).toBe('A désarchivé la référence X')
   })
 })

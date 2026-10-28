@@ -42,6 +42,7 @@ describe('Menu latéral', () => {
       'Clients',
       'Fabrication',
       'Tarifs et catalogue',
+      'Matériaux',
       'Modèles de documents',
       'Boutique',
       'Site vitrine',

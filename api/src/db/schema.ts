@@ -532,6 +532,8 @@ export const sheetStock = pgTable(
     // Seuil d'alerte : en dessous, la feuille est signalée « stock bas » (0 = pas d'alerte)
     seuil: integer('seuil').notNull().default(0),
     note: text('note').notNull().default(''),
+    // Une référence ne se supprime jamais (l'historique en dépend) : elle s'archive, et disparaît alors des listes et de la réception
+    archivedAt: ts('archived_at'),
     createdAt: ts('created_at').notNull().defaultNow(),
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },

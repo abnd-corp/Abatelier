@@ -286,6 +286,12 @@ export const router = createRouter({
           meta: { perm: 'catalog.manage', section: 'Direction', title: 'Tarifs et catalogue' },
         },
         {
+          path: 'materiaux',
+          name: 'materiaux',
+          component: () => import('@/views/MateriauxView.vue'),
+          meta: { perm: 'catalog.manage', section: 'Direction', title: 'Matériaux' },
+        },
+        {
           path: 'modeles-documents',
           name: 'documents',
           component: () => import('@/views/DocumentsView.vue'),

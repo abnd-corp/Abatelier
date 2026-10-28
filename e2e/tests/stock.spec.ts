@@ -173,12 +173,7 @@ test.describe('Stock de feuilles : seuil, note et suppression', () => {
     await carte().getByRole('button', { name: 'Valider' }).click()
     await expect(carte()).toContainText(note)
 
-    // La référence est vide : on peut la supprimer
-    await carte()
-      .getByRole('button', { name: /^Supprimer la référence/ })
-      .click()
-    await expect(carte()).toHaveCount(0)
-    await adminPage.reload()
-    await expect(carte()).toHaveCount(0)
+    // Même vide, une référence ne se supprime pas depuis le stock : elle s'archive dans Matériaux
+    await expect(carte().getByRole('button', { name: /^Supprimer/ })).toHaveCount(0)
   })
 })

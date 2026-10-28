@@ -1,9 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import { and, asc, desc, eq, gte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import { colors, materials, SHEET_MOTIFS, sheetBarcodes, sheetMovements, sheetStock, users } from '../db/schema.js'
-import { requirePerm } from '../auth/plugin.js'
+import { requireAnyPerm, requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
 import { colorLabel, materialLabel } from '../quote.js'
 import { invalid, isUniqueViolation } from '../validation.js'
@@ -37,18 +37,29 @@ const code = z
   .max(64, 'Code-barres : 64 caractères maximum.')
   .regex(/^[A-Za-z0-9._\-/]+$/, 'Code-barres : chiffres, lettres, point, tiret ou barre oblique seulement.')
   .transform((c) => c.toUpperCase())
-const createBody = z.object({
-  materialId: z.uuid('Choisissez la matière.'),
-  colorId: z.uuid('Coloris inconnu.').nullish(),
-  largeur: dim('Largeur'),
-  longueur: dim('Longueur'),
-  chute: z.boolean().default(false),
-  quantite: qty('Quantité').default(0),
-  seuil: qty('Seuil d’alerte', 10000).default(0),
-  note: note.default(''),
-  // Code-barres du fournisseur, pour la réception au scan
-  code: code.optional(),
-})
+const createBody = z
+  .object({
+    // La matière et le coloris se désignent par leur identifiant (catalogue) ou se saisissent librement : ce qui manque au catalogue y est créé
+    materialId: z.uuid('Choisissez la matière.').optional(),
+    colorId: z.uuid('Coloris inconnu.').nullish(),
+    matiere: z.string().trim().min(1, 'Indiquez la matière.').max(60, 'Matière : 60 caractères maximum.').optional(),
+    epaisseur: z.number({ error: 'Épaisseur : nombre attendu.' }).min(0.3, 'Épaisseur : 0,3 mm minimum.').max(10, 'Épaisseur : 10 mm maximum.').optional(),
+    coloris: z.string().trim().max(60, 'Coloris : 60 caractères maximum.').optional(),
+    reference: z.string().trim().max(40, 'Référence du coloris : 40 caractères maximum.').optional(),
+    largeur: dim('Largeur'),
+    longueur: dim('Longueur'),
+    chute: z.boolean().default(false),
+    quantite: qty('Quantité').default(0),
+    seuil: qty('Seuil d’alerte', 10000).default(0),
+    note: note.default(''),
+    // Code-barres du fournisseur, pour la réception au scan
+    code: code.optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (d.materialId) return
+    if (!d.matiere) ctx.addIssue({ code: 'custom', message: 'Indiquez la matière.', path: ['matiere'] })
+    if (d.epaisseur === undefined) ctx.addIssue({ code: 'custom', message: 'Indiquez l’épaisseur.', path: ['epaisseur'] })
+  })
 const patchBody = z.object({
   largeur: dim('Largeur').optional(),
   longueur: dim('Longueur').optional(),
@@ -76,8 +87,15 @@ const receptionBody = z.object({
 const isUuid = (id: string) => z.uuid().safeParse(id).success
 const fmt = (n: number) => n.toLocaleString('fr-FR')
 
+// La définition des références (matière, coloris, format) et de leurs codes-barres est aussi accessible à la direction (page Matériaux) ;
+// les quantités, les mouvements et la réception restent à l'atelier.
+const DEFINITION = new Set(['GET /options', 'GET /feuilles', 'POST /feuilles', 'POST /feuilles/:id/archive', 'POST /feuilles/:id/unarchive', 'GET /codes/:code', 'POST /codes', 'DELETE /codes/:code'])
+
 export async function stockRoutes(app: FastifyInstance) {
-  app.addHook('preHandler', requirePerm('stock.manage'))
+  app.addHook('preHandler', async (req, reply) => {
+    const route = `${req.method} ${(req.routeOptions.url ?? '').replace(/^\/api\/stock/, '')}`
+    return (DEFINITION.has(route) ? requireAnyPerm('stock.manage', 'catalog.manage') : requirePerm('stock.manage'))(req, reply)
+  })
 
   const base = () =>
     db
@@ -96,6 +114,7 @@ export async function stockRoutes(app: FastifyInstance) {
         quantite: sheetStock.quantite,
         seuil: sheetStock.seuil,
         note: sheetStock.note,
+        archivedAt: sheetStock.archivedAt,
       })
       .from(sheetStock)
       .innerJoin(materials, eq(materials.id, sheetStock.materialId))
@@ -113,7 +132,8 @@ export async function stockRoutes(app: FastifyInstance) {
     if (quantite <= seuil) return 'bas'
     return 'ok'
   }
-  const out = (r: Row) => ({ ...r, libelle: libelle(r), bas: r.seuil > 0 && r.quantite <= r.seuil, etat: etatOf(r.seuil, r.quantite) })
+  const out = ({ archivedAt, ...r }: Row) => ({ ...r, archivee: archivedAt !== null, libelle: libelle(r), bas: r.seuil > 0 && r.quantite <= r.seuil, etat: etatOf(r.seuil, r.quantite) })
+  const ARCHIVEE = 'Cette référence est archivée : désarchivez-la pour l’utiliser.'
 
   async function find(id: string, reply: FastifyReply) {
     const [r] = isUuid(id) ? await base().where(eq(sheetStock.id, id)) : []
@@ -122,16 +142,33 @@ export async function stockRoutes(app: FastifyInstance) {
   }
 
   // Matières et coloris du catalogue, pour choisir ce que l'on stocke (la direction les gère dans « Tarifs et catalogue »)
-  app.get('/options', async () => {
+  // ?tous=1 : aussi les matières et coloris inactifs (créés depuis le stock, pas encore tarifés), pour les suggestions de saisie libre
+  app.get('/options', async (req) => {
+    const tous = (req.query as { tous?: string }).tous === '1'
     const [ms, cs] = await Promise.all([
-      db.select().from(materials).where(eq(materials.actif, true)).orderBy(asc(materials.position), asc(materials.nom), asc(materials.epaisseur)),
-      db.select().from(colors).where(eq(colors.actif, true)).orderBy(asc(colors.position), asc(colors.nom)),
+      db
+        .select()
+        .from(materials)
+        .where(tous ? undefined : eq(materials.actif, true))
+        .orderBy(asc(materials.position), asc(materials.nom), asc(materials.epaisseur)),
+      db
+        .select()
+        .from(colors)
+        .where(tous ? undefined : eq(colors.actif, true))
+        .orderBy(asc(colors.position), asc(colors.nom)),
     ])
-    return { materials: ms.map((m) => ({ id: m.id, label: materialLabel(m) })), colors: cs.map((c) => ({ id: c.id, label: colorLabel(c), hex: c.hex })) }
+    return {
+      materials: ms.map((m) => ({ id: m.id, label: materialLabel(m), nom: m.nom, epaisseur: m.epaisseur })),
+      colors: cs.map((c) => ({ id: c.id, label: colorLabel(c), hex: c.hex, nom: c.nom, reference: c.reference })),
+    }
   })
 
-  app.get('/feuilles', async () => {
-    const rows = await base().orderBy(asc(materials.nom), asc(materials.epaisseur), asc(colors.nom), asc(sheetStock.chute), asc(sheetStock.largeur), asc(sheetStock.longueur))
+  // Par défaut les références en service ; ?archivees=1 donne celles qui sont archivées
+  app.get('/feuilles', async (req) => {
+    const archivees = (req.query as { archivees?: string }).archivees === '1'
+    const rows = await base()
+      .where(archivees ? isNotNull(sheetStock.archivedAt) : isNull(sheetStock.archivedAt))
+      .orderBy(asc(materials.nom), asc(materials.epaisseur), asc(colors.nom), asc(sheetStock.chute), asc(sheetStock.largeur), asc(sheetStock.longueur))
     const links = await db.select({ code: sheetBarcodes.code, sheetId: sheetBarcodes.sheetId }).from(sheetBarcodes).orderBy(asc(sheetBarcodes.createdAt))
     const feuilles = rows.map((r) => ({ ...out(r), codes: links.filter((l) => l.sheetId === r.id).map((l) => l.code) }))
     // Une chute n'est pas une feuille entière (un reste de découpe, parfois trop petit pour être réutilisé) :
@@ -156,8 +193,10 @@ export async function stockRoutes(app: FastifyInstance) {
     const parsed = createBody.safeParse(req.body)
     if (!parsed.success) return invalid(reply, parsed.error)
     const d = parsed.data
-    const [m] = await db.select({ id: materials.id }).from(materials).where(eq(materials.id, d.materialId))
-    if (!m) return reply.code(400).send({ error: 'Matière inconnue.', field: 'materialId' })
+    if (d.materialId) {
+      const [m] = await db.select({ id: materials.id }).from(materials).where(eq(materials.id, d.materialId))
+      if (!m) return reply.code(400).send({ error: 'Matière inconnue.', field: 'materialId' })
+    }
     if (d.colorId) {
       const [c] = await db.select({ id: colors.id }).from(colors).where(eq(colors.id, d.colorId))
       if (!c) return reply.code(400).send({ error: 'Coloris inconnu.', field: 'colorId' })
@@ -168,15 +207,50 @@ export async function stockRoutes(app: FastifyInstance) {
     if (n >= FEUILLES_MAX) return reply.code(409).send({ error: `${FEUILLES_MAX} références maximum.` })
     // Largeur ≤ longueur : le plus petit côté est la largeur
     const [largeur, longueur] = d.largeur <= d.longueur ? [d.largeur, d.longueur] : [d.longueur, d.largeur]
+    let materialId = d.materialId
+    let colorId = d.colorId ?? null
+    const crees: { type: 'material' | 'color'; id: string; nom: string }[] = []
     try {
       const id = await db.transaction(async (tx) => {
-        const [s] = await tx
-          .insert(sheetStock)
-          .values({ materialId: d.materialId, colorId: d.colorId ?? null, largeur, longueur, chute: d.chute, quantite: d.quantite, seuil: d.seuil, note: d.note })
-          .returning({ id: sheetStock.id })
+        // Matière et coloris saisis librement : on retrouve ceux du catalogue (sans tenir compte des majuscules), sinon on les crée.
+        // Ce qui est créé ici est inactif, à prix zéro : la direction le complète dans « Tarifs et catalogue » avant de le vendre.
+        if (!materialId) {
+          const [found] = await tx
+            .select()
+            .from(materials)
+            .where(and(sql`lower(${materials.nom}) = lower(${d.matiere!})`, eq(materials.epaisseur, d.epaisseur!)))
+          if (found) materialId = found.id
+          else {
+            const [m] = await tx
+              .insert(materials)
+              .values({ nom: d.matiere!, epaisseur: d.epaisseur!, prixM2: 0, retourMin: 0, actif: false, position: sql`(select coalesce(max(position), 0) + 1 from materials)` })
+              .returning()
+            materialId = m!.id
+            crees.push({ type: 'material', id: m!.id, nom: materialLabel(m!) })
+          }
+        }
+        if (!colorId && d.coloris) {
+          const ref = d.reference || d.coloris
+          const [found] = await tx
+            .select()
+            .from(colors)
+            .where(sql`lower(${colors.reference}) = lower(${ref})`)
+          if (found) colorId = found.id
+          else {
+            const [c] = await tx
+              .insert(colors)
+              .values({ nom: d.coloris, reference: ref, hex: '#cccccc', actif: false, position: sql`(select coalesce(max(position), 0) + 1 from colors)` })
+              .returning()
+            colorId = c!.id
+            crees.push({ type: 'color', id: c!.id, nom: colorLabel(c!) })
+          }
+        }
+        const [s] = await tx.insert(sheetStock).values({ materialId, colorId, largeur, longueur, chute: d.chute, quantite: d.quantite, seuil: d.seuil, note: d.note }).returning({ id: sheetStock.id })
         if (d.code) await tx.insert(sheetBarcodes).values({ code: d.code, sheetId: s!.id, createdBy: req.user!.id })
         return s!.id
       })
+      for (const c of crees)
+        await audit(req, c.type === 'material' ? 'catalog.material_created' : 'catalog.color_created', { targetType: c.type, targetId: c.id, details: { nom: c.nom, prixM2: 0, depuisStock: true } })
       const r = (await base().where(eq(sheetStock.id, id)))[0]!
       if (d.quantite > 0)
         await db.insert(sheetMovements).values({ sheetId: id, libelle: libelle(r), delta: d.quantite, apres: d.quantite, motif: 'reception', note: 'Première saisie', userId: req.user!.id })
@@ -186,6 +260,19 @@ export async function stockRoutes(app: FastifyInstance) {
       if (isUniqueViolation(e)) {
         const taken = d.code ? (await db.select({ code: sheetBarcodes.code }).from(sheetBarcodes).where(eq(sheetBarcodes.code, d.code))).length > 0 : false
         if (taken) return reply.code(409).send({ error: 'Ce code-barres est déjà associé à une autre référence.', field: 'code' })
+        const [dup] = await db
+          .select({ archivedAt: sheetStock.archivedAt })
+          .from(sheetStock)
+          .where(
+            and(
+              eq(sheetStock.materialId, materialId!),
+              colorId ? eq(sheetStock.colorId, colorId) : isNull(sheetStock.colorId),
+              eq(sheetStock.largeur, largeur),
+              eq(sheetStock.longueur, longueur),
+              eq(sheetStock.chute, d.chute),
+            ),
+          )
+        if (dup?.archivedAt) return reply.code(409).send({ error: 'Cette référence existe, archivée : désarchivez-la plutôt que de la recréer.', field: 'largeur' })
         return reply.code(409).send({ error: 'Cette feuille existe déjà dans le stock : ajoutez-lui des feuilles plutôt que de la recréer.', field: 'largeur' })
       }
       throw e
@@ -266,6 +353,7 @@ export async function stockRoutes(app: FastifyInstance) {
     if (!parsed.success) return invalid(reply, parsed.error)
     const r = await byCode(parsed.data)
     if (!r) return reply.code(404).send({ error: 'Code-barres inconnu : associez-le à une référence du stock.', code: parsed.data })
+    if (r.archivedAt) return reply.code(409).send({ error: ARCHIVEE, code: parsed.data })
     return { code: parsed.data, feuille: out(r) }
   })
 
@@ -275,6 +363,7 @@ export async function stockRoutes(app: FastifyInstance) {
     if (!parsed.success) return invalid(reply, parsed.error)
     const r = await find(parsed.data.sheetId, reply)
     if (!r) return
+    if (r.archivedAt) return reply.code(409).send({ error: ARCHIVEE })
     const existing = await byCode(parsed.data.code)
     if (existing) {
       if (existing.id === r.id) return { ok: true }
@@ -301,16 +390,28 @@ export async function stockRoutes(app: FastifyInstance) {
     if (!parsed.success) return invalid(reply, parsed.error)
     const r = await byCode(parsed.data.code)
     if (!r) return reply.code(404).send({ error: 'Code-barres inconnu : associez-le à une référence du stock.', code: parsed.data.code })
+    if (r.archivedAt) return reply.code(409).send({ error: ARCHIVEE, code: parsed.data.code })
     const apres = await move(req, r, parsed.data.quantite, 'reception', parsed.data.note || 'Réception', { code: parsed.data.code })
     return { feuille: out({ ...r, quantite: apres! }), recu: parsed.data.quantite }
   })
 
-  app.delete('/feuilles/:id', async (req, reply) => {
+  // Une référence ne se supprime jamais : l'historique des mouvements et des commandes s'y rapporte. On l'archive (stock à zéro).
+  app.post('/feuilles/:id/archive', async (req, reply) => {
     const r = await find((req.params as { id: string }).id, reply)
     if (!r) return
-    if (r.quantite > 0) return reply.code(409).send({ error: 'Il reste des feuilles de ce format : sortez-les du stock (perte ou inventaire) avant de supprimer la référence.' })
-    await db.delete(sheetStock).where(eq(sheetStock.id, r.id))
-    await audit(req, 'stock.sheet_deleted', { targetType: 'sheet', targetId: r.id, details: { libelle: libelle(r) } })
+    if (r.archivedAt) return { ok: true }
+    if (r.quantite > 0) return reply.code(409).send({ error: 'Il reste des feuilles de ce format : sortez-les du stock (perte ou inventaire) avant d’archiver la référence.' })
+    await db.update(sheetStock).set({ archivedAt: new Date() }).where(eq(sheetStock.id, r.id))
+    await audit(req, 'stock.sheet_archived', { targetType: 'sheet', targetId: r.id, details: { libelle: libelle(r) } })
+    return { ok: true }
+  })
+
+  app.post('/feuilles/:id/unarchive', async (req, reply) => {
+    const r = await find((req.params as { id: string }).id, reply)
+    if (!r) return
+    if (!r.archivedAt) return { ok: true }
+    await db.update(sheetStock).set({ archivedAt: null }).where(eq(sheetStock.id, r.id))
+    await audit(req, 'stock.sheet_unarchived', { targetType: 'sheet', targetId: r.id, details: { libelle: libelle(r) } })
     return { ok: true }
   })
 
