@@ -21,7 +21,7 @@ Stripe confirme un paiement par une notification envoyée à l'application : c'e
 make stripe-ecoute
 ```
 
-La commande affiche `Ready! Your webhook signing secret is whsec_…`. Copier ce secret dans `secrets/stripe_webhook_secret.txt`, puis laisser la commande tourner pendant les essais (elle affiche chaque notification reçue).
+La commande ne relaie que les quatre événements dont l'application a besoin (paiement réussi, échoué ou expiré). Elle affiche `Ready! Your webhook signing secret is whsec_…`. Copier ce secret dans `secrets/stripe_webhook_secret.txt`, puis laisser la commande tourner pendant les essais (elle affiche chaque notification reçue).
 
 ## 3. Activer Stripe dans l'application
 
