@@ -78,18 +78,20 @@ export interface Mail {
   ID: string
   Subject: string
   Text: string
+  /** Version mise en page du message */
+  HTML: string
   To: { Address: string }[]
   ReplyTo: { Address: string }[]
   Attachments: { PartID: string; FileName: string; ContentType: string }[]
 }
 
 /** Attend le message dont l'objet contient `fragment` (unique par test) et le renvoie en entier. */
-export async function waitForMail(request: APIRequestContext, fragment: string): Promise<Mail> {
+export async function waitForMail(request: APIRequestContext, fragment: string, to?: string): Promise<Mail> {
   let found: { ID: string } | undefined
   await expect
     .poll(
       async () => {
-        const res = await request.get(`${MAIL}/api/v1/search?query=${encodeURIComponent(`subject:"${fragment}"`)}`)
+        const res = await request.get(`${MAIL}/api/v1/search?query=${encodeURIComponent(`subject:"${fragment}"${to ? ` to:"${to}"` : ''}`)}`)
         found = (await res.json()).messages?.[0]
         return Boolean(found)
       },

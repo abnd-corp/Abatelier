@@ -612,6 +612,39 @@ test.describe('Site vitrine : direction', () => {
     await expect(adminPage.getByRole('alert').filter({ hasText: 'Adresse e-mail invalide.' })).toBeVisible()
   })
 
+  test('l’aperçu des messages montre chaque modèle sur ordinateur et sur téléphone, et s’envoie en exemple', async ({ adminPage, uid }) => {
+    await adminPage.goto('/site-vitrine?onglet=emails')
+    const apercu = adminPage.getByRole('region', { name: 'Aperçu des messages' })
+    const cadre = apercu.frameLocator('iframe')
+    // Premier modèle : la confirmation de commande, avec son bouton
+    await expect(apercu.getByRole('button', { name: /Commande confirmée/ })).toHaveAttribute('aria-pressed', 'true')
+    await expect(cadre.getByText('Camille Martin').first()).toBeVisible()
+    await expect(cadre.getByRole('link', { name: 'Suivre ma commande' })).toBeVisible()
+    await expect(cadre.getByText('Nous n’envoyons jamais de publicité')).toBeVisible()
+    await apercu.getByRole('button', { name: 'Téléphone' }).click()
+    await expect(cadre.getByRole('link', { name: 'Suivre ma commande' })).toBeVisible()
+    await apercu.getByRole('button', { name: 'Texte brut' }).click()
+    await expect(apercu.locator('pre')).toContainText('Suivez-la depuis votre espace client')
+    await apercu.getByRole('button', { name: 'Ordinateur' }).click()
+
+    // Une alerte pour l'équipe a son propre pied de page
+    await apercu.getByRole('button', { name: /Commande payée/ }).click()
+    await expect(cadre.getByText('destiné à l’équipe')).toBeVisible()
+    await expect(cadre.getByText('jamais de publicité')).toHaveCount(0)
+
+    // On se l'envoie pour le voir dans sa messagerie : marqué « Exemple », avec la version mise en page
+    await apercu.getByRole('button', { name: /Commande refusée/ }).click()
+    const adresse = `${uid}@exemple.fr`
+    await apercu.getByLabel('M’envoyer cet exemple').fill(adresse)
+    await apercu.getByRole('button', { name: 'Envoyer l’exemple' }).click()
+    await expect(apercu.getByText('Exemple envoyé')).toBeVisible()
+    const mail = await waitForMail(adminPage.request, '[Exemple] Votre commande C-2026-0042 ne peut pas être réalisée', adresse)
+    expect(mail.Text).toContain('Motif : La longueur demandée')
+    expect(mail.HTML).toContain('<table')
+    expect(mail.HTML).toContain('La longueur demandée dépasse ce que notre plieuse peut réaliser.')
+    expect(mail.HTML).toContain('Nous n’envoyons jamais de publicité')
+  })
+
   test('est réservé à la direction : la RH n’a ni le menu, ni la page, ni l’API', async ({ adminPage, browser, baseURL, uid }) => {
     const temp = await createUser(adminPage.request, baseURL!, { identifiant: uid, nom: `Claire ${uid.slice(-4)}`, role: 'rh' })
     const rh = await (await browser.newContext()).newPage()

@@ -56,6 +56,8 @@ Nous ne vous écrivons que pour le service : la création et l’accès à votre
 
 Nous n’envoyons aucune publicité, aucune lettre d’information et aucun message de prospection. Votre adresse e-mail n’est jamais vendue, ni utilisée pour de la communication commerciale.
 
+Pour votre sécurité, nous ne vous demanderons jamais votre mot de passe, vos coordonnées bancaires ni votre numéro de carte par e-mail. Quand vous avez un espace client, vos devis et vos factures ne sont pas joints à nos messages : vous les retrouvez dans votre espace, après connexion.
+
 # Qui y a accès ?
 L’équipe de {raisonSociale}. Pour faire fonctionner le site, nous faisons appel à des prestataires techniques qui traitent vos données uniquement pour notre compte : le paiement en ligne, l’hébergement et l’envoi des e-mails. Ils n’ont pas le droit de les utiliser pour leurs propres besoins. Vos données ne sont ni vendues ni transmises à des tiers à des fins commerciales.
 

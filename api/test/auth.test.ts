@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq, sql } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
 import { loginAttempts, sessions } from '../src/db/schema.js'
+import { env } from '../src/env.js'
+import { failureDelayMs } from '../src/auth/throttle.js'
 import { auditActions, buildApp, client, createUser, loginAs, PASSWORD, resetDb, type App } from './helpers.js'
 
 let app: App
@@ -133,15 +135,29 @@ describe('Verrouillage et délai progressif', () => {
     expect(await db.select().from(loginAttempts)).toHaveLength(0)
   })
 
-  it('augmente le délai de réponse à chaque échec', async () => {
-    const times = []
-    for (let i = 0; i < 4; i++) {
-      const t = performance.now()
-      await client(app).post('/api/auth/login', { identifiant: 'lent', password: 'faux' })
-      times.push(performance.now() - t)
+  it('double le délai après chaque échec, jusqu’à un plafond', () => {
+    const base = env.LOGIN_DELAY_BASE_MS
+    env.LOGIN_DELAY_BASE_MS = 40
+    try {
+      expect([1, 2, 3, 4, 5, 6].map(failureDelayMs)).toEqual([40, 80, 160, 320, 320, 320])
+    } finally {
+      env.LOGIN_DELAY_BASE_MS = base
     }
-    // Base de 5 ms en test : 5, 10, 20, 40 ms
-    expect(times[3]!).toBeGreaterThan(times[0]! + 20)
+  })
+
+  it('fait attendre la réponse au moins ce délai à chaque échec', async () => {
+    const base = env.LOGIN_DELAY_BASE_MS
+    env.LOGIN_DELAY_BASE_MS = 40
+    try {
+      for (let i = 0; i < 4; i++) {
+        const t = performance.now()
+        await client(app).post('/api/auth/login', { identifiant: 'lent', password: 'faux' })
+        // Une borne basse seulement : une machine lente ne peut que rallonger l'attente, jamais la raccourcir
+        expect(performance.now() - t, `échec ${i + 1}`).toBeGreaterThanOrEqual(40 * 2 ** i - 5)
+      }
+    } finally {
+      env.LOGIN_DELAY_BASE_MS = base
+    }
   })
 })
 

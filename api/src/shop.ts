@@ -7,6 +7,8 @@ import { GeoUnavailable } from './geo.js'
 import { auditSystem } from './audit.js'
 import { loadCatalog } from './orders.js'
 import { alertRecipients, sendMail, withTimeout } from './mail.js'
+import { orderConfirmed, orderPaidAlert } from './mail-texts.js'
+import { getCompany } from './documents.js'
 import { addWorkingDays, cents, lineValues } from './quote.js'
 import { todayParis } from './departures.js'
 import { clientName } from './routes/clients.js'
@@ -216,19 +218,24 @@ async function afterPayment(p: Payment, order: { id: string; numero: string }) {
     if (!c) return
     const origin = p.panier.origin
     const nom = clientName(c)
-    const euros = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }).replace(/[  ]/g, ' ')
     const sm = p.panier.surMesure
     const articles = sm
       ? sm.lignes.map((l) => `  - ${l.quantite} × ${l.modeleLabel}${l.repere ? ` « ${l.repere} »` : ''} (${l.materialLabel}, ${l.colorLabel})`).join('\n')
       : p.panier.lignes.map((l) => `  - ${l.quantite} × ${l.produit} (${l.libelle})`).join('\n')
     const to = await alertRecipients()
     if (to.length) {
+      const alerte = orderPaidAlert({ nom, email: c.email ?? '', numero: order.numero, ttc: p.montantTtc, surMesure: Boolean(sm), articles, link: `${origin}/commandes/${order.id}` })
       await withTimeout(
         sendMail({
           kind: 'contact',
           to,
-          subject: `${sm ? 'Commande sur mesure' : 'Commande boutique'} payée : ${order.numero} (${euros(p.montantTtc)})`,
-          text: `${nom} <${c.email}> vient de payer sa commande ${order.numero} ${sm ? 'depuis le configurateur' : 'sur la boutique'}, ${euros(p.montantTtc)} TTC.\n\n${articles}\n\nLa commande vaut contrat : elle est déjà validée et visible dans Fabrication. Si elle n’est finalement pas réalisable, vous pouvez la refuser, ce qui rembourse le client.\n${origin}/commandes/${order.id}`,
+          subject: alerte.subject,
+          text: alerte.text,
+          htmlText: alerte.htmlText,
+          titre: alerte.titre,
+          faits: alerte.faits,
+          action: alerte.action,
+          audience: 'equipe',
           replyTo: c.email ?? undefined,
           targetType: 'order',
           targetId: order.id,
@@ -238,12 +245,31 @@ async function afterPayment(p: Payment, order: { id: string; numero: string }) {
       )
     }
     if (c.email) {
+      const entreprise = (await getCompany()).raisonSociale
+      const [o] = await db.select({ datePrevue: orders.datePrevue, livraisonMode: orders.livraisonMode }).from(orders).where(eq(orders.id, order.id))
+      const dateEstimee = o?.datePrevue ? new Date(`${o.datePrevue}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : null
+      const mail = orderConfirmed({
+        nom,
+        numero: order.numero,
+        ttc: p.montantTtc,
+        articles,
+        link: `${origin}/espace/commandes/${order.id}`,
+        espace: `${origin}/espace`,
+        entreprise,
+        remise: o?.livraisonMode ?? 'retrait',
+        dateEstimee,
+      })
       await withTimeout(
         sendMail({
           kind: 'contact',
           to: [c.email],
-          subject: `Votre commande ${order.numero} est confirmée`,
-          text: `Bonjour ${nom},\n\nNous avons bien reçu votre paiement de ${euros(p.montantTtc)} TTC pour la commande ${order.numero} :\n${articles}\n\nSuivez-la depuis votre espace client : ${origin}/espace/commandes/${order.id}\n\nSi, après vérification, nous ne pouvions pas la réaliser, nous vous préviendrions et vous rembourserions intégralement.\n\nAlu Pliage Service`,
+          subject: mail.subject,
+          text: mail.text,
+          htmlText: mail.htmlText,
+          titre: mail.titre,
+          faits: mail.faits,
+          action: mail.action,
+          espace: mail.espace,
           targetType: 'order',
           targetId: order.id,
         }),

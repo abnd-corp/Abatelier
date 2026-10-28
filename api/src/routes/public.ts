@@ -308,7 +308,7 @@ export async function publicRoutes(app: FastifyInstance) {
     if (to.length) {
       const proto = req.headers['x-forwarded-proto'] ?? req.protocol
       const mail = contactAlert({ ...data, fichierNom: file?.fichierNom ?? null, configuration: null }, `${proto}://${req.headers.host}/site-vitrine`)
-      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: data.email, targetType: 'contact', targetId: row!.id }), 6000, {
+      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, audience: 'equipe', replyTo: data.email, targetType: 'contact', targetId: row!.id }), 6000, {
         ok: false,
         notConfigured: false,
         error: 'délai dépassé',

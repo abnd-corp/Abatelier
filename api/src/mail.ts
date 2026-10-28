@@ -2,7 +2,8 @@ import nodemailer, { type Transporter } from 'nodemailer'
 import { db } from './db/index.js'
 import { emailLog, type CompanySettings } from './db/schema.js'
 import { env } from './env.js'
-import { getCompany } from './documents.js'
+import { getCompany, getTemplate } from './documents.js'
+import { LOGO_CID, renderMail } from './mail-layout.js'
 
 // Envoi d'e-mails par SMTP. En développement, Mailpit (http://localhost:8025) attrape tout : rien ne part pour de vrai.
 // Sans SMTP_HOST et MAIL_FROM, l'envoi est désactivé et l'application continue de fonctionner.
@@ -11,12 +12,26 @@ export interface Attachment {
   filename: string
   content: Buffer
   contentType: string
+  /** Image affichée dans le corps du message (cid:…) plutôt que jointe */
+  cid?: string
 }
 export interface MailInput {
   kind: (typeof emailLog.$inferInsert)['kind']
   to: string[]
   subject: string
   text: string
+  /** Texte de la version mise en page, quand il diffère du texte brut (par exemple sans le lien que remplace le bouton) */
+  htmlText?: string
+  /** Gros titre de la version mise en page */
+  titre?: string
+  /** Récapitulatif de la version mise en page (numéro, montant, date…) */
+  faits?: { label: string; value: string }[]
+  /** Bouton d'action de la version mise en page */
+  action?: { label: string; url: string }
+  /** Lien vers l'espace client, sous le bouton */
+  espace?: string
+  /** Client (par défaut) ou équipe : change le pied de page */
+  audience?: 'client' | 'equipe'
   replyTo?: string
   attachments?: Attachment[]
   targetType?: string
@@ -27,7 +42,7 @@ export type MailResult = { ok: true } | { ok: false; notConfigured: boolean; err
 
 /** Ce que fait nodemailer et rien de plus : permet de brancher un faux dans les tests. */
 export interface Transport {
-  sendMail(options: { from: string; to: string[]; subject: string; text: string; replyTo?: string; attachments?: Attachment[] }): Promise<unknown>
+  sendMail(options: { from: string; to: string[]; subject: string; text: string; html?: string; replyTo?: string; attachments?: Attachment[] }): Promise<unknown>
 }
 
 let transport: Transport | null = null
@@ -79,8 +94,18 @@ export async function alertRecipients() {
 export async function sendMail(input: MailInput): Promise<MailResult> {
   if (!isMailConfigured()) return { ok: false, notConfigured: true, error: 'L’envoi d’e-mails n’est pas configuré sur ce serveur.' }
   let result: MailResult = { ok: true }
+  // Version mise en page (HTML) en plus du texte : si elle ne peut pas se construire, le texte part seul
+  let html: string | undefined
+  let attachments = input.attachments
   try {
-    await getTransport().sendMail({ from: env.MAIL_FROM!, to: input.to, subject: input.subject, text: input.text, replyTo: input.replyTo, attachments: input.attachments })
+    const built = await buildHtml(input)
+    html = built.html
+    if (built.logo) attachments = [...(attachments ?? []), built.logo]
+  } catch (e) {
+    console.error('E-mail : mise en page impossible, envoi en texte seul', e instanceof Error ? e.message : e)
+  }
+  try {
+    await getTransport().sendMail({ from: env.MAIL_FROM!, to: input.to, subject: input.subject, text: input.text, html, replyTo: input.replyTo, attachments })
   } catch (e) {
     result = { ok: false, notConfigured: false, error: reason(e) }
     console.error(`E-mail « ${input.subject} » non envoyé : ${reason(e)}`)
@@ -100,6 +125,32 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
     console.error('Journal des e-mails : écriture impossible', e instanceof Error ? e.message : e)
   }
   return result
+}
+
+/** Un PNG plus large que 2,2 fois sa hauteur : c'est un logo avec le nom. Un autre format est supposé carré (marque seule). */
+function isWide(img: Buffer) {
+  const png = img.length > 24 && img.subarray(1, 4).toString('latin1') === 'PNG'
+  return png ? img.readUInt32BE(16) / Math.max(1, img.readUInt32BE(20)) > 2.2 : false
+}
+
+/** Le message mis en page, avec le logo de l'entreprise s'il y en a un. */
+export async function buildHtml(input: Pick<MailInput, 'subject' | 'text' | 'htmlText' | 'titre' | 'faits' | 'action' | 'espace' | 'audience'>): Promise<{ html: string; logo: Attachment | null }> {
+  const [company, template] = await Promise.all([getCompany(), getTemplate()])
+  const logo = company.logo && company.logoType ? { filename: 'logo', content: company.logo, contentType: company.logoType, cid: LOGO_CID } : null
+  const { html } = renderMail({
+    company,
+    couleur: template.couleur,
+    logo: logo !== null,
+    logoLarge: logo ? isWide(logo.content) : false,
+    subject: input.subject,
+    text: input.htmlText ?? input.text,
+    titre: input.titre,
+    faits: input.faits,
+    action: input.action,
+    espace: input.espace,
+    audience: input.audience,
+  })
+  return { html, logo }
 }
 
 /** Attend l'envoi, mais au plus `ms` millisecondes : une messagerie lente ne doit pas bloquer un visiteur. */

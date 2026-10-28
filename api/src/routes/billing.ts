@@ -3,12 +3,12 @@ import { and, count, desc, eq, ilike, or, sql, sum, type SQL } from 'drizzle-orm
 import { z } from 'zod'
 import { alias } from 'drizzle-orm/pg-core'
 import { db } from '../db/index.js'
-import { BILLING_TYPES, billingDocuments, clients, DEVIS_REPONSES, orders, PAIEMENT_MODES, payments, users } from '../db/schema.js'
+import { BILLING_TYPES, billingDocuments, clientAccounts, clients, DEVIS_REPONSES, orders, PAIEMENT_MODES, payments, users } from '../db/schema.js'
 import { csvAmount, csvDate, csvDay, csvText, PAIEMENT_LABELS, STATUT_LABELS_CSV, toCsv } from '../accounting.js'
 import { requirePerm } from '../auth/plugin.js'
 import { getCompany } from '../documents.js'
 import { isMailConfigured, sendMail } from '../mail.js'
-import { defaultDocumentMail } from '../mail-texts.js'
+import { defaultDocumentMail, documentFaits } from '../mail-texts.js'
 import { audit } from '../audit.js'
 import { avoirAlias, BillingConflict, DEVIS_STATUTS, FACTURE_STATUTS, issueCreditNote, issueFromOrder, statutSql } from '../billing.js'
 import { todayParis } from '../departures.js'
@@ -100,6 +100,10 @@ async function statutOf(id: string) {
 }
 
 const NOMS = { devis: 'Le devis', facture: 'La facture', avoir: 'L’avoir' }
+
+const originOf = (req: { headers: Record<string, string | string[] | undefined>; protocol: string }) => `${req.headers['x-forwarded-proto'] ?? req.protocol}://${req.headers.host}`
+/** Le client a-t-il un espace client ? Alors il retrouve ses documents en ligne : on ne les joint pas au message. */
+const hasEspace = async (clientId: string) => (await db.select({ id: clientAccounts.id }).from(clientAccounts).where(eq(clientAccounts.clientId, clientId)).limit(1)).length > 0
 
 export async function billingRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requirePerm('billing.manage'))
@@ -332,7 +336,9 @@ export async function billingRoutes(app: FastifyInstance) {
     const doc = await findDoc((req.params as { id: string }).id, reply)
     if (!doc) return
     const [[client], company] = await Promise.all([db.select().from(clients).where(eq(clients.id, doc.clientId)), getCompany()])
-    return { configure: isMailConfigured(), fichier: `${doc.numero}.pdf`, ...defaultDocumentMail(doc, client!, company) }
+    const espace = await hasEspace(doc.clientId)
+    // Avec un espace client : pas de pièce jointe, le message renvoie vers l'espace. Sans espace : le PDF est joint.
+    return { configure: isMailConfigured(), fichier: espace ? null : `${doc.numero}.pdf`, espace, ...defaultDocumentMail(doc, client!, company, espace ? `${originOf(req)}/espace` : null) }
   })
 
   // Envoie le PDF au client, puis marque le document comme envoyé
@@ -346,12 +352,18 @@ export async function billingRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: issue?.message ?? 'Données invalides.', field: issue?.path[0] !== undefined ? String(issue.path[0]) : undefined })
     }
     if (!isMailConfigured()) return reply.code(503).send({ error: 'L’envoi d’e-mails n’est pas configuré sur ce serveur. Ouvrez le PDF pour l’envoyer vous-même.' })
+    // Le client a un espace : le document s'y retrouve, il n'est pas joint (aucune pièce de ce genre ne circule par e-mail)
+    const espace = await hasEspace(doc.clientId)
+    const nomDoc = { devis: 'devis', facture: 'facture', avoir: 'avoir' }[doc.type]
     const result = await sendMail({
       kind: 'document',
       to: parsed.data.to,
       subject: parsed.data.sujet,
       text: parsed.data.message,
-      attachments: [{ filename: `${doc.numero}.pdf`, content: doc.pdf, contentType: 'application/pdf' }],
+      titre: doc.type === 'avoir' ? 'Votre avoir est disponible' : `Votre ${nomDoc} est disponible`,
+      faits: documentFaits(doc),
+      ...(espace ? { action: { label: `Consulter ${doc.type === 'facture' ? 'ma' : 'mon'} ${nomDoc}`, url: `${originOf(req)}/espace` }, espace: `${originOf(req)}/espace` } : {}),
+      attachments: espace ? undefined : [{ filename: `${doc.numero}.pdf`, content: doc.pdf, contentType: 'application/pdf' }],
       targetType: 'billing',
       targetId: doc.id,
       userId: req.user!.id,

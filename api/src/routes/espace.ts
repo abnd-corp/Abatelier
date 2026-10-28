@@ -346,7 +346,7 @@ export async function espaceRoutes(app: FastifyInstance) {
         },
         `${baseUrl(req)}/commandes/${placed.id}`,
       )
-      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: me.email, targetType: 'order', targetId: placed.id }), 6000, {
+      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, audience: 'equipe', replyTo: me.email, targetType: 'order', targetId: placed.id }), 6000, {
         ok: false,
         notConfigured: false,
         error: 'délai dépassé',
@@ -620,7 +620,7 @@ export async function espaceRoutes(app: FastifyInstance) {
     const to = await alertRecipients()
     if (to.length) {
       const mail = espaceAnswerAlert({ client: doc.clientNom, devis: doc.numero, commande: order!.numero, reponse: parsed.data.reponse, ttc: doc.ttc }, `${baseUrl(req)}/commandes/${order!.id}`)
-      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, replyTo: me.email, targetType: 'billing', targetId: doc.id }), 6000, {
+      await withTimeout(sendMail({ kind: 'contact', to, subject: mail.subject, text: mail.text, audience: 'equipe', replyTo: me.email, targetType: 'billing', targetId: doc.id }), 6000, {
         ok: false,
         notConfigured: false,
         error: 'délai dépassé',

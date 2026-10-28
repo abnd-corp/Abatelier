@@ -415,6 +415,8 @@ describe('Configurateur public', () => {
     expect(c['legal.confidentialite']).toMatch(/retrouver votre mot de passe/)
     expect(c['legal.confidentialite']).toMatch(/aucune publicité, aucune lettre d’information et aucun message de prospection/)
     expect(c['legal.confidentialite']).toMatch(/prestataires techniques/)
+    expect(c['legal.confidentialite']).toMatch(/jamais votre mot de passe, vos coordonnées bancaires ni votre numéro de carte par e-mail/)
+    expect(c['legal.confidentialite']).toMatch(/vos devis et vos factures ne sont pas joints à nos messages/)
     expect(c['legal.cookies']).toMatch(/espace client/)
     expect(c['legal.cookies']).toMatch(/strictement nécessaire/)
     expect(c['legal.cookies']).not.toMatch(/Seule l’équipe/)

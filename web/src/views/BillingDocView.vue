@@ -108,7 +108,9 @@ interface MailProposal {
   to: string
   sujet: string
   message: string
-  fichier: string
+  /** Nom du PDF joint ; null quand le client a un espace client et retrouve le document en ligne */
+  fichier: string | null
+  espace?: boolean
 }
 const mail = ref<MailProposal | null>(null)
 const mailTo = ref('')
@@ -245,7 +247,11 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
           <textarea id="mail-message" v-model="mailMessage" class="input" rows="10" :aria-invalid="actionError?.field === 'message' || undefined" aria-describedby="mail-error-message" />
           <p v-if="actionError?.field === 'message'" id="mail-error-message" class="field-error" role="alert">{{ actionError.msg }}</p>
         </div>
-        <p class="muted small"><AppIcon name="file" :size="14" /> Pièce jointe : {{ mail.fichier }}</p>
+        <p v-if="mail.fichier" class="muted small">
+          <AppIcon name="file" :size="14" /> Pièce jointe : {{ mail.fichier }}<br />
+          Ce client n’a pas d’espace client : le document est joint au message. Avec un espace client, il le retrouverait en ligne, sans pièce jointe.
+        </p>
+        <p v-else class="muted small"><AppIcon name="shield" :size="14" /> Aucune pièce jointe : le message renvoie vers l’espace client du client, où il retrouve le document après connexion.</p>
         <div class="actions">
           <button class="btn primary" type="submit" :disabled="busy || !mail.configure || !mailTo.trim() || !mailMessage.trim()">
             <AppIcon name="mail" :size="16" />{{ busy ? 'Envoi…' : 'Envoyer' }}
