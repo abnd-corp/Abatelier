@@ -43,6 +43,17 @@ C'est ce qui permet de compter en temps machine plutôt qu'en nombre de pièces.
 - Le délai annoncé aujourd'hui aux clients, et le délai réellement tenu ? Combien de retards sur un mois type ?
 - Quels délais selon la quantité (par exemple 1 à 100 pièces : 2 jours, 100 à 300 : 4 jours) : confirmez les tranches et les durées.
 
+## 5 bis. Les feuilles et le réapprovisionnement
+
+L'estimation donnée au client doit tenir compte du stock : si les feuilles nécessaires manquent, la date s'allonge du temps de réapprovisionnement.
+
+- Chez quel(s) fournisseur(s) commandent-ils les feuilles ? Par quel moyen (téléphone, e-mail, site) ?
+- Le **délai de livraison** du fournisseur, par matière et par coloris : en jours ouvrés, avec le plus court et le plus long observé ?
+- Y a-t-il des coloris ou des formats **toujours en stock** chez le fournisseur, et d'autres **sur commande** (délai plus long) ?
+- À quel rythme commandent-ils (chaque semaine, à la demande, dès qu'un seuil est atteint) ?
+- Un **minimum de commande** chez le fournisseur (nombre de feuilles, montant) ?
+- Combien de feuilles gardent-ils en réserve pour les commandes urgentes ?
+
 ## 6. Ce qu'ils refusent aujourd'hui
 
 - Quelles demandes refusent-ils ? Donnez 5 exemples réels (pièce infaisable, quantité trop grande, délai impossible).
@@ -68,6 +79,7 @@ Le client doit avoir un prestataire de paiement pour encaisser les cartes sur la
 | Limites de la plieuse par matière et épaisseur | Façonnage et conditions : plis, angles, retour minimum, développé, longueur. Quand une limite est dépassée, le configurateur dit laquelle et propose une correction |
 | Tranches de quantité et durées | Délai selon la quantité de pièces de la commande |
 | Cadence et nombre d'opérateurs | Capacité par jour : le délai annoncé s'allonge selon la charge déjà en file |
+| Délai de réapprovisionnement par matière et coloris | Estimation selon le stock : délai standard si les feuilles sont en stock, plus le délai du fournisseur sinon |
 | Prestataire de paiement et moyens proposés | Réalisation du prestataire choisi (une centaine de lignes) puis clés dans `secrets/` ; essai en mode test avant l'ouverture |
 | Plafond de pièces et délai maximal acceptable | Au-delà, le configurateur propose une demande de contact avec la fiche de la pièce, au lieu d'une commande |
 
