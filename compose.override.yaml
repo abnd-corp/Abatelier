@@ -23,10 +23,11 @@ services:
       mailpit: { condition: service_started }
     environment:
       NODE_ENV: development
-      SMTP_HOST: mailpit
-      SMTP_PORT: "1025"
-      MAIL_FROM: "Alu Pliage Service <contact@aps.test>"
-      MAIL_ALERT_TO: "direction@aps.test"
+      # E-mails : par défaut la boîte de test Mailpit (http://localhost:8025). Pour de vrais envois (Gmail, etc.), renseigner SMTP_* et MAIL_* dans .env
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      MAIL_FROM: ${MAIL_FROM:-Alu Pliage Service <contact@aps.test>}
+      MAIL_ALERT_TO: ${MAIL_ALERT_TO:-direction@aps.test}
       # Faux paiement en ligne pour essayer la boutique. Pour essayer Stripe en mode test : PAYMENT_PROVIDER=stripe dans .env (voir docs/stripe-test.md)
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-simulation}
     volumes:
