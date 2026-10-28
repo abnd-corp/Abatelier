@@ -20,7 +20,7 @@ test.describe('Stock de feuilles', () => {
     await atelier.goto('/tableau-de-bord')
     const nav = atelier.getByRole('navigation', { name: 'Navigation principale' })
     if (await atelier.getByRole('button', { name: 'Ouvrir le menu' }).isVisible()) await atelier.getByRole('button', { name: 'Ouvrir le menu' }).click()
-    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication', 'Stock de feuilles'])
+    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Fabrication', 'Réception', 'Stock de feuilles'])
     await nav.getByRole('link', { name: 'Stock de feuilles' }).click()
     await expect(atelier.getByRole('heading', { level: 1, name: 'Stock de feuilles' })).toBeVisible()
 

@@ -21,7 +21,7 @@ export const GROUPES = {
     sources: [/^api\/src\/(billing|pdf|facturx|numbering)[^/]*\.ts/, /^api\/src\/routes\/(billing|documents)\.ts/, /^web\/src\/views\/(Billing|Documents)/],
   },
   stock: {
-    tests: ['stock'],
+    tests: ['stock', 'reception', 'reception-camera'],
     sources: [/^api\/src\/(stock|cutting)[^/]*\.ts/, /^api\/src\/routes\/stock\.ts/, /^web\/src\/views\/Stock/],
   },
   equipe: {

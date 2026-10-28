@@ -195,6 +195,12 @@ export const router = createRouter({
           meta: { perm: 'employees.manage', section: 'Équipe', parent: employeesParent, title: 'Fiche salarié', menu: 'employees' },
         },
         {
+          path: 'reception',
+          name: 'reception',
+          component: () => import('@/views/ReceptionView.vue'),
+          meta: { perm: 'stock.manage', section: 'Atelier', title: 'Réception de marchandise' },
+        },
+        {
           path: 'stock',
           name: 'stock',
           component: () => import('@/views/StockView.vue'),

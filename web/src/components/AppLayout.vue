@@ -32,6 +32,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
     title: 'Atelier',
     items: [
       { to: { name: 'production' }, name: 'production', label: 'Fabrication', icon: 'layers', perm: 'orders.production' },
+      { to: { name: 'reception' }, name: 'reception', label: 'Réception', icon: 'truck', perm: 'stock.manage' },
       { to: { name: 'stock' }, name: 'stock', label: 'Stock de feuilles', icon: 'inbox', perm: 'stock.manage' },
     ],
   },
@@ -402,7 +403,6 @@ async function logout() {
   gap: 20px;
   align-content: start;
   padding: 24px max(24px, env(safe-area-inset-right)) 64px max(24px, env(safe-area-inset-left));
-  max-width: 1280px;
   width: 100%;
 }
 

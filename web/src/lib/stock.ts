@@ -17,6 +17,8 @@ export interface Feuille {
   bas: boolean
   // Noir (vide), rouge (critique), jaune (bas) ou vert (ok) : calculé par l'API, jamais réglable ici (R7)
   etat: EtatStock
+  // Codes-barres des fournisseurs associés à cette référence (réception au scan)
+  codes?: string[]
 }
 export type EtatStock = 'vide' | 'critique' | 'bas' | 'ok'
 export const ETAT_LABELS: Record<EtatStock, string> = { vide: 'Vide', critique: 'Critique', bas: 'Stock bas', ok: 'Correct' }
