@@ -51,8 +51,13 @@ Si vous créez un espace client, nous gardons en plus votre mot de passe, sous u
 # Combien de temps ?
 Une demande restée sans suite est supprimée au bout de 12 mois. Les devis, commandes et factures sont conservés le temps imposé par la loi (10 ans pour les factures). Vous pouvez obtenir la fermeture de votre espace client à tout moment, depuis la page « Mon espace » : vos coordonnées sont alors effacées et vos commandes sont anonymisées. Seules les factures et avoirs sont gardés, sans lien avec votre identité côté fiche client, car la loi l’impose.
 
+# Les e-mails que nous vous envoyons
+Nous ne vous écrivons que pour le service : la création et l’accès à votre espace client (y compris pour retrouver votre mot de passe), la confirmation et le suivi de vos commandes, l’envoi de vos devis et factures, et la réponse à votre demande de contact.
+
+Nous n’envoyons aucune publicité, aucune lettre d’information et aucun message de prospection. Votre adresse e-mail n’est jamais vendue, ni utilisée pour de la communication commerciale.
+
 # Qui y a accès ?
-Seule l’équipe de {raisonSociale}. Vos données ne sont ni vendues ni transmises à des tiers à des fins commerciales.
+L’équipe de {raisonSociale}. Pour faire fonctionner le site, nous faisons appel à des prestataires techniques qui traitent vos données uniquement pour notre compte : le paiement en ligne, l’hébergement et l’envoi des e-mails. Ils n’ont pas le droit de les utiliser pour leurs propres besoins. Vos données ne sont ni vendues ni transmises à des tiers à des fins commerciales.
 
 # Vos droits
 Vous pouvez demander l’accès à vos données, leur correction ou leur suppression en écrivant à {email}. Vous pouvez aussi saisir la CNIL (www.cnil.fr).

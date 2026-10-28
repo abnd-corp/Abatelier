@@ -450,7 +450,7 @@ describe('Stripe', () => {
     const [p] = await db.select().from(payments)
     expect(form.get('client_reference_id')).toBe(p!.id)
     expect(form.get('success_url')).toBe(`http://atelier.test/boutique/commande/${p!.id}`)
-    expect(form.get('cancel_url')).toBe('http://atelier.test/panier')
+    expect(form.get('cancel_url')).toBe('http://atelier.test/panier?paiement=annule')
     expect(p).toMatchObject({ provider: 'stripe', providerRef: 'cs_test_1', statut: 'attente' })
     // Pas de page de simulation avec Stripe
     expect((await c.post(`/api/espace/boutique/paiements/${p!.id}/simulation`, { issue: 'paye' })).statusCode).toBe(404)

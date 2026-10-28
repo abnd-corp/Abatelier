@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api, apiFile, ApiError } from '@/api'
 import OrderEditor from '@/components/orders/OrderEditor.vue'
 import { newLine, type OrderCatalog, type OrderForm } from '@/lib/orders'
@@ -9,7 +9,11 @@ import { useEspaceStore } from '@/stores/espace'
 // Configurateur de pliage : le visiteur dessine ses pièces et voit le prix en direct (calculé par le serveur, avec les tarifs et
 // les limites de la plieuse), sans compte. Trois actions : télécharger le devis (PDF indicatif, sans compte), l'enregistrer
 // dans son espace client (devis numéroté) ou passer la commande (paiement en ligne). Les deux dernières demandent un compte.
+const route = useRoute()
 const router = useRouter()
+// Retour de la page de paiement sans avoir payé : on le dit, et on retire l'indicateur de l'adresse
+const paiementAnnule = ref(route.query.paiement === 'annule')
+if (paiementAnnule.value) router.replace({ query: {} })
 const espace = useEspaceStore()
 const catalog = ref<OrderCatalog | null>(null)
 const loadError = ref('')
@@ -150,6 +154,7 @@ const reasons = computed(() => {
     <template v-if="catalog && form && !emptyCatalog">
       <OrderEditor v-model="form" :catalog="catalog" :addresses="[]" :error="orderError" quote-url="/public/configurateur/chiffrage" visitor @priced="priced = $event">
         <p class="muted hint">Prix indicatif pour un particulier, TVA comprise. Le devis enregistré dans votre espace fait foi.</p>
+        <p v-if="paiementAnnule" class="alert" role="status">Paiement annulé : aucune somme n’a été débitée. Votre saisie est conservée, vous pourrez payer quand vous voulez.</p>
         <p v-if="failure" class="alert bad" role="alert">{{ failure }}</p>
         <div v-if="connecte" class="field">
           <label for="d-precision">Une précision pour l’atelier ? (facultatif)</label>

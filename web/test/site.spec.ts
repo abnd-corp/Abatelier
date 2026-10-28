@@ -586,6 +586,20 @@ describe('Configurateur public', () => {
     await flushPromises()
     return { wrapper, calls }
   }
+  it('dit que le paiement est annulé quand on revient de la page de paiement sans avoir payé', async () => {
+    mockApi(routes())
+    const pinia = freshPinia()
+    const router = makeRouter()
+    await router.push('/configurateur?paiement=annule')
+    await router.isReady()
+    const wrapper = mount(ConfiguratorView, { global: { plugins: [pinia, router] }, attachTo: document.body })
+    await flushPromises()
+    await new Promise((r) => setTimeout(r, 450))
+    await flushPromises()
+    expect(wrapper.text()).toContain('Paiement annulé : aucune somme n’a été débitée')
+    expect(router.currentRoute.value.query.paiement).toBeUndefined()
+  })
+
   it('charge le catalogue public, chiffre avec la route publique et affiche le prix, sans appeler la session', async () => {
     const { wrapper, calls } = await mountConfig()
     expect(wrapper.get('h1').text()).toContain('Dessinez votre pièce')

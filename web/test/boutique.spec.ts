@@ -219,6 +219,15 @@ describe('Le panier', () => {
     expect(wrapper.find('a[href="/boutique"]').exists()).toBe(true)
   })
 
+  it('dit que le paiement est annulé quand on revient de la page de paiement sans avoir payé, puis retire l’indicateur', async () => {
+    const { wrapper, router } = await mountAt(PanierView, '/panier?paiement=annule', routes())
+    expect(wrapper.get('[role="status"]').text()).toContain('Paiement annulé : aucune somme n’a été débitée')
+    expect(router.currentRoute.value.query.paiement).toBeUndefined()
+    // Sans l'indicateur, rien de tel
+    const normal = await mountAt(PanierView, '/panier', routes())
+    expect(normal.wrapper.text()).not.toContain('Paiement annulé')
+  })
+
   it('chiffre avec le serveur (jamais de prix envoyé) et montre les lignes et le total TTC', async () => {
     const { wrapper, calls } = await mountCart()
     const post = calls.find((c) => c.path === '/public/boutique/panier')!
