@@ -78,7 +78,7 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
         <span class="eyebrow">Commande</span>
         <h1>{{ c.numero }}</h1>
         <p class="muted">
-          Demandée le {{ jour(c.createdAt) }}<template v-if="c.datePrevue && !annulee && c.statut !== 'livree'"> · prévue le {{ jour(c.datePrevue) }}</template>
+          Demandée le {{ jour(c.createdAt) }}<template v-if="c.datePrevue && !annulee && c.statut !== 'livree'"> · date estimée : {{ jour(c.datePrevue) }}</template>
         </p>
       </header>
 
@@ -149,7 +149,7 @@ const fmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 
             </template>
           </template>
         </p>
-        <p v-if="attenteReponse(devis)" class="muted hint">En acceptant, vous demandez à l’atelier de lancer la commande : il la valide, fixe la date prévue, et vous suivez ici chaque étape.</p>
+        <p v-if="attenteReponse(devis)" class="muted hint">En acceptant, vous demandez à l’atelier de lancer la commande. Vous suivez ici chaque étape, avec une date estimée.</p>
       </section>
       <section v-else-if="!payee" class="card box">
         <h2>Votre devis</h2>

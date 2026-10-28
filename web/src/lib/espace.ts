@@ -106,7 +106,7 @@ export interface EspaceOrder {
 /** Étapes d'une commande menée à terme, dans l'ordre. Une commande annulée sort de ce parcours. */
 export const PARCOURS: { statut: EtapeStatut; label: string; aide: string }[] = [
   { statut: 'recue', label: 'Demande reçue', aide: 'Votre demande est enregistrée.' },
-  { statut: 'validee', label: 'Commande validée', aide: 'Votre commande est enregistrée et sa date prévue est fixée d’après le délai annoncé.' },
+  { statut: 'validee', label: 'Commande validée', aide: 'Votre commande est enregistrée, avec une date estimée d’après le délai annoncé.' },
   { statut: 'fabrication', label: 'En fabrication', aide: 'Vos pièces sont en cours de pliage.' },
   { statut: 'prete', label: 'Prête', aide: 'Vos pièces sont prêtes.' },
   { statut: 'livree', label: 'Livrée ou retirée', aide: 'Commande terminée.' },

@@ -274,7 +274,7 @@ describe('Mes commandes', () => {
     expect(norm(rows[0]!.text())).toContain('518,54 €')
     expect(rows[1]!.text()).toContain('En fabrication')
     expect(rows[1]!.text()).toContain('Devis accepté')
-    expect(rows[1]!.text()).toContain('prévue le 28 octobre 2026')
+    expect(rows[1]!.text()).toContain('date estimée : 28 octobre 2026')
     expect(wrapper.get('[role="status"]').text()).toContain('Un devis attend')
     expect(rows[0]!.get('a').attributes('href')).toBe('/espace/commandes/o1')
   })
@@ -437,7 +437,7 @@ describe('Ma commande', () => {
     expect(steps[2]!.attributes('aria-current')).toBe('step')
     expect(steps[0]!.text()).toContain('20 octobre 2026')
     expect(steps[2]!.text()).toContain('Vos pièces sont en cours de pliage')
-    expect(wrapper.get('.top').text()).toContain('prévue le 28 octobre 2026')
+    expect(wrapper.get('.top').text()).toContain('date estimée : 28 octobre 2026')
     expect(wrapper.get('h1').text()).toBe('C-2026-0002')
   })
 

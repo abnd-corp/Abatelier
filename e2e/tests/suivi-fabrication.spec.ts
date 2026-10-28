@@ -28,6 +28,9 @@ test.describe('Suivi de fabrication', () => {
     await client.goto(`/espace/commandes/${commandeId}`)
     const suivi = client.getByRole('region', { name: 'Suivi de la commande' })
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Commande validée')
+    // La date est une estimation, pas une promesse
+    await expect(client.getByText(/date estimée : \d/)).toBeVisible()
+    await expect(client.getByText(/prévue le/)).toHaveCount(0)
 
     // L'atelier la voit dans Fabrication, avec le nom du client, et la fait avancer étape par étape
     const identifiant = `${uid}-at`
