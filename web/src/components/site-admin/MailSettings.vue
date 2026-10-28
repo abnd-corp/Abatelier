@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { api, ApiError } from '@/api'
 import AppIcon from '@/components/AppIcon.vue'
+import MailPreview from '@/components/site-admin/MailPreview.vue'
 import { dateTime } from '@/lib/format'
 import type { MailStatus } from '@/lib/site-admin'
 
@@ -76,6 +77,8 @@ const KINDS = { contact: 'Alerte de contact', document: 'Devis ou facture', test
           <button class="btn primary" type="submit" :disabled="busy || !to.trim()"><AppIcon name="mail" :size="16" />{{ busy ? 'Envoi…' : 'Envoyer l’essai' }}</button>
         </p>
       </form>
+
+      <MailPreview :configure="status.configure" :adresse="status.alertes[0]" />
 
       <section class="card box" aria-labelledby="mail-journal">
         <h2 id="mail-journal">Derniers envois</h2>

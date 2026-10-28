@@ -14,6 +14,7 @@ import { clientName } from './clients.js'
 import { activeInvoice, issueCreditNote } from '../billing.js'
 import { PaymentError, providerOf } from '../payments.js'
 import { sendMail, withTimeout } from '../mail.js'
+import { orderRefused } from '../mail-texts.js'
 import { getCompany } from '../documents.js'
 import { facturxMissingFor } from '../facturx.js'
 
@@ -412,17 +413,10 @@ export async function orderRoutes(app: FastifyInstance) {
     // Le client est prévenu, avec le motif ; un échec d'envoi n'annule rien
     const [c] = await db.select().from(clients).where(eq(clients.id, o.clientId))
     if (c?.email) {
-      const euros = pay.montantTtc.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }).replace(/[\u202f\u00a0]/g, ' ')
+      const entreprise = (await getCompany()).raisonSociale
+      const mail = orderRefused({ nom: clientName(c), numero: o.numero, motif, ttc: pay.montantTtc, entreprise })
       await withTimeout(
-        sendMail({
-          kind: 'contact',
-          to: [c.email],
-          subject: `Votre commande ${o.numero} ne peut pas être réalisée : remboursement`,
-          text: `Bonjour ${clientName(c)},\n\nAprès vérification, nous ne pouvons pas réaliser votre commande ${o.numero}.\nMotif : ${motif}\n\nNous vous remboursons la totalité, soit ${euros}, sur le moyen de paiement utilisé. Le délai d’arrivée dépend de votre banque (quelques jours).\n\nNous restons à votre disposition pour trouver une solution.\n\nAlu Pliage Service`,
-          targetType: 'order',
-          targetId: o.id,
-          userId: req.user!.id,
-        }),
+        sendMail({ kind: 'contact', to: [c.email], subject: mail.subject, text: mail.text, htmlText: mail.htmlText, titre: mail.titre, targetType: 'order', targetId: o.id, userId: req.user!.id }),
         6000,
         { ok: false, notConfigured: false, error: 'délai dépassé' },
       )

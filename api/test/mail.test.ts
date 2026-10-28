@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { accessories, auditLog, billingDocuments, colors, contactRequests, emailLog, materials } from '../src/db/schema.js'
+import { accessories, auditLog, billingDocuments, colors, companySettings, contactRequests, documentTemplate, emailLog, materials } from '../src/db/schema.js'
 import { env } from '../src/env.js'
+import { getCompany, getTemplate } from '../src/documents.js'
 import { isMailConfigured, setTransport, type Transport } from '../src/mail.js'
 import { buildApp, client, createUser, loginAs, M, resetDb, seedModels, type App, type Client } from './helpers.js'
 
@@ -324,6 +325,101 @@ describe('Envoi d’un devis ou d’une facture', () => {
       expect((await c.post(`/api/billing/${f.id}/email`, { to: 'a@b.fr', sujet: 'x', message: 'y' })).statusCode, role).toBe(403)
       expect((await c.get(`/api/billing/${f.id}/email`)).statusCode, role).toBe(403)
     }
+    expect(sent).toHaveLength(0)
+  })
+})
+
+describe('Mise en page et aperçu', () => {
+  it('envoie le message mis en page en plus du texte brut, sans laisser passer de HTML saisi par un visiteur', async () => {
+    mailOn({ alertTo: 'direction@aps.test' })
+    await visitor.post('/api/public/contact', contact({ nom: 'Jean <i>Dupont</i>', message: '<script>alert(1)</script> Bonjour' }))
+    const mail = sent[0]!
+    expect(mail.text).toContain('<script>alert(1)</script> Bonjour')
+    expect(mail.html).toContain('&lt;script&gt;alert(1)&lt;/script&gt; Bonjour')
+    expect(mail.html).not.toContain('<script>')
+    expect(mail.html).not.toContain('<i>Dupont</i>')
+    // Alerte interne : pied de page « équipe », pas la mention destinée aux clients
+    expect(mail.html).toContain('destiné à l’équipe')
+    expect(mail.html).not.toContain('Nous n’envoyons jamais de publicité')
+  })
+
+  it('prend la couleur du modèle de documents et joint le logo de l’entreprise quand il y en a un', async () => {
+    mailOn({ alertTo: 'direction@aps.test' })
+    await getTemplate()
+    await db.update(documentTemplate).set({ couleur: '#0b6b3a' })
+    await visitor.post('/api/public/contact', contact())
+    expect(sent[0]!.html).toContain('#0b6b3a')
+    expect(sent[0]!.html).not.toContain('cid:')
+    expect(sent[0]!.attachments).toBeUndefined()
+
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+    await getCompany()
+    await db.update(companySettings).set({ logo: png, logoType: 'image/png' })
+    await visitor.post('/api/public/contact', contact())
+    const avec = sent[1]!
+    expect(avec.html).toContain('src="cid:logo-entreprise"')
+    expect(avec.attachments).toHaveLength(1)
+    expect(avec.attachments![0]).toMatchObject({ cid: 'logo-entreprise', contentType: 'image/png' })
+  })
+
+  it('envoie quand même le texte si la mise en page est impossible', async () => {
+    mailOn({ alertTo: 'direction@aps.test' })
+    await getTemplate()
+    await db.update(documentTemplate).set({ couleur: 'pas-une-couleur' })
+    const res = await visitor.post('/api/public/contact', contact())
+    expect(res.statusCode).toBe(201)
+    expect(sent).toHaveLength(1)
+    expect(sent[0]!.html).toContain('#5b34c4')
+  })
+
+  it('liste les messages d’exemple et en donne l’aperçu, à la direction seulement', async () => {
+    const liste = await direction.get('/api/mail/apercu')
+    expect(liste.statusCode).toBe(200)
+    const ids = liste.json().modeles.map((m: { id: string }) => m.id)
+    expect(ids).toEqual(['commande-confirmee', 'commande-refusee', 'devis', 'facture', 'alerte-commande', 'alerte-contact', 'essai'])
+    expect((await visitor.get('/api/mail/apercu')).statusCode).toBe(401)
+    await createUser({ identifiant: 'plieur', role: 'atelier' })
+    const atelier = await loginAs(app, 'plieur')
+    for (const url of ['/api/mail/apercu', '/api/mail/apercu/devis']) expect((await atelier.get(url)).statusCode, url).toBe(403)
+    expect((await atelier.post('/api/mail/apercu/devis/envoyer', { to: 'a@b.test' })).statusCode).toBe(403)
+
+    const a = (await direction.get('/api/mail/apercu/commande-confirmee')).json()
+    expect(a.sujet).toBe('Votre commande C-2026-0042 est confirmée')
+    expect(a.html).toContain('Suivre ma commande')
+    expect(a.html).toContain('Camille Martin')
+    expect(a.texte).toContain('Suivez-la depuis votre espace client')
+    expect((await direction.get('/api/mail/apercu/inconnu')).statusCode).toBe(404)
+  })
+
+  it('l’aperçu intègre le logo à la page au lieu de la pièce jointe', async () => {
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+    await getCompany()
+    await db.update(companySettings).set({ logo: png, logoType: 'image/png' })
+    const { html } = (await direction.get('/api/mail/apercu/devis')).json()
+    expect(html).toContain('src="data:image/png;base64,')
+    expect(html).not.toContain('cid:')
+  })
+
+  it('s’envoie un exemple, marqué comme tel, et le trace au journal', async () => {
+    mailOn()
+    const res = await direction.post('/api/mail/apercu/commande-refusee/envoyer', { to: 'moi@exemple.fr' })
+    expect(res.statusCode, res.body).toBe(200)
+    expect(sent).toHaveLength(1)
+    expect(sent[0]).toMatchObject({ to: ['moi@exemple.fr'], subject: '[Exemple] Votre commande C-2026-0042 ne peut pas être réalisée : remboursement' })
+    expect(sent[0]!.html).toContain('Votre commande ne peut pas être réalisée')
+    expect(sent[0]!.text).toContain('Motif : La longueur demandée')
+    expect(await log()).toMatchObject([{ kind: 'test', destinataires: 'moi@exemple.fr', statut: 'envoye' }])
+    const [e] = await db.select().from(auditLog).where(eq(auditLog.action, 'mail.test'))
+    expect(e!.details).toMatchObject({ modele: 'commande-refusee' })
+  })
+
+  it('refuse l’envoi d’un exemple sans adresse valide, sans messagerie, ou pour un modèle inconnu', async () => {
+    expect((await direction.post('/api/mail/apercu/devis/envoyer', { to: 'a@b.test' })).statusCode).toBe(503)
+    mailOn()
+    expect((await direction.post('/api/mail/apercu/devis/envoyer', { to: 'pas une adresse' })).statusCode).toBe(400)
+    expect((await direction.post('/api/mail/apercu/inconnu/envoyer', { to: 'a@b.test' })).statusCode).toBe(404)
+    failWith = new Error('boom')
+    expect((await direction.post('/api/mail/apercu/devis/envoyer', { to: 'a@b.test' })).statusCode).toBe(502)
     expect(sent).toHaveLength(0)
   })
 })
