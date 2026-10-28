@@ -1,6 +1,6 @@
 # Recueil : machines, limites et capacité de l'atelier
 
-À remplir avec l'atelier pendant l'entretien. Les réponses fixent les limites que l'application impose au configurateur, et la façon de calculer les délais. Notez les chiffres tels que l'atelier les donne, avec l'unité, et demandez un exemple chiffré pour chacun.
+À remplir avec l'atelier pendant l'entretien. Les réponses fixent les limites que l'application impose au configurateur, et la façon de calculer les délais. Le but est que **tout soit contrôlé automatiquement**, sans étape humaine de confirmation : le configurateur accompagne le client jusqu'à une commande faisable, ou le renvoie vers une demande de contact si elle dépasse ce que l'atelier peut absorber. Notez les chiffres tels que l'atelier les donne, avec l'unité, et demandez un exemple chiffré pour chacun.
 
 ## 1. La plieuse
 
@@ -53,8 +53,9 @@ C'est ce qui permet de compter en temps machine plutôt qu'en nombre de pièces.
 
 | Réponse obtenue | Réglage dans l'application |
 |---|---|
-| Limites de la plieuse par matière et épaisseur | Façonnage et conditions : plis, angles, retour minimum, développé, longueur |
+| Limites de la plieuse par matière et épaisseur | Façonnage et conditions : plis, angles, retour minimum, développé, longueur. Quand une limite est dépassée, le configurateur dit laquelle et propose une correction |
 | Tranches de quantité et durées | Délai selon la quantité de pièces de la commande |
-| Plafond de pièces par commande et par ligne | Limite du configurateur, avec « pour plus, contactez-nous » |
-| Cadence et nombre d'opérateurs | Capacité par jour, pour calculer le délai selon la charge en cours |
-| Seuil à partir duquel on confirme à la main | Colonne « À confirmer » avant « À lancer » |
+| Cadence et nombre d'opérateurs | Capacité par jour : le délai annoncé s'allonge selon la charge déjà en file |
+| Plafond de pièces et délai maximal acceptable | Au-delà, le configurateur propose une demande de contact avec la fiche de la pièce, au lieu d'une commande |
+
+Il n'y a pas de colonne « À confirmer » : une commande est soit acceptée automatiquement avec un délai honnête, soit corrigée par le client avec l'aide du configurateur, soit transformée en demande de contact.
