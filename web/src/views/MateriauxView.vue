@@ -15,10 +15,11 @@ const error = ref('')
 const info = ref('')
 const filtre = ref('')
 const ouvert = ref<string | null>(null)
+const archivees = ref(false)
 
 async function load() {
   try {
-    feuilles.value = (await api<{ feuilles: Feuille[] }>('/stock/feuilles')).feuilles
+    feuilles.value = (await api<{ feuilles: Feuille[] }>(`/stock/feuilles${archivees.value ? '?archivees=1' : ''}`)).feuilles
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : 'Chargement impossible.'
   } finally {
@@ -83,17 +84,24 @@ async function add() {
   }
 }
 
-async function supprimer(f: Feuille) {
+// Une référence ne se supprime jamais : on l'archive (elle n'est plus proposée), et on peut la désarchiver
+async function archiver(f: Feuille, archive: boolean) {
   error.value = info.value = ''
-  if (!window.confirm(`Supprimer la référence « ${f.libelle} » et ses codes-barres ?`)) return
   try {
-    await api(`/stock/feuilles/${f.id}`, { method: 'DELETE' })
-    info.value = 'Référence supprimée.'
+    await api(`/stock/feuilles/${f.id}/${archive ? 'archive' : 'unarchive'}`, { method: 'POST' })
+    info.value = archive ? 'Référence archivée.' : 'Référence désarchivée.'
     if (ouvert.value === f.id) ouvert.value = null
     await load()
   } catch (e) {
-    error.value = e instanceof ApiError ? e.message : 'Suppression impossible.'
+    error.value = e instanceof ApiError ? e.message : 'Action impossible.'
   }
+}
+
+async function basculerArchivees() {
+  archivees.value = !archivees.value
+  ouvert.value = null
+  loading.value = true
+  await load()
 }
 </script>
 
@@ -104,7 +112,10 @@ async function supprimer(f: Feuille) {
       <h1>Matériaux</h1>
       <p class="muted lead">Les feuilles que l’atelier reçoit : matière, coloris, format, et les codes-barres du fournisseur qui permettent de les reconnaître au scan.</p>
     </div>
-    <button class="btn primary" type="button" aria-controls="ajout" :aria-expanded="ajout" @click="ouvrirAjout"><AppIcon name="plus" :size="16" />Ajouter une référence</button>
+    <div class="head-actions">
+      <button class="btn" type="button" :aria-pressed="archivees" @click="basculerArchivees">{{ archivees ? 'Voir les références en service' : 'Voir les archivées' }}</button>
+      <button v-if="!archivees" class="btn primary" type="button" aria-controls="ajout" :aria-expanded="ajout" @click="ouvrirAjout"><AppIcon name="plus" :size="16" />Ajouter une référence</button>
+    </div>
   </div>
 
   <p v-if="info" class="alert ok" role="status">{{ info }}</p>
@@ -158,8 +169,8 @@ async function supprimer(f: Feuille) {
 
   <p v-if="loading" class="muted">Chargement…</p>
   <div v-else-if="!feuilles.length" class="card empty">
-    <p>Aucune référence pour l’instant.</p>
-    <p class="muted">Ajoutez la première : une matière, un coloris, un format et le code-barres de son emballage.</p>
+    <p>{{ archivees ? 'Aucune référence archivée.' : 'Aucune référence pour l’instant.' }}</p>
+    <p v-if="!archivees" class="muted">Ajoutez la première : une matière, un coloris, un format et le code-barres de son emballage.</p>
   </div>
 
   <ul v-else class="refs" aria-label="Références de feuilles">
@@ -173,10 +184,13 @@ async function supprimer(f: Feuille) {
         <span class="format mono">{{ fmt(f.largeur) }} × {{ fmt(f.longueur) }} mm{{ f.chute ? ' (chute)' : '' }}</span>
         <span class="muted stock">{{ fmt(f.quantite) }} en stock</span>
         <div class="ref-actions">
-          <button class="btn small" type="button" :aria-expanded="ouvert === f.id" :aria-label="`Codes-barres : ${f.libelle}`" @click="ouvert = ouvert === f.id ? null : f.id">
+          <button v-if="!f.archivee" class="btn small" type="button" :aria-expanded="ouvert === f.id" :aria-label="`Codes-barres : ${f.libelle}`" @click="ouvert = ouvert === f.id ? null : f.id">
             <AppIcon name="tag" :size="14" />Codes-barres{{ f.codes?.length ? ` (${f.codes.length})` : '' }}
           </button>
-          <button v-if="!f.quantite" class="btn small danger" type="button" :aria-label="`Supprimer la référence ${f.libelle}`" @click="supprimer(f)"><AppIcon name="trash" :size="14" /></button>
+          <button v-if="f.archivee" class="btn small" type="button" :aria-label="`Désarchiver la référence ${f.libelle}`" @click="archiver(f, false)">Désarchiver</button>
+          <button v-else-if="!f.quantite" class="btn small" type="button" :aria-label="`Archiver la référence ${f.libelle}`" @click="archiver(f, true)">
+            <AppIcon name="inbox" :size="14" />Archiver
+          </button>
         </div>
       </div>
       <SheetCodes v-if="ouvert === f.id" :feuille="f" @changed="load" />
@@ -186,6 +200,11 @@ async function supprimer(f: Feuille) {
 </template>
 
 <style scoped>
+.head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .lead {
   max-width: 60ch;
   margin: 4px 0 0;

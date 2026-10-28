@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply } from 'fastify'
-import { asc, eq, inArray, sql } from 'drizzle-orm'
+import { asc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import { colors, materials, ORDER_STATUTS, orderLines, orders, sheetStock } from '../db/schema.js'
@@ -57,6 +57,8 @@ async function sheetAdvice(orderId: string) {
     .from(sheetStock)
     .innerJoin(materials, eq(materials.id, sheetStock.materialId))
     .leftJoin(colors, eq(colors.id, sheetStock.colorId))
+    // Une référence archivée n'est plus proposée
+    .where(isNull(sheetStock.archivedAt))
   const options = (materialId: string | null, colorId: string | null): SheetOption[] =>
     stock
       .filter((r) => r.s.materialId === materialId && (r.s.colorId ?? null) === (colorId ?? null))

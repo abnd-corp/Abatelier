@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import { and, asc, desc, eq, gte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import { colors, materials, SHEET_MOTIFS, sheetBarcodes, sheetMovements, sheetStock, users } from '../db/schema.js'
@@ -78,7 +78,7 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
 
 // La définition des références (matière, coloris, format) et de leurs codes-barres est aussi accessible à la direction (page Matériaux) ;
 // les quantités, les mouvements et la réception restent à l'atelier.
-const DEFINITION = new Set(['GET /options', 'GET /feuilles', 'POST /feuilles', 'DELETE /feuilles/:id', 'GET /codes/:code', 'POST /codes', 'DELETE /codes/:code'])
+const DEFINITION = new Set(['GET /options', 'GET /feuilles', 'POST /feuilles', 'POST /feuilles/:id/archive', 'POST /feuilles/:id/unarchive', 'GET /codes/:code', 'POST /codes', 'DELETE /codes/:code'])
 
 export async function stockRoutes(app: FastifyInstance) {
   app.addHook('preHandler', async (req, reply) => {
@@ -103,6 +103,7 @@ export async function stockRoutes(app: FastifyInstance) {
         quantite: sheetStock.quantite,
         seuil: sheetStock.seuil,
         note: sheetStock.note,
+        archivedAt: sheetStock.archivedAt,
       })
       .from(sheetStock)
       .innerJoin(materials, eq(materials.id, sheetStock.materialId))
@@ -120,7 +121,8 @@ export async function stockRoutes(app: FastifyInstance) {
     if (quantite <= seuil) return 'bas'
     return 'ok'
   }
-  const out = (r: Row) => ({ ...r, libelle: libelle(r), bas: r.seuil > 0 && r.quantite <= r.seuil, etat: etatOf(r.seuil, r.quantite) })
+  const out = ({ archivedAt, ...r }: Row) => ({ ...r, archivee: archivedAt !== null, libelle: libelle(r), bas: r.seuil > 0 && r.quantite <= r.seuil, etat: etatOf(r.seuil, r.quantite) })
+  const ARCHIVEE = 'Cette référence est archivée : désarchivez-la pour l’utiliser.'
 
   async function find(id: string, reply: FastifyReply) {
     const [r] = isUuid(id) ? await base().where(eq(sheetStock.id, id)) : []
@@ -137,8 +139,12 @@ export async function stockRoutes(app: FastifyInstance) {
     return { materials: ms.map((m) => ({ id: m.id, label: materialLabel(m) })), colors: cs.map((c) => ({ id: c.id, label: colorLabel(c), hex: c.hex })) }
   })
 
-  app.get('/feuilles', async () => {
-    const rows = await base().orderBy(asc(materials.nom), asc(materials.epaisseur), asc(colors.nom), asc(sheetStock.chute), asc(sheetStock.largeur), asc(sheetStock.longueur))
+  // Par défaut les références en service ; ?archivees=1 donne celles qui sont archivées
+  app.get('/feuilles', async (req) => {
+    const archivees = (req.query as { archivees?: string }).archivees === '1'
+    const rows = await base()
+      .where(archivees ? isNotNull(sheetStock.archivedAt) : isNull(sheetStock.archivedAt))
+      .orderBy(asc(materials.nom), asc(materials.epaisseur), asc(colors.nom), asc(sheetStock.chute), asc(sheetStock.largeur), asc(sheetStock.longueur))
     const links = await db.select({ code: sheetBarcodes.code, sheetId: sheetBarcodes.sheetId }).from(sheetBarcodes).orderBy(asc(sheetBarcodes.createdAt))
     const feuilles = rows.map((r) => ({ ...out(r), codes: links.filter((l) => l.sheetId === r.id).map((l) => l.code) }))
     // Une chute n'est pas une feuille entière (un reste de découpe, parfois trop petit pour être réutilisé) :
@@ -193,6 +199,19 @@ export async function stockRoutes(app: FastifyInstance) {
       if (isUniqueViolation(e)) {
         const taken = d.code ? (await db.select({ code: sheetBarcodes.code }).from(sheetBarcodes).where(eq(sheetBarcodes.code, d.code))).length > 0 : false
         if (taken) return reply.code(409).send({ error: 'Ce code-barres est déjà associé à une autre référence.', field: 'code' })
+        const [dup] = await db
+          .select({ archivedAt: sheetStock.archivedAt })
+          .from(sheetStock)
+          .where(
+            and(
+              eq(sheetStock.materialId, d.materialId),
+              d.colorId ? eq(sheetStock.colorId, d.colorId) : isNull(sheetStock.colorId),
+              eq(sheetStock.largeur, largeur),
+              eq(sheetStock.longueur, longueur),
+              eq(sheetStock.chute, d.chute),
+            ),
+          )
+        if (dup?.archivedAt) return reply.code(409).send({ error: 'Cette référence existe, archivée : désarchivez-la plutôt que de la recréer.', field: 'largeur' })
         return reply.code(409).send({ error: 'Cette feuille existe déjà dans le stock : ajoutez-lui des feuilles plutôt que de la recréer.', field: 'largeur' })
       }
       throw e
@@ -273,6 +292,7 @@ export async function stockRoutes(app: FastifyInstance) {
     if (!parsed.success) return invalid(reply, parsed.error)
     const r = await byCode(parsed.data)
     if (!r) return reply.code(404).send({ error: 'Code-barres inconnu : associez-le à une référence du stock.', code: parsed.data })
+    if (r.archivedAt) return reply.code(409).send({ error: ARCHIVEE, code: parsed.data })
     return { code: parsed.data, feuille: out(r) }
   })
 
@@ -282,6 +302,7 @@ export async function stockRoutes(app: FastifyInstance) {
     if (!parsed.success) return invalid(reply, parsed.error)
     const r = await find(parsed.data.sheetId, reply)
     if (!r) return
+    if (r.archivedAt) return reply.code(409).send({ error: ARCHIVEE })
     const existing = await byCode(parsed.data.code)
     if (existing) {
       if (existing.id === r.id) return { ok: true }
@@ -308,16 +329,28 @@ export async function stockRoutes(app: FastifyInstance) {
     if (!parsed.success) return invalid(reply, parsed.error)
     const r = await byCode(parsed.data.code)
     if (!r) return reply.code(404).send({ error: 'Code-barres inconnu : associez-le à une référence du stock.', code: parsed.data.code })
+    if (r.archivedAt) return reply.code(409).send({ error: ARCHIVEE, code: parsed.data.code })
     const apres = await move(req, r, parsed.data.quantite, 'reception', parsed.data.note || 'Réception', { code: parsed.data.code })
     return { feuille: out({ ...r, quantite: apres! }), recu: parsed.data.quantite }
   })
 
-  app.delete('/feuilles/:id', async (req, reply) => {
+  // Une référence ne se supprime jamais : l'historique des mouvements et des commandes s'y rapporte. On l'archive (stock à zéro).
+  app.post('/feuilles/:id/archive', async (req, reply) => {
     const r = await find((req.params as { id: string }).id, reply)
     if (!r) return
-    if (r.quantite > 0) return reply.code(409).send({ error: 'Il reste des feuilles de ce format : sortez-les du stock (perte ou inventaire) avant de supprimer la référence.' })
-    await db.delete(sheetStock).where(eq(sheetStock.id, r.id))
-    await audit(req, 'stock.sheet_deleted', { targetType: 'sheet', targetId: r.id, details: { libelle: libelle(r) } })
+    if (r.archivedAt) return { ok: true }
+    if (r.quantite > 0) return reply.code(409).send({ error: 'Il reste des feuilles de ce format : sortez-les du stock (perte ou inventaire) avant d’archiver la référence.' })
+    await db.update(sheetStock).set({ archivedAt: new Date() }).where(eq(sheetStock.id, r.id))
+    await audit(req, 'stock.sheet_archived', { targetType: 'sheet', targetId: r.id, details: { libelle: libelle(r) } })
+    return { ok: true }
+  })
+
+  app.post('/feuilles/:id/unarchive', async (req, reply) => {
+    const r = await find((req.params as { id: string }).id, reply)
+    if (!r) return
+    if (!r.archivedAt) return { ok: true }
+    await db.update(sheetStock).set({ archivedAt: null }).where(eq(sheetStock.id, r.id))
+    await audit(req, 'stock.sheet_unarchived', { targetType: 'sheet', targetId: r.id, details: { libelle: libelle(r) } })
     return { ok: true }
   })
 

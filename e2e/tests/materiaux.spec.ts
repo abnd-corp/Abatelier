@@ -45,7 +45,7 @@ test.describe('Matériaux', () => {
     await expect(ligne.getByRole('button', { name: /^Codes-barres/ })).toContainText('(1)')
 
     // Elle retrouve la référence par son code
-    await dir.getByLabel('Chercher une référence ou un code').fill(code.slice(0, 8))
+    await dir.getByLabel('Chercher une référence ou un code').fill(code.toLowerCase())
     await expect(dir.locator('ul.refs > li')).toHaveCount(1)
 
     // L'atelier scanne (ici : saisit) ce code : la référence est reconnue
@@ -64,14 +64,21 @@ test.describe('Matériaux', () => {
     await atelier.goto('/materiaux')
     await expect(atelier).toHaveURL('/tableau-de-bord')
 
-    // La direction retire le code, puis supprime la référence (aucune feuille en stock)
+    // La direction retire le code, puis archive la référence (aucune feuille en stock) : elle ne se supprime jamais
     await dir.getByLabel('Chercher une référence ou un code').fill('')
     await ligne.getByRole('button', { name: /^Codes-barres/ }).click()
     await ligne.getByRole('button', { name: new RegExp(`Retirer le code ${code}`) }).click()
     await expect(ligne.getByText('Aucun code-barres')).toBeVisible()
-    dir.once('dialog', (d) => d.accept())
-    await ligne.getByRole('button', { name: /^Supprimer la référence/ }).click()
+    await expect(ligne.getByRole('button', { name: /^Supprimer/ })).toHaveCount(0)
+    await ligne.getByRole('button', { name: /^Archiver la référence/ }).click()
     await expect(dir.locator('ul.refs > li', { hasText: format })).toHaveCount(0)
+
+    // Archivée, elle se retrouve dans la liste des archivées, d'où on peut la désarchiver
+    await dir.getByRole('button', { name: 'Voir les archivées' }).click()
+    await expect(ligne).toBeVisible()
+    await ligne.getByRole('button', { name: /^Désarchiver la référence/ }).click()
+    await dir.getByRole('button', { name: 'Voir les références en service' }).click()
+    await expect(ligne).toBeVisible()
     await dir.context().close()
     await atelier.context().close()
   })

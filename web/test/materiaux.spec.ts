@@ -132,27 +132,33 @@ describe('Matériaux', () => {
     expect(wrapper.find(`#code-${F1.id}`).exists()).toBe(false)
   })
 
-  it('ne propose de supprimer qu’une référence sans stock, après confirmation', async () => {
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => true),
-    )
-    const { wrapper, calls } = await mountPage({ 'DELETE /stock/feuilles/f2': [200, { ok: true }] })
-    expect(wrapper.find(`button[aria-label="Supprimer la référence ${F1.libelle}"]`).exists()).toBe(false)
-    await wrapper.get(`button[aria-label="Supprimer la référence ${F2.libelle}"]`).trigger('click')
+  it('n’archive qu’une référence sans stock, et ne propose jamais de la supprimer', async () => {
+    const { wrapper, calls } = await mountPage({ 'POST /stock/feuilles/f2/archive': [200, { ok: true }] })
+    expect(wrapper.find('button[aria-label^="Supprimer"]').exists()).toBe(false)
+    expect(wrapper.find(`button[aria-label="Archiver la référence ${F1.libelle}"]`).exists()).toBe(false)
+    await wrapper.get(`button[aria-label="Archiver la référence ${F2.libelle}"]`).trigger('click')
     await flushPromises()
-    expect(calls.some((c) => c.method === 'DELETE' && c.path === '/stock/feuilles/f2')).toBe(true)
-    expect(wrapper.get('[role="status"]').text()).toContain('Référence supprimée')
+    expect(calls.some((c) => c.method === 'POST' && c.path === '/stock/feuilles/f2/archive')).toBe(true)
+    expect(wrapper.get('[role="status"]').text()).toContain('Référence archivée')
   })
 
-  it('ne supprime rien si la direction annule', async () => {
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => false),
-    )
-    const { wrapper, calls } = await mountPage()
-    await wrapper.get(`button[aria-label="Supprimer la référence ${F2.libelle}"]`).trigger('click')
+  it('montre les références archivées à part et permet de les désarchiver', async () => {
+    const ARCH: Feuille = { ...F2, archivee: true }
+    const { wrapper, calls } = await mountPage({
+      'GET /stock/feuilles?archivees=1': [200, { feuilles: [ARCH] }],
+      'POST /stock/feuilles/f2/unarchive': [200, { ok: true }],
+    })
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Voir les archivées')!
+      .trigger('click')
     await flushPromises()
-    expect(calls.some((c) => c.method === 'DELETE')).toBe(false)
+    expect(calls.some((c) => c.path === '/stock/feuilles?archivees=1')).toBe(true)
+    expect(wrapper.find('button[aria-controls="ajout"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label^="Codes-barres"]').exists()).toBe(false)
+    await wrapper.get(`button[aria-label="Désarchiver la référence ${ARCH.libelle}"]`).trigger('click')
+    await flushPromises()
+    expect(calls.some((c) => c.method === 'POST' && c.path === '/stock/feuilles/f2/unarchive')).toBe(true)
+    expect(wrapper.get('[role="status"]').text()).toContain('Référence désarchivée')
   })
 })

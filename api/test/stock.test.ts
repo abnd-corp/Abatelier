@@ -204,16 +204,46 @@ describe('Entrées, sorties et inventaire', () => {
     expect((await atelier.post('/api/stock/feuilles/pas-un-uuid/mouvement', { delta: 1, motif: 'perte' })).statusCode).toBe(404)
   })
 
-  it('ne supprime une référence que vide, et garde l’historique', async () => {
+  it('n’archive une référence que vide, la garde avec son historique, et ne la supprime jamais', async () => {
     const f = await add({ quantite: 2 })
-    expect((await atelier.delete(`/api/stock/feuilles/${f.id}`)).statusCode).toBe(409)
+    expect((await atelier.post(`/api/stock/feuilles/${f.id}/archive`)).statusCode).toBe(409)
     await atelier.post(`/api/stock/feuilles/${f.id}/mouvement`, { quantite: 0, motif: 'inventaire' })
-    expect((await atelier.delete(`/api/stock/feuilles/${f.id}`)).statusCode).toBe(200)
-    expect(await db.select().from(sheetStock)).toHaveLength(0)
+    expect((await atelier.post(`/api/stock/feuilles/${f.id}/archive`)).statusCode).toBe(200)
+    // La ligne et son historique restent en base, rattachés à la référence
+    const lignes = await db.select().from(sheetStock)
+    expect(lignes).toHaveLength(1)
+    expect(lignes[0]!.archivedAt).not.toBeNull()
     const mv = await db.select().from(sheetMovements)
     expect(mv).toHaveLength(2)
-    expect(mv.every((m) => m.sheetId === null && m.libelle.includes('Aluminium'))).toBe(true)
-    expect(await entries('stock.sheet_deleted')).toHaveLength(1)
+    expect(mv.every((m) => m.sheetId === f.id)).toBe(true)
+    expect(await entries('stock.sheet_archived')).toHaveLength(1)
+    // Il n'existe plus de route de suppression
+    expect([404, 405]).toContain((await atelier.delete(`/api/stock/feuilles/${f.id}`)).statusCode)
+    expect(await db.select().from(sheetStock)).toHaveLength(1)
+  })
+
+  it('une référence archivée disparaît de la liste, de la réception et des conseils de découpe, et se désarchive', async () => {
+    const EAN = '3760123456789'
+    const f = await add({ quantite: 0 })
+    await atelier.post('/api/stock/codes', { code: EAN, sheetId: f.id })
+    await atelier.post(`/api/stock/feuilles/${f.id}/archive`)
+    expect((await atelier.get('/api/stock/feuilles')).json().feuilles).toHaveLength(0)
+    const archivees = (await atelier.get('/api/stock/feuilles?archivees=1')).json()
+    expect(archivees.feuilles).toHaveLength(1)
+    expect(archivees.feuilles[0]).toMatchObject({ id: f.id, archivee: true, codes: [EAN] })
+    // Le code d'une référence archivée n'est plus reconnu à la réception, et on n'y ajoute plus de code
+    expect((await atelier.get(`/api/stock/codes/${EAN}`)).statusCode).toBe(409)
+    expect((await atelier.post('/api/stock/reception', { code: EAN, quantite: 1 })).statusCode).toBe(409)
+    expect((await atelier.post('/api/stock/codes', { code: 'AB-12345', sheetId: f.id })).statusCode).toBe(409)
+    // Recréer le même format propose de la désarchiver
+    const doublon = await atelier.post('/api/stock/feuilles', feuille())
+    expect(doublon.statusCode).toBe(409)
+    expect(doublon.json().error).toContain('archivée')
+    // Désarchivée, elle revient avec son code
+    expect((await atelier.post(`/api/stock/feuilles/${f.id}/unarchive`)).statusCode).toBe(200)
+    expect((await atelier.get('/api/stock/feuilles')).json().feuilles[0]).toMatchObject({ id: f.id, archivee: false })
+    expect((await atelier.get(`/api/stock/codes/${EAN}`)).statusCode).toBe(200)
+    expect(await entries('stock.sheet_unarchived')).toHaveLength(1)
   })
 
   it('deux sorties simultanées ne passent pas sous zéro', async () => {
@@ -275,6 +305,9 @@ describe('Choix de la feuille', () => {
     expect(l.conseils[0]).toMatchObject({ sheetId: f.id, parFeuille: 2, feuilles: 2, enStock: 6 })
     expect(chute.id).toBeTruthy()
     expect(res.body).not.toMatch(/Dupont|prix|ttc/i)
+    // Une référence archivée n'est plus conseillée
+    await atelier.post(`/api/stock/feuilles/${f.id}/mouvement`, { quantite: 0, motif: 'inventaire' })
+    await atelier.post(`/api/stock/feuilles/${f.id}/archive`)
     // Sans stock pour cette matière : on le dit
     await db.delete(sheetStock)
     const vide = (await atelier.get(`/api/production/${order.id}/feuilles`)).json().lignes[0]
@@ -338,7 +371,7 @@ describe('Codes-barres et réception de marchandise', () => {
     expect((await atelier.get('/api/stock/feuilles')).json().feuilles[0].quantite).toBe(4)
   })
 
-  it('supprime un code, et le supprime avec sa référence', async () => {
+  it('supprime un code, et un code d’une référence archivée n’est plus reconnu', async () => {
     const f = await add({ quantite: 0 })
     await atelier.post('/api/stock/codes', { code: EAN, sheetId: f.id })
     await atelier.post('/api/stock/codes', { code: 'PALETTE-1', sheetId: f.id })
@@ -346,8 +379,8 @@ describe('Codes-barres et réception de marchandise', () => {
     expect((await atelier.get(`/api/stock/codes/${EAN}`)).statusCode).toBe(404)
     expect((await atelier.delete(`/api/stock/codes/${EAN}`)).statusCode).toBe(404)
     expect(await entries('stock.code_unlinked')).toHaveLength(1)
-    expect((await atelier.delete(`/api/stock/feuilles/${f.id}`)).statusCode).toBe(200)
-    expect((await atelier.get('/api/stock/codes/PALETTE-1')).statusCode).toBe(404)
+    expect((await atelier.post(`/api/stock/feuilles/${f.id}/archive`)).statusCode).toBe(200)
+    expect((await atelier.get('/api/stock/codes/PALETTE-1')).statusCode).toBe(409)
   })
 
   it('crée une référence avec son code-barres, et refuse un code déjà pris', async () => {
@@ -382,7 +415,7 @@ describe('Définition des références par la direction (page Matériaux)', () =
     chef = await loginAs(app, 'dir')
   })
 
-  it('un compte direction (sans la section atelier) définit une référence et ses codes-barres, puis la supprime', async () => {
+  it('un compte direction (sans la section atelier) définit une référence et ses codes-barres, puis l’archive', async () => {
     expect((await chef.get('/api/stock/options')).statusCode).toBe(200)
     const res = await chef.post('/api/stock/feuilles', feuille({ quantite: 0, code: EAN }))
     expect(res.statusCode, res.body).toBe(201)
@@ -391,7 +424,7 @@ describe('Définition des références par la direction (page Matériaux)', () =
     expect((await chef.post('/api/stock/codes', { code: 'AB-12345', sheetId: f.id })).statusCode).toBe(201)
     expect((await chef.get('/api/stock/feuilles')).json().feuilles[0].codes).toEqual([EAN, 'AB-12345'])
     expect((await chef.delete('/api/stock/codes/AB-12345')).statusCode).toBe(200)
-    expect((await chef.delete(`/api/stock/feuilles/${f.id}`)).statusCode).toBe(200)
+    expect((await chef.post(`/api/stock/feuilles/${f.id}/archive`)).statusCode).toBe(200)
     // Tout est dans le journal, au nom de la direction
     expect((await entries('stock.sheet_created')).length).toBe(1)
     expect((await entries('stock.code_unlinked')).length).toBe(1)

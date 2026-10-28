@@ -19,6 +19,7 @@ export interface Feuille {
   etat: EtatStock
   // Codes-barres des fournisseurs associés à cette référence (réception au scan)
   codes?: string[]
+  archivee?: boolean
 }
 export type EtatStock = 'vide' | 'critique' | 'bas' | 'ok'
 export const ETAT_LABELS: Record<EtatStock, string> = { vide: 'Vide', critique: 'Critique', bas: 'Stock bas', ok: 'Correct' }

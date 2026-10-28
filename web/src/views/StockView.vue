@@ -160,19 +160,6 @@ async function validerNote(f: Feuille) {
   openPanel.value = null
 }
 
-// --- Supprimer une référence vide ---
-async function supprimer(f: Feuille) {
-  error.value = ''
-  info.value = ''
-  try {
-    await api(`/stock/feuilles/${f.id}`, { method: 'DELETE' })
-    info.value = 'Référence supprimée.'
-    await load()
-  } catch (e) {
-    error.value = e instanceof ApiError ? e.message : 'Suppression impossible.'
-  }
-}
-
 // --- Seuil et note ---
 async function patch(f: Feuille, body: Record<string, unknown>) {
   error.value = ''
@@ -429,9 +416,6 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
             <button class="btn small" type="button" :aria-expanded="estOuvert(f, 'codes')" :aria-label="`Codes-barres : ${f.libelle}`" @click="ouvrirCodes(f)">
               <AppIcon name="tag" :size="14" />Codes-barres{{ f.codes?.length ? ` (${f.codes.length})` : '' }}
             </button>
-            <button v-if="!f.quantite" class="btn small danger" type="button" :aria-label="`Supprimer la référence ${f.libelle}`" @click="supprimer(f)">
-              <AppIcon name="trash" :size="14" />
-            </button>
           </div>
 
           <form v-if="estOuvert(f, 'ajuster')" class="move" novalidate @submit.prevent="appliquer(f)">
@@ -511,9 +495,6 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
             </button>
             <button class="btn small" type="button" :aria-expanded="estOuvert(f, 'codes')" :aria-label="`Codes-barres : ${f.libelle}`" @click="ouvrirCodes(f)">
               <AppIcon name="tag" :size="14" />Codes-barres{{ f.codes?.length ? ` (${f.codes.length})` : '' }}
-            </button>
-            <button v-if="!f.quantite" class="btn small danger" type="button" :aria-label="`Supprimer la référence ${f.libelle}`" @click="supprimer(f)">
-              <AppIcon name="trash" :size="14" />
             </button>
           </div>
 
