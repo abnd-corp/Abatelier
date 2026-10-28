@@ -4,11 +4,8 @@ import { api, ApiError } from '@/api'
 import AppIcon from '@/components/AppIcon.vue'
 import type { Champ } from '@/lib/site-admin'
 
-// « textes » : les textes du site ; « legal » : les pages légales (mentions, CGV, confidentialité, cookies), à part
-const props = withDefaults(defineProps<{ pages?: 'textes' | 'legal' }>(), { pages: 'textes' })
-const LEGAL = 'Pages légales'
-const tous = ref<Champ[]>([])
-const champs = computed(() => tous.value.filter((c) => (c.groupe === LEGAL) === (props.pages === 'legal')))
+// Les textes du site que la direction modifie. Les pages légales n'en font pas partie : elles suivent les versions de l'application.
+const champs = ref<Champ[]>([])
 const draft = reactive<Record<string, string>>({})
 const loading = ref(true)
 const saving = ref(false)
@@ -17,7 +14,7 @@ const errorField = ref('')
 const saved = ref(false)
 
 function fill(list: Champ[]) {
-  tous.value = list
+  champs.value = list
   for (const c of list) draft[c.key] = c.valeur
 }
 async function load() {
@@ -41,7 +38,6 @@ const groupes = computed(() => {
 })
 const changed = computed(() => champs.value.filter((c) => draft[c.key] !== c.valeur))
 // Textes qui attendent une information (hébergeur, médiateur…) : on les signale pour qu'ils ne partent pas en ligne ainsi
-const toComplete = computed(() => champs.value.filter((c) => draft[c.key]?.includes('À COMPLÉTER')))
 
 async function save() {
   error.value = ''
@@ -73,23 +69,11 @@ async function reset(c: Champ) {
 <template>
   <form class="pane" @submit.prevent="save">
     <p v-if="error" class="alert bad" role="alert">{{ error }}</p>
-    <p v-if="saved" class="alert ok" role="status">
-      <AppIcon name="check" :size="16" /><span
-        >{{ pages === 'legal' ? 'Pages légales enregistrées' : 'Textes enregistrés' }} : {{ pages === 'legal' ? 'elles sont déjà en ligne' : 'ils sont déjà en ligne' }}.</span
-      >
-    </p>
-    <p v-if="toComplete.length" class="alert" role="status">
-      <span
-        >À compléter avant la mise en ligne : <b>{{ toComplete.map((c) => c.label).join(', ') }}</b> (cherchez « À COMPLÉTER » dans le texte).</span
-      >
-    </p>
+    <p v-if="saved" class="alert ok" role="status"><AppIcon name="check" :size="16" /><span>Textes enregistrés : ils sont déjà en ligne.</span></p>
     <p v-if="loading" class="muted" aria-busy="true">Chargement…</p>
 
     <fieldset v-for="[groupe, list] in groupes" :key="groupe" class="card group">
       <legend>{{ groupe }}</legend>
-      <p v-if="groupe === 'Pages légales'" class="muted hint">
-        Les mots entre accolades, comme {raisonSociale} ou {siret}, sont remplacés par les informations de « Modèles de documents ». Une ligne commençant par « # » est un titre de section.
-      </p>
       <div v-for="c in list" :key="c.key" class="field">
         <div class="lab">
           <label :for="`f-${c.key}`">{{ c.label }}</label>

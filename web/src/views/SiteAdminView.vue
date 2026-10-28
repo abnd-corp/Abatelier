@@ -10,7 +10,6 @@ import AppIcon from '@/components/AppIcon.vue'
 const TABS = [
   { id: 'demandes', label: 'Demandes reçues' },
   { id: 'textes', label: 'Textes' },
-  { id: 'legal', label: 'Pages légales' },
   { id: 'photos', label: 'Photos' },
   { id: 'emails', label: 'E-mails' },
 ] as const
@@ -43,8 +42,7 @@ function select(t: Tab) {
 
   <div :id="`panel-${tab}`" role="tabpanel" :aria-labelledby="`tab-${tab}`">
     <ContactRequests v-if="tab === 'demandes'" @count="pending = $event" />
-    <ContentEditor v-else-if="tab === 'textes'" key="textes" pages="textes" />
-    <ContentEditor v-else-if="tab === 'legal'" key="legal" pages="legal" />
+    <ContentEditor v-else-if="tab === 'textes'" />
     <PhotoManager v-else-if="tab === 'photos'" />
     <MailSettings v-else />
   </div>

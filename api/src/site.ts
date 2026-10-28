@@ -2,9 +2,12 @@ import { eq, sql } from 'drizzle-orm'
 import { db } from './db/index.js'
 import { siteContent } from './db/schema.js'
 import { getCompany } from './documents.js'
+import { env } from './env.js'
 
 // Textes du site vitrine. La direction les modifie dans « Site vitrine » ; sans modification on affiche la valeur par défaut.
-// Dans les textes juridiques, {raisonSociale}, {adresse}, {siret}, {telephone} et {email} viennent de « Modèles de documents ».
+// Les pages légales ne sont pas modifiables par le client : elles font partie de l'application et suivent ses versions (la loi change,
+// c'est la maintenance qui les met à jour). Dans ces textes, {raisonSociale}, {adresse}, {siret}, {telephone} et {email} viennent de
+// « Modèles de documents », {hebergeur} et {mediateur} de la configuration du déploiement (LEGAL_HEBERGEUR, LEGAL_MEDIATEUR).
 
 export interface Field {
   key: string
@@ -27,7 +30,7 @@ SIRET : {siret}
 La direction de {raisonSociale}.
 
 # Hébergement
-À COMPLÉTER : nom, adresse et téléphone de l’hébergeur du site.
+{hebergeur}
 
 # Propriété intellectuelle
 Les textes, photos et schémas de ce site sont la propriété de {raisonSociale}. Toute reproduction sans autorisation est interdite.
@@ -97,7 +100,7 @@ Les pièces étant fabriquées selon vos spécifications, le droit de rétractat
 Les garanties légales de conformité et des vices cachés s’appliquent. La garantie ne couvre pas une pièce conforme à la commande mais mal dimensionnée, ni une mauvaise pose.
 
 # Litiges
-Droit français. Un consommateur peut recourir gratuitement à un médiateur de la consommation. À COMPLÉTER : nom et coordonnées du médiateur.`
+Droit français. Un consommateur peut recourir gratuitement à un médiateur de la consommation. {mediateur}`
 
 export const FIELDS: Field[] = [
   // Accueil
@@ -195,14 +198,17 @@ export const FIELDS: Field[] = [
     max: 200,
     defaut: 'Alu Pliage Service, pliage de tôle aluminium sur mesure à Fraisses, près de Saint-Étienne : couvertines, bavettes, bandeaux. Devis gratuit.',
   },
-  // Pages légales
-  { key: 'legal.mentions', groupe: 'Pages légales', label: 'Mentions légales', long: true, max: 6000, defaut: MENTIONS },
-  { key: 'legal.confidentialite', groupe: 'Pages légales', label: 'Politique de confidentialité', long: true, max: 8000, defaut: CONFIDENTIALITE },
-  { key: 'legal.cookies', groupe: 'Pages légales', label: 'Cookies', long: true, max: 4000, defaut: COOKIES },
-  { key: 'legal.cgv', groupe: 'Pages légales', label: 'Conditions générales de vente', long: true, max: 12000, defaut: CGV },
 ]
 
 export const FIELD = new Map(FIELDS.map((f) => [f.key, f]))
+
+/** Pages légales : servies avec le site, jamais modifiables depuis l'application. */
+const LEGAL_TEXTS: Record<string, string> = {
+  'legal.mentions': MENTIONS,
+  'legal.confidentialite': CONFIDENTIALITE,
+  'legal.cookies': COOKIES,
+  'legal.cgv': CGV,
+}
 
 /** Valeurs enregistrées (les champs jamais modifiés ne sont pas en base). */
 async function stored() {
@@ -213,7 +219,7 @@ async function stored() {
 /** Tous les textes, avec la valeur par défaut pour ceux qui n'ont pas été modifiés. */
 export async function getContent() {
   const saved = await stored()
-  return Object.fromEntries(FIELDS.map((f) => [f.key, saved.get(f.key) ?? f.defaut]))
+  return { ...Object.fromEntries(FIELDS.map((f) => [f.key, saved.get(f.key) ?? f.defaut])), ...LEGAL_TEXTS }
 }
 
 /** Même chose, avec le détail utile à l'éditeur. */
@@ -244,6 +250,8 @@ export async function fillCompany(texts: Record<string, string>) {
     siret: c.siret || 'À COMPLÉTER',
     telephone: c.telephone || 'À COMPLÉTER',
     email: c.email || 'À COMPLÉTER',
+    hebergeur: env.LEGAL_HEBERGEUR || 'À COMPLÉTER : nom, adresse et téléphone de l’hébergeur du site.',
+    mediateur: env.LEGAL_MEDIATEUR || 'À COMPLÉTER : nom et coordonnées du médiateur de la consommation.',
   }
   const out: Record<string, string> = {}
   for (const [k, v] of Object.entries(texts)) out[k] = v.replace(/\{(\w+)\}/g, (m, name: string) => vars[name] ?? m)

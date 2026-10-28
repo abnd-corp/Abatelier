@@ -67,6 +67,9 @@ const schema = z.object({
   ADMIN_NOM: z.string().default('Administrateur'),
   // Avis Google affichés sur le site : identifiant de la fiche et clé de l'API Places (sans clé, le site affiche seulement un lien)
   GOOGLE_PLACE_ID: z.string().trim().optional(),
+  // Pages légales, réglées une fois à l'installation : hébergeur du site (mentions légales) et médiateur de la consommation (conditions de vente)
+  LEGAL_HEBERGEUR: z.string().trim().optional(),
+  LEGAL_MEDIATEUR: z.string().trim().optional(),
   GOOGLE_PLACES_API_KEY: z.string().trim().optional(),
 })
 

@@ -17,6 +17,8 @@ afterEach(() => {
   vi.unstubAllGlobals()
   env.GOOGLE_PLACE_ID = undefined
   env.GOOGLE_PLACES_API_KEY = undefined
+  env.LEGAL_HEBERGEUR = undefined
+  env.LEGAL_MEDIATEUR = undefined
   resetReviewsCache()
   return app.close()
 })
@@ -118,6 +120,43 @@ describe('Textes', () => {
     expect(await db.select().from(siteContent)).toHaveLength(0)
     expect(await entries('site.content_reset')).toHaveLength(1)
     expect((await direction.post('/api/site/content/reset', { key: 'x' })).statusCode).toBe(400)
+  })
+})
+
+describe('Pages légales', () => {
+  const LEGALES = ['legal.mentions', 'legal.confidentialite', 'legal.cookies', 'legal.cgv']
+  const publiques = async () => (await visitor.get('/api/public/site')).json().contenu as Record<string, string>
+
+  it('ne sont pas modifiables : absentes de l’éditeur, refusées à l’enregistrement et au rétablissement', async () => {
+    const champs = (await direction.get('/api/site/content')).json().champs as { key: string; groupe: string }[]
+    expect(champs.some((f) => f.key.startsWith('legal.') || f.groupe === 'Pages légales')).toBe(false)
+    for (const key of LEGALES) {
+      expect((await direction.patch('/api/site/content', { valeurs: { [key]: 'Texte du client' } })).json()).toMatchObject({ field: key })
+      expect((await direction.post('/api/site/content/reset', { key })).statusCode).toBe(400)
+    }
+    expect(await entries('site.content_updated')).toHaveLength(0)
+  })
+
+  it('restent servies au public, sans variable restée à nu, et ignorent un ancien texte enregistré en base', async () => {
+    await db.insert(siteContent).values({ key: 'legal.mentions', value: 'Ancien texte modifié par le client' })
+    const contenu = await publiques()
+    for (const key of LEGALES) {
+      expect(contenu[key], key).toBeTruthy()
+      expect(contenu[key], key).not.toMatch(/\{\w+\}/)
+    }
+    expect(contenu['legal.mentions']).not.toContain('Ancien texte')
+  })
+
+  it('l’hébergeur et le médiateur viennent de la configuration, et le manque reste visible', async () => {
+    const vide = await publiques()
+    expect(vide['legal.mentions']).toContain('À COMPLÉTER : nom, adresse et téléphone de l’hébergeur')
+    expect(vide['legal.cgv']).toContain('À COMPLÉTER : nom et coordonnées du médiateur')
+    env.LEGAL_HEBERGEUR = 'Hébergeur Test, 1 rue du Serveur, 75000 Paris'
+    env.LEGAL_MEDIATEUR = 'Médiation Test, www.mediation.exemple.fr'
+    const rempli = await publiques()
+    expect(rempli['legal.mentions']).toContain('Hébergeur Test, 1 rue du Serveur, 75000 Paris')
+    expect(rempli['legal.mentions']).not.toContain('À COMPLÉTER : nom, adresse')
+    expect(rempli['legal.cgv']).toContain('Médiation Test, www.mediation.exemple.fr')
   })
 })
 
