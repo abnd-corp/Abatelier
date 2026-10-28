@@ -39,6 +39,8 @@ const espace = () => client(app, { cookieName: 'aps_client' })
 const entries = (action: string) => db.select().from(auditLog).where(eq(auditLog.action, action))
 const MDP = 'Plieuse-numerique-2026'
 const NOUVEAU = 'Cintreuse-hydraulique-2027'
+const TROISIEME = 'Perceuse-radiale-2028'
+const VOLEUR = 'Rectifieuse-plane-2029'
 const signup = (over: Record<string, unknown> = {}) => ({ prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', password: MDP, consentement: true, ...over })
 /** Les e-mails partent en arrière-plan : on attend qu'ils soient là. */
 const messages = async (n: number) => {
@@ -162,7 +164,7 @@ describe('Choisir un nouveau mot de passe', () => {
     expect(m!.html).toContain('Ce n’était pas moi')
     expect(await entries('espace.password_reset')).toHaveLength(1)
     // Un second passage avec le même lien est refusé
-    const encore = await espace().post('/api/espace/nouveau-mot-de-passe', { jeton, password: 'Autre-mot-de-passe-2028' })
+    const encore = await espace().post('/api/espace/nouveau-mot-de-passe', { jeton, password: TROISIEME })
     expect(encore.statusCode).toBe(400)
     expect(encore.json()).toMatchObject({ field: 'jeton' })
     expect((await db.select().from(clientAccounts))[0]!.passwordChangedAt).not.toBeNull()
@@ -266,7 +268,7 @@ describe('Activation d’un espace sur une fiche créée par l’atelier', () =>
     await membre()
     await messages(1)
     sent.length = 0
-    const res = await espace().post('/api/espace/inscription', signup({ password: 'Un-autre-mot-de-passe-2026' }))
+    const res = await espace().post('/api/espace/inscription', signup({ password: VOLEUR }))
     expect(res.statusCode).toBe(409)
     await new Promise((r) => setTimeout(r, 200))
     expect(sent).toHaveLength(0)
