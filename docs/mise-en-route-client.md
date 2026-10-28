@@ -6,6 +6,7 @@ Ce que nous faisons au déploiement, puis ce que le client doit renseigner avant
 
 - Installer l'application et créer le compte `admin`, qui sert uniquement à l'administration.
 - Configurer les secrets : envoi d'e-mails, paiement en ligne, avis Google.
+- Renseigner l'hébergeur du site et le médiateur de la consommation (`LEGAL_HEBERGEUR`, `LEGAL_MEDIATEUR`) : ils apparaissent dans les mentions légales et les conditions de vente. Ces pages légales ne sont pas modifiables par le client : elles suivent les versions de l'application, et nous les mettons à jour.
 - Le nom de domaine en HTTPS.
 - Les sauvegardes nocturnes et leur vérification.
 - Remettre au client son compte administrateur, avec un mot de passe provisoire.
