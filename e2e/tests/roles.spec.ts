@@ -46,6 +46,7 @@ test.describe('Droits des comptes', () => {
       'Devis et factures',
       'Clients',
       'Tarifs et catalogue',
+      'Matériaux',
       'Modèles de documents',
       'Boutique',
       'Site vitrine',

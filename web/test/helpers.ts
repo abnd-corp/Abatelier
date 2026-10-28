@@ -67,6 +67,7 @@ export function makeRouter() {
       { path: '/boutique/commande/:id', name: 'site-paiement-retour', component: page('site-paiement-retour'), meta: { public: true, site: true } },
       { path: '/paiement-simulation/:id', name: 'site-paiement-simulation', component: page('site-paiement-simulation'), meta: { public: true, site: true } },
       { path: '/panier', name: 'site-panier', component: page('site-panier'), meta: { public: true, site: true } },
+      { path: '/materiaux', name: 'materiaux', component: page('materiaux'), meta: { section: 'Direction', title: 'Matériaux' } },
       { path: '/site-vitrine', name: 'site-admin', component: page('site-admin'), meta: { section: 'Direction', title: 'Site vitrine' } },
       { path: '/connexion', name: 'login', component: page('login'), meta: { public: true } },
       { path: '/tableau-de-bord', name: 'dashboard', component: page('dashboard') },

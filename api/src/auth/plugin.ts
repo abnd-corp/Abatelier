@@ -53,3 +53,12 @@ export function requirePerm(perm: Permission) {
     if (!can(req.user!, perm)) return reply.code(403).send({ error: 'Vous n’avez pas accès à cette fonction.' })
   }
 }
+
+/** Connexion obligatoire + au moins une des permissions données. */
+export function requireAnyPerm(...perms: Permission[]) {
+  return async (req: FastifyRequest, reply: FastifyReply) => {
+    await requireAuth(req, reply)
+    if (reply.sent) return
+    if (!perms.some((p) => can(req.user!, p))) return reply.code(403).send({ error: 'Vous n’avez pas accès à cette fonction.' })
+  }
+}

@@ -10,7 +10,12 @@ export const GROUPES = {
   },
   commandes: {
     tests: ['orders', 'pliage', 'suivi-fabrication', 'clients', 'modeles'],
-    sources: [/^api\/src\/(quote|profile|geo|production-sheet)\.ts/, /^api\/src\/routes\/(orders|production|clients|delivery)\.ts/, /^web\/src\/views\/(Order|Production|Client)/, /^web\/src\/lib\/(orders|piece3d)/],
+    sources: [
+      /^api\/src\/(quote|profile|geo|production-sheet)\.ts/,
+      /^api\/src\/routes\/(orders|production|clients|delivery)\.ts/,
+      /^web\/src\/views\/(Order|Production|Client)/,
+      /^web\/src\/lib\/(orders|piece3d)/,
+    ],
   },
   catalogue: {
     tests: ['catalog'],
@@ -21,8 +26,8 @@ export const GROUPES = {
     sources: [/^api\/src\/(billing|pdf|facturx|numbering)[^/]*\.ts/, /^api\/src\/routes\/(billing|documents)\.ts/, /^web\/src\/views\/(Billing|Documents)/],
   },
   stock: {
-    tests: ['stock', 'reception', 'reception-camera'],
-    sources: [/^api\/src\/(stock|cutting)[^/]*\.ts/, /^api\/src\/routes\/stock\.ts/, /^web\/src\/views\/Stock/],
+    tests: ['stock', 'reception', 'reception-camera', 'materiaux'],
+    sources: [/^api\/src\/(stock|cutting)[^/]*\.ts/, /^api\/src\/routes\/stock\.ts/, /^web\/src\/views\/(Stock|Materiaux)/, /^web\/src\/components\/(SheetCodes|CodeField)/],
   },
   equipe: {
     tests: ['employees'],

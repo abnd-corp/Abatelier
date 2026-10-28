@@ -1,0 +1,1 @@
+ALTER TABLE "sheet_stock" ADD COLUMN "archived_at" timestamp with time zone;

@@ -312,6 +312,10 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
         text: `${d.motif === 'inventaire' ? 'Inventaire' : d.delta > 0 ? 'Entrée' : 'Sortie'} de ${Math.abs(d.delta)} feuille${Math.abs(d.delta) > 1 ? 's' : ''} : ${d.libelle} (reste ${d.apres})${d.code ? ` · code ${d.code}` : ''}`,
         tone: d.delta > 0 ? 'accent' : 'neutral',
       }
+    case 'stock.sheet_archived':
+      return { text: `A archivé la référence ${d.libelle}`, tone: 'neutral' }
+    case 'stock.sheet_unarchived':
+      return { text: `A désarchivé la référence ${d.libelle}`, tone: 'accent' }
     case 'stock.sheet_deleted':
       return { text: `A supprimé du stock la référence ${d.libelle}`, tone: 'bad' }
     case 'product.imported':

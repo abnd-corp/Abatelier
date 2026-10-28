@@ -23,6 +23,7 @@ const PAGES = [
   { path: '/commandes/nouvelle', heading: 'Nouvelle commande' },
   { path: '/fabrication', heading: 'Fabrication' },
   { path: '/stock', heading: 'Stock de feuilles' },
+  { path: '/materiaux', heading: 'Matériaux' },
   { path: '/reception', heading: 'Réception de marchandise' },
   { path: '/factures', heading: 'Devis et factures' },
   { path: '/factures?type=devis', heading: 'Devis et factures' },
