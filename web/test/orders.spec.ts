@@ -428,7 +428,8 @@ describe('Fiche commande', () => {
     await wrapper.get('#cancel-reason').setValue('Doublon')
     await confirm.trigger('click')
     await flushPromises()
-    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ statut: 'annulee', note: 'Doublon' })
+    // L'appel d'annulation précisément : un chiffrage de la page peut partir avant lui
+    expect(calls.find((c) => c.method === 'POST' && c.path === '/orders/o1/status')!.body).toEqual({ statut: 'annulee', note: 'Doublon' })
   })
 
   it('modifie les pièces d’une commande reçue, sans renvoyer le client', async () => {
