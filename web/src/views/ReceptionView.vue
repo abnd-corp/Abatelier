@@ -377,6 +377,8 @@ h2 {
 }
 .viewer {
   position: relative;
+  overflow: hidden;
+  border-radius: 10px;
 }
 .video {
   display: block;
