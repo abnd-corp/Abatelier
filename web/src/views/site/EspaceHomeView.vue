@@ -91,7 +91,7 @@ async function closeAccount() {
           </div>
           <div class="amount">
             <b>{{ eur(c.ttc) }}</b> <span class="muted">TTC</span>
-            <span v-if="c.datePrevue && c.statut !== 'livree' && c.statut !== 'annulee'" class="muted"> · prévue le {{ jour(c.datePrevue) }}</span>
+            <span v-if="c.datePrevue && c.statut !== 'livree' && c.statut !== 'annulee'" class="muted"> · date estimée : {{ jour(c.datePrevue) }}</span>
           </div>
           <RouterLink :to="{ name: 'espace-commande', params: { id: c.id } }" class="s-btn">Voir</RouterLink>
         </li>

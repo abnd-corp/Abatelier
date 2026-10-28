@@ -176,7 +176,7 @@ const cover = (id: Emplacement) => photosOf(site.value, id)[0]
         <div class="card suivi">
           <div class="suivi-text">
             <h3>Ensuite, tout se suit en ligne</h3>
-            <p class="muted">Dans votre espace client : l’étape de chaque commande, la date prévue, vos devis et vos factures en PDF.</p>
+            <p class="muted">Dans votre espace client : l’étape de chaque commande, sa date estimée, vos devis et vos factures en PDF.</p>
           </div>
           <ol class="suivi-steps" aria-label="Étapes d’une commande">
             <li v-for="etape in SUIVI" :key="etape.statut" :class="statutOf(etape.statut).tone">
