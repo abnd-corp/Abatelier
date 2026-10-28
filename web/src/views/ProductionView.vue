@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { api, ApiError } from '@/api'
-import { sheetUrl, shortDay, statutOf, STEP_ACTIONS, type OrderStatut } from '@/lib/orders'
+import { sheetUrl, shortDay, STEP_ACTIONS, type OrderStatut } from '@/lib/orders'
 import { todayParis } from '@/lib/employees'
 import AppIcon from '@/components/AppIcon.vue'
 
@@ -126,7 +126,6 @@ const etapes = computed(() =>
           <p v-if="!c.orders.length" class="muted none">Aucune.</p>
           <article v-for="o in c.orders" :key="o.id" class="card order">
             <RouterLink :to="{ name: 'production-order', params: { id: o.id } }" class="client">{{ o.client }}</RouterLink>
-            <span class="pill" :class="statutOf(o.statut).tone">{{ statutOf(o.statut).label }}</span>
             <span class="ref">
               <span class="numero mono">{{ o.numero }}</span>
               <span v-if="o.kind === 'boutique'" class="pill accent">Boutique</span>
@@ -271,7 +270,8 @@ const etapes = computed(() =>
   color: var(--muted);
 }
 .retard {
-  justify-self: end;
+  grid-column: 1 / -1;
+  justify-self: start;
 }
 .retards {
   margin: 0;

@@ -575,6 +575,13 @@ describe('Atelier', () => {
     expect(carte('C-2026-0002')).toContain('Pris en charge par Lucas Martinon, terminé par Marc Durand')
   })
 
+  it('n’affiche pas le nom de l’étape sur la carte (la colonne le dit) : seule la pastille de retard existe', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    expect(wrapper.findAll('article.order .pill').map((p) => p.text())).toEqual([expect.stringMatching(/^En retard de \d+ j$/)])
+    const carte = wrapper.findAll('article.order').find((a) => a.text().includes('C-2026-0003'))!
+    expect(carte.find('.pill').exists()).toBe(false)
+  })
+
   it('met le nom du client en titre de la carte, avec le numéro en plus petit, et rien d’autre sur lui', async () => {
     const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
     const carte = wrapper.findAll('article.order').find((a) => a.text().includes('C-2026-0003'))!

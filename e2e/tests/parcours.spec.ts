@@ -45,9 +45,11 @@ test.describe('Parcours complet : devis, commande, fabrication, facture, paiemen
     await atelier.goto('/fabrication')
     const carte = atelier.getByRole('article').filter({ hasText: numero })
     await carte.getByRole('button', { name: 'Lancer la fabrication' }).click()
-    await expect(carte).toContainText('En fabrication')
+    // L'étape se lit à la colonne, plus sur la carte
+    const etape = () => atelier.locator('.etape').filter({ has: carte }).getByRole('heading', { level: 2 })
+    await expect(etape()).toContainText('En fabrication')
     await carte.getByRole('button', { name: 'Marquer prête' }).click()
-    await expect(carte).toContainText('Prête')
+    await expect(etape()).toContainText('Prête')
     await carte.getByRole('button', { name: 'Marquer livrée / retirée' }).click()
     await expect(atelier.getByRole('article').filter({ hasText: numero })).toHaveCount(0)
 

@@ -47,7 +47,6 @@ test.describe('Suivi de fabrication', () => {
     await expect(etape().getByRole('heading', { level: 2 })).toContainText('À lancer')
 
     await ligne.getByRole('button', { name: 'Lancer la fabrication' }).click()
-    await expect(ligne).toContainText('En fabrication')
     // Le nom du salarié qui l'a prise, pas un identifiant, et la commande change de colonne
     await expect(ligne).toContainText('Pris en charge par Plieur Suivi')
     await expect(etape().getByRole('heading', { level: 2 })).toContainText('En fabrication')
@@ -56,7 +55,6 @@ test.describe('Suivi de fabrication', () => {
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Vos pièces sont en cours de pliage')
 
     await ligne.getByRole('button', { name: 'Marquer prête' }).click()
-    await expect(ligne).toContainText('Prête')
     await expect(ligne).toContainText('terminé par Plieur Suivi')
     // « Prête » en bandeau, puis la colonne : à faire retirer ou à livrer
     await expect(etape().getByRole('heading', { level: 2 })).toContainText('Prête')
@@ -119,8 +117,8 @@ test.describe('Suivi de fabrication', () => {
     const carte = atelier.getByRole('article').filter({ hasText: numero })
     await expect(carte).toBeVisible()
     await carte.getByRole('button', { name: 'Lancer la fabrication' }).click()
-    // On attend que l'atelier voie l'étape enregistrée avant de recharger la page du client
-    await expect(carte).toContainText('En fabrication')
+    // On attend que l'atelier voie l'étape enregistrée (la colonne) avant de recharger la page du client
+    await expect(atelier.locator('.etape').filter({ has: carte }).getByRole('heading', { level: 2 })).toContainText('En fabrication')
     await client.reload()
     await expect(client.getByRole('region', { name: 'Suivi de la commande' }).locator('li[aria-current="step"]')).toContainText('En fabrication')
   })
