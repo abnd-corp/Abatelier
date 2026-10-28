@@ -18,6 +18,9 @@ services:
     environment:
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
+      # La pile de test n'utilise jamais les identifiants du .env : ses messages restent dans sa boîte de test
+      SMTP_USER: ""
+      SMTP_SECURE: "false"
       MAIL_FROM: "Alu Pliage Service <contact@aps.test>"
       MAIL_ALERT_TO: "direction@aps.test"
       # Les tests se connectent beaucoup depuis la même IP : on relève la limite et on raccourcit les délais
