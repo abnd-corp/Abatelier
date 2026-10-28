@@ -145,13 +145,15 @@ const err = (f: string) => (error.value?.field === f ? error.value.msg : '')
         <legend>Façonnage</legend>
         <div class="field">
           <label for="s-pli">Prix par pli et par mètre</label>
-          <span class="unit"><input id="s-pli" v-model="form.prixPliMl" class="input mono" inputmode="decimal" :aria-invalid="!!err('prixPliMl') || undefined" /><span>€</span></span>
+          <span class="unit"><input id="s-pli" v-model="form.prixPliMl" class="input mono" inputmode="decimal" :aria-invalid="!!err('prixPliMl') || undefined" /><span>€ HT</span></span>
           <span v-if="err('prixPliMl')" class="field-error">{{ err('prixPliMl') }}</span>
           <span class="hint muted">{{ example }}</span>
         </div>
         <div class="field">
           <label for="s-mer">Mise en route machine</label>
-          <span class="unit"><input id="s-mer" v-model="form.miseEnRoute" class="input mono" inputmode="decimal" :aria-invalid="!!err('miseEnRoute') || undefined" /><span>€ / référence</span></span>
+          <span class="unit"
+            ><input id="s-mer" v-model="form.miseEnRoute" class="input mono" inputmode="decimal" :aria-invalid="!!err('miseEnRoute') || undefined" /><span>€ HT / référence</span></span
+          >
           <span v-if="err('miseEnRoute')" class="field-error">{{ err('miseEnRoute') }}</span>
           <span class="hint muted">Ajoutée une fois par pièce différente d’un devis (réglage de la plieuse).</span>
         </div>

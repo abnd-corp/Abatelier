@@ -395,7 +395,7 @@ export async function espaceRoutes(app: FastifyInstance) {
         description: `Alu Pliage Service : ${pieces} pièce${pieces > 1 ? 's' : ''} sur mesure`,
         email: me.email,
         successUrl: `${origin}/boutique/commande/${p!.id}`,
-        cancelUrl: `${origin}/configurateur`,
+        cancelUrl: `${origin}/configurateur?paiement=annule`,
       })
       await db.update(payments).set({ providerRef: checkout.ref }).where(eq(payments.id, p!.id))
       await audit(req, 'boutique.checkout_started', {
@@ -441,7 +441,7 @@ export async function espaceRoutes(app: FastifyInstance) {
         description: `Alu Pliage Service : ${nbArticles} article${nbArticles > 1 ? 's' : ''}`,
         email: me.email,
         successUrl: `${origin}/boutique/commande/${p!.id}`,
-        cancelUrl: `${origin}/panier`,
+        cancelUrl: `${origin}/panier?paiement=annule`,
       })
       await db.update(payments).set({ providerRef: checkout.ref }).where(eq(payments.id, p!.id))
       await audit(req, 'boutique.checkout_started', { ...who(me), targetType: 'payment', targetId: p!.id, details: { montant: p!.montantTtc, articles: nbArticles, prestataire: provider.name } })

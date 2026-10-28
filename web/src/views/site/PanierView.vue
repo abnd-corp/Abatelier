@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
 import AppIcon from '@/components/AppIcon.vue'
 import EspaceAuthForm from '@/components/site/EspaceAuthForm.vue'
@@ -14,7 +14,11 @@ import { usePanierStore } from '@/stores/panier'
 
 // Panier : articles et quantités gardés dans le navigateur, prix recalculés par le serveur, puis paiement.
 // Le compte client n'est demandé qu'au moment de payer.
+const route = useRoute()
 const router = useRouter()
+// Retour de la page de paiement sans avoir payé : on le dit, et on retire l'indicateur de l'adresse
+const paiementAnnule = ref(route.query.paiement === 'annule')
+if (paiementAnnule.value) router.replace({ query: {} })
 const panier = usePanierStore()
 const espace = useEspaceStore()
 const prix = ref<PanierPrix | null>(null)
@@ -96,6 +100,10 @@ async function payer() {
       <span class="eyebrow">Boutique</span>
       <h1>Mon panier</h1>
     </header>
+
+    <p v-if="paiementAnnule" class="alert" role="status">
+      Paiement annulé : aucune somme n’a été débitée.<template v-if="panier.lignes.length"> Votre panier est conservé, vous pourrez payer quand vous voulez.</template>
+    </p>
 
     <section v-if="!panier.lignes.length" class="card empty">
       <h2>Votre panier est vide</h2>
