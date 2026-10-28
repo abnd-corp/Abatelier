@@ -373,3 +373,49 @@ describe('Codes-barres et réception de marchandise', () => {
     }
   })
 })
+
+describe('Définition des références par la direction (page Matériaux)', () => {
+  const EAN = '3760123456789'
+  let chef: Client
+  beforeEach(async () => {
+    await createUser({ identifiant: 'dir', sections: ['direction'], admin: false })
+    chef = await loginAs(app, 'dir')
+  })
+
+  it('un compte direction (sans la section atelier) définit une référence et ses codes-barres, puis la supprime', async () => {
+    expect((await chef.get('/api/stock/options')).statusCode).toBe(200)
+    const res = await chef.post('/api/stock/feuilles', feuille({ quantite: 0, code: EAN }))
+    expect(res.statusCode, res.body).toBe(201)
+    const f = res.json().feuille as { id: string }
+    expect((await chef.get(`/api/stock/codes/${EAN}`)).statusCode).toBe(200)
+    expect((await chef.post('/api/stock/codes', { code: 'AB-12345', sheetId: f.id })).statusCode).toBe(201)
+    expect((await chef.get('/api/stock/feuilles')).json().feuilles[0].codes).toEqual([EAN, 'AB-12345'])
+    expect((await chef.delete('/api/stock/codes/AB-12345')).statusCode).toBe(200)
+    expect((await chef.delete(`/api/stock/feuilles/${f.id}`)).statusCode).toBe(200)
+    // Tout est dans le journal, au nom de la direction
+    expect((await entries('stock.sheet_created')).length).toBe(1)
+    expect((await entries('stock.code_unlinked')).length).toBe(1)
+  })
+
+  it('n’ouvre pas pour autant les quantités, les mouvements ni la réception', async () => {
+    const f = await add()
+    for (const [method, url, body] of [
+      ['get', '/api/stock/mouvements'],
+      ['post', `/api/stock/feuilles/${f.id}/mouvement`, { delta: 1, motif: 'reception' }],
+      ['patch', `/api/stock/feuilles/${f.id}`, { seuil: 2 }],
+      ['post', '/api/stock/reception', { code: EAN, quantite: 1 }],
+    ] as const)
+      expect((await chef[method](url, body as never)).statusCode, `${method} ${url}`).toBe(403)
+  })
+
+  it('refuse un compte qui n’a ni la section atelier ni la section direction', async () => {
+    await createUser({ identifiant: 'vente', sections: ['ventes'], admin: false })
+    const ventes = await loginAs(app, 'vente')
+    for (const [method, url, body] of [
+      ['get', '/api/stock/feuilles'],
+      ['post', '/api/stock/feuilles', feuille()],
+      ['post', '/api/stock/codes', { code: EAN, sheetId: '00000000-0000-4000-8000-000000000000' }],
+    ] as const)
+      expect((await ventes[method](url, body as never)).statusCode, `${method} ${url}`).toBe(403)
+  })
+})

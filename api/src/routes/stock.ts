@@ -3,7 +3,7 @@ import { and, asc, desc, eq, gte, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import { colors, materials, SHEET_MOTIFS, sheetBarcodes, sheetMovements, sheetStock, users } from '../db/schema.js'
-import { requirePerm } from '../auth/plugin.js'
+import { requireAnyPerm, requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
 import { colorLabel, materialLabel } from '../quote.js'
 import { invalid, isUniqueViolation } from '../validation.js'
@@ -76,8 +76,15 @@ const receptionBody = z.object({
 const isUuid = (id: string) => z.uuid().safeParse(id).success
 const fmt = (n: number) => n.toLocaleString('fr-FR')
 
+// La définition des références (matière, coloris, format) et de leurs codes-barres est aussi accessible à la direction (page Matériaux) ;
+// les quantités, les mouvements et la réception restent à l'atelier.
+const DEFINITION = new Set(['GET /options', 'GET /feuilles', 'POST /feuilles', 'DELETE /feuilles/:id', 'GET /codes/:code', 'POST /codes', 'DELETE /codes/:code'])
+
 export async function stockRoutes(app: FastifyInstance) {
-  app.addHook('preHandler', requirePerm('stock.manage'))
+  app.addHook('preHandler', async (req, reply) => {
+    const route = `${req.method} ${(req.routeOptions.url ?? '').replace(/^\/api\/stock/, '')}`
+    return (DEFINITION.has(route) ? requireAnyPerm('stock.manage', 'catalog.manage') : requirePerm('stock.manage'))(req, reply)
+  })
 
   const base = () =>
     db

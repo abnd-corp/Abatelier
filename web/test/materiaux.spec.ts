@@ -1,0 +1,158 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import MateriauxView from '@/views/MateriauxView.vue'
+import type { Feuille } from '@/lib/stock'
+import { useAuthStore } from '@/stores/auth'
+import { ADMIN, freshPinia, makeRouter, mockApi } from './helpers'
+
+// La caméra (lecture de codes-barres) n'est pas utilisée ici
+vi.mock('@/lib/scan', () => ({ startScan: vi.fn() }))
+
+const F1: Feuille = {
+  id: 'f1',
+  materialId: 'm1',
+  matiere: 'Aluminium',
+  epaisseur: 1.5,
+  colorId: 'c1',
+  coloris: 'Gris anthracite',
+  reference: 'RAL 7016',
+  hex: '#383e42',
+  largeur: 1250,
+  longueur: 3000,
+  chute: false,
+  quantite: 10,
+  seuil: 4,
+  note: '',
+  libelle: 'Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 1 250 × 3 000 mm',
+  bas: false,
+  etat: 'ok',
+  codes: ['3760123456789'],
+}
+const F2: Feuille = {
+  ...F1,
+  id: 'f2',
+  materialId: 'm2',
+  epaisseur: 1,
+  colorId: null,
+  coloris: null,
+  reference: null,
+  hex: null,
+  quantite: 0,
+  libelle: 'Aluminium 1 mm · brut · 1 250 × 3 000 mm',
+  codes: [],
+}
+const CHUTE: Feuille = { ...F1, id: 'f3', chute: true, largeur: 450, quantite: 4, libelle: 'Aluminium 1,5 mm · Gris anthracite (RAL 7016) · 450 × 3 000 mm (chute)', codes: [] }
+const OPTIONS = { materials: [{ id: 'm1', label: 'Aluminium 1,5 mm' }], colors: [{ id: 'c1', label: 'Gris anthracite (RAL 7016)', hex: '#383e42' }] }
+
+async function mountPage(extra: Parameters<typeof mockApi>[0] = {}) {
+  const calls = mockApi({ 'GET /stock/feuilles': [200, { feuilles: [F1, F2] }], 'GET /stock/options': [200, OPTIONS], ...extra })
+  const pinia = freshPinia()
+  useAuthStore().user = ADMIN
+  const router = makeRouter()
+  await router.push('/materiaux')
+  await router.isReady()
+  const wrapper = mount(MateriauxView, { global: { plugins: [pinia, router] } })
+  await flushPromises()
+  return { wrapper, calls }
+}
+
+beforeEach(() => {
+  document.body.replaceChildren()
+  vi.unstubAllGlobals()
+})
+
+describe('Matériaux', () => {
+  it('liste les références avec leur format, leur stock et le nombre de codes-barres', async () => {
+    const { wrapper } = await mountPage()
+    const lignes = wrapper.findAll('ul.refs > li')
+    expect(lignes).toHaveLength(2)
+    expect(lignes[0]!.text()).toContain('Aluminium')
+    expect(lignes[0]!.text()).toContain('Gris anthracite · RAL 7016')
+    expect(lignes[0]!.text()).toContain('10 en stock')
+    expect(wrapper.get(`button[aria-label="Codes-barres : ${F1.libelle}"]`).text()).toContain('(1)')
+    expect(lignes[1]!.text()).toContain('Brut, sans laquage')
+  })
+
+  it('ne liste pas les chutes : elles restent au stock de l’atelier', async () => {
+    const { wrapper } = await mountPage({ 'GET /stock/feuilles': [200, { feuilles: [F1, CHUTE] }] })
+    expect(wrapper.findAll('ul.refs > li')).toHaveLength(1)
+    expect(wrapper.text()).not.toContain('(chute)')
+  })
+
+  it('affiche un message quand il n’y a encore aucune référence', async () => {
+    const { wrapper } = await mountPage({ 'GET /stock/feuilles': [200, { feuilles: [] }] })
+    expect(wrapper.text()).toContain('Aucune référence pour l’instant')
+    expect(wrapper.find('#m-filtre').exists()).toBe(false)
+  })
+
+  it('cherche par texte ou par code-barres', async () => {
+    const { wrapper } = await mountPage()
+    await wrapper.get('#m-filtre').setValue('brut')
+    expect(wrapper.findAll('ul.refs > li')).toHaveLength(1)
+    await wrapper.get('#m-filtre').setValue('3760123')
+    expect(wrapper.findAll('ul.refs > li')[0]!.text()).toContain('Gris anthracite')
+    await wrapper.get('#m-filtre').setValue('zzz')
+    expect(wrapper.text()).toContain('Aucune référence ne correspond')
+  })
+
+  it('ajoute une référence à zéro en stock, avec son code-barres, puis recharge la liste', async () => {
+    const { wrapper, calls } = await mountPage({ 'POST /stock/feuilles': [201, { feuille: F1 }] })
+    expect(wrapper.find('#ajout').exists()).toBe(false)
+    await wrapper.get('button[aria-controls="ajout"]').trigger('click')
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('#m-matiere').setValue('m1')
+    await wrapper.get('#m-coloris').setValue('c1')
+    await wrapper.get('#m-code').setValue('3760999888777')
+    await wrapper.get('form.grid').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ materialId: 'm1', colorId: 'c1', largeur: 1250, longueur: 3000, quantite: 0, code: '3760999888777' })
+    expect(wrapper.get('[role="status"]').text()).toContain('Référence ajoutée')
+    expect(wrapper.find('#ajout').exists()).toBe(false)
+    expect(calls.filter((c) => c.method === 'GET' && c.path === '/stock/feuilles')).toHaveLength(2)
+  })
+
+  it('montre l’erreur du champ concerné, par exemple un code déjà pris', async () => {
+    const { wrapper } = await mountPage({ 'POST /stock/feuilles': [409, { error: 'Ce code-barres est déjà associé à une autre référence.', field: 'code' }] })
+    await wrapper.get('button[aria-controls="ajout"]').trigger('click')
+    await wrapper.get('#m-matiere').setValue('m1')
+    await wrapper.get('#m-code').setValue('3760123456789')
+    await wrapper.get('form.grid').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('.field-error').text()).toContain('déjà associé')
+    expect(wrapper.find('#ajout').exists()).toBe(true)
+  })
+
+  it('ouvre les codes-barres d’une référence pour en ajouter ou en retirer', async () => {
+    const { wrapper } = await mountPage()
+    expect(wrapper.find(`#code-${F1.id}`).exists()).toBe(false)
+    await wrapper.get(`button[aria-label="Codes-barres : ${F1.libelle}"]`).trigger('click')
+    expect(wrapper.text()).toContain('3760123456789')
+    expect(wrapper.find(`#code-${F1.id}`).exists()).toBe(true)
+    await wrapper.get(`button[aria-label="Codes-barres : ${F1.libelle}"]`).trigger('click')
+    expect(wrapper.find(`#code-${F1.id}`).exists()).toBe(false)
+  })
+
+  it('ne propose de supprimer qu’une référence sans stock, après confirmation', async () => {
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true),
+    )
+    const { wrapper, calls } = await mountPage({ 'DELETE /stock/feuilles/f2': [200, { ok: true }] })
+    expect(wrapper.find(`button[aria-label="Supprimer la référence ${F1.libelle}"]`).exists()).toBe(false)
+    await wrapper.get(`button[aria-label="Supprimer la référence ${F2.libelle}"]`).trigger('click')
+    await flushPromises()
+    expect(calls.some((c) => c.method === 'DELETE' && c.path === '/stock/feuilles/f2')).toBe(true)
+    expect(wrapper.get('[role="status"]').text()).toContain('Référence supprimée')
+  })
+
+  it('ne supprime rien si la direction annule', async () => {
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => false),
+    )
+    const { wrapper, calls } = await mountPage()
+    await wrapper.get(`button[aria-label="Supprimer la référence ${F2.libelle}"]`).trigger('click')
+    await flushPromises()
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(false)
+  })
+})
