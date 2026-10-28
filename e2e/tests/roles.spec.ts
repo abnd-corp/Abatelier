@@ -40,9 +40,21 @@ test.describe('Droits des comptes', () => {
     const page = await connecte(browser, baseURL!, uid, temp)
     await page.goto('/tableau-de-bord')
     const nav = page.getByRole('navigation', { name: 'Navigation principale' })
-    await expect(nav.getByRole('link')).toHaveText(['Tableau de bord', 'Commandes', 'Devis et factures', 'Clients', 'Tarifs et catalogue', 'Modèles de documents', 'Boutique', 'Site vitrine'])
-    // Ni l'atelier, ni l'administration
-    for (const url of ['/fabrication', '/stock', '/utilisateurs', '/salaries', '/journal']) {
+    await expect(nav.getByRole('link')).toHaveText([
+      'Tableau de bord',
+      'Commandes',
+      'Devis et factures',
+      'Clients',
+      'Tarifs et catalogue',
+      'Modèles de documents',
+      'Boutique',
+      'Site vitrine',
+      'Salariés',
+    ])
+    // Les fiches salariés viennent de la section direction ; ni l'atelier, ni les comptes, ni le journal
+    await page.goto('/salaries')
+    await expect(page).toHaveURL('/salaries')
+    for (const url of ['/fabrication', '/stock', '/utilisateurs', '/journal']) {
       await page.goto(url)
       await expect(page, url).toHaveURL('/tableau-de-bord')
     }
