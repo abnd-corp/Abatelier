@@ -402,7 +402,6 @@ async function logout() {
   gap: 20px;
   align-content: start;
   padding: 24px max(24px, env(safe-area-inset-right)) 64px max(24px, env(safe-area-inset-left));
-  max-width: 1280px;
   width: 100%;
 }
 
