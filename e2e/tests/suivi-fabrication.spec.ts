@@ -41,14 +41,14 @@ test.describe('Suivi de fabrication', () => {
     await expect(atelier.getByText(`Suivi ${uid.slice(-6)}`)).toHaveCount(0)
 
     await expect(ligne).toContainText('Personne ne l’a encore prise')
-    const colonne = atelier.locator('section.group').filter({ has: ligne })
-    await expect(colonne.getByRole('heading', { level: 2 })).toContainText('À lancer')
+    const etape = () => atelier.locator('.etape').filter({ has: ligne })
+    await expect(etape().getByRole('heading', { level: 2 })).toContainText('À lancer')
 
     await ligne.getByRole('button', { name: 'Lancer la fabrication' }).click()
     await expect(ligne).toContainText('En fabrication')
     // Le nom du salarié qui l'a prise, pas un identifiant, et la commande change de colonne
     await expect(ligne).toContainText('Pris en charge par Plieur Suivi')
-    await expect(atelier.locator('section.group').filter({ has: ligne }).getByRole('heading', { level: 2 })).toContainText('En fabrication')
+    await expect(etape().getByRole('heading', { level: 2 })).toContainText('En fabrication')
     await client.reload()
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('En fabrication')
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Vos pièces sont en cours de pliage')
@@ -56,7 +56,9 @@ test.describe('Suivi de fabrication', () => {
     await ligne.getByRole('button', { name: 'Marquer prête' }).click()
     await expect(ligne).toContainText('Prête')
     await expect(ligne).toContainText('terminé par Plieur Suivi')
-    await expect(atelier.locator('section.group').filter({ has: ligne }).getByRole('heading', { level: 2 })).toContainText('Prêtes, à')
+    // « Prête » en bandeau, puis la colonne : à faire retirer ou à livrer
+    await expect(etape().getByRole('heading', { level: 2 })).toContainText('Prête')
+    await expect(atelier.locator('section.group').filter({ has: ligne }).getByRole('heading', { level: 3 })).toContainText(/À faire retirer|À livrer/)
     await client.reload()
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Prête')
 

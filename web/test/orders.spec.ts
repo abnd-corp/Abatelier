@@ -533,10 +533,13 @@ describe('Atelier', () => {
 
   it('range les commandes par étape, signale le retard et fait avancer', async () => {
     const { wrapper, calls } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: ROWS }], 'POST /production/o1/status': [200, {}] }, ATELIER)
-    const groups = wrapper.findAll('section.group')
-    expect(groups.map((g) => g.find('h2').text())).toEqual(['À lancer 1', 'En fabrication 0', 'Prêtes, à faire retirer 0', 'Prêtes, à livrer 1'])
-    expect(norm(groups[0]!.text())).toContain('en retard')
-    expect(norm(groups[3]!.text())).not.toContain('en retard')
+    // Trois étapes, « Prête » partagée en deux colonnes : à faire retirer, à livrer
+    expect(wrapper.findAll('.etape .band').map((h) => h.text())).toEqual(['À lancer 1', 'En fabrication 0', 'Prête 1'])
+    expect(wrapper.findAll('.etape h3.sub').map((h) => h.text())).toEqual(['À faire retirer 0', 'À livrer 1'])
+    expect(wrapper.findAll('.etape').map((e) => e.classes().find((c) => ['info', 'accent', 'ok'].includes(c)))).toEqual(['info', 'accent', 'ok'])
+    const col = (id: string) => wrapper.get(`section[data-colonne="${id}"]`)
+    expect(norm(col('a-lancer').text())).toContain('en retard')
+    expect(norm(col('a-livrer').text())).not.toContain('en retard')
     await button(wrapper, 'Lancer la fabrication').trigger('click')
     await flushPromises()
     expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ statut: 'fabrication' })
@@ -544,11 +547,13 @@ describe('Atelier', () => {
 
   it('sépare les commandes prêtes à retirer de celles à livrer', async () => {
     const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
-    const col = (titre: string) => wrapper.findAll('section.group').find((g) => g.find('h2').text().startsWith(titre))!
-    expect(col('En fabrication').text()).toContain('C-2026-0003')
-    expect(col('Prêtes, à faire retirer').text()).toContain('C-2026-0004')
-    expect(col('Prêtes, à faire retirer').text()).not.toContain('C-2026-0002')
-    expect(col('Prêtes, à livrer').text()).toContain('C-2026-0002')
+    const col = (id: string) => wrapper.get(`section[data-colonne="${id}"]`)
+    expect(col('fabrication').text()).toContain('C-2026-0003')
+    expect(col('a-retirer').text()).toContain('C-2026-0004')
+    expect(col('a-retirer').text()).not.toContain('C-2026-0002')
+    expect(col('a-livrer').text()).toContain('C-2026-0002')
+    // « Prête » n'est écrit qu'une fois, au-dessus des deux colonnes
+    expect(wrapper.findAll('.band').filter((b) => b.text().startsWith('Prête'))).toHaveLength(1)
   })
 
   it('montre le nom de la personne qui a pris la commande et de quoi elle parle, jamais un identifiant', async () => {
