@@ -349,6 +349,14 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A refusé la commande ${d.numero} et remboursé ${eur(d.montant)} au client : ${d.motif}${d.avoir ? ` (avoir ${d.avoir})` : ''}`, tone: 'bad' }
     case 'espace.registered':
       return { text: `Espace client créé : ${d.nom}`, tone: 'accent' }
+    case 'espace.password_reset_requested':
+      return { text: 'Lien de réinitialisation du mot de passe envoyé à un client', tone: 'neutral' }
+    case 'espace.password_reset':
+      return { text: 'Mot de passe d’un client réinitialisé avec le lien reçu par e-mail', tone: 'accent' }
+    case 'espace.activation_sent':
+      return { text: 'Lien d’activation d’espace client envoyé à une fiche existante', tone: 'neutral' }
+    case 'espace.activated':
+      return { text: 'Espace client activé sur une fiche existante', tone: 'accent' }
     case 'espace.profile_updated':
       return { text: `Un client a modifié ses informations (${(d.champs ?? []).join(', ')})`, tone: 'neutral' }
     case 'espace.login':

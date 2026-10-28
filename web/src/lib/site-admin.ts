@@ -42,7 +42,7 @@ export interface MailStatus {
   configure: boolean
   expediteur: string | null
   alertes: string[]
-  journal: { id: string; at: string; kind: 'contact' | 'document' | 'test'; destinataires: string; objet: string; statut: 'envoye' | 'echec'; erreur: string | null }[]
+  journal: { id: string; at: string; kind: 'contact' | 'document' | 'test' | 'compte'; destinataires: string; objet: string; statut: 'envoye' | 'echec'; erreur: string | null }[]
 }
 
 export interface MailModele {

@@ -150,10 +150,13 @@ async function submit() {
         >12 caractères minimum, pas un mot de passe courant.<template v-if="form.password"> Solidité : {{ strength.label }}.</template></span
       >
     </div>
-    <label v-if="mode === 'connexion'" class="check">
-      <input v-model="form.remember" type="checkbox" />
-      <span>Rester connecté sur cet appareil</span>
-    </label>
+    <template v-if="mode === 'connexion'">
+      <label class="check">
+        <input v-model="form.remember" type="checkbox" />
+        <span>Rester connecté sur cet appareil</span>
+      </label>
+      <p class="oubli"><RouterLink :to="{ name: 'espace-mot-de-passe-oublie' }">Mot de passe oublié ?</RouterLink></p>
+    </template>
     <template v-else>
       <!-- Piège à robots : invisible pour une personne, rempli par les robots -->
       <div class="trap" aria-hidden="true">
@@ -239,5 +242,9 @@ async function submit() {
   .auth .s-btn {
     width: 100%;
   }
+}
+.oubli {
+  margin: 0;
+  font-size: 0.95rem;
 }
 </style>

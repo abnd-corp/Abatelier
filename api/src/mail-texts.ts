@@ -37,8 +37,11 @@ export function contactAlert(r: Pick<ContactRequest, 'nom' | 'email' | 'telephon
 
 type Doc = { type: 'devis' | 'facture' | 'avoir'; numero: string; ttc: number; echeance: string | null }
 
-/** Message proposé pour envoyer un devis, une facture ou un avoir. Avec un espace client : pas de pièce jointe, le document s'y retrouve. */
-export function defaultDocumentMail(doc: Doc, client: Pick<Client, 'prenom' | 'nom' | 'email'>, company: CompanySettings, espaceUrl: string | null = null) {
+/**
+ * Message proposé pour envoyer un devis, une facture ou un avoir. Aucun document n'est joint : le client le retrouve dans son espace client,
+ * ou l'active d'abord avec son adresse e-mail s'il n'en a pas encore.
+ */
+export function defaultDocumentMail(doc: Doc, client: Pick<Client, 'prenom' | 'nom' | 'email'>, company: CompanySettings, espace: { url: string; actif: boolean }) {
   const name = [client.prenom, client.nom].filter(Boolean).join(' ')
   const hello = name ? `Bonjour ${name},` : 'Bonjour,'
   const montant = eur(Math.abs(doc.ttc))
@@ -46,10 +49,13 @@ export function defaultDocumentMail(doc: Doc, client: Pick<Client, 'prenom' | 'n
     ? `\n\nPour un règlement par virement :\nIBAN : ${company.iban}${company.bic ? `\nBIC : ${company.bic}` : ''}\nMerci d’indiquer le numéro ${doc.numero} en référence.`
     : ''
   const nom = { devis: 'devis', facture: 'facture', avoir: 'avoir' }[doc.type]
-  // Où trouver le document : en pièce jointe, ou dans l'espace client
-  const ou = espaceUrl ? `est disponible dans votre espace client (connexion nécessaire) : ${espaceUrl}` : 'se trouve en pièce jointe'
+  const sujet = doc.type === 'avoir' ? 'L’avoir' : `Votre ${nom}`
+  // Où le trouver : dans l'espace client (connexion), ou après avoir activé cet espace avec l'adresse e-mail
+  const ou = espace.actif
+    ? `est disponible dans votre espace client, après connexion : ${espace.url}`
+    : `est disponible dans votre espace client. Pour y accéder, activez-le avec cette adresse e-mail : ${espace.url}`
   const suite = {
-    devis: `, d’un montant de ${montant} TTC${doc.echeance ? `, valable jusqu’au ${day(doc.echeance)}` : ''}.\n\nPour l’accepter, ${espaceUrl ? 'connectez-vous à votre espace client' : 'répondez simplement à ce message'}.`,
+    devis: `, d’un montant de ${montant} TTC${doc.echeance ? `, valable jusqu’au ${day(doc.echeance)}` : ''}.\n\nPour l’accepter, connectez-vous à votre espace client.`,
     facture: `, d’un montant de ${montant} TTC${doc.echeance ? `, à régler avant le ${day(doc.echeance)}` : ''}.${virement}`,
     avoir: `, d’un montant de ${montant} TTC.`,
   }[doc.type]
@@ -57,7 +63,7 @@ export function defaultDocumentMail(doc: Doc, client: Pick<Client, 'prenom' | 'n
   return {
     to: client.email ?? '',
     sujet: `${subjectName} ${doc.numero} — ${company.raisonSociale}`,
-    message: `${hello}\n\n${doc.type === 'avoir' ? 'L’avoir' : `Votre ${nom}`} ${doc.numero} ${ou}${suite}\n\nCordialement,\n${signature(company)}`,
+    message: `${hello}\n\n${sujet} ${doc.numero} ${ou}${suite}\n\nCordialement,\n${signature(company)}`,
   }
 }
 
@@ -174,6 +180,56 @@ export function orderPaidAlert(r: { nom: string; email: string; numero: string; 
   }
 }
 
+/** Bienvenue : l'espace client vient d'être créé. */
+export function welcomeMail(r: { nom: string; espace: string; entreprise: string }) {
+  const corps = `Bonjour ${r.nom},\n\nVotre espace client est créé. Vous y composez vos pièces dans le configurateur, retrouvez vos devis et vos factures, et suivez l’avancement de vos commandes.\n\nNous n’enverrons jamais de publicité à cette adresse : seulement les messages utiles à votre compte et à vos commandes.`
+  return {
+    subject: `Bienvenue chez ${r.entreprise}`,
+    titre: 'Bienvenue !',
+    action: { label: 'Accéder à mon espace client', url: r.espace },
+    text: `${corps}\n\nAccéder à votre espace : ${r.espace}\n\n${r.entreprise}`,
+    htmlText: corps,
+  }
+}
+
+/** Activation : une fiche existe déjà pour cette adresse (créée par l'atelier) ; le client choisit son mot de passe. */
+export function activationMail(r: { nom: string; lien: string; entreprise: string }) {
+  const corps = `Bonjour ${r.nom},\n\nUne fiche est déjà ouverte à votre nom chez ${r.entreprise}, par exemple pour un devis. Pour y accéder en ligne, choisissez votre mot de passe : ce lien est valable 7 jours et ne peut servir qu’une fois.\n\nSi vous n’êtes pas à l’origine de cette demande, ignorez ce message : rien ne sera modifié.`
+  return {
+    subject: `Activez votre espace client — ${r.entreprise}`,
+    titre: 'Activez votre espace client',
+    faits: [{ label: 'Validité du lien', value: '7 jours, une seule utilisation' }],
+    action: { label: 'Choisir mon mot de passe', url: r.lien },
+    text: `${corps}\n\nChoisir mon mot de passe : ${r.lien}\n\n${r.entreprise}`,
+    htmlText: corps,
+  }
+}
+
+/** Mot de passe oublié : un lien valable une heure. */
+export function passwordResetMail(r: { nom: string; lien: string; entreprise: string }) {
+  const corps = `Bonjour ${r.nom},\n\nVous avez demandé à réinitialiser le mot de passe de votre espace client. Ce lien est valable 1 heure et ne peut servir qu’une fois.\n\nSi vous n’avez rien demandé, ignorez ce message : votre mot de passe actuel reste valable.`
+  return {
+    subject: `Réinitialisation de votre mot de passe — ${r.entreprise}`,
+    titre: 'Choisissez un nouveau mot de passe',
+    faits: [{ label: 'Validité du lien', value: '1 heure, une seule utilisation' }],
+    action: { label: 'Choisir un nouveau mot de passe', url: r.lien },
+    text: `${corps}\n\nChoisir un nouveau mot de passe : ${r.lien}\n\n${r.entreprise}`,
+    htmlText: corps,
+  }
+}
+
+/** Alerte de sécurité : le mot de passe vient d'être changé. */
+export function passwordChangedMail(r: { nom: string; reinitialisation: string; entreprise: string }) {
+  const corps = `Bonjour ${r.nom},\n\nLe mot de passe de votre espace client vient d’être modifié, et vous avez été déconnecté de vos autres appareils.\n\nSi ce n’est pas vous, réinitialisez-le tout de suite et prévenez-nous.`
+  return {
+    subject: `Votre mot de passe a été modifié — ${r.entreprise}`,
+    titre: 'Votre mot de passe a été modifié',
+    action: { label: 'Ce n’était pas moi', url: r.reinitialisation },
+    text: `${corps}\n\nRéinitialiser mon mot de passe : ${r.reinitialisation}\n\n${r.entreprise}`,
+    htmlText: corps,
+  }
+}
+
 export type MailExample = {
   id: string
   titre: string
@@ -207,8 +263,14 @@ export function mailExamples(company: CompanySettings, base: string): MailExampl
   const refusee = orderRefused({ nom: 'Camille Martin', numero: 'C-2026-0042', motif: 'La longueur demandée dépasse ce que notre plieuse peut réaliser.', ttc: 126, espace, entreprise })
   const docDevis = { type: 'devis' as const, numero: 'D-2026-0012', ttc: 432.12, echeance: '2026-11-30' }
   const docFacture = { type: 'facture' as const, numero: 'F-2026-0031', ttc: 432.12, echeance: '2026-12-15' }
-  const devis = defaultDocumentMail(docDevis, client, company, espace)
-  const facture = defaultDocumentMail(docFacture, client, company, espace)
+  const devis = defaultDocumentMail(docDevis, client, company, { url: espace, actif: true })
+  const facture = defaultDocumentMail(docFacture, client, company, { url: espace, actif: true })
+  const bienvenue = welcomeMail({ nom: 'Camille Martin', espace, entreprise })
+  const activation = activationMail({ nom: 'Camille Martin', lien: `${base}/espace/nouveau-mot-de-passe?jeton=exemple`, entreprise })
+  const oubli = passwordResetMail({ nom: 'Camille Martin', lien: `${base}/espace/nouveau-mot-de-passe?jeton=exemple`, entreprise })
+  const modifie = passwordChangedMail({ nom: 'Camille Martin', reinitialisation: `${base}/espace/mot-de-passe-oublie`, entreprise })
+  const alerteDevis = espaceQuoteAlert({ client: 'Camille Martin', email: client.email, commande: 'C-2026-0042', devis: 'D-2026-0012', pieces: 6, ht: 360.1, ttc: 432.12 }, `${base}/commandes/exemple`)
+  const alerteReponse = espaceAnswerAlert({ client: 'Camille Martin', devis: 'D-2026-0012', commande: 'C-2026-0042', reponse: 'accepte', ttc: 432.12 }, `${base}/commandes/exemple`)
   const alerte = orderPaidAlert({ nom: 'Camille Martin', email: client.email, numero: 'C-2026-0042', ttc: 126, surMesure: true, articles, link: `${base}/commandes/exemple` })
   const contact = contactAlert(
     {
@@ -250,6 +312,49 @@ export function mailExamples(company: CompanySettings, base: string): MailExampl
       espace: refusee.espace,
     },
     {
+      id: 'bienvenue',
+      titre: 'Bienvenue, espace créé (au client)',
+      audience: 'client',
+      subject: bienvenue.subject,
+      text: bienvenue.text,
+      htmlText: bienvenue.htmlText,
+      titreMail: bienvenue.titre,
+      action: bienvenue.action,
+      espace,
+    },
+    {
+      id: 'activation',
+      titre: 'Activer son espace, adresse confirmée (au client)',
+      audience: 'client',
+      subject: activation.subject,
+      text: activation.text,
+      htmlText: activation.htmlText,
+      titreMail: activation.titre,
+      faits: activation.faits,
+      action: activation.action,
+    },
+    {
+      id: 'mot-de-passe-oublie',
+      titre: 'Mot de passe oublié (au client)',
+      audience: 'client',
+      subject: oubli.subject,
+      text: oubli.text,
+      htmlText: oubli.htmlText,
+      titreMail: oubli.titre,
+      faits: oubli.faits,
+      action: oubli.action,
+    },
+    {
+      id: 'mot-de-passe-modifie',
+      titre: 'Mot de passe modifié (au client)',
+      audience: 'client',
+      subject: modifie.subject,
+      text: modifie.text,
+      htmlText: modifie.htmlText,
+      titreMail: modifie.titre,
+      action: modifie.action,
+    },
+    {
       id: 'devis',
       titre: 'Envoi d’un devis (au client)',
       audience: 'client',
@@ -281,6 +386,24 @@ export function mailExamples(company: CompanySettings, base: string): MailExampl
       titreMail: alerte.titre,
       faits: alerte.faits,
       action: alerte.action,
+    },
+    {
+      id: 'alerte-devis',
+      titre: 'Devis demandé depuis l’espace client (alerte à l’équipe)',
+      audience: 'equipe',
+      subject: alerteDevis.subject,
+      text: alerteDevis.text,
+      titreMail: 'Un client demande un devis',
+      action: { label: 'Ouvrir la commande', url: `${base}/commandes/exemple` },
+    },
+    {
+      id: 'alerte-reponse',
+      titre: 'Devis accepté ou refusé (alerte à l’équipe)',
+      audience: 'equipe',
+      subject: alerteReponse.subject,
+      text: alerteReponse.text,
+      titreMail: 'Réponse à un devis',
+      action: { label: 'Ouvrir la commande', url: `${base}/commandes/exemple` },
     },
     {
       id: 'alerte-contact',

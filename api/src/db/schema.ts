@@ -493,6 +493,25 @@ export const clientAccounts = pgTable('client_accounts', {
   disabledAt: ts('disabled_at'),
 })
 
+// Liens à usage unique envoyés par e-mail au client : activer un espace sur une fiche créée par l'atelier, ou choisir un nouveau mot de passe.
+// Comme les sessions, l'id est le SHA-256 du jeton : le jeton lui-même n'est jamais gardé, il n'existe que dans l'e-mail.
+export const EMAIL_TOKEN_PURPOSES = ['activation', 'reinitialisation'] as const
+export type EmailTokenPurpose = (typeof EMAIL_TOKEN_PURPOSES)[number]
+export const emailTokens = pgTable(
+  'email_tokens',
+  {
+    id: text('id').primaryKey(),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => clients.id, { onDelete: 'cascade' }),
+    purpose: text('purpose', { enum: EMAIL_TOKEN_PURPOSES }).notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    expiresAt: ts('expires_at').notNull(),
+    usedAt: ts('used_at'),
+  },
+  (t) => [index('email_tokens_client_idx').on(t.clientId, t.purpose)],
+)
+
 // Comme sessions : l'id est le SHA-256 du jeton du cookie
 export const clientSessions = pgTable(
   'client_sessions',
@@ -827,7 +846,7 @@ export const contactRequests = pgTable(
 )
 
 // Journal des e-mails envoyés par l'application (preuve d'envoi, diagnostic quand un message n'arrive pas)
-export const EMAIL_KINDS = ['contact', 'document', 'test'] as const
+export const EMAIL_KINDS = ['contact', 'document', 'test', 'compte'] as const
 export const emailLog = pgTable(
   'email_log',
   {

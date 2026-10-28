@@ -36,7 +36,7 @@ async function test() {
     await load()
   }
 }
-const KINDS = { contact: 'Alerte de contact', document: 'Devis ou facture', test: 'Essai' }
+const KINDS = { contact: 'Alerte de contact', document: 'Devis ou facture', test: 'Essai', compte: 'Message au client' }
 </script>
 
 <template>

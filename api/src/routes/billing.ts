@@ -102,7 +102,9 @@ async function statutOf(id: string) {
 const NOMS = { devis: 'Le devis', facture: 'La facture', avoir: 'L’avoir' }
 
 const originOf = (req: { headers: Record<string, string | string[] | undefined>; protocol: string }) => `${req.headers['x-forwarded-proto'] ?? req.protocol}://${req.headers.host}`
-/** Le client a-t-il un espace client ? Alors il retrouve ses documents en ligne : on ne les joint pas au message. */
+/** Où envoyer le client : son espace s'il en a un, sinon la page qui l'active avec son adresse e-mail. */
+const lienEspace = (origin: string, actif: boolean) => ({ url: actif ? `${origin}/espace` : `${origin}/espace/mot-de-passe-oublie`, actif })
+/** Le client a-t-il un espace client ? */
 const hasEspace = async (clientId: string) => (await db.select({ id: clientAccounts.id }).from(clientAccounts).where(eq(clientAccounts.clientId, clientId)).limit(1)).length > 0
 
 export async function billingRoutes(app: FastifyInstance) {
@@ -336,12 +338,12 @@ export async function billingRoutes(app: FastifyInstance) {
     const doc = await findDoc((req.params as { id: string }).id, reply)
     if (!doc) return
     const [[client], company] = await Promise.all([db.select().from(clients).where(eq(clients.id, doc.clientId)), getCompany()])
-    const espace = await hasEspace(doc.clientId)
-    // Avec un espace client : pas de pièce jointe, le message renvoie vers l'espace. Sans espace : le PDF est joint.
-    return { configure: isMailConfigured(), fichier: espace ? null : `${doc.numero}.pdf`, espace, ...defaultDocumentMail(doc, client!, company, espace ? `${originOf(req)}/espace` : null) }
+    // Jamais de pièce jointe : le client retrouve le document dans son espace, ou l'active d'abord avec son adresse e-mail
+    const actif = await hasEspace(doc.clientId)
+    return { configure: isMailConfigured(), espace: actif, ...defaultDocumentMail(doc, client!, company, lienEspace(originOf(req), actif)) }
   })
 
-  // Envoie le PDF au client, puis marque le document comme envoyé
+  // Envoie le message au client (sans pièce jointe), puis marque le document comme envoyé
   app.post('/:id/email', async (req, reply) => {
     const doc = await findDoc((req.params as { id: string }).id, reply)
     if (!doc) return
@@ -352,8 +354,9 @@ export async function billingRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: issue?.message ?? 'Données invalides.', field: issue?.path[0] !== undefined ? String(issue.path[0]) : undefined })
     }
     if (!isMailConfigured()) return reply.code(503).send({ error: 'L’envoi d’e-mails n’est pas configuré sur ce serveur. Ouvrez le PDF pour l’envoyer vous-même.' })
-    // Le client a un espace : le document s'y retrouve, il n'est pas joint (aucune pièce de ce genre ne circule par e-mail)
-    const espace = await hasEspace(doc.clientId)
+    // Aucun document ne circule par e-mail : le client le retrouve dans son espace, ou l'active d'abord avec son adresse e-mail
+    const actif = await hasEspace(doc.clientId)
+    const lien = lienEspace(originOf(req), actif)
     const nomDoc = { devis: 'devis', facture: 'facture', avoir: 'avoir' }[doc.type]
     const result = await sendMail({
       kind: 'document',
@@ -362,8 +365,8 @@ export async function billingRoutes(app: FastifyInstance) {
       text: parsed.data.message,
       titre: doc.type === 'avoir' ? 'Votre avoir est disponible' : `Votre ${nomDoc} est disponible`,
       faits: documentFaits(doc),
-      ...(espace ? { action: { label: `Consulter ${doc.type === 'facture' ? 'ma' : 'mon'} ${nomDoc}`, url: `${originOf(req)}/espace` }, espace: `${originOf(req)}/espace` } : {}),
-      attachments: espace ? undefined : [{ filename: `${doc.numero}.pdf`, content: doc.pdf, contentType: 'application/pdf' }],
+      action: { label: actif ? `Consulter ${doc.type === 'facture' ? 'ma' : 'mon'} ${nomDoc}` : 'Activer mon espace client', url: lien.url },
+      espace: lien.url,
       targetType: 'billing',
       targetId: doc.id,
       userId: req.user!.id,

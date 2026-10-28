@@ -3,17 +3,19 @@ import { and, count, desc, eq, gt, inArray, notInArray, sql } from 'drizzle-orm'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { auditLog, billingDocuments, clientAccounts, clientSites, clients, contactRequests, DEVIS_REPONSES, orderLines, orders, payments } from '../db/schema.js'
+import { auditLog, billingDocuments, clientAccounts, clientSessions, clientSites, clients, contactRequests, DEVIS_REPONSES, orderLines, orders, payments } from '../db/schema.js'
 import { hashPassword, verifyPassword } from '../auth/password.js'
 import { checkPasswordPolicy } from '../auth/password-policy.js'
 import { clearClientCookieOptions, CLIENT_COOKIE, clientCookieOptions, createClientSession, deleteClientSession, requireAccount, type ClientAccount } from '../auth/client-session.js'
+import { consumeEmailToken, findEmailToken, issueEmailToken, recentlyIssued } from '../auth/email-token.js'
 import { clearFailures, failureDelayMs, getLock, lockedMessage, MAX_FAILURES, recordFailure } from '../auth/throttle.js'
 import { audit, userAgentOf } from '../audit.js'
 import { avoirAlias, BillingConflict, issueFromOrder, statutSql } from '../billing.js'
 import { todayParis } from '../departures.js'
 import { env } from '../env.js'
 import { alertRecipients, sendMail, withTimeout } from '../mail.js'
-import { espaceAnswerAlert, espaceQuoteAlert } from '../mail-texts.js'
+import { activationMail, espaceAnswerAlert, espaceQuoteAlert, passwordChangedMail, passwordResetMail, welcomeMail } from '../mail-texts.js'
+import { getCompany } from '../documents.js'
 import { eventsOf, STATUT_LABELS } from '../orders.js'
 import { invalid, isUniqueViolation } from '../validation.js'
 import { clientFields, clientName, identityError, normalize } from './clients.js'
@@ -26,7 +28,8 @@ import { confirmPayment, failPayment, priceCart } from '../shop.js'
 // Tout ici est limité à la fiche du client connecté (cookie propre à l'espace client, jamais celui de l'atelier).
 // Les notes internes, les noms des salariés et les autres clients ne sortent jamais d'ici.
 
-const EMAIL_TAKEN = 'Cette adresse e-mail est déjà enregistrée. Connectez-vous ; si vous n’avez jamais créé d’espace client, contactez l’atelier pour l’activer.'
+const EMAIL_TAKEN = 'Cette adresse e-mail est déjà connue. Connectez-vous, ou utilisez « Mot de passe oublié » : si un espace reste à activer, un message vous est envoyé à cette adresse.'
+const LIEN_INVALIDE = 'Ce lien n’est plus valable : il a expiré ou a déjà servi. Demandez-en un nouveau.'
 const MAX_DEVIS_PAR_JOUR = 10
 
 const optText = (max: number, label: string) =>
@@ -59,6 +62,9 @@ const registerBody = z
   })
 const loginBody = z.object({ email: z.string().trim().toLowerCase().min(1).max(120), password: z.string().min(1).max(200), remember: z.boolean().default(false) })
 const devisBody = orderBody.omit({ clientId: true })
+const oubliBody = z.object({ email: emailField })
+const jetonBody = z.object({ jeton: z.string().min(1).max(200) })
+const nouveauMotDePasseBody = z.object({ jeton: z.string().min(1).max(200), password: z.string().max(200) })
 const fermetureBody = z.object({ password: z.string().min(1, 'Saisissez votre mot de passe pour confirmer.').max(200) })
 const reponseBody = z.object({ reponse: z.enum(DEVIS_REPONSES, { error: 'Indiquez si vous acceptez ou refusez le devis.' }) })
 
@@ -68,6 +74,28 @@ const isUuid = (id: string) => z.uuid().safeParse(id).success
 const who = (a: Pick<ClientAccount, 'clientId'>) => ({ actor: null, identifiant: `espace:${a.clientId}` })
 
 const baseUrl = (req: { headers: Record<string, string | string[] | undefined>; protocol: string }) => `${req.headers['x-forwarded-proto'] ?? req.protocol}://${req.headers.host}`
+
+type Message = { subject: string; text: string; htmlText?: string; titre?: string; faits?: { label: string; value: string }[]; action?: { label: string; url: string }; espace?: string }
+/** Écrit au client sans faire attendre la réponse : le temps de réponse ne révèle pas si l'adresse existe, et une messagerie lente ne bloque rien. */
+function notify(client: { id: string; email: string | null }, build: (entreprise: string) => Message) {
+  if (!client.email) return
+  const to = client.email
+  void (async () => {
+    const entreprise = (await getCompany()).raisonSociale
+    await sendMail({ kind: 'compte', to: [to], ...build(entreprise), targetType: 'client', targetId: client.id })
+  })().catch((e) => console.error('E-mail au client : envoi impossible', e instanceof Error ? e.message : e))
+}
+const pageMotDePasse = (req: Parameters<typeof baseUrl>[0], jeton: string) => `${baseUrl(req)}/espace/nouveau-mot-de-passe?jeton=${jeton}`
+
+/** La fiche d'un client par son adresse e-mail, avec son espace s'il en a un. */
+const fichePar = async (email: string) =>
+  (
+    await db
+      .select({ client: clients, account: clientAccounts })
+      .from(clients)
+      .leftJoin(clientAccounts, eq(clientAccounts.clientId, clients.id))
+      .where(sql`lower(${clients.email}) = ${email}`)
+  )[0] ?? null
 
 async function startSession(req: Parameters<typeof userAgentOf>[0], reply: FastifyReply, accountId: string, remember: boolean) {
   const { token, expiresAt } = await createClientSession(accountId, { remember, ip: req.ip, userAgent: userAgentOf(req) })
@@ -102,10 +130,20 @@ export async function espaceRoutes(app: FastifyInstance) {
         targetId: created.client.id,
         details: { nom: clientName(created.client), type: created.client.type },
       })
+      notify(created.client, (entreprise) => welcomeMail({ nom: clientName(created.client), espace: `${baseUrl(req)}/espace`, entreprise }))
       return reply.code(201).send({ compte: publicAccount({ ...created.client, clientId: created.client.id, id: created.account.id } as ClientAccount) })
     } catch (e) {
-      // Une adresse e-mail désigne une seule fiche client : on ne dit pas si elle a déjà un compte
-      if (isUniqueViolation(e)) return reply.code(409).send({ error: EMAIL_TAKEN, field: 'email' })
+      // Une adresse e-mail désigne une seule fiche client. Si cette fiche existe sans espace (créée par l'atelier), un lien d'activation
+      // part à cette adresse : seul son propriétaire peut s'y rattacher. La réponse est la même dans tous les cas.
+      if (isUniqueViolation(e)) {
+        const fiche = await fichePar(data.email)
+        if (fiche && !fiche.account && !fiche.client.archivedAt && !(await recentlyIssued(fiche.client.id, 'activation'))) {
+          const jeton = await issueEmailToken(fiche.client.id, 'activation')
+          notify(fiche.client, (entreprise) => activationMail({ nom: clientName(fiche.client), lien: pageMotDePasse(req, jeton), entreprise }))
+          await audit(req, 'espace.activation_sent', { ...who({ clientId: fiche.client.id }), targetType: 'client', targetId: fiche.client.id })
+        }
+        return reply.code(409).send({ error: EMAIL_TAKEN, field: 'email' })
+      }
       throw e
     }
   })
@@ -140,6 +178,90 @@ export async function espaceRoutes(app: FastifyInstance) {
     await startSession(req, reply, row.account.id, remember)
     await audit(req, 'espace.login', { ...who({ clientId: row.client.id }) })
     return { compte: publicAccount({ ...row.client, clientId: row.client.id, id: row.account.id } as ClientAccount) }
+  })
+
+  // --- Mot de passe oublié, activation d'un espace sur une fiche existante ---
+  // Un lien à usage unique part à l'adresse de la fiche : seul son propriétaire peut choisir un mot de passe.
+  // La réponse ne dit jamais si l'adresse existe.
+  app.post('/mot-de-passe-oublie', { config: { rateLimit: { max: 10, timeWindow: '1 hour' } } }, async (req, reply) => {
+    const parsed = oubliBody.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ error: 'Indiquez votre adresse e-mail.', field: 'email' })
+    const fiche = await fichePar(parsed.data.email)
+    if (fiche && !fiche.client.archivedAt && !fiche.account?.disabledAt) {
+      const purpose = fiche.account ? 'reinitialisation' : 'activation'
+      if (!(await recentlyIssued(fiche.client.id, purpose))) {
+        const jeton = await issueEmailToken(fiche.client.id, purpose)
+        const lien = pageMotDePasse(req, jeton)
+        const nom = clientName(fiche.client)
+        notify(fiche.client, (entreprise) => (purpose === 'reinitialisation' ? passwordResetMail({ nom, lien, entreprise }) : activationMail({ nom, lien, entreprise })))
+        await audit(req, purpose === 'reinitialisation' ? 'espace.password_reset_requested' : 'espace.activation_sent', {
+          ...who({ clientId: fiche.client.id }),
+          targetType: 'client',
+          targetId: fiche.client.id,
+        })
+      }
+    }
+    return { ok: true }
+  })
+
+  // Le lien est-il encore valable, et pour quoi faire ? (la page choisit son titre)
+  app.post('/jeton/verification', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const parsed = jetonBody.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ error: LIEN_INVALIDE, field: 'jeton' })
+    const t = await findEmailToken(parsed.data.jeton)
+    return t ? { valide: true, objet: t.purpose } : { valide: false }
+  })
+
+  app.post('/nouveau-mot-de-passe', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const parsed = nouveauMotDePasseBody.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ error: LIEN_INVALIDE, field: 'jeton' })
+    const t = await findEmailToken(parsed.data.jeton)
+    if (!t || t.purpose !== 'reinitialisation') return reply.code(400).send({ error: LIEN_INVALIDE, field: 'jeton' })
+    const fiche = await db
+      .select({ client: clients, account: clientAccounts })
+      .from(clientAccounts)
+      .innerJoin(clients, eq(clients.id, clientAccounts.clientId))
+      .where(eq(clientAccounts.clientId, t.clientId))
+      .then((r) => r[0])
+    if (!fiche || fiche.account.disabledAt || fiche.client.archivedAt) return reply.code(400).send({ error: LIEN_INVALIDE, field: 'jeton' })
+    const policyError = checkPasswordPolicy(parsed.data.password, { identifiant: fiche.client.email ?? '', nom: fiche.client.nom ?? '' })
+    if (policyError) return reply.code(400).send({ error: policyError, field: 'password' })
+    const passwordHash = await hashPassword(parsed.data.password)
+    // Un seul passage : si un autre appareil a utilisé le lien entre-temps, celui-ci n'est plus valable
+    if (!(await consumeEmailToken(t.id))) return reply.code(400).send({ error: LIEN_INVALIDE, field: 'jeton' })
+    await db.transaction(async (tx) => {
+      await tx.update(clientAccounts).set({ passwordHash, passwordChangedAt: new Date() }).where(eq(clientAccounts.id, fiche.account.id))
+      // Changer de mot de passe déconnecte tous les appareils, y compris celui d'une personne qui aurait volé l'ancien
+      await tx.delete(clientSessions).where(eq(clientSessions.accountId, fiche.account.id))
+    })
+    if (fiche.client.email) await clearFailures(`espace:${fiche.client.email.toLowerCase()}`)
+    await audit(req, 'espace.password_reset', { ...who({ clientId: fiche.client.id }), targetType: 'client', targetId: fiche.client.id })
+    notify(fiche.client, (entreprise) => passwordChangedMail({ nom: clientName(fiche.client), reinitialisation: `${baseUrl(req)}/espace/mot-de-passe-oublie`, entreprise }))
+    return { ok: true }
+  })
+
+  app.post('/activation', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const parsed = nouveauMotDePasseBody.safeParse(req.body)
+    if (!parsed.success) return reply.code(400).send({ error: LIEN_INVALIDE, field: 'jeton' })
+    const t = await findEmailToken(parsed.data.jeton)
+    if (!t || t.purpose !== 'activation') return reply.code(400).send({ error: LIEN_INVALIDE, field: 'jeton' })
+    const [client] = await db.select().from(clients).where(eq(clients.id, t.clientId))
+    const [existing] = client ? await db.select({ id: clientAccounts.id }).from(clientAccounts).where(eq(clientAccounts.clientId, client.id)) : []
+    if (!client || client.archivedAt || existing) return reply.code(400).send({ error: LIEN_INVALIDE, field: 'jeton' })
+    const policyError = checkPasswordPolicy(parsed.data.password, { identifiant: client.email ?? '', nom: client.nom ?? '' })
+    if (policyError) return reply.code(400).send({ error: policyError, field: 'password' })
+    const passwordHash = await hashPassword(parsed.data.password)
+    if (!(await consumeEmailToken(t.id))) return reply.code(400).send({ error: LIEN_INVALIDE, field: 'jeton' })
+    try {
+      const [account] = await db.insert(clientAccounts).values({ clientId: client.id, passwordHash, lastLoginAt: new Date() }).returning()
+      await startSession(req, reply, account!.id, false)
+      await audit(req, 'espace.activated', { ...who({ clientId: client.id }), targetType: 'client', targetId: client.id })
+      notify(client, (entreprise) => welcomeMail({ nom: clientName(client), espace: `${baseUrl(req)}/espace`, entreprise }))
+      return reply.code(201).send({ compte: publicAccount({ ...client, clientId: client.id, id: account!.id } as ClientAccount) })
+    } catch (e) {
+      if (isUniqueViolation(e)) return reply.code(400).send({ error: LIEN_INVALIDE, field: 'jeton' })
+      throw e
+    }
   })
 
   app.post('/deconnexion', async (req, reply) => {

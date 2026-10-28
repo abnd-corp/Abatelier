@@ -346,6 +346,9 @@ describe('Demander un devis', () => {
   it('crée la commande et le devis PDF numéroté tout de suite, au prix du configurateur, et prévient la direction', async () => {
     mailOn()
     const c = await member()
+    // Le message de bienvenue part en arrière-plan : on l'attend, puis on ne garde que l'alerte à la direction
+    await vi.waitFor(() => expect(mailSent.map((m) => m.subject).join()).toContain('Bienvenue'))
+    mailSent.length = 0
     const expected = (await visitor.post('/api/public/configurateur/chiffrage', config())).json().totals
     // Le client ne peut pas imposer son prix ni son client
     const res = await c.post('/api/espace/devis', { ...config(), ttc: 1, clientId: '00000000-0000-4000-8000-000000000000' })
