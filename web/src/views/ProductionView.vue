@@ -15,6 +15,10 @@ interface Row {
   datePrevue: string | null
   pieces: number
   lignes: number
+  // De quoi parle la commande (« Couvertine, Bavette »), et les noms de ceux qui l'ont prise puis terminée
+  modeles: string
+  prisPar: string | null
+  pretePar: string | null
   next: OrderStatut | null
 }
 
@@ -50,12 +54,16 @@ async function advance(o: Row) {
 
 const today = todayParis()
 const late = (o: Row) => !!o.datePrevue && o.datePrevue < today && o.statut !== 'prete'
-const GROUPS: { statut: OrderStatut; title: string }[] = [
-  { statut: 'validee', title: 'À lancer' },
-  { statut: 'fabrication', title: 'En fabrication' },
-  { statut: 'prete', title: 'Prêtes, à livrer ou à faire retirer' },
+// Quatre colonnes : une commande prête n'attend pas la même chose selon qu'on vient la chercher ou qu'on la livre
+type Colonne = 'a-lancer' | 'fabrication' | 'a-retirer' | 'a-livrer'
+const colonneOf = (o: Row): Colonne => (o.statut === 'validee' ? 'a-lancer' : o.statut === 'fabrication' ? 'fabrication' : o.livraisonMode === 'retrait' ? 'a-retirer' : 'a-livrer')
+const GROUPS: { id: Colonne; title: string }[] = [
+  { id: 'a-lancer', title: 'À lancer' },
+  { id: 'fabrication', title: 'En fabrication' },
+  { id: 'a-retirer', title: 'Prêtes, à faire retirer' },
+  { id: 'a-livrer', title: 'Prêtes, à livrer' },
 ]
-const groups = computed(() => GROUPS.map((g) => ({ ...g, orders: orders.value.filter((o) => o.statut === g.statut) })))
+const groups = computed(() => GROUPS.map((g) => ({ ...g, orders: orders.value.filter((o) => colonneOf(o) === g.id) })))
 </script>
 
 <template>
@@ -75,8 +83,8 @@ const groups = computed(() => GROUPS.map((g) => ({ ...g, orders: orders.value.fi
   </div>
 
   <div v-else class="groups">
-    <section v-for="g in groups" :key="g.statut" class="group" :aria-labelledby="`g-${g.statut}`">
-      <h2 :id="`g-${g.statut}`">
+    <section v-for="g in groups" :key="g.id" class="group" :aria-labelledby="`g-${g.id}`">
+      <h2 :id="`g-${g.id}`">
         {{ g.title }} <span class="count">{{ g.orders.length }}</span>
       </h2>
       <p v-if="!g.orders.length" class="muted none">Aucune.</p>
@@ -84,11 +92,22 @@ const groups = computed(() => GROUPS.map((g) => ({ ...g, orders: orders.value.fi
         <RouterLink :to="{ name: 'production-order', params: { id: o.id } }" class="numero mono">{{ o.numero }}</RouterLink>
         <span class="pill" :class="statutOf(o.statut).tone">{{ statutOf(o.statut).label }}</span>
         <span v-if="o.kind === 'boutique'" class="pill accent">Boutique</span>
+        <p v-if="o.modeles" class="modeles">{{ o.modeles }}</p>
         <p class="meta">
           <span><AppIcon name="calendar" :size="15" /> {{ shortDay(o.datePrevue) }}<b v-if="late(o)" class="late-label"> en retard</b></span>
           <span><AppIcon name="layers" :size="15" /> {{ o.pieces }} {{ o.kind === 'boutique' ? 'article' : 'pièce' }}{{ o.pieces > 1 ? 's' : '' }} ({{ o.lignes }} réf.)</span>
           <span><AppIcon :name="o.livraisonMode === 'retrait' ? 'home' : 'truck'" :size="15" /> {{ o.livraisonMode === 'retrait' ? 'Retrait' : 'Livraison' }}</span>
         </p>
+        <p v-if="o.prisPar" class="qui">
+          <AppIcon name="user" :size="15" />
+          <span
+            >Pris en charge par <b>{{ o.prisPar }}</b
+            ><template v-if="o.pretePar"
+              >, terminé par <b>{{ o.pretePar }}</b></template
+            ></span
+          >
+        </p>
+        <p v-else-if="o.statut === 'validee'" class="qui muted"><AppIcon name="user" :size="15" /><span>Personne ne l’a encore prise</span></p>
         <div class="row-actions">
           <button v-if="o.next" class="btn small" :class="{ primary: o.statut !== 'prete' }" type="button" :disabled="busy === o.id" @click="advance(o)">{{ STEP_ACTIONS[o.next] }}</button>
           <a class="btn small" :href="sheetUrl(o.id)" target="_blank" rel="noopener" :aria-label="`Imprimer la fiche ${o.numero}`" title="Imprimer la fiche"
@@ -103,7 +122,7 @@ const groups = computed(() => GROUPS.map((g) => ({ ...g, orders: orders.value.fi
 <style scoped>
 .groups {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
@@ -145,6 +164,20 @@ const groups = computed(() => GROUPS.map((g) => ({ ...g, orders: orders.value.fi
   color: var(--accent);
   text-decoration: underline;
 }
+.modeles {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.qui {
+  grid-column: 1 / -1;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+}
 .meta {
   grid-column: 1 / -1;
   margin: 0;
@@ -175,7 +208,12 @@ const groups = computed(() => GROUPS.map((g) => ({ ...g, orders: orders.value.fi
   gap: 8px;
   text-align: center;
 }
-@media (max-width: 1100px) {
+@media (max-width: 1400px) {
+  .groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 800px) {
   .groups {
     grid-template-columns: minmax(0, 1fr);
   }

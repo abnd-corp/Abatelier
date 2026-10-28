@@ -40,14 +40,23 @@ test.describe('Suivi de fabrication', () => {
     await expect(ligne).toBeVisible()
     await expect(atelier.getByText(`Suivi ${uid.slice(-6)}`)).toHaveCount(0)
 
+    await expect(ligne).toContainText('Personne ne l’a encore prise')
+    const colonne = atelier.locator('section.group').filter({ has: ligne })
+    await expect(colonne.getByRole('heading', { level: 2 })).toContainText('À lancer')
+
     await ligne.getByRole('button', { name: 'Lancer la fabrication' }).click()
     await expect(ligne).toContainText('En fabrication')
+    // Le nom du salarié qui l'a prise, pas un identifiant, et la commande change de colonne
+    await expect(ligne).toContainText('Pris en charge par Plieur Suivi')
+    await expect(atelier.locator('section.group').filter({ has: ligne }).getByRole('heading', { level: 2 })).toContainText('En fabrication')
     await client.reload()
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('En fabrication')
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Vos pièces sont en cours de pliage')
 
     await ligne.getByRole('button', { name: 'Marquer prête' }).click()
     await expect(ligne).toContainText('Prête')
+    await expect(ligne).toContainText('terminé par Plieur Suivi')
+    await expect(atelier.locator('section.group').filter({ has: ligne }).getByRole('heading', { level: 2 })).toContainText('Prêtes, à')
     await client.reload()
     await expect(suivi.locator('li[aria-current="step"]')).toContainText('Prête')
 

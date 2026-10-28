@@ -474,19 +474,98 @@ describe('Fiche commande', () => {
 
 describe('Atelier', () => {
   const ROWS = [
-    { id: 'o1', numero: 'C-2026-0001', statut: 'validee', livraisonMode: 'retrait', datePrevue: '2020-01-06', pieces: 4, lignes: 1, next: 'fabrication' },
-    { id: 'o2', numero: 'C-2026-0002', statut: 'prete', livraisonMode: 'livraison', datePrevue: '2099-01-06', pieces: 1, lignes: 1, next: 'livree' },
+    {
+      id: 'o1',
+      numero: 'C-2026-0001',
+      statut: 'validee',
+      livraisonMode: 'retrait',
+      datePrevue: '2020-01-06',
+      pieces: 4,
+      lignes: 1,
+      modeles: 'Couvertine',
+      prisPar: null,
+      pretePar: null,
+      next: 'fabrication',
+    },
+    {
+      id: 'o2',
+      numero: 'C-2026-0002',
+      statut: 'prete',
+      livraisonMode: 'livraison',
+      datePrevue: '2099-01-06',
+      pieces: 1,
+      lignes: 1,
+      modeles: 'Bavette',
+      prisPar: 'Lucas Martinon',
+      pretePar: 'Marc Durand',
+      next: 'livree',
+    },
+  ]
+  const TOUTES = [
+    ...ROWS,
+    {
+      id: 'o3',
+      numero: 'C-2026-0003',
+      statut: 'fabrication',
+      livraisonMode: 'retrait',
+      datePrevue: '2099-01-07',
+      pieces: 2,
+      lignes: 2,
+      modeles: 'Couvertine, Bandeau',
+      prisPar: 'Lucas Martinon',
+      pretePar: null,
+      next: 'prete',
+    },
+    {
+      id: 'o4',
+      numero: 'C-2026-0004',
+      statut: 'prete',
+      livraisonMode: 'retrait',
+      datePrevue: '2099-01-08',
+      pieces: 3,
+      lignes: 1,
+      modeles: 'Bandeau',
+      prisPar: 'Marc Durand',
+      pretePar: 'Marc Durand',
+      next: 'livree',
+    },
   ]
 
   it('range les commandes par étape, signale le retard et fait avancer', async () => {
     const { wrapper, calls } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: ROWS }], 'POST /production/o1/status': [200, {}] }, ATELIER)
     const groups = wrapper.findAll('section.group')
-    expect(groups.map((g) => g.find('h2').text())).toEqual(['À lancer 1', 'En fabrication 0', 'Prêtes, à livrer ou à faire retirer 1'])
+    expect(groups.map((g) => g.find('h2').text())).toEqual(['À lancer 1', 'En fabrication 0', 'Prêtes, à faire retirer 0', 'Prêtes, à livrer 1'])
     expect(norm(groups[0]!.text())).toContain('en retard')
-    expect(norm(groups[2]!.text())).not.toContain('en retard')
+    expect(norm(groups[3]!.text())).not.toContain('en retard')
     await button(wrapper, 'Lancer la fabrication').trigger('click')
     await flushPromises()
     expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ statut: 'fabrication' })
+  })
+
+  it('sépare les commandes prêtes à retirer de celles à livrer', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    const col = (titre: string) => wrapper.findAll('section.group').find((g) => g.find('h2').text().startsWith(titre))!
+    expect(col('En fabrication').text()).toContain('C-2026-0003')
+    expect(col('Prêtes, à faire retirer').text()).toContain('C-2026-0004')
+    expect(col('Prêtes, à faire retirer').text()).not.toContain('C-2026-0002')
+    expect(col('Prêtes, à livrer').text()).toContain('C-2026-0002')
+  })
+
+  it('montre le nom de la personne qui a pris la commande et de quoi elle parle, jamais un identifiant', async () => {
+    const { wrapper } = await mountAt(ProductionView, '/fabrication', { 'GET /production': [200, { orders: TOUTES }] }, ATELIER)
+    const carte = (numero: string) =>
+      norm(
+        wrapper
+          .findAll('article.order')
+          .find((a) => a.text().includes(numero))!
+          .text(),
+      )
+    expect(carte('C-2026-0001')).toContain('Couvertine')
+    expect(carte('C-2026-0001')).toContain('Personne ne l’a encore prise')
+    expect(carte('C-2026-0003')).toContain('Pris en charge par Lucas Martinon')
+    expect(carte('C-2026-0003')).not.toContain('terminé par')
+    expect(carte('C-2026-0003')).toContain('Couvertine, Bandeau')
+    expect(carte('C-2026-0002')).toContain('Pris en charge par Lucas Martinon, terminé par Marc Durand')
   })
 
   it('donne la fiche imprimable de chaque commande', async () => {

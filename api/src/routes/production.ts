@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyReply } from 'fastify'
-import { asc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { colors, materials, ORDER_STATUTS, orderLines, orders, sheetStock } from '../db/schema.js'
+import { colors, materials, ORDER_STATUTS, orderEvents, orderLines, orders, sheetStock, users } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
 import { changeStatus, eventsOf, NEXT, PRODUCTION_STATUTS, PRODUCTION_STEPS, STATUT_LABELS } from '../orders.js'
 import { getCompany, getTemplate } from '../documents.js'
@@ -88,7 +88,13 @@ export async function productionRoutes(app: FastifyInstance) {
 
   app.get('/', async () => {
     const pieces = db
-      .select({ orderId: orderLines.orderId, n: sql<number>`sum(${orderLines.quantite})::int`.as('n'), lignes: sql<number>`count(*)::int`.as('lignes') })
+      .select({
+        orderId: orderLines.orderId,
+        n: sql<number>`sum(${orderLines.quantite})::int`.as('n'),
+        lignes: sql<number>`count(*)::int`.as('lignes'),
+        // De quoi parle la commande, en quelques mots (« Couvertine, Bavette ») : plus parlant que son numéro
+        modeles: sql<string>`string_agg(distinct ${orderLines.modeleLabel}, ', ')`.as('modeles'),
+      })
       .from(orderLines)
       .groupBy(orderLines.orderId)
       .as('pieces')
@@ -102,13 +108,43 @@ export async function productionRoutes(app: FastifyInstance) {
         datePrevue: orders.datePrevue,
         pieces: pieces.n,
         lignes: pieces.lignes,
+        modeles: pieces.modeles,
       })
       .from(orders)
       .leftJoin(pieces, eq(pieces.orderId, orders.id))
       .where(inArray(orders.statut, PRODUCTION_STATUTS))
       // Les plus urgentes d'abord
       .orderBy(asc(orders.datePrevue), asc(orders.numero))
-    return { orders: rows.map((r) => ({ ...r, pieces: r.pieces ?? 0, lignes: r.lignes ?? 0, next: next(r.statut) })) }
+    // Qui a pris la commande (celui qui l'a lancée en fabrication) et qui l'a terminée : le nom, jamais un identifiant.
+    // Le dernier passage compte (une commande peut avoir été relancée).
+    const events = rows.length
+      ? await db
+          .select({ orderId: orderEvents.orderId, statut: orderEvents.statut, nom: users.nom })
+          .from(orderEvents)
+          .leftJoin(users, eq(users.id, orderEvents.userId))
+          .where(
+            and(
+              inArray(
+                orderEvents.orderId,
+                rows.map((r) => r.id),
+              ),
+              inArray(orderEvents.statut, ['fabrication', 'prete']),
+            ),
+          )
+          .orderBy(asc(orderEvents.id))
+      : []
+    const who = (orderId: string, statut: 'fabrication' | 'prete') => events.filter((e) => e.orderId === orderId && e.statut === statut).at(-1)?.nom ?? null
+    return {
+      orders: rows.map((r) => ({
+        ...r,
+        pieces: r.pieces ?? 0,
+        lignes: r.lignes ?? 0,
+        modeles: r.modeles ?? '',
+        prisPar: who(r.id, 'fabrication'),
+        pretePar: who(r.id, 'prete'),
+        next: next(r.statut),
+      })),
+    }
   })
 
   app.get('/:id', async (req, reply) => {

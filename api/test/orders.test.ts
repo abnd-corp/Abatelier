@@ -379,6 +379,25 @@ describe('Fabrication (atelier)', () => {
     expect((await atelier.get(`/api/production/${recue.id}`)).statusCode).toBe(404)
   })
 
+  it('montre qui a pris la commande et qui l’a terminée, par leur nom, avec de quoi elle parle', async () => {
+    const { id } = await create()
+    await direction.post(`/api/orders/${id}/status`, { statut: 'validee' })
+    await createUser({ identifiant: 'lucas.m', nom: 'Lucas Martinon', role: 'atelier' })
+    await createUser({ identifiant: 'marc.d', nom: 'Marc Durand', role: 'atelier' })
+    const lucas = await loginAs(app, 'lucas.m')
+    const marc = await loginAs(app, 'marc.d')
+    const ligne = async (c: Client) => (await c.get('/api/production')).json().orders[0]
+    // Pas encore lancée : personne
+    expect(await ligne(lucas)).toMatchObject({ prisPar: null, pretePar: null, modeles: expect.stringContaining('Couvertine') })
+    await lucas.post(`/api/production/${id}/status`, { statut: 'fabrication' })
+    expect(await ligne(marc)).toMatchObject({ prisPar: 'Lucas Martinon', pretePar: null })
+    await marc.post(`/api/production/${id}/status`, { statut: 'prete' })
+    const prete = await ligne(lucas)
+    expect(prete).toMatchObject({ statut: 'prete', prisPar: 'Lucas Martinon', pretePar: 'Marc Durand' })
+    // Le nom, jamais l'identifiant de connexion
+    expect(JSON.stringify(prete)).not.toMatch(/lucas\.m|marc\.d/)
+  })
+
   it('fait avancer la commande d’une étape à la fois, sans pouvoir l’annuler', async () => {
     const { id } = await create()
     await direction.post(`/api/orders/${id}/status`, { statut: 'validee' })
