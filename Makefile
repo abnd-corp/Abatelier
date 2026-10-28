@@ -104,7 +104,7 @@ e2e-up: ## Démarre seulement la stack e2e (pour « cd e2e && npm run test:ui »
 
 stripe-ecoute: ## Relaie les notifications de paiement Stripe (mode test) vers l'appli de dev ; affiche le secret whsec_… à copier (voir docs/stripe-test.md)
 	@test -s secrets/stripe_secret_key.txt || { echo "Mettez d'abord la clé secrète de test (sk_test_…) dans secrets/stripe_secret_key.txt"; exit 1; }
-	docker run --rm -it --network host -e STRIPE_API_KEY="$$(cat secrets/stripe_secret_key.txt)" stripe/stripe-cli listen --forward-to localhost:$${WEB_PORT:-5173}/api/paiement/stripe
+	docker run --rm -it --network host -e STRIPE_API_KEY="$$(cat secrets/stripe_secret_key.txt)" stripe/stripe-cli listen --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.expired,checkout.session.async_payment_failed --forward-to localhost:$${WEB_PORT:-5173}/api/paiement/stripe
 
 e2e-down: ## Supprime la stack e2e
 	$(E2E) down -v
