@@ -57,7 +57,38 @@ describe('Mise en page des e-mails', () => {
     expect(renderMail({ ...base, logo: true }).html).toContain(`src="cid:${LOGO_CID}"`)
     const sans = renderMail(base).html
     expect(sans).not.toContain('cid:')
-    expect(sans).toContain('font-size:20px;font-weight:bold;color:#5b34c4;')
+    // Sans logo : le nom, en blanc sur le bandeau de couleur
+    expect(sans).toContain('font-size:20px;font-weight:bold;letter-spacing:0.2px;color:#ffffff;')
+  })
+
+  it('met le récapitulatif en tableau, et le lien vers l’espace client sous le bouton', () => {
+    const { html } = renderMail({
+      ...base,
+      faits: [
+        { label: 'Commande', value: 'C-2026-0042' },
+        { label: 'Montant payé', value: '126,00 € TTC' },
+      ],
+      action: { label: 'Suivre ma commande', url: 'https://atelier.test/espace/commandes/1' },
+      espace: 'https://atelier.test/espace',
+    })
+    expect(html).toContain('>Commande</td>')
+    expect(html).toContain('>C-2026-0042</td>')
+    expect(html).toContain('Accéder à mon espace client')
+    expect(html).toContain('href="https://atelier.test/espace"')
+    // Le rappel de sécurité cite l'espace client seulement quand le message y renvoie
+    expect(html).toContain('se consultent dans votre espace client')
+    expect(renderMail(base).html).not.toContain('se consultent dans votre espace client')
+    expect(renderMail({ ...base, audience: 'equipe', espace: 'https://atelier.test/espace' }).html).not.toContain('Pour votre sécurité')
+  })
+
+  it('met le logo sur une pastille, avec le nom à côté quand c’est une marque carrée, sans le nom quand le logo est large', () => {
+    const carre = renderMail({ ...base, logo: true, logoLarge: false }).html
+    expect(carre).toContain('src="cid:logo-entreprise"')
+    expect(carre).toContain('max-width:60px')
+    expect(carre).toContain('>Alu &lt;Pliage&gt; &amp; Cie</td>')
+    const large = renderMail({ ...base, logo: true, logoLarge: true }).html
+    expect(large).toContain('max-width:200px')
+    expect(large).not.toContain('letter-spacing:0.2px')
   })
 
   it('dit au client qu’il ne reçoit jamais de publicité, et à l’équipe que le message est automatique', () => {

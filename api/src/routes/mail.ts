@@ -35,7 +35,7 @@ export async function mailRoutes(app: FastifyInstance) {
   app.get('/apercu/:id', async (req, reply) => {
     const m = await find(req, (req.params as { id: string }).id)
     if (!m) return reply.code(404).send({ error: 'Modèle de message inconnu.' })
-    const { html, logo } = await buildHtml({ subject: m.subject, text: m.text, htmlText: m.htmlText, titre: m.titreMail, action: m.action, audience: m.audience })
+    const { html, logo } = await buildHtml({ subject: m.subject, text: m.text, htmlText: m.htmlText, titre: m.titreMail, faits: m.faits, action: m.action, espace: m.espace, audience: m.audience })
     // Le logo, joint au vrai message, est ici intégré à la page
     const apercu = logo ? html.replace(`cid:${LOGO_CID}`, `data:${logo.contentType};base64,${logo.content.toString('base64')}`) : html
     return { id: m.id, titre: m.titre, sujet: m.subject, texte: m.text, html: apercu }
@@ -54,7 +54,9 @@ export async function mailRoutes(app: FastifyInstance) {
       text: m.text,
       htmlText: m.htmlText,
       titre: m.titreMail,
+      faits: m.faits,
       action: m.action,
+      espace: m.espace,
       audience: m.audience,
       userId: req.user!.id,
     })

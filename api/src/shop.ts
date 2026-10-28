@@ -226,16 +226,53 @@ async function afterPayment(p: Payment, order: { id: string; numero: string }) {
     if (to.length) {
       const alerte = orderPaidAlert({ nom, email: c.email ?? '', numero: order.numero, ttc: p.montantTtc, surMesure: Boolean(sm), articles, link: `${origin}/commandes/${order.id}` })
       await withTimeout(
-        sendMail({ kind: 'contact', to, subject: alerte.subject, text: alerte.text, audience: 'equipe', replyTo: c.email ?? undefined, targetType: 'order', targetId: order.id }),
+        sendMail({
+          kind: 'contact',
+          to,
+          subject: alerte.subject,
+          text: alerte.text,
+          htmlText: alerte.htmlText,
+          titre: alerte.titre,
+          faits: alerte.faits,
+          action: alerte.action,
+          audience: 'equipe',
+          replyTo: c.email ?? undefined,
+          targetType: 'order',
+          targetId: order.id,
+        }),
         6000,
         { ok: false, notConfigured: false, error: 'délai dépassé' },
       )
     }
     if (c.email) {
       const entreprise = (await getCompany()).raisonSociale
-      const mail = orderConfirmed({ nom, numero: order.numero, ttc: p.montantTtc, articles, link: `${origin}/espace/commandes/${order.id}`, entreprise })
+      const [o] = await db.select({ datePrevue: orders.datePrevue, livraisonMode: orders.livraisonMode }).from(orders).where(eq(orders.id, order.id))
+      const dateEstimee = o?.datePrevue ? new Date(`${o.datePrevue}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : null
+      const mail = orderConfirmed({
+        nom,
+        numero: order.numero,
+        ttc: p.montantTtc,
+        articles,
+        link: `${origin}/espace/commandes/${order.id}`,
+        espace: `${origin}/espace`,
+        entreprise,
+        remise: o?.livraisonMode ?? 'retrait',
+        dateEstimee,
+      })
       await withTimeout(
-        sendMail({ kind: 'contact', to: [c.email], subject: mail.subject, text: mail.text, htmlText: mail.htmlText, titre: mail.titre, action: mail.action, targetType: 'order', targetId: order.id }),
+        sendMail({
+          kind: 'contact',
+          to: [c.email],
+          subject: mail.subject,
+          text: mail.text,
+          htmlText: mail.htmlText,
+          titre: mail.titre,
+          faits: mail.faits,
+          action: mail.action,
+          espace: mail.espace,
+          targetType: 'order',
+          targetId: order.id,
+        }),
         6000,
         { ok: false, notConfigured: false, error: 'délai dépassé' },
       )

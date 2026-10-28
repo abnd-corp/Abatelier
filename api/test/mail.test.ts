@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { accessories, auditLog, billingDocuments, colors, companySettings, contactRequests, documentTemplate, emailLog, materials } from '../src/db/schema.js'
+import { accessories, auditLog, billingDocuments, clientAccounts, colors, companySettings, contactRequests, documentTemplate, emailLog, materials } from '../src/db/schema.js'
 import { env } from '../src/env.js'
 import { getCompany, getTemplate } from '../src/documents.js'
 import { isMailConfigured, setTransport, type Transport } from '../src/mail.js'
@@ -220,9 +220,65 @@ describe('Envoi d’un devis ou d’une facture', () => {
     expect(res).toMatchObject({ configure: true, to: 'jean@example.com', fichier: `${d.numero}.pdf` })
     expect(res.sujet).toBe(`Devis ${d.numero} — Alu Pliage Service`)
     expect(res.message).toContain('Bonjour Jean Dupont,')
-    expect(res.message).toContain(`notre devis ${d.numero}`)
+    expect(res).toMatchObject({ espace: false })
+    expect(res.message).toContain(`Votre devis ${d.numero} se trouve en pièce jointe`)
     expect(res.message).toMatch(/valable jusqu’au \d{2}\/\d{2}\/\d{4}/)
     expect(res.message).toContain('Cordialement')
+  })
+
+  describe('avec un espace client', () => {
+    const ouvrirEspace = () => db.insert(clientAccounts).values({ clientId: ids.dupont, passwordHash: 'x' })
+
+    it('propose un message qui renvoie vers l’espace, sans pièce jointe', async () => {
+      mailOn()
+      await ouvrirEspace()
+      const d = await doc('devis')
+      const res = (await direction.get(`/api/billing/${d.id}/email`)).json()
+      expect(res).toMatchObject({ configure: true, fichier: null, espace: true })
+      expect(res.message).toContain(`Votre devis ${d.numero} est disponible dans votre espace client`)
+      expect(res.message).toContain('http://atelier.test/espace')
+      expect(res.message).not.toContain('pièce jointe')
+    })
+
+    it('n’envoie aucune pièce jointe, mais un bouton et un lien vers l’espace client', async () => {
+      mailOn()
+      await ouvrirEspace()
+      const f = await doc('facture')
+      const res = await direction.post(`/api/billing/${f.id}/email`, { to: 'jean@example.com', sujet: `Facture ${f.numero}`, message: 'Bonjour, votre facture est dans votre espace.' })
+      expect(res.statusCode, res.body).toBe(200)
+      const mail = sent[0]!
+      expect(mail.attachments).toBeUndefined()
+      expect(mail.html).toContain('Consulter ma facture')
+      expect(mail.html).toContain('Accéder à mon espace client')
+      expect(mail.html).toContain('href="http://atelier.test/espace"')
+      expect(mail.html).toContain(f.numero)
+      // Le client est « envoyé » comme avant
+      const [row] = await db.select().from(billingDocuments).where(eq(billingDocuments.id, f.id))
+      expect(row!.envoyeLe).not.toBeNull()
+    })
+
+    it('met en forme le récapitulatif du document, et le rappel de sécurité renvoie vers l’espace', async () => {
+      mailOn()
+      await ouvrirEspace()
+      const d = await doc('devis')
+      await direction.post(`/api/billing/${d.id}/email`, { to: 'jean@example.com', sujet: `Devis ${d.numero}`, message: 'Bonjour.' })
+      const { html } = sent[0]!
+      expect(html).toContain('Votre devis est disponible')
+      expect(html).toContain('Valable jusqu’au')
+      expect(html).toContain('Pour votre sécurité.')
+      expect(html).toContain('ni votre numéro de carte par e-mail')
+      expect(html).toContain('se consultent dans votre espace client')
+    })
+  })
+
+  it('sans espace client, le rappel de sécurité ne promet pas de retrouver les documents en ligne', async () => {
+    mailOn()
+    const f = await doc('facture')
+    await direction.post(`/api/billing/${f.id}/email`, { to: 'jean@example.com', sujet: `Facture ${f.numero}`, message: 'Bonjour.' })
+    const { html } = sent[0]!
+    expect(html).toContain('ni votre numéro de carte par e-mail')
+    expect(html).not.toContain('se consultent dans votre espace client')
+    expect(html).not.toContain('Accéder à mon espace client')
   })
 
   it('met l’IBAN dans le message d’une facture quand il est renseigné', async () => {

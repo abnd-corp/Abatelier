@@ -348,7 +348,7 @@ describe('Refuser et rembourser', () => {
     expect(mailSent).toHaveLength(1)
     expect(mailSent[0]!.to).toEqual(['jean@example.com'])
     expect(mailSent[0]!.text).toContain('Longueur impossible à plier')
-    expect(mailSent[0]!.text).toMatch(/rembours\w+ la totalité, soit 126,00 €/)
+    expect(mailSent[0]!.text).toMatch(/Montant remboursé : 126,00 € \(la totalité\)/)
     expect((await entries('order.refused'))[0]!.details).toMatchObject({ numero: order.numero, montant: 126, motif: 'Longueur impossible à plier sur notre machine.' })
     const detail = (await c.get(`/api/espace/commandes/${order.id}`)).json()
     expect(detail.commande.statut).toBe('annulee')

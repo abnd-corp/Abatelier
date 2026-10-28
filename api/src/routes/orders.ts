@@ -414,9 +414,28 @@ export async function orderRoutes(app: FastifyInstance) {
     const [c] = await db.select().from(clients).where(eq(clients.id, o.clientId))
     if (c?.email) {
       const entreprise = (await getCompany()).raisonSociale
-      const mail = orderRefused({ nom: clientName(c), numero: o.numero, motif, ttc: pay.montantTtc, entreprise })
+      const mail = orderRefused({
+        nom: clientName(c),
+        numero: o.numero,
+        motif,
+        ttc: pay.montantTtc,
+        espace: `${req.headers['x-forwarded-proto'] ?? req.protocol}://${req.headers.host}/espace`,
+        entreprise,
+      })
       await withTimeout(
-        sendMail({ kind: 'contact', to: [c.email], subject: mail.subject, text: mail.text, htmlText: mail.htmlText, titre: mail.titre, targetType: 'order', targetId: o.id, userId: req.user!.id }),
+        sendMail({
+          kind: 'contact',
+          to: [c.email],
+          subject: mail.subject,
+          text: mail.text,
+          htmlText: mail.htmlText,
+          titre: mail.titre,
+          faits: mail.faits,
+          espace: mail.espace,
+          targetType: 'order',
+          targetId: o.id,
+          userId: req.user!.id,
+        }),
         6000,
         { ok: false, notConfigured: false, error: 'délai dépassé' },
       )

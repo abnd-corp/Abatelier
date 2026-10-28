@@ -371,12 +371,18 @@ describe('Export pour le comptable', () => {
 
 describe('Envoi par e-mail', () => {
   const PROPOSAL = { configure: true, to: 'jean@example.com', sujet: 'Facture F-2026-0001 — Alu Pliage Service', message: 'Bonjour Jean,\n\nVoici la facture.', fichier: 'F-2026-0001.pdf' }
-  const open = async (routes: Parameters<typeof mockApi>[0] = {}) => {
-    const res = await mountAt(BillingDocView, '/factures/f1', { 'GET /billing/f1': [200, detail()], 'GET /billing/f1/email': [200, PROPOSAL], ...routes })
+  const open = async (routes: Parameters<typeof mockApi>[0] = {}, proposal: object = PROPOSAL) => {
+    const res = await mountAt(BillingDocView, '/factures/f1', { 'GET /billing/f1': [200, detail()], 'GET /billing/f1/email': [200, proposal], ...routes })
     await button(res.wrapper, 'Envoyer par e-mail')!.trigger('click')
     await flushPromises()
     return res
   }
+
+  it('n’annonce aucune pièce jointe quand le client a un espace client : le message renvoie vers cet espace', async () => {
+    const { wrapper } = await open({}, { ...PROPOSAL, fichier: null, espace: true })
+    expect(wrapper.text()).not.toContain('Pièce jointe')
+    expect(wrapper.text()).toContain('Aucune pièce jointe : le message renvoie vers l’espace client')
+  })
 
   it('propose le message prêt à envoyer, puis envoie avec les champs modifiés', async () => {
     const { wrapper, calls } = await open({ 'POST /billing/f1/email': [200, { ok: true, envoyeLe: '2026-10-20T09:00:00Z' }] })
@@ -384,6 +390,7 @@ describe('Envoi par e-mail', () => {
     expect((wrapper.get('#mail-subject').element as HTMLInputElement).value).toBe(PROPOSAL.sujet)
     expect((wrapper.get('#mail-message').element as HTMLTextAreaElement).value).toContain('Voici la facture.')
     expect(wrapper.text()).toContain('Pièce jointe : F-2026-0001.pdf')
+    expect(wrapper.text()).toContain('Ce client n’a pas d’espace client : le document est joint au message')
     await wrapper.get('#mail-to').setValue('jean@example.com, compta@example.com')
     await wrapper.get('#mail-message').setValue('Bonjour, voici la facture à régler.')
     await wrapper.get('form.inline-form').trigger('submit')

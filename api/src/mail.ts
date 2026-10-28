@@ -24,8 +24,12 @@ export interface MailInput {
   htmlText?: string
   /** Gros titre de la version mise en page */
   titre?: string
+  /** Récapitulatif de la version mise en page (numéro, montant, date…) */
+  faits?: { label: string; value: string }[]
   /** Bouton d'action de la version mise en page */
   action?: { label: string; url: string }
+  /** Lien vers l'espace client, sous le bouton */
+  espace?: string
   /** Client (par défaut) ou équipe : change le pied de page */
   audience?: 'client' | 'equipe'
   replyTo?: string
@@ -123,18 +127,27 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
   return result
 }
 
+/** Un PNG plus large que 2,2 fois sa hauteur : c'est un logo avec le nom. Un autre format est supposé carré (marque seule). */
+function isWide(img: Buffer) {
+  const png = img.length > 24 && img.subarray(1, 4).toString('latin1') === 'PNG'
+  return png ? img.readUInt32BE(16) / Math.max(1, img.readUInt32BE(20)) > 2.2 : false
+}
+
 /** Le message mis en page, avec le logo de l'entreprise s'il y en a un. */
-export async function buildHtml(input: Pick<MailInput, 'subject' | 'text' | 'htmlText' | 'titre' | 'action' | 'audience'>): Promise<{ html: string; logo: Attachment | null }> {
+export async function buildHtml(input: Pick<MailInput, 'subject' | 'text' | 'htmlText' | 'titre' | 'faits' | 'action' | 'espace' | 'audience'>): Promise<{ html: string; logo: Attachment | null }> {
   const [company, template] = await Promise.all([getCompany(), getTemplate()])
   const logo = company.logo && company.logoType ? { filename: 'logo', content: company.logo, contentType: company.logoType, cid: LOGO_CID } : null
   const { html } = renderMail({
     company,
     couleur: template.couleur,
     logo: logo !== null,
+    logoLarge: logo ? isWide(logo.content) : false,
     subject: input.subject,
     text: input.htmlText ?? input.text,
     titre: input.titre,
+    faits: input.faits,
     action: input.action,
+    espace: input.espace,
     audience: input.audience,
   })
   return { html, logo }
