@@ -42,6 +42,8 @@ services:
       ADMIN_PASSWORD_FILE: /run/secrets/admin_password
       # Avis Google du site : sans clé, il affiche seulement un lien (clé dans secrets/google_places_api_key.txt)
       GOOGLE_PLACE_ID: ${GOOGLE_PLACE_ID:-}
+      LEGAL_HEBERGEUR: ${LEGAL_HEBERGEUR:-}
+      LEGAL_MEDIATEUR: ${LEGAL_MEDIATEUR:-}
       # E-mails : sans SMTP_HOST ni MAIL_FROM, rien n'est envoyé (mot de passe dans secrets/smtp_password.txt)
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
