@@ -452,3 +452,81 @@ describe('Définition des références par la direction (page Matériaux)', () =
       expect((await ventes[method](url, body as never)).statusCode, `${method} ${url}`).toBe(403)
   })
 })
+
+describe('Saisie libre d’une référence (matière et coloris tapés, créés au catalogue si absents)', () => {
+  let chef: Client
+  beforeEach(async () => {
+    await createUser({ identifiant: 'dir', sections: ['direction'], admin: false })
+    chef = await loginAs(app, 'dir')
+  })
+  const libre = (over: Record<string, unknown> = {}) => ({ matiere: 'Acier inox', epaisseur: 0.8, coloris: 'Brossé', reference: 'INOX-B', largeur: 1250, longueur: 2500, ...over })
+
+  it('crée la matière et le coloris manquants au catalogue, inactifs et à prix zéro, et le trace', async () => {
+    const res = await chef.post('/api/stock/feuilles', libre())
+    expect(res.statusCode, res.body).toBe(201)
+    expect(norm(res.json().feuille.libelle)).toBe('Acier inox 0,8 mm · Brossé (INOX-B) · 1 250 × 2 500 mm')
+    expect(res.json().feuille.quantite).toBe(0)
+    const [m] = await db.select().from(materials).where(eq(materials.nom, 'Acier inox'))
+    expect(m).toMatchObject({ epaisseur: 0.8, prixM2: 0, actif: false })
+    const [c] = await db.select().from(colors).where(eq(colors.reference, 'INOX-B'))
+    expect(c).toMatchObject({ nom: 'Brossé', actif: false })
+    expect(await entries('catalog.material_created')).toHaveLength(1)
+    expect(await entries('catalog.color_created')).toHaveLength(1)
+    expect(await entries('stock.sheet_created')).toHaveLength(1)
+  })
+
+  it('retrouve la matière et le coloris du catalogue sans tenir compte des majuscules, sans créer de doublon', async () => {
+    const avant = (await db.select().from(materials)).length
+    const res = await chef.post('/api/stock/feuilles', { matiere: 'aluminium', epaisseur: 1.5, coloris: 'gris anthracite', reference: 'ral 7016', largeur: 1000, longueur: 2000 })
+    expect(res.statusCode, res.body).toBe(201)
+    expect(res.json().feuille).toMatchObject({ materialId: ids.alu, colorId: ids.anthracite })
+    expect((await db.select().from(materials)).length).toBe(avant)
+    expect(await entries('catalog.material_created')).toHaveLength(0)
+    expect(await entries('catalog.color_created')).toHaveLength(0)
+  })
+
+  it('sans référence de coloris, le nom du coloris sert de référence ; sans coloris, la tôle est brute', async () => {
+    const a = await chef.post('/api/stock/feuilles', libre({ reference: undefined, coloris: 'Aspect bois' }))
+    expect(a.statusCode, a.body).toBe(201)
+    expect((await db.select().from(colors).where(eq(colors.reference, 'Aspect bois')))[0]).toMatchObject({ nom: 'Aspect bois' })
+    const b = await chef.post('/api/stock/feuilles', libre({ coloris: undefined, reference: undefined, largeur: 1000 }))
+    expect(b.statusCode, b.body).toBe(201)
+    expect(b.json().feuille).toMatchObject({ colorId: null, coloris: null })
+  })
+
+  it('valide la saisie avec le champ concerné', async () => {
+    const champ = async (over: Record<string, unknown>) => (await chef.post('/api/stock/feuilles', libre(over))).json()
+    expect(await champ({ matiere: '  ' })).toMatchObject({ field: 'matiere' })
+    expect(await champ({ epaisseur: undefined })).toMatchObject({ field: 'epaisseur' })
+    expect(await champ({ epaisseur: 0.1 })).toMatchObject({ field: 'epaisseur' })
+    expect(await champ({ epaisseur: 50 })).toMatchObject({ field: 'epaisseur' })
+    expect(await champ({ coloris: 'x'.repeat(61) })).toMatchObject({ field: 'coloris' })
+    expect(await champ({ largeur: 10 })).toMatchObject({ field: 'largeur' })
+    expect(await entries('stock.sheet_created')).toHaveLength(0)
+  })
+
+  it('n’en crée rien au catalogue quand la référence est refusée (code déjà pris, format déjà là)', async () => {
+    const a = await chef.post('/api/stock/feuilles', libre({ code: 'AB-12345' }))
+    expect(a.statusCode, a.body).toBe(201)
+    const nb = { m: (await db.select().from(materials)).length, c: (await db.select().from(colors)).length }
+    // Même code sur une autre matière, inconnue : refusé, et la matière n'est pas créée
+    const b = await chef.post('/api/stock/feuilles', libre({ matiere: 'Cuivre', coloris: 'Patiné', reference: 'CU-P', code: 'AB-12345' }))
+    expect(b.statusCode).toBe(409)
+    expect(b.json().field).toBe('code')
+    // Même format une seconde fois
+    const c = await chef.post('/api/stock/feuilles', libre())
+    expect(c.statusCode).toBe(409)
+    expect(c.json().field).toBe('largeur')
+    expect({ m: (await db.select().from(materials)).length, c: (await db.select().from(colors)).length }).toEqual(nb)
+  })
+
+  it('propose aussi, pour la saisie, les matières et coloris pas encore tarifés (?tous=1), sans prix', async () => {
+    await chef.post('/api/stock/feuilles', libre())
+    const normal = (await chef.get('/api/stock/options')).json()
+    expect(normal.materials.some((m: { nom: string }) => m.nom === 'Acier inox')).toBe(false)
+    const tous = await chef.get('/api/stock/options?tous=1')
+    expect(tous.json().materials.some((m: { nom: string; epaisseur: number }) => m.nom === 'Acier inox' && m.epaisseur === 0.8)).toBe(true)
+    expect(tous.json().colors.some((c: { reference: string }) => c.reference === 'INOX-B')).toBe(true)
+    expect(tous.body).not.toMatch(/prix|majoration/i)
+  })
+})

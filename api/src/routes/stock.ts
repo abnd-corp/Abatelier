@@ -37,18 +37,29 @@ const code = z
   .max(64, 'Code-barres : 64 caractères maximum.')
   .regex(/^[A-Za-z0-9._\-/]+$/, 'Code-barres : chiffres, lettres, point, tiret ou barre oblique seulement.')
   .transform((c) => c.toUpperCase())
-const createBody = z.object({
-  materialId: z.uuid('Choisissez la matière.'),
-  colorId: z.uuid('Coloris inconnu.').nullish(),
-  largeur: dim('Largeur'),
-  longueur: dim('Longueur'),
-  chute: z.boolean().default(false),
-  quantite: qty('Quantité').default(0),
-  seuil: qty('Seuil d’alerte', 10000).default(0),
-  note: note.default(''),
-  // Code-barres du fournisseur, pour la réception au scan
-  code: code.optional(),
-})
+const createBody = z
+  .object({
+    // La matière et le coloris se désignent par leur identifiant (catalogue) ou se saisissent librement : ce qui manque au catalogue y est créé
+    materialId: z.uuid('Choisissez la matière.').optional(),
+    colorId: z.uuid('Coloris inconnu.').nullish(),
+    matiere: z.string().trim().min(1, 'Indiquez la matière.').max(60, 'Matière : 60 caractères maximum.').optional(),
+    epaisseur: z.number({ error: 'Épaisseur : nombre attendu.' }).min(0.3, 'Épaisseur : 0,3 mm minimum.').max(10, 'Épaisseur : 10 mm maximum.').optional(),
+    coloris: z.string().trim().max(60, 'Coloris : 60 caractères maximum.').optional(),
+    reference: z.string().trim().max(40, 'Référence du coloris : 40 caractères maximum.').optional(),
+    largeur: dim('Largeur'),
+    longueur: dim('Longueur'),
+    chute: z.boolean().default(false),
+    quantite: qty('Quantité').default(0),
+    seuil: qty('Seuil d’alerte', 10000).default(0),
+    note: note.default(''),
+    // Code-barres du fournisseur, pour la réception au scan
+    code: code.optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (d.materialId) return
+    if (!d.matiere) ctx.addIssue({ code: 'custom', message: 'Indiquez la matière.', path: ['matiere'] })
+    if (d.epaisseur === undefined) ctx.addIssue({ code: 'custom', message: 'Indiquez l’épaisseur.', path: ['epaisseur'] })
+  })
 const patchBody = z.object({
   largeur: dim('Largeur').optional(),
   longueur: dim('Longueur').optional(),
@@ -131,12 +142,25 @@ export async function stockRoutes(app: FastifyInstance) {
   }
 
   // Matières et coloris du catalogue, pour choisir ce que l'on stocke (la direction les gère dans « Tarifs et catalogue »)
-  app.get('/options', async () => {
+  // ?tous=1 : aussi les matières et coloris inactifs (créés depuis le stock, pas encore tarifés), pour les suggestions de saisie libre
+  app.get('/options', async (req) => {
+    const tous = (req.query as { tous?: string }).tous === '1'
     const [ms, cs] = await Promise.all([
-      db.select().from(materials).where(eq(materials.actif, true)).orderBy(asc(materials.position), asc(materials.nom), asc(materials.epaisseur)),
-      db.select().from(colors).where(eq(colors.actif, true)).orderBy(asc(colors.position), asc(colors.nom)),
+      db
+        .select()
+        .from(materials)
+        .where(tous ? undefined : eq(materials.actif, true))
+        .orderBy(asc(materials.position), asc(materials.nom), asc(materials.epaisseur)),
+      db
+        .select()
+        .from(colors)
+        .where(tous ? undefined : eq(colors.actif, true))
+        .orderBy(asc(colors.position), asc(colors.nom)),
     ])
-    return { materials: ms.map((m) => ({ id: m.id, label: materialLabel(m) })), colors: cs.map((c) => ({ id: c.id, label: colorLabel(c), hex: c.hex })) }
+    return {
+      materials: ms.map((m) => ({ id: m.id, label: materialLabel(m), nom: m.nom, epaisseur: m.epaisseur })),
+      colors: cs.map((c) => ({ id: c.id, label: colorLabel(c), hex: c.hex, nom: c.nom, reference: c.reference })),
+    }
   })
 
   // Par défaut les références en service ; ?archivees=1 donne celles qui sont archivées
@@ -169,8 +193,10 @@ export async function stockRoutes(app: FastifyInstance) {
     const parsed = createBody.safeParse(req.body)
     if (!parsed.success) return invalid(reply, parsed.error)
     const d = parsed.data
-    const [m] = await db.select({ id: materials.id }).from(materials).where(eq(materials.id, d.materialId))
-    if (!m) return reply.code(400).send({ error: 'Matière inconnue.', field: 'materialId' })
+    if (d.materialId) {
+      const [m] = await db.select({ id: materials.id }).from(materials).where(eq(materials.id, d.materialId))
+      if (!m) return reply.code(400).send({ error: 'Matière inconnue.', field: 'materialId' })
+    }
     if (d.colorId) {
       const [c] = await db.select({ id: colors.id }).from(colors).where(eq(colors.id, d.colorId))
       if (!c) return reply.code(400).send({ error: 'Coloris inconnu.', field: 'colorId' })
@@ -181,15 +207,50 @@ export async function stockRoutes(app: FastifyInstance) {
     if (n >= FEUILLES_MAX) return reply.code(409).send({ error: `${FEUILLES_MAX} références maximum.` })
     // Largeur ≤ longueur : le plus petit côté est la largeur
     const [largeur, longueur] = d.largeur <= d.longueur ? [d.largeur, d.longueur] : [d.longueur, d.largeur]
+    let materialId = d.materialId
+    let colorId = d.colorId ?? null
+    const crees: { type: 'material' | 'color'; id: string; nom: string }[] = []
     try {
       const id = await db.transaction(async (tx) => {
-        const [s] = await tx
-          .insert(sheetStock)
-          .values({ materialId: d.materialId, colorId: d.colorId ?? null, largeur, longueur, chute: d.chute, quantite: d.quantite, seuil: d.seuil, note: d.note })
-          .returning({ id: sheetStock.id })
+        // Matière et coloris saisis librement : on retrouve ceux du catalogue (sans tenir compte des majuscules), sinon on les crée.
+        // Ce qui est créé ici est inactif, à prix zéro : la direction le complète dans « Tarifs et catalogue » avant de le vendre.
+        if (!materialId) {
+          const [found] = await tx
+            .select()
+            .from(materials)
+            .where(and(sql`lower(${materials.nom}) = lower(${d.matiere!})`, eq(materials.epaisseur, d.epaisseur!)))
+          if (found) materialId = found.id
+          else {
+            const [m] = await tx
+              .insert(materials)
+              .values({ nom: d.matiere!, epaisseur: d.epaisseur!, prixM2: 0, retourMin: 0, actif: false, position: sql`(select coalesce(max(position), 0) + 1 from materials)` })
+              .returning()
+            materialId = m!.id
+            crees.push({ type: 'material', id: m!.id, nom: materialLabel(m!) })
+          }
+        }
+        if (!colorId && d.coloris) {
+          const ref = d.reference || d.coloris
+          const [found] = await tx
+            .select()
+            .from(colors)
+            .where(sql`lower(${colors.reference}) = lower(${ref})`)
+          if (found) colorId = found.id
+          else {
+            const [c] = await tx
+              .insert(colors)
+              .values({ nom: d.coloris, reference: ref, hex: '#cccccc', actif: false, position: sql`(select coalesce(max(position), 0) + 1 from colors)` })
+              .returning()
+            colorId = c!.id
+            crees.push({ type: 'color', id: c!.id, nom: colorLabel(c!) })
+          }
+        }
+        const [s] = await tx.insert(sheetStock).values({ materialId, colorId, largeur, longueur, chute: d.chute, quantite: d.quantite, seuil: d.seuil, note: d.note }).returning({ id: sheetStock.id })
         if (d.code) await tx.insert(sheetBarcodes).values({ code: d.code, sheetId: s!.id, createdBy: req.user!.id })
         return s!.id
       })
+      for (const c of crees)
+        await audit(req, c.type === 'material' ? 'catalog.material_created' : 'catalog.color_created', { targetType: c.type, targetId: c.id, details: { nom: c.nom, prixM2: 0, depuisStock: true } })
       const r = (await base().where(eq(sheetStock.id, id)))[0]!
       if (d.quantite > 0)
         await db.insert(sheetMovements).values({ sheetId: id, libelle: libelle(r), delta: d.quantite, apres: d.quantite, motif: 'reception', note: 'Première saisie', userId: req.user!.id })
@@ -204,8 +265,8 @@ export async function stockRoutes(app: FastifyInstance) {
           .from(sheetStock)
           .where(
             and(
-              eq(sheetStock.materialId, d.materialId),
-              d.colorId ? eq(sheetStock.colorId, d.colorId) : isNull(sheetStock.colorId),
+              eq(sheetStock.materialId, materialId!),
+              colorId ? eq(sheetStock.colorId, colorId) : isNull(sheetStock.colorId),
               eq(sheetStock.largeur, largeur),
               eq(sheetStock.longueur, longueur),
               eq(sheetStock.chute, d.chute),

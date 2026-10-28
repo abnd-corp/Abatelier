@@ -29,11 +29,18 @@ async function load() {
 onMounted(async () => {
   await load()
   try {
-    options.value = await api<StockOptions>('/stock/options')
+    options.value = await api<StockOptions>('/stock/options?tous=1')
   } catch {
     /* le formulaire d'ajout restera vide : l'erreur de chargement est déjà affichée */
   }
 })
+
+// Suggestions de saisie : les matières, épaisseurs et coloris déjà connus (la saisie reste libre)
+const unique = (l: (string | undefined)[]) => [...new Set(l.filter((v): v is string => !!v))]
+const matieres = computed(() => unique(options.value.materials.map((m) => m.nom)))
+const epaisseurs = computed(() => unique(options.value.materials.map((m) => (m.epaisseur === undefined ? undefined : String(m.epaisseur).replace('.', ',')))))
+const colorisConnus = computed(() => unique(options.value.colors.map((c) => c.nom)))
+const references = computed(() => unique(options.value.colors.map((c) => c.reference)))
 
 const fmt = (n: number) => n.toLocaleString('fr-FR')
 // Espaces insécables des milliers et espaces ordinaires se valent quand on cherche
@@ -46,7 +53,7 @@ const visibles = computed(() => {
 
 // --- Ajouter une référence ---
 const ajout = ref(false)
-const draft = reactive({ materialId: '', colorId: '', largeur: '1250', longueur: '3000', code: '' })
+const draft = reactive({ matiere: '', epaisseur: '', coloris: '', reference: '', largeur: '1250', longueur: '3000', code: '' })
 const errors = reactive<Record<string, string>>({})
 const adding = ref(false)
 const num = (v: string) => (v.trim() === '' ? NaN : Number(v.replace(',', '.')))
@@ -54,7 +61,7 @@ const num = (v: string) => (v.trim() === '' ? NaN : Number(v.replace(',', '.')))
 function ouvrirAjout() {
   ajout.value = !ajout.value
   for (const k of Object.keys(errors)) delete errors[k]
-  Object.assign(draft, { materialId: '', colorId: '', largeur: '1250', longueur: '3000', code: '' })
+  Object.assign(draft, { matiere: '', epaisseur: '', coloris: '', reference: '', largeur: '1250', longueur: '3000', code: '' })
 }
 
 async function add() {
@@ -65,8 +72,9 @@ async function add() {
     await api('/stock/feuilles', {
       method: 'POST',
       body: {
-        materialId: draft.materialId,
-        colorId: draft.colorId || null,
+        matiere: draft.matiere,
+        epaisseur: num(draft.epaisseur),
+        ...(draft.coloris.trim() ? { coloris: draft.coloris, ...(draft.reference.trim() ? { reference: draft.reference } : {}) } : {}),
         largeur: num(draft.largeur),
         longueur: num(draft.longueur),
         quantite: 0,
@@ -123,22 +131,63 @@ async function basculerArchivees() {
 
   <section v-if="ajout" id="ajout" class="card new" aria-labelledby="ajout-titre">
     <h2 id="ajout-titre">Nouvelle référence</h2>
-    <p class="muted hint">La matière et son épaisseur viennent de « Tarifs et catalogue », le coloris aussi. Le stock démarre à zéro : l’atelier ajoute les feuilles à la réception.</p>
+    <p class="muted hint">
+      Saisissez librement la matière, l’épaisseur et le coloris : ce qui n’existe pas encore au catalogue y est créé (à prix zéro, inactif), à compléter dans « Tarifs et catalogue ». Le stock démarre
+      à zéro : l’atelier ajoute les feuilles à la réception.
+    </p>
     <form class="grid" novalidate @submit.prevent="add">
       <div class="field">
-        <label for="m-matiere">Matière et épaisseur</label>
-        <select id="m-matiere" v-model="draft.materialId" class="input" :class="{ invalid: errors.materialId }" :aria-invalid="!!errors.materialId">
-          <option value="" disabled>Choisir…</option>
-          <option v-for="m in options.materials" :key="m.id" :value="m.id">{{ m.label }}</option>
-        </select>
-        <span v-if="errors.materialId" class="field-error">{{ errors.materialId }}</span>
+        <label for="m-matiere">Matière</label>
+        <input
+          id="m-matiere"
+          v-model="draft.matiere"
+          class="input"
+          list="m-matieres"
+          maxlength="60"
+          autocomplete="off"
+          placeholder="Aluminium"
+          :class="{ invalid: errors.matiere }"
+          :aria-invalid="!!errors.matiere"
+        />
+        <datalist id="m-matieres"><option v-for="m in matieres" :key="m" :value="m" /></datalist>
+        <span v-if="errors.matiere" class="field-error">{{ errors.matiere }}</span>
       </div>
       <div class="field">
-        <label for="m-coloris">Coloris</label>
-        <select id="m-coloris" v-model="draft.colorId" class="input">
-          <option value="">Brut, sans laquage</option>
-          <option v-for="c in options.colors" :key="c.id" :value="c.id">{{ c.label }}</option>
-        </select>
+        <label for="m-epaisseur">Épaisseur (mm)</label>
+        <input
+          id="m-epaisseur"
+          v-model="draft.epaisseur"
+          class="input mono"
+          list="m-epaisseurs"
+          inputmode="decimal"
+          autocomplete="off"
+          placeholder="1,5"
+          :class="{ invalid: errors.epaisseur }"
+          :aria-invalid="!!errors.epaisseur"
+        />
+        <datalist id="m-epaisseurs"><option v-for="e in epaisseurs" :key="e" :value="e" /></datalist>
+        <span v-if="errors.epaisseur" class="field-error">{{ errors.epaisseur }}</span>
+      </div>
+      <div class="field">
+        <label for="m-coloris">Coloris (vide = brut, sans laquage)</label>
+        <input
+          id="m-coloris"
+          v-model="draft.coloris"
+          class="input"
+          list="m-coloris-liste"
+          maxlength="60"
+          autocomplete="off"
+          placeholder="Gris anthracite"
+          :class="{ invalid: errors.coloris }"
+          :aria-invalid="!!errors.coloris"
+        />
+        <datalist id="m-coloris-liste"><option v-for="c in colorisConnus" :key="c" :value="c" /></datalist>
+        <span v-if="errors.coloris" class="field-error">{{ errors.coloris }}</span>
+      </div>
+      <div class="field">
+        <label for="m-reference">Référence du coloris (RAL…)</label>
+        <input id="m-reference" v-model="draft.reference" class="input mono" list="m-references" maxlength="40" autocomplete="off" placeholder="RAL 7016" :disabled="!draft.coloris.trim()" />
+        <datalist id="m-references"><option v-for="r in references" :key="r" :value="r" /></datalist>
       </div>
       <div class="field">
         <label for="m-largeur">Largeur (mm)</label>
@@ -156,7 +205,7 @@ async function basculerArchivees() {
         <span v-if="errors.code" class="field-error">{{ errors.code }}</span>
       </div>
       <p class="actions">
-        <button class="btn primary" type="submit" :disabled="adding || !draft.materialId">Ajouter la référence</button>
+        <button class="btn primary" type="submit" :disabled="adding || !draft.matiere.trim()">Ajouter la référence</button>
         <button class="btn" type="button" @click="ouvrirAjout">Annuler</button>
       </p>
     </form>

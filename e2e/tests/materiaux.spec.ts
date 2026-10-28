@@ -19,6 +19,9 @@ test.describe('Matériaux', () => {
     )
     const largeur = 1100 + Math.floor(Math.random() * 900)
     const format = `${largeur.toLocaleString('fr-FR')} × 2 500 mm`
+    // Matière et coloris inconnus du catalogue : saisis librement, ils y sont créés
+    const matiere = `Inox ${uid.replace(/[^a-z0-9]/gi, '').slice(-6)}`
+    const coloris = `Brossé ${uid.replace(/[^a-z0-9]/gi, '').slice(-4)}`
     const code = `MAT${uid
       .replace(/[^a-z0-9]/gi, '')
       .toUpperCase()
@@ -33,13 +36,20 @@ test.describe('Matériaux', () => {
 
     // Elle ajoute la référence avec le code de l'emballage
     await dir.getByRole('button', { name: 'Ajouter une référence' }).click()
-    await dir.getByLabel('Matière et épaisseur').selectOption({ index: 1 })
-    await dir.getByLabel('Coloris').selectOption({ index: 1 })
+    await dir.getByLabel('Matière', { exact: true }).fill(matiere)
+    await dir.getByLabel('Épaisseur (mm)').fill('0,8')
+    await dir.getByLabel(/^Coloris/).fill(coloris)
+    await dir.getByLabel(/^Référence du coloris/).fill(`REF-${code}`)
     await dir.getByLabel('Largeur (mm)').fill(String(largeur))
     await dir.getByLabel('Longueur (mm)').fill('2500')
     await dir.getByLabel('Code-barres du fournisseur').fill(code.toLowerCase())
     await dir.getByRole('button', { name: 'Ajouter la référence' }).click()
     await expect(dir.getByRole('status')).toContainText('Référence ajoutée')
+    // La matière et le coloris saisis ont été créés au catalogue, inactifs et à prix zéro, à compléter par la direction
+    const catalogue = (await (await adminPage.request.get('/api/catalog/materials')).json()).materials as { nom: string; prixM2: number; actif: boolean }[]
+    expect(catalogue.find((m) => m.nom === matiere)).toMatchObject({ prixM2: 0, actif: false })
+    const coulCatalogue = (await (await adminPage.request.get('/api/catalog/colors')).json()).colors as { nom: string; reference: string; actif: boolean }[]
+    expect(coulCatalogue.find((c) => c.nom === coloris)).toMatchObject({ reference: `REF-${code}`, actif: false })
     const ligne = dir.locator('ul.refs > li', { hasText: format })
     await expect(ligne).toContainText('0 en stock')
     await expect(ligne.getByRole('button', { name: /^Codes-barres/ })).toContainText('(1)')
@@ -100,7 +110,8 @@ test.describe('Matériaux', () => {
     await dir.getByRole('button', { name: 'Ajouter une référence' }).click()
     // Sans matière, le bouton reste inactif
     await expect(dir.getByRole('button', { name: 'Ajouter la référence' })).toBeDisabled()
-    await dir.getByLabel('Matière et épaisseur').selectOption({ index: 1 })
+    await dir.getByLabel('Matière', { exact: true }).fill('Aluminium')
+    await dir.getByLabel('Épaisseur (mm)').fill('1,5')
     await dir.getByLabel('Largeur (mm)').fill('1337')
     await dir.getByLabel('Code-barres du fournisseur').fill(code)
     await dir.getByRole('button', { name: 'Ajouter la référence' }).click()
