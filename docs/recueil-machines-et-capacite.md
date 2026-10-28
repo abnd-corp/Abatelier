@@ -72,6 +72,17 @@ Le client doit avoir un prestataire de paiement pour encaisser les cartes sur la
 - Souhaite-t-il que ses données de paiement restent chez un prestataire **européen** ?
 - Qui ouvrira le compte, avec quels documents (extrait Kbis, pièce d'identité du dirigeant, RIB) ?
 
+## 7 bis. L'adresse e-mail de l'entreprise
+
+L'application écrit aux clients au nom de l'entreprise (confirmation de commande, suivi, création de compte, mot de passe oublié). Jamais de publicité.
+
+- Quelle est l'adresse e-mail de contact **exacte** (celle du site actuel) ? Est-ce une adresse Gmail ou sur un nom de domaine à elle ?
+- **Qui a accès** à ce compte ? Qui reçoit et traite les réponses des clients ?
+- La **validation en deux étapes** est-elle activée sur ce compte (nécessaire pour créer le mot de passe d'application) ? Le dirigeant peut-il la créer pendant la mise en route ?
+- Combien de messages par jour environ ? (Un compte Gmail gratuit est limité à environ 500 envois par jour.)
+- Souhaite-t-il plus tard une adresse sur son propre nom de domaine ?
+- Qui doit recevoir les **alertes** de l'application (nouvelle commande payée, demande de contact) ?
+
 ## 8. Le serveur et le NAS
 
 L'application tourne sur un petit serveur (Raspberry Pi) chez le client ; les sauvegardes, et éventuellement les documents, peuvent aller sur son NAS, sur le même réseau.
