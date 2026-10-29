@@ -122,11 +122,16 @@ Schéma : [05-commande-en-ligne.svg](bpmn/05-commande-en-ligne.svg) · 10 étape
 - Quels problèmes (erreurs, retards, oublis) ?
 - Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
 
-### 6. Commande saisie par la direction
+### 6. Commande saisie par la direction pour un client
 
-Un client appelle ou écrit ; la direction saisit la commande, fait le devis, la fait valider ou l’annule.
+Exception à la commande en ligne : un client qui ne peut ou ne veut pas le faire seul (téléphone, visite). La direction saisit la commande dans l’application, mais le devis, son envoi, l’accès à l’espace et la validation se font tout seuls : le client décide dans son espace.
 
-Schéma : [06-commande-direction.svg](bpmn/06-commande-direction.svg) · 7 étapes : 7 dans l'application, 0 en partie, 0 pas encore, 0 hors application.
+Schéma : [06-commande-direction.svg](bpmn/06-commande-direction.svg) · 9 étapes : 7 dans l'application, 1 en partie, 1 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Éditer le devis numéroté et envoyer au client le lien d’accès à son espace (en partie)
+- Valider la commande tout de suite, sans passer par la direction (pas encore)
 
 À demander au client :
 

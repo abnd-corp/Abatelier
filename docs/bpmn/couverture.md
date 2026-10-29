@@ -7,10 +7,10 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 | Couverture | Étapes | Part |
 |---|---|---|
 | Dans l’application | 114 | 70 % |
-| En partie | 7 | 4 % |
-| Pas encore | 31 | 19 % |
+| En partie | 8 | 5 % |
+| Pas encore | 32 | 20 % |
 | Hors application | 10 | 6 % |
-| **Total** | **162** | |
+| **Total** | **164** | |
 
 ## Ce qu’il reste à faire pour couvrir tout le besoin
 
@@ -24,6 +24,8 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Devis depuis l’espace client** : Valider la commande tout de suite, sans passer par la direction (pas encore) : Aujourd’hui la direction valide à la main (un clic depuis le devis) ; devis encore valable et prix inchangés
 - **Devis depuis l’espace client** : Prévenir la direction : devis accepté, commande validée (en partie) : Alerte envoyée, mais elle dit encore « attend votre validation »
 - **Commande payée en ligne (sur mesure ou boutique)** : Contrôler et débiter la carte (en partie) : Essayé avec le mode test de Stripe ; le compte du client se branche à la mise en service
+- **Commande saisie par la direction pour un client** : Éditer le devis numéroté et envoyer au client le lien d’accès à son espace (en partie) : Devis et lien d’activation existent ; l’envoi des deux ensemble, en un seul geste, est à faire
+- **Commande saisie par la direction pour un client** : Valider la commande tout de suite, sans passer par la direction (pas encore) : Même règle que « Devis depuis l’espace client »
 - **Refus d’une commande payée et remboursement** : Rembourser la carte du client (en partie) : Vérifié avec le mode test de Stripe
 - **Fabrication à l’atelier** : Décompter les feuilles utilisées du stock (pas encore) : Aujourd’hui saisi à la main dans Stock de feuilles
 - **Fabrication à l’atelier** : Confirmer les chutes obtenues et les remettre au stock (pas encore) : Décidé : le nombre de chutes se confirme à la fin de la fabrication
@@ -148,21 +150,23 @@ Schéma : [image](05-commande-en-ligne.svg) · [fichier BPMN](05-commande-en-lig
 | Ne rien créer, garder le panier | Application (automatique) | Dans l’application | Message au retour sur le site : paiement annulé, aucune somme débitée |
 | Suivre sa commande dans son espace | Visiteur / Client | Dans l’application | Étapes, date estimée, paiement |
 
-## 6. Commande saisie par la direction
+## 6. Commande saisie par la direction pour un client
 
-Un client appelle ou écrit ; la direction saisit la commande, fait le devis, la fait valider ou l’annule.
+Exception à la commande en ligne : un client qui ne peut ou ne veut pas le faire seul (téléphone, visite). La direction saisit la commande dans l’application, mais le devis, son envoi, l’accès à l’espace et la validation se font tout seuls : le client décide dans son espace.
 
 Schéma : [image](06-commande-direction.svg) · [fichier BPMN](06-commande-direction.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
 | Retrouver ou créer la fiche client | Direction | Dans l’application | Clients (particulier ou professionnel, chantiers) |
-| Saisir les pièces (cotes, angles, matière, coloris, accessoires) | Direction | Dans l’application | Commandes › Nouvelle commande |
+| Saisir ou modifier les pièces dans l’application (cotes, angles, matière, coloris, accessoires) | Direction | Dans l’application | Commandes › Nouvelle commande |
 | Chiffrer, calculer le délai et les frais de livraison (distance par la route) | Application (automatique) | Dans l’application | Remise quantité et remise pro automatiques |
-| Faire le devis PDF et l’envoyer au client | Direction | Dans l’application | Message sans pièce jointe : le devis se retrouve dans l’espace client |
-| Noter l’acceptation et valider la commande en un clic | Direction | Dans l’application | Devis › Accepté par le client |
-| Modifier les pièces si besoin (avant validation) | Direction | Dans l’application | Commande › Modifier les pièces |
-| Annuler la commande en notant la raison | Direction | Dans l’application | Commande › Annuler (la raison est gardée) |
+| Éditer le devis numéroté et envoyer au client le lien d’accès à son espace | Application (automatique) | En partie | Devis et lien d’activation existent ; l’envoi des deux ensemble, en un seul geste, est à faire |
+| Accepter le devis dans son espace | Visiteur / Client | Dans l’application | Espace client › commande › Accepter le devis |
+| Noter l’acceptation donnée par téléphone (exception) | Direction | Dans l’application | Devis › Accepté par le client |
+| Valider la commande tout de suite, sans passer par la direction | Application (automatique) | Pas encore | Même règle que « Devis depuis l’espace client » |
+| Prévenir la direction du refus par e-mail | Application (automatique) | Dans l’application | Alerte avec un lien vers la commande |
+| Annuler la commande en notant la raison, si besoin | Direction | Dans l’application | Commande › Annuler (la raison est gardée) |
 
 ## 7. Refus d’une commande payée et remboursement
 

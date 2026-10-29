@@ -4,7 +4,7 @@
 "3";"Vente et clients";"Configurateur : faisabilité contrôlée, prix et date estimée";"7";"5";"1";"1";"0";"";"";"";"";"=K4*L4/60";"";"=M4*N4*52";"79";"=O4*P4/100";"";""
 "4";"Vente et clients";"Devis depuis l’espace client";"8";"6";"1";"1";"0";"";"";"";"";"=K5*L5/60";"";"=M5*N5*52";"81";"=O5*P5/100";"";""
 "5";"Vente et clients";"Commande payée en ligne (sur mesure ou boutique)";"10";"9";"1";"0";"0";"";"";"";"";"=K6*L6/60";"";"=M6*N6*52";"95";"=O6*P6/100";"";""
-"6";"Vente et clients";"Commande saisie par la direction";"7";"7";"0";"0";"0";"";"";"";"";"=K7*L7/60";"";"=M7*N7*52";"100";"=O7*P7/100";"";""
+"6";"Vente et clients";"Commande saisie par la direction pour un client";"9";"7";"1";"1";"0";"";"";"";"";"=K7*L7/60";"";"=M7*N7*52";"83";"=O7*P7/100";"";""
 "7";"Vente et clients";"Refus d’une commande payée et remboursement";"7";"5";"1";"0";"1";"";"";"";"";"=K8*L8/60";"";"=M8*N8*52";"92";"=O8*P8/100";"";""
 "8";"Production";"Fabrication à l’atelier";"11";"6";"0";"3";"2";"";"";"";"";"=K9*L9/60";"";"=M9*N9*52";"67";"=O9*P9/100";"";""
 "9";"Production";"Livraison et retrait";"6";"2";"0";"3";"1";"";"";"";"";"=K10*L10/60";"";"=M10*N10*52";"40";"=O10*P10/100";"";""
