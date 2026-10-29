@@ -2,15 +2,15 @@
 
 > Généré par `node scripts/bpmn/generer.mjs` à partir de `scripts/bpmn/processus.mjs`. Ne pas modifier à la main.
 
-Les 29 processus de l’atelier sont décrits en BPMN (voir [README](README.md)). Chaque étape est classée selon ce que fait l’application aujourd’hui.
+Les 33 processus de l’atelier sont décrits en BPMN (voir [README](README.md)). Chaque étape est classée selon ce que fait l’application aujourd’hui.
 
 | Couverture | Étapes | Part |
 |---|---|---|
-| Dans l’application | 105 | 52 % |
-| En partie | 17 | 8 % |
-| Pas encore | 70 | 35 % |
-| Hors application | 10 | 5 % |
-| **Total** | **202** | |
+| Dans l’application | 107 | 48 % |
+| En partie | 18 | 8 % |
+| Pas encore | 88 | 39 % |
+| Hors application | 11 | 5 % |
+| **Total** | **224** | |
 
 ## Ce qu’il reste à faire pour couvrir tout le besoin
 
@@ -43,7 +43,7 @@ Les 29 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Livraison et retrait** : Éditer le bon de livraison (pas encore) : Prévu : nouveau type de document
 - **Livraison et retrait** : Confirmer la réception (en donnant son code ou en signant) (pas encore) : Le client prévient lui-même que tout est arrivé
 - **Faire vivre les références de feuilles (facultatif)** : Importer toutes les références d’un coup (fichier) (pas encore) : Décidé : plus tard
-- **Commande de feuilles au fournisseur** : Enregistrer la commande passée : fournisseur, références, nombre de feuilles de chaque lot, date de livraison prévue (pas encore) : Aujourd’hui l’application ne connaît pas les commandes fournisseur
+- **Commande de feuilles au fournisseur** : Enregistrer la commande passée : fournisseur, références, nombre de feuilles de chaque lot, date de livraison prévue (pas encore) : À étudier : voir d’abord comment l’atelier commande, puis importer la commande (fichier ou e-mail du fournisseur) plutôt que la ressaisir
 - **Commande de feuilles au fournisseur** : Afficher « en commande » sur chaque référence et préparer les quantités attendues à la réception (pas encore) : Permet la comparaison entre commandé et reçu
 - **Commande de feuilles au fournisseur** : Notifier la direction si la livraison n’arrive pas à la date prévue (pas encore) : Notification dans la plateforme
 - **Réception de marchandise au scan** : Ouvrir la commande fournisseur attendue (pas encore) : Reprend aussi une réception laissée en attente
@@ -63,7 +63,9 @@ Les 29 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Statistiques : chiffres clés et ventes** : Répartir les ventes par matière, coloris, modèle de pièce, sur mesure ou boutique (pas encore) : Les lignes de commande gardent déjà ces informations
 - **Statistiques : chiffres clés et ventes** : Lire les chiffres, les courbes et le classement des références (pas encore) : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone
 - **Statistiques : audience du site et entonnoir** : Compter les visites et les pages vues, sans cookie ni adresse IP conservée (pas encore) : Compteur anonyme agrégé par jour et par page, à valider côté RGPD / CNIL
-- **Statistiques : audience du site et entonnoir** : Enregistrer les abandons du configurateur et du panier, les devis refusés ou expirés et leur motif (pas encore) : Sert au taux de conversion
+- **Statistiques : audience du site et entonnoir** : Écarter les robots : agents connus, requêtes sans navigateur réel, volume anormal (pas encore) : Aucun filtre n’est parfait : on obtient un bon ordre de grandeur, pas un chiffre exact
+- **Statistiques : audience du site et entonnoir** : Distinguer le visiteur anonyme du client connecté à son espace (pas encore) : Seule la session de l’espace client le permet ; un visiteur anonyme le reste, sans cookie ni suivi
+- **Statistiques : audience du site et entonnoir** : Enregistrer les abandons du configurateur et du panier, les devis refusés ou expirés et leur motif (pas encore) : Sert au taux de conversion ; un robot ne demande ni devis ni paiement
 - **Statistiques : audience du site et entonnoir** : Calculer l’entonnoir : visite, configurateur, devis, commande (pas encore) : Aussi les demandes de contact
 - **Statistiques : audience du site et entonnoir** : Lire l’audience et l’entonnoir (pas encore) : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone
 - **Statistiques : dépenses, entrées et marge** : Saisir le prix d’achat à la réception de chaque lot (pas encore) : Aucun prix d’achat dans l’application aujourd’hui
@@ -90,17 +92,34 @@ Les 29 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Statistiques : reprise de l’historique** : Vérifier les courbes dès le départ (pas encore) : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone
 - **Paramétrage par la direction** : Régler les limites par matière, la quantité maximale et le délai selon la quantité (pas encore) : En attente des données des machines de l’atelier
 - **Paramétrage par la direction** : Déclarer les jours fériés et les fermetures (pas encore) : Le délai annoncé saute les week-ends, pas les jours fériés
-- **Messages envoyés par l’application** : Commande prête, accusé de réception d’une demande de contact (pas encore) : Pas encore envoyés au client
-- **Messages envoyés par l’application** : Notifier la direction dans la plateforme (commande, contact, devis) (en partie) : Centre de notifications unique : chaque compte de la direction (comptes personnels) reçoit la même notification dès qu’il en a le droit, donc personne ne voit moins que l’autre ; aujourd’hui des e-mails aux adresses réglées
-- **Messages envoyés par l’application** : Lire la notification et ouvrir la commande ou la demande (en partie) : Un seul endroit pour tout, sans séparer les informations entre e-mail et plateforme
-- **Messages envoyés par l’application** : Envoyer un e-mail d’alerte à la direction si trop de notifications restent non lues (pas encore) : Seuil réglable (nombre de notifications non lues) ; seul cas où la direction reçoit un e-mail
+- **Paramétrer les machines de l’atelier** : Ajouter ou modifier une machine : type, longueur maximale, épaisseur par matière, cadence (pas encore) : Données à recueillir chez le client (limites des machines)
+- **Paramétrer les machines de l’atelier** : Mettre une machine hors service (panne, maintenance) ou la retirer (pas encore) : La capacité baisse tant qu’elle est arrêtée
+- **Paramétrer les machines de l’atelier** : Appliquer les limites des machines au contrôle du configurateur (pas encore) : Plafond de quantité, longueur et épaisseur maximales
+- **Paramétrer les machines de l’atelier** : Calculer la capacité par jour pour la date estimée (pas encore) : Dépend du recensement des machines et de leurs cadences
+- **Messages envoyés aux clients** : Commande prête, accusé de réception d’une demande de contact (pas encore) : Pas encore envoyés au client
+- **Notifications de la direction** : Créer la notification pour chaque compte de la direction qui en a le droit (en partie) : Aujourd’hui des e-mails aux adresses réglées pour l’équipe
+- **Notifications de la direction** : Envoyer un e-mail d’alerte à la direction si trop de notifications restent non lues (pas encore) : Seuil réglable ; seul cas où la direction reçoit un e-mail
+- **Notifications de la direction** : Voir le nombre de notifications non lues dans le menu (pas encore) : Pastille sur une cloche, dans le menu de gauche
+- **Notifications de la direction** : Ouvrir la notification : arriver directement sur la page à traiter (pas encore) : Commande, demande de contact, devis, stock : la page exacte, pas la liste
+- **Notifications de la direction** : Marquer la notification comme lue, puis traitée (pas encore) : Lue pour tous les comptes ou pour chacun : à définir avec le client
 - **Mise en service chez un client** : Installer l’application, créer le compte administrateur, régler les secrets (e-mail, paiement) (en partie) : Docker prêt ; domaine HTTPS et serveur chez le client à finaliser
 - **Mise en service chez un client** : Importer les clients et l’historique de l’ancien outil (pas encore) : Facultatif ; dépend de la forme des données existantes
 - **Mise en service chez un client** : Brancher le prestataire de paiement du client et faire un paiement de test (en partie) : Stripe essayé en test ; le choix du prestataire se fait avec le client
-- **Sauvegarde et exploitation** : Copier la sauvegarde hors de la machine (NAS du client) (pas encore) : Prévu avec le déploiement (M3)
-- **Sauvegarde et exploitation** : Surveiller et alerter (e-mail, supervision) (pas encore) : Prévu avec le déploiement (M3)
-- **Sauvegarde et exploitation** : Se connecter à distance pour la maintenance (réseau privé, sans port ouvert) (en partie) : Raspberry Pi et accès à distance prévus
-- **Sauvegarde et exploitation** : Installer une nouvelle version, avec retour arrière possible (pas encore) : Versions et déploiement (tickets D1 à D9)
+- **Disponibilité et supervision du serveur** : Relancer tout seul un service qui plante (en partie) : Redémarrage automatique des conteneurs prévu ; à vérifier sur le Raspberry
+- **Disponibilité et supervision du serveur** : Se reconnecter au réseau (wifi) après une coupure (pas encore) : Prévu avec le déploiement
+- **Disponibilité et supervision du serveur** : Redémarrer le Raspberry s’il ne répond plus (chien de garde) (pas encore) : Prévu avec le déploiement
+- **Disponibilité et supervision du serveur** : Remonter l’état du serveur et de chaque service (API, base, sauvegardes, disque, température) (pas encore) : Prévu avec le déploiement
+- **Disponibilité et supervision du serveur** : Alerter la maintenance (nous) (pas encore) : Prévu avec le déploiement
+- **Disponibilité et supervision du serveur** : Se connecter à distance et lire l’état (réseau privé, sans port ouvert) (en partie) : Raspberry Pi et accès à distance prévus
+- **Sauvegardes et test de restauration** : Copier la sauvegarde sur le NAS du client (pas encore) : Prévu avec le déploiement
+- **Sauvegardes et test de restauration** : Copier une sauvegarde chez nous, hors du site (chiffrée) (pas encore) : Protège contre un vol, un incendie ou une panne sur place
+- **Sauvegardes et test de restauration** : Tester la restauration : recréer une base depuis la dernière sauvegarde et la comparer (en partie) : La commande de vérification existe ; il reste à la lancer automatiquement et à alerter si elle échoue
+- **Sauvegardes et test de restauration** : Tester de temps en temps un redémarrage complet de l’application depuis une sauvegarde, sur une autre machine (pas encore) : Calendrier à fixer
+- **Sauvegardes et test de restauration** : Alerter la maintenance si une copie ou un test échoue (pas encore) : Prévu avec le déploiement
+- **Mises à jour du système et de l’application** : Appliquer les mises à jour de sécurité du système du Raspberry, la nuit (pas encore) : Prévu avec le déploiement
+- **Mises à jour du système et de l’application** : Redémarrer et vérifier que tout est reparti (pas encore) : Utilise la supervision du serveur
+- **Mises à jour du système et de l’application** : Publier la nouvelle version et la déployer sur le Raspberry (pas encore) : Versions et déploiement (tickets D1 à D9)
+- **Mises à jour du système et de l’application** : Contrôler la santé après déploiement et revenir à la version précédente si besoin (pas encore) : Retour arrière automatique
 
 ## 1. Demande de contact
 
@@ -303,7 +322,7 @@ Schéma : [image](12-commande-fournisseur.svg) · [fichier BPMN](12-commande-fou
 |---|---|---|---|
 | Notifier la direction dans la plateforme : stock bas | Application (automatique) | Dans l’application | Seuil réglable sur chaque référence |
 | Passer la commande au fournisseur (téléphone, e-mail, site du fournisseur) | Direction | Hors application | Le fournisseur n’est pas relié à l’application ; à recueillir : qui commande, à qui, comment |
-| Enregistrer la commande passée : fournisseur, références, nombre de feuilles de chaque lot, date de livraison prévue | Direction | Pas encore | Aujourd’hui l’application ne connaît pas les commandes fournisseur |
+| Enregistrer la commande passée : fournisseur, références, nombre de feuilles de chaque lot, date de livraison prévue | Direction | Pas encore | À étudier : voir d’abord comment l’atelier commande, puis importer la commande (fichier ou e-mail du fournisseur) plutôt que la ressaisir |
 | Afficher « en commande » sur chaque référence et préparer les quantités attendues à la réception | Application (automatique) | Pas encore | Permet la comparaison entre commandé et reçu |
 | Notifier la direction si la livraison n’arrive pas à la date prévue | Application (automatique) | Pas encore | Notification dans la plateforme |
 
@@ -377,14 +396,16 @@ Schéma : [image](16-stats-ventes.svg) · [fichier BPMN](16-stats-ventes.bpmn)
 
 ## 17. Statistiques : audience du site et entonnoir
 
-La direction voit si le site attire et si les visiteurs deviennent clients. Rien n’est mesuré aujourd’hui : la collecte doit commencer dès la mise en production.
+La direction voit si le site attire et si les visiteurs deviennent clients. Rien n’est mesuré aujourd’hui : la collecte doit commencer dès la mise en production. Les robots sont écartés autant que possible ; seule l’action (devis, commande) prouve un vrai client.
 
 Schéma : [image](17-stats-audience.svg) · [fichier BPMN](17-stats-audience.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
 | Compter les visites et les pages vues, sans cookie ni adresse IP conservée | Application (automatique) | Pas encore | Compteur anonyme agrégé par jour et par page, à valider côté RGPD / CNIL |
-| Enregistrer les abandons du configurateur et du panier, les devis refusés ou expirés et leur motif | Application (automatique) | Pas encore | Sert au taux de conversion |
+| Écarter les robots : agents connus, requêtes sans navigateur réel, volume anormal | Application (automatique) | Pas encore | Aucun filtre n’est parfait : on obtient un bon ordre de grandeur, pas un chiffre exact |
+| Distinguer le visiteur anonyme du client connecté à son espace | Application (automatique) | Pas encore | Seule la session de l’espace client le permet ; un visiteur anonyme le reste, sans cookie ni suivi |
+| Enregistrer les abandons du configurateur et du panier, les devis refusés ou expirés et leur motif | Application (automatique) | Pas encore | Sert au taux de conversion ; un robot ne demande ni devis ni paiement |
 | Calculer l’entonnoir : visite, configurateur, devis, commande | Application (automatique) | Pas encore | Aussi les demandes de contact |
 | Lire l’audience et l’entonnoir | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
 
@@ -496,11 +517,24 @@ Schéma : [image](25-parametrage.svg) · [fichier BPMN](25-parametrage.bpmn)
 | Déclarer les jours fériés et les fermetures | Direction | Pas encore | Le délai annoncé saute les week-ends, pas les jours fériés |
 | Appliquer tout de suite aux prochains devis, commandes et au site | Application (automatique) | Dans l’application | Les documents déjà émis ne changent pas |
 
-## 26. Faire vivre le site vitrine et la boutique
+## 26. Paramétrer les machines de l’atelier
+
+La direction décrit les machines (type, longueur et épaisseur maximales, cadence) : l’application s’en sert pour contrôler la faisabilité d’une pièce et estimer la charge. Les limites réelles sont à recueillir chez le client.
+
+Schéma : [image](26-parametrage-machines.svg) · [fichier BPMN](26-parametrage-machines.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Ajouter ou modifier une machine : type, longueur maximale, épaisseur par matière, cadence | Direction | Pas encore | Données à recueillir chez le client (limites des machines) |
+| Mettre une machine hors service (panne, maintenance) ou la retirer | Direction | Pas encore | La capacité baisse tant qu’elle est arrêtée |
+| Appliquer les limites des machines au contrôle du configurateur | Application (automatique) | Pas encore | Plafond de quantité, longueur et épaisseur maximales |
+| Calculer la capacité par jour pour la date estimée | Application (automatique) | Pas encore | Dépend du recensement des machines et de leurs cadences |
+
+## 27. Faire vivre le site vitrine et la boutique
 
 Produits de la boutique, photos, textes du site et alertes de la messagerie. Les pages légales ne se modifient pas : elles suivent les versions de l’application.
 
-Schéma : [image](26-site-vitrine.svg) · [fichier BPMN](26-site-vitrine.bpmn)
+Schéma : [image](27-site-vitrine.svg) · [fichier BPMN](27-site-vitrine.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -511,29 +545,40 @@ Schéma : [image](26-site-vitrine.svg) · [fichier BPMN](26-site-vitrine.bpmn)
 | Voir les messages envoyés et leur aperçu, s’envoyer un exemple | Direction | Dans l’application | Site vitrine › E-mails |
 | Mettre à jour les pages légales avec les versions de l’application | Maintenance (nous) | Hors application | Mentions légales, confidentialité, cookies, conditions de vente ; hébergeur et médiateur réglés à l’installation |
 
-## 27. Messages envoyés par l’application
+## 28. Messages envoyés aux clients
 
-Les messages automatiques : par e-mail pour les clients, qui ne se connectent pas souvent ; dans la plateforme, en un seul endroit, pour la direction. Jamais de publicité, jamais de document joint, jamais de mot de passe.
+Les e-mails automatiques envoyés aux clients, qui ne se connectent pas souvent à leur espace : à quel moment, avec quelles règles. Jamais de publicité, jamais de document joint, jamais de mot de passe. La direction, elle, est notifiée dans la plateforme (voir « Notifications de la direction »).
 
-Schéma : [image](27-messages.svg) · [fichier BPMN](27-messages.bpmn)
+Schéma : [image](28-messages.svg) · [fichier BPMN](28-messages.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
 | Bienvenue, activation de l’espace, mot de passe oublié, mot de passe modifié | Application (automatique) | Dans l’application | Liens à usage unique ; message de sécurité à chaque changement de mot de passe |
 | Commande confirmée, commande refusée et remboursée | Application (automatique) | Dans l’application | Récapitulatif, date estimée, bouton vers l’espace client |
-| Devis, facture ou avoir disponible dans l’espace client | Application (automatique) | Dans l’application | Aucune pièce jointe ; envoyé par la direction, texte modifiable |
+| Devis, facture ou avoir disponible dans l’espace client | Application (automatique) | Dans l’application | Aucune pièce jointe ; texte modifiable |
 | Commande prête, accusé de réception d’une demande de contact | Application (automatique) | Pas encore | Pas encore envoyés au client |
 | Lire le message (rappel de sécurité et lien vers son espace) | Visiteur / Client | Dans l’application | Version mise en page et version texte |
-| Notifier la direction dans la plateforme (commande, contact, devis) | Application (automatique) | En partie | Centre de notifications unique : chaque compte de la direction (comptes personnels) reçoit la même notification dès qu’il en a le droit, donc personne ne voit moins que l’autre ; aujourd’hui des e-mails aux adresses réglées |
-| Lire la notification et ouvrir la commande ou la demande | Direction | En partie | Un seul endroit pour tout, sans séparer les informations entre e-mail et plateforme |
-| Envoyer un e-mail d’alerte à la direction si trop de notifications restent non lues | Application (automatique) | Pas encore | Seuil réglable (nombre de notifications non lues) ; seul cas où la direction reçoit un e-mail |
-| Vérifier le rendu de chaque message et se l’envoyer | Direction | Dans l’application | Site vitrine › E-mails › Aperçu des messages (13 modèles) |
 
-## 28. Mise en service chez un client
+## 29. Notifications de la direction
+
+Tout ce qui concerne la direction arrive dans la plateforme, en un seul endroit, pour chaque compte qui en a le droit. Un clic ouvre la page où traiter la demande. Si trop de notifications restent non lues, un e-mail d’alerte part.
+
+Schéma : [image](29-notifications.svg) · [fichier BPMN](29-notifications.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Créer la notification pour chaque compte de la direction qui en a le droit | Application (automatique) | En partie | Aujourd’hui des e-mails aux adresses réglées pour l’équipe |
+| Envoyer un e-mail d’alerte à la direction si trop de notifications restent non lues | Application (automatique) | Pas encore | Seuil réglable ; seul cas où la direction reçoit un e-mail |
+| Voir le nombre de notifications non lues dans le menu | Direction | Pas encore | Pastille sur une cloche, dans le menu de gauche |
+| Ouvrir la notification : arriver directement sur la page à traiter | Direction | Pas encore | Commande, demande de contact, devis, stock : la page exacte, pas la liste |
+| Traiter la demande dans l’application | Direction | Dans l’application | Les pages existent déjà (commandes, demandes reçues, stock) |
+| Marquer la notification comme lue, puis traitée | Application (automatique) | Pas encore | Lue pour tous les comptes ou pour chacun : à définir avec le client |
+
+## 30. Mise en service chez un client
 
 Ce que nous installons et ce que le client renseigne avant de s’en servir : entreprise, numérotation, tarifs, équipe, références, stock de départ, site.
 
-Schéma : [image](28-mise-en-service.svg) · [fichier BPMN](28-mise-en-service.bpmn)
+Schéma : [image](30-mise-en-service.svg) · [fichier BPMN](30-mise-en-service.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -549,18 +594,50 @@ Schéma : [image](28-mise-en-service.svg) · [fichier BPMN](28-mise-en-service.b
 | Brancher le prestataire de paiement du client et faire un paiement de test | Maintenance (nous) | En partie | Stripe essayé en test ; le choix du prestataire se fait avec le client |
 | Former les utilisateurs | Maintenance (nous) | Hors application | Se fait sur place avec les écrans réels |
 
-## 29. Sauvegarde et exploitation
+## 31. Disponibilité et supervision du serveur
 
-La sécurité des données et la maintenance au quotidien, sur le serveur du client.
+Le serveur du client (un Raspberry Pi) doit rester disponible : il relance seul ses services, se reconnecte au réseau, et remonte son état. La maintenance s’y connecte à distance. Un seul Raspberry ne garantit pas 100 % (coupure de courant, d’internet) : la disponibilité visée est à fixer avec le client.
 
-Schéma : [image](29-exploitation.svg) · [fichier BPMN](29-exploitation.bpmn)
+Schéma : [image](31-exploitation.svg) · [fichier BPMN](31-exploitation.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Relancer tout seul un service qui plante | Application (automatique) | En partie | Redémarrage automatique des conteneurs prévu ; à vérifier sur le Raspberry |
+| Se reconnecter au réseau (wifi) après une coupure | Application (automatique) | Pas encore | Prévu avec le déploiement |
+| Redémarrer le Raspberry s’il ne répond plus (chien de garde) | Application (automatique) | Pas encore | Prévu avec le déploiement |
+| Remonter l’état du serveur et de chaque service (API, base, sauvegardes, disque, température) | Application (automatique) | Pas encore | Prévu avec le déploiement |
+| Alerter la maintenance (nous) | Application (automatique) | Pas encore | Prévu avec le déploiement |
+| Se connecter à distance et lire l’état (réseau privé, sans port ouvert) | Maintenance (nous) | En partie | Raspberry Pi et accès à distance prévus |
+| Réparer ou intervenir | Maintenance (nous) | Hors application | Depuis chez nous, ou sur place si besoin |
+
+## 32. Sauvegardes et test de restauration
+
+La base est sauvegardée chaque nuit, copiée sur le NAS du client et chez nous, hors du site. Une sauvegarde qu’on n’a jamais restaurée ne vaut rien : la restauration est testée régulièrement.
+
+Schéma : [image](32-exploitation-sauvegardes.svg) · [fichier BPMN](32-exploitation-sauvegardes.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
 | Sauvegarder la base de données (documents compris) | Application (automatique) | Dans l’application | Les PDF, photos et références sont dans la base |
 | Vérifier que la sauvegarde est lisible | Application (automatique) | Dans l’application | Toutes les tables sont contrôlées |
-| Copier la sauvegarde hors de la machine (NAS du client) | Application (automatique) | Pas encore | Prévu avec le déploiement (M3) |
-| Restaurer la base | Maintenance (nous) | Dans l’application | Commande de restauration documentée |
-| Surveiller et alerter (e-mail, supervision) | Application (automatique) | Pas encore | Prévu avec le déploiement (M3) |
-| Se connecter à distance pour la maintenance (réseau privé, sans port ouvert) | Maintenance (nous) | En partie | Raspberry Pi et accès à distance prévus |
-| Installer une nouvelle version, avec retour arrière possible | Maintenance (nous) | Pas encore | Versions et déploiement (tickets D1 à D9) |
+| Copier la sauvegarde sur le NAS du client | Application (automatique) | Pas encore | Prévu avec le déploiement |
+| Copier une sauvegarde chez nous, hors du site (chiffrée) | Application (automatique) | Pas encore | Protège contre un vol, un incendie ou une panne sur place |
+| Tester la restauration : recréer une base depuis la dernière sauvegarde et la comparer | Application (automatique) | En partie | La commande de vérification existe ; il reste à la lancer automatiquement et à alerter si elle échoue |
+| Tester de temps en temps un redémarrage complet de l’application depuis une sauvegarde, sur une autre machine | Maintenance (nous) | Pas encore | Calendrier à fixer |
+| Alerter la maintenance si une copie ou un test échoue | Application (automatique) | Pas encore | Prévu avec le déploiement |
+| Restaurer la base en cas d’incident | Maintenance (nous) | Dans l’application | Commande de restauration documentée |
+
+## 33. Mises à jour du système et de l’application
+
+Le système du Raspberry, les services et les dépendances du front et du back sont tenus à jour sans casser l’application : détection, tests, publication, retour arrière.
+
+Schéma : [image](33-exploitation-mises-a-jour.svg) · [fichier BPMN](33-exploitation-mises-a-jour.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Appliquer les mises à jour de sécurité du système du Raspberry, la nuit | Application (automatique) | Pas encore | Prévu avec le déploiement |
+| Redémarrer et vérifier que tout est reparti | Application (automatique) | Pas encore | Utilise la supervision du serveur |
+| Détecter les dépendances et les images à mettre à jour (front, back) | Application (automatique) | Dans l’application | Dependabot ouvre ses demandes chaque lundi, le bot prévient |
+| Relire, tester (API, composants, parcours complets) et fusionner | Maintenance (nous) | Dans l’application | La CI rejoue tous les tests avant fusion |
+| Publier la nouvelle version et la déployer sur le Raspberry | Maintenance (nous) | Pas encore | Versions et déploiement (tickets D1 à D9) |
+| Contrôler la santé après déploiement et revenir à la version précédente si besoin | Application (automatique) | Pas encore | Retour arrière automatique |

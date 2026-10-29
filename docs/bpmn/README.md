@@ -1,6 +1,6 @@
 # Processus métier en BPMN
 
-Les 29 processus d'Alu Pliage Service, dessinés en BPMN 2.0, pour vérifier avec le client que l'application répond à tout le besoin, et mesurer le gain qu'elle apporte.
+Les 33 processus d'Alu Pliage Service, dessinés en BPMN 2.0, pour vérifier avec le client que l'application répond à tout le besoin, et mesurer le gain qu'elle apporte.
 
 - **À regarder** : les images `.png` (les plus simples à ouvrir dans VS Code) ou `.svg` (un navigateur suffit).
 - **À modifier ou à présenter** : les fichiers `.bpmn`, ouverts avec [bpmn.io](https://demo.bpmn.io) (glisser le fichier dans la page) ou avec l'extension « BPMN Editor » de VS Code.
@@ -33,17 +33,19 @@ Le détail de chaque étape (écran concerné, limite) est dans [couverture.md](
 
 ## Les processus
 
-**Vente et clients** : 1 Demande de contact · 2 Espace client · 3 Configurateur · 4 Devis en ligne · 5 Commande payée en ligne · 6 Commande saisie par la direction · 7 Refus et remboursement
+Les numéros sont ceux des fichiers (`01-contact`, `02-espace-client`…).
 
-**Production** : 8 Fabrication · 9 Livraison et retrait
+**Vente et clients** : 01 Demande de contact · 02 Espace client · 03 Configurateur · 04 Devis en ligne · 05 Commande payée en ligne · 06 Commande saisie par la direction · 07 Refus et remboursement
+
+**Production** : 08 Fabrication · 09 Livraison et retrait
 
 **Stock de feuilles** : 10 Créer une référence · 11 Faire vivre les références (facultatif) · 12 Commande au fournisseur · 13 Réception · 14 Suivi du stock
 
 **Finance** : 15 Facturation · 16 à 23 Statistiques (ventes, audience, finances, atelier, stock, comparateur, alertes, historique)
 
-**Organisation** : 24 Équipe · 25 Paramétrage · 26 Site vitrine · 27 Messages
+**Organisation** : 24 Équipe · 25 Paramétrage · 26 Machines de l'atelier · 27 Site vitrine · 28 Messages aux clients · 29 Notifications de la direction
 
-**Mise en service et exploitation** : 28 Mise en service · 29 Sauvegarde et exploitation
+**Mise en service et exploitation** : 30 Mise en service · 31 Disponibilité du serveur · 32 Sauvegardes et test de restauration · 33 Mises à jour
 
 ## Les modifier
 

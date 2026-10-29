@@ -39,6 +39,8 @@ L'organigramme n'est pas connu, et il est sans doute flou. Il décide des compte
 - **Paiement** : une commande peut-elle partir sans paiement préalable (client professionnel, virement, chèque, paiement à la livraison) ? Si oui, comment est-elle réglée, et qui le constate ? La plateforme ne demande pas à la direction de saisir les paiements : par quoi les remplacer (lecture du relevé bancaire, par exemple) ?
 - **Commande de feuilles** : qui commande, à quel fournisseur, comment (téléphone, e-mail, site) ? Les feuilles arrivent-elles en plusieurs camions ? Combien de références par commande ?
 - **Réception** : qui réceptionne, et sur quel appareil (téléphone, tablette) ? Que fait-on quand le camion apporte moins ou plus que commandé ?
+- **Machines** : combien de machines, de quels types ? Longueur maximale, épaisseur maximale par matière, cadence, pannes fréquentes ? Qui peut les modifier ?
+- **Serveur** : le client a-t-il un NAS (modèle, accès) pour la copie des sauvegardes ? Quel réseau (wifi, câble), quelle coupure de courant ou d'internet est acceptable ? Quelle disponibilité attend-il vraiment ?
 - **Statistiques** : quelles questions voulez-vous poser à vos chiffres ? Quelles données anciennes existent (logiciel de facturation, tableurs) ? Quelles catégories de dépenses voulez-vous suivre ?
 
 ## Chiffres à demander une fois pour toutes
@@ -361,13 +363,15 @@ Schéma : [16-stats-ventes.svg](bpmn/16-stats-ventes.svg) · 4 étapes : 0 dans 
 
 ### 17. Statistiques : audience du site et entonnoir
 
-La direction voit si le site attire et si les visiteurs deviennent clients. Rien n’est mesuré aujourd’hui : la collecte doit commencer dès la mise en production.
+La direction voit si le site attire et si les visiteurs deviennent clients. Rien n’est mesuré aujourd’hui : la collecte doit commencer dès la mise en production. Les robots sont écartés autant que possible ; seule l’action (devis, commande) prouve un vrai client.
 
-Schéma : [17-stats-audience.svg](bpmn/17-stats-audience.svg) · 4 étapes : 0 dans l'application, 0 en partie, 4 pas encore, 0 hors application.
+Schéma : [17-stats-audience.svg](bpmn/17-stats-audience.svg) · 6 étapes : 0 dans l'application, 0 en partie, 6 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
 - Compter les visites et les pages vues, sans cookie ni adresse IP conservée (pas encore)
+- Écarter les robots : agents connus, requêtes sans navigateur réel, volume anormal (pas encore)
+- Distinguer le visiteur anonyme du client connecté à son espace (pas encore)
 - Enregistrer les abandons du configurateur et du panier, les devis refusés ou expirés et leur motif (pas encore)
 - Calculer l’entonnoir : visite, configurateur, devis, commande (pas encore)
 - Lire l’audience et l’entonnoir (pas encore)
@@ -530,11 +534,18 @@ Schéma : [25-parametrage.svg](bpmn/25-parametrage.svg) · 6 étapes : 4 dans l'
 - Quels problèmes (erreurs, retards, oublis) ?
 - Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
 
-### 26. Faire vivre le site vitrine et la boutique
+### 26. Paramétrer les machines de l’atelier
 
-Produits de la boutique, photos, textes du site et alertes de la messagerie. Les pages légales ne se modifient pas : elles suivent les versions de l’application.
+La direction décrit les machines (type, longueur et épaisseur maximales, cadence) : l’application s’en sert pour contrôler la faisabilité d’une pièce et estimer la charge. Les limites réelles sont à recueillir chez le client.
 
-Schéma : [26-site-vitrine.svg](bpmn/26-site-vitrine.svg) · 6 étapes : 5 dans l'application, 0 en partie, 0 pas encore, 1 hors application.
+Schéma : [26-parametrage-machines.svg](bpmn/26-parametrage-machines.svg) · 4 étapes : 0 dans l'application, 0 en partie, 4 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Ajouter ou modifier une machine : type, longueur maximale, épaisseur par matière, cadence (pas encore)
+- Mettre une machine hors service (panne, maintenance) ou la retirer (pas encore)
+- Appliquer les limites des machines au contrôle du configurateur (pas encore)
+- Calculer la capacité par jour pour la date estimée (pas encore)
 
 À demander au client :
 
@@ -543,18 +554,49 @@ Schéma : [26-site-vitrine.svg](bpmn/26-site-vitrine.svg) · 6 étapes : 5 dans 
 - Quels problèmes (erreurs, retards, oublis) ?
 - Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
 
-### 27. Messages envoyés par l’application
+### 27. Faire vivre le site vitrine et la boutique
 
-Les messages automatiques : par e-mail pour les clients, qui ne se connectent pas souvent ; dans la plateforme, en un seul endroit, pour la direction. Jamais de publicité, jamais de document joint, jamais de mot de passe.
+Produits de la boutique, photos, textes du site et alertes de la messagerie. Les pages légales ne se modifient pas : elles suivent les versions de l’application.
 
-Schéma : [27-messages.svg](bpmn/27-messages.svg) · 9 étapes : 5 dans l'application, 2 en partie, 2 pas encore, 0 hors application.
+Schéma : [27-site-vitrine.svg](bpmn/27-site-vitrine.svg) · 6 étapes : 5 dans l'application, 0 en partie, 0 pas encore, 1 hors application.
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 28. Messages envoyés aux clients
+
+Les e-mails automatiques envoyés aux clients, qui ne se connectent pas souvent à leur espace : à quel moment, avec quelles règles. Jamais de publicité, jamais de document joint, jamais de mot de passe. La direction, elle, est notifiée dans la plateforme (voir « Notifications de la direction »).
+
+Schéma : [28-messages.svg](bpmn/28-messages.svg) · 5 étapes : 4 dans l'application, 0 en partie, 1 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
 - Commande prête, accusé de réception d’une demande de contact (pas encore)
-- Notifier la direction dans la plateforme (commande, contact, devis) (en partie)
-- Lire la notification et ouvrir la commande ou la demande (en partie)
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 29. Notifications de la direction
+
+Tout ce qui concerne la direction arrive dans la plateforme, en un seul endroit, pour chaque compte qui en a le droit. Un clic ouvre la page où traiter la demande. Si trop de notifications restent non lues, un e-mail d’alerte part.
+
+Schéma : [29-notifications.svg](bpmn/29-notifications.svg) · 6 étapes : 1 dans l'application, 1 en partie, 4 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Créer la notification pour chaque compte de la direction qui en a le droit (en partie)
 - Envoyer un e-mail d’alerte à la direction si trop de notifications restent non lues (pas encore)
+- Voir le nombre de notifications non lues dans le menu (pas encore)
+- Ouvrir la notification : arriver directement sur la page à traiter (pas encore)
+- Marquer la notification comme lue, puis traitée (pas encore)
 
 À demander au client :
 
@@ -565,11 +607,11 @@ Schéma : [27-messages.svg](bpmn/27-messages.svg) · 9 étapes : 5 dans l'applic
 
 ## Mise en service et exploitation
 
-### 28. Mise en service chez un client
+### 30. Mise en service chez un client
 
 Ce que nous installons et ce que le client renseigne avant de s’en servir : entreprise, numérotation, tarifs, équipe, références, stock de départ, site.
 
-Schéma : [28-mise-en-service.svg](bpmn/28-mise-en-service.svg) · 11 étapes : 7 dans l'application, 2 en partie, 1 pas encore, 1 hors application.
+Schéma : [30-mise-en-service.svg](bpmn/30-mise-en-service.svg) · 11 étapes : 7 dans l'application, 2 en partie, 1 pas encore, 1 hors application.
 
 À développer ou à compléter :
 
@@ -584,18 +626,61 @@ Schéma : [28-mise-en-service.svg](bpmn/28-mise-en-service.svg) · 11 étapes : 
 - Quels problèmes (erreurs, retards, oublis) ?
 - Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
 
-### 29. Sauvegarde et exploitation
+### 31. Disponibilité et supervision du serveur
 
-La sécurité des données et la maintenance au quotidien, sur le serveur du client.
+Le serveur du client (un Raspberry Pi) doit rester disponible : il relance seul ses services, se reconnecte au réseau, et remonte son état. La maintenance s’y connecte à distance. Un seul Raspberry ne garantit pas 100 % (coupure de courant, d’internet) : la disponibilité visée est à fixer avec le client.
 
-Schéma : [29-exploitation.svg](bpmn/29-exploitation.svg) · 7 étapes : 3 dans l'application, 1 en partie, 3 pas encore, 0 hors application.
+Schéma : [31-exploitation.svg](bpmn/31-exploitation.svg) · 7 étapes : 0 dans l'application, 2 en partie, 4 pas encore, 1 hors application.
 
 À développer ou à compléter :
 
-- Copier la sauvegarde hors de la machine (NAS du client) (pas encore)
-- Surveiller et alerter (e-mail, supervision) (pas encore)
-- Se connecter à distance pour la maintenance (réseau privé, sans port ouvert) (en partie)
-- Installer une nouvelle version, avec retour arrière possible (pas encore)
+- Relancer tout seul un service qui plante (en partie)
+- Se reconnecter au réseau (wifi) après une coupure (pas encore)
+- Redémarrer le Raspberry s’il ne répond plus (chien de garde) (pas encore)
+- Remonter l’état du serveur et de chaque service (API, base, sauvegardes, disque, température) (pas encore)
+- Alerter la maintenance (nous) (pas encore)
+- Se connecter à distance et lire l’état (réseau privé, sans port ouvert) (en partie)
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 32. Sauvegardes et test de restauration
+
+La base est sauvegardée chaque nuit, copiée sur le NAS du client et chez nous, hors du site. Une sauvegarde qu’on n’a jamais restaurée ne vaut rien : la restauration est testée régulièrement.
+
+Schéma : [32-exploitation-sauvegardes.svg](bpmn/32-exploitation-sauvegardes.svg) · 8 étapes : 3 dans l'application, 1 en partie, 4 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Copier la sauvegarde sur le NAS du client (pas encore)
+- Copier une sauvegarde chez nous, hors du site (chiffrée) (pas encore)
+- Tester la restauration : recréer une base depuis la dernière sauvegarde et la comparer (en partie)
+- Tester de temps en temps un redémarrage complet de l’application depuis une sauvegarde, sur une autre machine (pas encore)
+- Alerter la maintenance si une copie ou un test échoue (pas encore)
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 33. Mises à jour du système et de l’application
+
+Le système du Raspberry, les services et les dépendances du front et du back sont tenus à jour sans casser l’application : détection, tests, publication, retour arrière.
+
+Schéma : [33-exploitation-mises-a-jour.svg](bpmn/33-exploitation-mises-a-jour.svg) · 6 étapes : 2 dans l'application, 0 en partie, 4 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Appliquer les mises à jour de sécurité du système du Raspberry, la nuit (pas encore)
+- Redémarrer et vérifier que tout est reparti (pas encore)
+- Publier la nouvelle version et la déployer sur le Raspberry (pas encore)
+- Contrôler la santé après déploiement et revenir à la version précédente si besoin (pas encore)
 
 À demander au client :
 
