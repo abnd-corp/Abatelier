@@ -58,6 +58,19 @@ export interface MailApercu {
   html: string
 }
 
+export interface MailModele {
+  id: string
+  titre: string
+  audience: 'client' | 'equipe'
+}
+export interface MailApercu {
+  id: string
+  titre: string
+  sujet: string
+  texte: string
+  html: string
+}
+
 export const EMPLACEMENTS: { value: Emplacement; label: string; aide: string }[] = [
   { value: 'accueil', label: 'Accueil (grande photo)', aide: 'La première photo s’affiche à côté du titre de la page d’accueil.' },
   { value: 'realisation', label: 'Réalisations', aide: 'Galerie « Quelques réalisations » de l’accueil.' },
