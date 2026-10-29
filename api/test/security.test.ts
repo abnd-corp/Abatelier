@@ -35,6 +35,11 @@ const PUBLIC = [
   'POST /api/espace/inscription',
   'POST /api/espace/connexion',
   'POST /api/espace/deconnexion',
+  // Liens à usage unique : le jeton reçu par e-mail fait foi, vérifié et consommé par le serveur
+  'POST /api/espace/mot-de-passe-oublie',
+  'POST /api/espace/jeton/verification',
+  'POST /api/espace/nouveau-mot-de-passe',
+  'POST /api/espace/activation',
   'GET /api/espace/session',
 ]
 const UUID = '00000000-0000-4000-8000-000000000000'

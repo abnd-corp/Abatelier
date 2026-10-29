@@ -1,4 +1,4 @@
-import { apiLogin, createUser, expect, mailPart, NEW_PASSWORD, test, waitForMail } from './fixtures'
+import { apiLogin, createUser, expect, NEW_PASSWORD, test, waitForMail } from './fixtures'
 
 test.describe('Devis et factures', () => {
   test('la direction fait un devis, facture la commande, encaisse puis annule par un avoir', async ({ adminPage: page, baseURL, uid }) => {
@@ -96,7 +96,7 @@ test.describe('Devis et factures', () => {
     await expect(page.getByRole('cell', { name: new RegExp(`A émis l’avoir ${avoir} qui annule la facture ${facture}`) })).toBeVisible()
   })
 
-  test('la direction envoie la facture au client par e-mail, avec le PDF en pièce jointe', async ({ adminPage: page, baseURL, uid }) => {
+  test('la direction envoie la facture au client par e-mail, sans pièce jointe : il la retrouve dans son espace client', async ({ adminPage: page, baseURL, uid }) => {
     const headers = { Origin: baseURL! }
     const nom = `Mail${uid.slice(-6)}`
     const email = `${uid}@exemple.fr`
@@ -124,15 +124,17 @@ test.describe('Devis et factures', () => {
     await page.getByLabel('Destinataire(s)').fill(email)
     await page.getByLabel('Objet').fill(`Facture ${facture.numero} pour ${uid}`)
     await page.getByRole('button', { name: 'Envoyer', exact: true }).click()
-    await expect(page.getByText('E-mail envoyé avec le PDF en pièce jointe.')).toBeVisible()
+    await expect(page.getByText('E-mail envoyé : le client retrouve le document dans son espace client.')).toBeVisible()
     await expect(page.getByText('Envoyée').first()).toBeVisible()
 
-    // Le message est arrivé, avec la facture en PDF
+    // Le message est arrivé, sans aucune pièce jointe : ce client n'a pas encore d'espace, le bouton l'invite à l'activer
     const mail = await waitForMail(page.request, uid)
     expect(mail.To.map((a) => a.Address)).toEqual([email])
-    expect(mail.Attachments).toHaveLength(1)
-    expect(mail.Attachments[0]).toMatchObject({ FileName: `${facture.numero}.pdf`, ContentType: 'application/pdf' })
-    expect((await mailPart(page.request, mail, mail.Attachments[0]!.PartID)).subarray(0, 5).toString()).toBe('%PDF-')
+    expect(mail.Attachments).toHaveLength(0)
+    expect(mail.Text).toContain(facture.numero)
+    expect(mail.Text).toMatch(/\/espace\/mot-de-passe-oublie/)
+    expect(mail.HTML).toContain('Activer mon espace client')
+    expect(mail.HTML).toContain('Pour votre sécurité.')
 
     await page.goto('/journal')
     await page.getByRole('button', { name: 'Devis et factures', exact: true }).click()

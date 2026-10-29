@@ -211,6 +211,13 @@
       "when": 1793192550246,
       "tag": "0029_violet_whirlwind",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793202765213,
+      "tag": "0030_minor_skin",
+      "breakpoints": true
     }
   ]
 }

@@ -217,11 +217,15 @@ describe('Envoi d’un devis ou d’une facture', () => {
     mailOn()
     const d = await doc('devis')
     const res = (await direction.get(`/api/billing/${d.id}/email`)).json()
-    expect(res).toMatchObject({ configure: true, to: 'jean@example.com', fichier: `${d.numero}.pdf` })
+    expect(res).toMatchObject({ configure: true, to: 'jean@example.com', espace: false })
+    // Jamais de pièce jointe
+    expect(res).not.toHaveProperty('fichier')
     expect(res.sujet).toBe(`Devis ${d.numero} — Alu Pliage Service`)
     expect(res.message).toContain('Bonjour Jean Dupont,')
-    expect(res).toMatchObject({ espace: false })
-    expect(res.message).toContain(`Votre devis ${d.numero} se trouve en pièce jointe`)
+    // Pas encore d'espace : il l'active avec son adresse e-mail
+    expect(res.message).toContain(`Votre devis ${d.numero} est disponible dans votre espace client`)
+    expect(res.message).toContain('activez-le avec cette adresse e-mail : http://atelier.test/espace/mot-de-passe-oublie')
+    expect(res.message).not.toContain('pièce jointe')
     expect(res.message).toMatch(/valable jusqu’au \d{2}\/\d{2}\/\d{4}/)
     expect(res.message).toContain('Cordialement')
   })
@@ -234,9 +238,9 @@ describe('Envoi d’un devis ou d’une facture', () => {
       await ouvrirEspace()
       const d = await doc('devis')
       const res = (await direction.get(`/api/billing/${d.id}/email`)).json()
-      expect(res).toMatchObject({ configure: true, fichier: null, espace: true })
-      expect(res.message).toContain(`Votre devis ${d.numero} est disponible dans votre espace client`)
-      expect(res.message).toContain('http://atelier.test/espace')
+      expect(res).toMatchObject({ configure: true, espace: true })
+      expect(res).not.toHaveProperty('fichier')
+      expect(res.message).toContain(`Votre devis ${d.numero} est disponible dans votre espace client, après connexion : http://atelier.test/espace`)
       expect(res.message).not.toContain('pièce jointe')
     })
 
@@ -249,8 +253,9 @@ describe('Envoi d’un devis ou d’une facture', () => {
       const mail = sent[0]!
       expect(mail.attachments).toBeUndefined()
       expect(mail.html).toContain('Consulter ma facture')
-      expect(mail.html).toContain('Accéder à mon espace client')
       expect(mail.html).toContain('href="http://atelier.test/espace"')
+      // Un seul lien vers l'espace : le bouton, pas un second lien identique dessous
+      expect(mail.html).not.toContain('Accéder à mon espace client →')
       expect(mail.html).toContain(f.numero)
       // Le client est « envoyé » comme avant
       const [row] = await db.select().from(billingDocuments).where(eq(billingDocuments.id, f.id))
@@ -271,14 +276,16 @@ describe('Envoi d’un devis ou d’une facture', () => {
     })
   })
 
-  it('sans espace client, le rappel de sécurité ne promet pas de retrouver les documents en ligne', async () => {
+  it('sans espace client non plus, aucune pièce jointe : le bouton invite à activer son espace avec son adresse e-mail', async () => {
     mailOn()
     const f = await doc('facture')
-    await direction.post(`/api/billing/${f.id}/email`, { to: 'jean@example.com', sujet: `Facture ${f.numero}`, message: 'Bonjour.' })
-    const { html } = sent[0]!
-    expect(html).toContain('ni votre numéro de carte par e-mail')
-    expect(html).not.toContain('se consultent dans votre espace client')
-    expect(html).not.toContain('Accéder à mon espace client')
+    const res = await direction.post(`/api/billing/${f.id}/email`, { to: 'jean@example.com', sujet: `Facture ${f.numero}`, message: 'Bonjour.' })
+    expect(res.statusCode, res.body).toBe(200)
+    const mail = sent[0]!
+    expect(mail.attachments).toBeUndefined()
+    expect(mail.html).toContain('Activer mon espace client')
+    expect(mail.html).toContain('href="http://atelier.test/espace/mot-de-passe-oublie"')
+    expect(mail.html).toContain('ni votre numéro de carte par e-mail')
   })
 
   it('met l’IBAN dans le message d’une facture quand il est renseigné', async () => {
@@ -303,7 +310,7 @@ describe('Envoi d’un devis ou d’une facture', () => {
     expect(res.message).toContain(`référence`)
   })
 
-  it('envoie le PDF en pièce jointe, marque le document comme envoyé et le note', async () => {
+  it('envoie le message sans pièce jointe, marque le document comme envoyé et le note', async () => {
     mailOn()
     const f = await doc('facture')
     const res = await direction.post(`/api/billing/${f.id}/email`, { to: 'jean@example.com, compta@example.com', sujet: `Facture ${f.numero}`, message: 'Bonjour, voici la facture.' })
@@ -311,9 +318,8 @@ describe('Envoi d’un devis ou d’une facture', () => {
     expect(sent).toHaveLength(1)
     const mail = sent[0]!
     expect(mail.to).toEqual(['jean@example.com', 'compta@example.com'])
-    expect(mail.attachments).toHaveLength(1)
-    expect(mail.attachments![0]).toMatchObject({ filename: `${f.numero}.pdf`, contentType: 'application/pdf' })
-    expect(mail.attachments![0]!.content.subarray(0, 5).toString()).toBe('%PDF-')
+    // Aucun document ne circule par e-mail
+    expect(mail.attachments).toBeUndefined()
     const [row] = await db.select().from(billingDocuments).where(eq(billingDocuments.id, f.id))
     expect(row!.envoyeLe).not.toBeNull()
     expect((await direction.get(`/api/billing/${f.id}`)).json().document.statut).toBe('envoyee')
@@ -432,7 +438,21 @@ describe('Mise en page et aperçu', () => {
     const liste = await direction.get('/api/mail/apercu')
     expect(liste.statusCode).toBe(200)
     const ids = liste.json().modeles.map((m: { id: string }) => m.id)
-    expect(ids).toEqual(['commande-confirmee', 'commande-refusee', 'devis', 'facture', 'alerte-commande', 'alerte-contact', 'essai'])
+    expect(ids).toEqual([
+      'commande-confirmee',
+      'commande-refusee',
+      'bienvenue',
+      'activation',
+      'mot-de-passe-oublie',
+      'mot-de-passe-modifie',
+      'devis',
+      'facture',
+      'alerte-commande',
+      'alerte-devis',
+      'alerte-reponse',
+      'alerte-contact',
+      'essai',
+    ])
     expect((await visitor.get('/api/mail/apercu')).statusCode).toBe(401)
     await createUser({ identifiant: 'plieur', role: 'atelier' })
     const atelier = await loginAs(app, 'plieur')

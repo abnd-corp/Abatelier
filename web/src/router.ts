@@ -146,6 +146,18 @@ export const router = createRouter({
           meta: { public: true, site: true, noindex: true, espace: 'invite', title: 'Connexion à mon espace client' },
         },
         {
+          path: 'espace/mot-de-passe-oublie',
+          name: 'espace-mot-de-passe-oublie',
+          component: () => import('@/views/site/EspaceMotDePasseOublieView.vue'),
+          meta: { public: true, site: true, noindex: true, title: 'Mot de passe oublié' },
+        },
+        {
+          path: 'espace/nouveau-mot-de-passe',
+          name: 'espace-nouveau-mot-de-passe',
+          component: () => import('@/views/site/EspaceNouveauMotDePasseView.vue'),
+          meta: { public: true, site: true, noindex: true, title: 'Choisir mon mot de passe' },
+        },
+        {
           path: 'espace/inscription',
           name: 'espace-inscription',
           component: () => import('@/views/site/EspaceAuthView.vue'),

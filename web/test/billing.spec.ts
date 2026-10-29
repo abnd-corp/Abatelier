@@ -370,7 +370,14 @@ describe('Export pour le comptable', () => {
 })
 
 describe('Envoi par e-mail', () => {
-  const PROPOSAL = { configure: true, to: 'jean@example.com', sujet: 'Facture F-2026-0001 — Alu Pliage Service', message: 'Bonjour Jean,\n\nVoici la facture.', fichier: 'F-2026-0001.pdf' }
+  const PROPOSAL = {
+    configure: true,
+    espace: false,
+    to: 'jean@example.com',
+    sujet: 'Facture F-2026-0001 — Alu Pliage Service',
+    message: 'Bonjour Jean,\n\nVoici la facture.',
+    fichier: 'F-2026-0001.pdf',
+  }
   const open = async (routes: Parameters<typeof mockApi>[0] = {}, proposal: object = PROPOSAL) => {
     const res = await mountAt(BillingDocView, '/factures/f1', { 'GET /billing/f1': [200, detail()], 'GET /billing/f1/email': [200, proposal], ...routes })
     await button(res.wrapper, 'Envoyer par e-mail')!.trigger('click')
@@ -378,10 +385,10 @@ describe('Envoi par e-mail', () => {
     return res
   }
 
-  it('n’annonce aucune pièce jointe quand le client a un espace client : le message renvoie vers cet espace', async () => {
-    const { wrapper } = await open({}, { ...PROPOSAL, fichier: null, espace: true })
-    expect(wrapper.text()).not.toContain('Pièce jointe')
-    expect(wrapper.text()).toContain('Aucune pièce jointe : le message renvoie vers l’espace client')
+  it('n’annonce aucune pièce jointe, et ne propose pas d’activer l’espace d’un client qui en a déjà un', async () => {
+    const { wrapper } = await open({}, { ...PROPOSAL, espace: true })
+    expect(wrapper.text()).toContain('Aucune pièce jointe : le document se retrouve dans l’espace client.')
+    expect(wrapper.text()).not.toContain('Ce client n’en a pas encore')
   })
 
   it('propose le message prêt à envoyer, puis envoie avec les champs modifiés', async () => {
@@ -389,8 +396,8 @@ describe('Envoi par e-mail', () => {
     expect((wrapper.get('#mail-to').element as HTMLInputElement).value).toBe('jean@example.com')
     expect((wrapper.get('#mail-subject').element as HTMLInputElement).value).toBe(PROPOSAL.sujet)
     expect((wrapper.get('#mail-message').element as HTMLTextAreaElement).value).toContain('Voici la facture.')
-    expect(wrapper.text()).toContain('Pièce jointe : F-2026-0001.pdf')
-    expect(wrapper.text()).toContain('Ce client n’a pas d’espace client : le document est joint au message')
+    expect(wrapper.text()).toContain('Aucune pièce jointe : le document se retrouve dans l’espace client.')
+    expect(wrapper.text()).toContain('Ce client n’en a pas encore : le message lui explique comment l’activer avec son adresse e-mail.')
     await wrapper.get('#mail-to').setValue('jean@example.com, compta@example.com')
     await wrapper.get('#mail-message').setValue('Bonjour, voici la facture à régler.')
     await wrapper.get('form.inline-form').trigger('submit')
@@ -399,7 +406,7 @@ describe('Envoi par e-mail', () => {
       path: '/billing/f1/email',
       body: { to: 'jean@example.com, compta@example.com', sujet: PROPOSAL.sujet, message: 'Bonjour, voici la facture à régler.' },
     })
-    expect(wrapper.text()).toContain('E-mail envoyé avec le PDF en pièce jointe.')
+    expect(wrapper.text()).toContain('E-mail envoyé : le client retrouve le document dans son espace client.')
     expect(wrapper.find('form.inline-form').exists()).toBe(false)
   })
 

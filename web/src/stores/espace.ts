@@ -34,6 +34,12 @@ export const useEspaceStore = defineStore('espace', () => {
     loaded.value = true
   }
 
+  /** Active l'espace d'une fiche existante avec le lien reçu par e-mail : le client choisit son mot de passe et se retrouve connecté. */
+  async function activer(jeton: string, password: string) {
+    compte.value = (await api<{ compte: Compte }>('/espace/activation', { method: 'POST', body: { jeton, password } })).compte
+    loaded.value = true
+  }
+
   async function deconnecter() {
     await api('/espace/deconnexion', { method: 'POST' }).catch(() => {})
     compte.value = null
@@ -57,5 +63,5 @@ export const useEspaceStore = defineStore('espace', () => {
     compte.value = null
   }
 
-  return { compte, loaded, isLoggedIn, ensureLoaded, inscrire, connecter, deconnecter, fermer, modifierProfil, forget }
+  return { compte, loaded, isLoggedIn, ensureLoaded, inscrire, connecter, activer, deconnecter, fermer, modifierProfil, forget }
 })

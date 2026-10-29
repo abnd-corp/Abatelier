@@ -110,7 +110,11 @@ export function renderMail(i: MailLayoutInput): { html: string } {
   const button = i.action
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 14px;"><tr><td style="background:${color};border-radius:8px;"><a href="${esc(i.action.url)}" style="display:inline-block;padding:13px 28px;${font}font-size:16px;font-weight:bold;color:${on};text-decoration:none;">${esc(i.action.label)}</a></td></tr></table>`
     : ''
-  const espace = i.espace ? `<p style="margin:0 0 20px;${font}font-size:14px;"><a href="${esc(i.espace)}" style="color:${color};font-weight:bold;">Accéder à mon espace client →</a></p>` : ''
+  // Pas de second lien vers la même adresse que le bouton
+  const espace =
+    i.espace && i.espace !== i.action?.url
+      ? `<p style="margin:0 0 20px;${font}font-size:14px;"><a href="${esc(i.espace)}" style="color:${color};font-weight:bold;">Accéder à mon espace client →</a></p>`
+      : ''
   const securite =
     i.audience === 'equipe'
       ? ''

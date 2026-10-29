@@ -108,8 +108,7 @@ interface MailProposal {
   to: string
   sujet: string
   message: string
-  /** Nom du PDF joint ; null quand le client a un espace client et retrouve le document en ligne */
-  fichier: string | null
+  /** Le client a-t-il déjà un espace client ? Sinon le message lui explique comment l'activer avec son adresse e-mail. */
   espace?: boolean
 }
 const mail = ref<MailProposal | null>(null)
@@ -130,7 +129,7 @@ const openMail = async () => {
   mailMessage.value = mail.value.message
   form.value = 'email'
 }
-const sendMail = () => act('email', { to: mailTo.value, sujet: mailSubject.value, message: mailMessage.value }, 'E-mail envoyé avec le PDF en pièce jointe.')
+const sendMail = () => act('email', { to: mailTo.value, sujet: mailSubject.value, message: mailMessage.value }, 'E-mail envoyé : le client retrouve le document dans son espace client.')
 
 const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer envoyée'))
 </script>
@@ -247,11 +246,10 @@ const sendLabel = computed(() => (isDevis.value ? 'Marquer envoyé' : 'Marquer e
           <textarea id="mail-message" v-model="mailMessage" class="input" rows="10" :aria-invalid="actionError?.field === 'message' || undefined" aria-describedby="mail-error-message" />
           <p v-if="actionError?.field === 'message'" id="mail-error-message" class="field-error" role="alert">{{ actionError.msg }}</p>
         </div>
-        <p v-if="mail.fichier" class="muted small">
-          <AppIcon name="file" :size="14" /> Pièce jointe : {{ mail.fichier }}<br />
-          Ce client n’a pas d’espace client : le document est joint au message. Avec un espace client, il le retrouverait en ligne, sans pièce jointe.
+        <p class="muted small">
+          <AppIcon name="shield" :size="14" /> Aucune pièce jointe : le document se retrouve dans l’espace client.
+          <template v-if="mail.espace === false">Ce client n’en a pas encore : le message lui explique comment l’activer avec son adresse e-mail.</template>
         </p>
-        <p v-else class="muted small"><AppIcon name="shield" :size="14" /> Aucune pièce jointe : le message renvoie vers l’espace client du client, où il retrouve le document après connexion.</p>
         <div class="actions">
           <button class="btn primary" type="submit" :disabled="busy || !mail.configure || !mailTo.trim() || !mailMessage.trim()">
             <AppIcon name="mail" :size="16" />{{ busy ? 'Envoi…' : 'Envoyer' }}

@@ -12,6 +12,8 @@ let direction: Client
 let visitor: Client
 let ids: { couvertine: string; v1: string; v2: string; cachee: string; bavette: string; vb: string }
 const mailSent: Parameters<Transport['sendMail']>[0][] = []
+/** Les messages de la commande : sans le message de bienvenue, envoyé à la création de l'espace client. */
+const commandeMails = () => mailSent.filter((m) => !m.subject.startsWith('Bienvenue'))
 
 beforeEach(async () => {
   app = await buildApp()
@@ -227,9 +229,9 @@ describe('Payer son panier', () => {
     expect(p).toMatchObject({ id: paymentId, statut: 'paye', orderId: order.id })
     expect(p!.paidAt).not.toBeNull()
     const to = (m: (typeof mailSent)[number]) => m.to.join()
-    expect(mailSent.map(to).sort()).toEqual(['direction@aps.test', 'jean@example.com'])
-    expect(mailSent.find((m) => to(m) === 'jean@example.com')!.subject).toContain(order.numero)
-    expect(mailSent.find((m) => to(m) === 'direction@aps.test')!.text).toMatch(/déjà validée.*vous pouvez la refuser/s)
+    expect(commandeMails().map(to).sort()).toEqual(['direction@aps.test', 'jean@example.com'])
+    expect(commandeMails().find((m) => to(m) === 'jean@example.com')!.subject).toContain(order.numero)
+    expect(commandeMails().find((m) => to(m) === 'direction@aps.test')!.text).toMatch(/déjà validée.*vous pouvez la refuser/s)
     expect((await entries('boutique.payment_confirmed'))[0]).toMatchObject({ targetId: order.id, userId: null })
     // Le client la voit dans son espace, avec son paiement
     const detail = (await c.get(`/api/espace/commandes/${order.id}`)).json()
@@ -623,8 +625,8 @@ describe('Commande sur mesure payée depuis le configurateur', () => {
     const suivi = (await c.get(`/api/espace/commandes/${o!.id}`)).json()
     expect(suivi.commande).toMatchObject({ kind: 'sur_mesure', statut: 'fabrication' })
     expect(suivi.paiement).toMatchObject({ statut: 'paye' })
-    expect(mailSent.map((m) => m.subject)).toEqual([expect.stringContaining('Commande sur mesure payée'), expect.stringContaining('est confirmée')])
-    expect(mailSent[0]!.text).toContain('depuis le configurateur')
+    expect(commandeMails().map((m) => m.subject)).toEqual([expect.stringContaining('Commande sur mesure payée'), expect.stringContaining('est confirmée')])
+    expect(commandeMails()[0]!.text).toContain('depuis le configurateur')
     expect(await entries('boutique.payment_confirmed')).toHaveLength(1)
   })
 
