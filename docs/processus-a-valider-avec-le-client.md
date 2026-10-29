@@ -21,6 +21,18 @@ Les schémas sont dans [bpmn/](bpmn/) (BPMN 2.0, fichiers `.bpmn` et images `.sv
 - Quelle est la saisie faite en double (recopier d'un outil à l'autre) ?
 - Y a-t-il des étapes que nous n'avons pas dessinées ?
 
+## Qui fait quoi chez eux (à clarifier en premier)
+
+L'organigramme n'est pas connu, et il est sans doute flou. Il décide des comptes et des droits, donc de plusieurs choix de l'application.
+
+- Combien de personnes dirigent, et se partagent-elles les mêmes informations ?
+- Chacune aura-t-elle son compte, ou plusieurs partageront-elles le même ? (Un compte par personne garde la trace de qui a fait quoi : annulation, avoir, remboursement.)
+- Qui reçoit quelles notifications (commandes, demandes de contact, devis, stock bas) ? Tous les mêmes, ou selon le rôle ?
+- Une notification lue par l'un est-elle lue pour l'autre ?
+- À partir de combien de notifications non lues faut-il un e-mail d'alerte ?
+- Qui est à l'atelier, qui fait l'administratif, qui fait la comptabilité ? Qui remplace qui en cas d'absence ?
+- Qui décide de l'exception : annuler une commande, rembourser, refuser, valider un statut professionnel qu'aucun annuaire ne confirme ?
+
 ## Chiffres à demander une fois pour toutes
 
 - Coût horaire chargé de la direction, de l'atelier, de l'administratif.
