@@ -182,6 +182,20 @@ export const router = createRouter({
     },
     // Atelier (équipe)
     { path: '/connexion', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { public: true, title: 'Connexion' } },
+    // Le plan graphique (direction) occupe toute la page : ni menu ni fil d'ariane, seulement un bouton pour revenir
+    {
+      path: '/plan-atelier',
+      name: 'plan-atelier',
+      component: () => import('@/views/PlanAtelierView.vue'),
+      meta: { perm: 'plan.read', title: 'Plan de l’atelier' },
+    },
+    // L'écran de l'atelier est une page à part, ouverte à tout compte connecté : le tableau des commandes, en grand et en lecture seule
+    {
+      path: '/ecran-atelier',
+      name: 'ecran-atelier',
+      component: () => import('@/views/EcranAtelierView.vue'),
+      meta: { title: 'Écran de l’atelier' },
+    },
     {
       path: '/',
       component: () => import('@/components/AppLayout.vue'),

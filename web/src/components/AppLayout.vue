@@ -161,6 +161,15 @@ async function logout() {
           <AppIcon name="globe" :size="19" />
           <span class="label">Voir le site</span>
         </RouterLink>
+        <!-- Deux pages à part, qui s'ouvrent dans un nouvel onglet : la vue graphique de l'application (direction) et l'écran des commandes de l'atelier -->
+        <RouterLink v-if="auth.can('plan.read')" :to="{ name: 'plan-atelier' }" class="item" :title="collapsed ? 'Plan graphique' : undefined" target="_blank" rel="noopener">
+          <AppIcon name="map-pin" :size="19" />
+          <span class="label">Plan graphique</span>
+        </RouterLink>
+        <RouterLink :to="{ name: 'ecran-atelier' }" class="item" :title="collapsed ? 'Écran de l’atelier' : undefined" target="_blank" rel="noopener">
+          <AppIcon name="layers" :size="19" />
+          <span class="label">Écran de l’atelier</span>
+        </RouterLink>
         <button class="item" type="button" aria-label="Se déconnecter" :title="collapsed ? 'Se déconnecter' : undefined" @click="logout">
           <AppIcon name="logout" :size="19" />
           <span class="label">Se déconnecter</span>

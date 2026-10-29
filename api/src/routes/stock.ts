@@ -91,6 +91,18 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
 // les quantités, les mouvements et la réception restent à l'atelier.
 const DEFINITION = new Set(['GET /options', 'GET /feuilles', 'POST /feuilles', 'POST /feuilles/:id/archive', 'POST /feuilles/:id/unarchive', 'GET /codes/:code', 'POST /codes', 'DELETE /codes/:code'])
 
+export const libelle = (r: { matiere: string; epaisseur: number; coloris: string | null; reference: string | null; largeur: number; longueur: number; chute: boolean }) =>
+  `${materialLabel({ nom: r.matiere, epaisseur: r.epaisseur })} · ${r.coloris ? colorLabel({ nom: r.coloris, reference: r.reference! }) : 'brut'} · ${fmt(r.largeur)} × ${fmt(r.longueur)} mm${r.chute ? ' (chute)' : ''}`
+// État visuel à 4 niveaux (R7) : vide (plus aucune feuille), critique (à moins de la moitié du seuil),
+// bas (au seuil ou sous lui) et ok. Sans seuil réglé (0), seul le niveau vide reste détecté.
+export const etatOf = (seuil: number, quantite: number): 'vide' | 'critique' | 'bas' | 'ok' => {
+  if (quantite <= 0) return 'vide'
+  if (seuil <= 0) return 'ok'
+  if (quantite <= Math.ceil(seuil / 2)) return 'critique'
+  if (quantite <= seuil) return 'bas'
+  return 'ok'
+}
+
 export async function stockRoutes(app: FastifyInstance) {
   app.addHook('preHandler', async (req, reply) => {
     const route = `${req.method} ${(req.routeOptions.url ?? '').replace(/^\/api\/stock/, '')}`
@@ -121,17 +133,6 @@ export async function stockRoutes(app: FastifyInstance) {
       .leftJoin(colors, eq(colors.id, sheetStock.colorId))
 
   type Row = Awaited<ReturnType<typeof base>>[number]
-  const libelle = (r: Pick<Row, 'matiere' | 'epaisseur' | 'coloris' | 'reference' | 'largeur' | 'longueur' | 'chute'>) =>
-    `${materialLabel({ nom: r.matiere, epaisseur: r.epaisseur })} · ${r.coloris ? colorLabel({ nom: r.coloris, reference: r.reference! }) : 'brut'} · ${fmt(r.largeur)} × ${fmt(r.longueur)} mm${r.chute ? ' (chute)' : ''}`
-  // État visuel à 4 niveaux (R7) : vide (plus aucune feuille), critique (à moins de la moitié du seuil),
-  // bas (au seuil ou sous lui) et ok. Sans seuil réglé (0), seul le niveau vide reste détecté.
-  const etatOf = (seuil: number, quantite: number): 'vide' | 'critique' | 'bas' | 'ok' => {
-    if (quantite <= 0) return 'vide'
-    if (seuil <= 0) return 'ok'
-    if (quantite <= Math.ceil(seuil / 2)) return 'critique'
-    if (quantite <= seuil) return 'bas'
-    return 'ok'
-  }
   const out = ({ archivedAt, ...r }: Row) => ({ ...r, archivee: archivedAt !== null, libelle: libelle(r), bas: r.seuil > 0 && r.quantite <= r.seuil, etat: etatOf(r.seuil, r.quantite) })
   const ARCHIVEE = 'Cette référence est archivée : désarchivez-la pour l’utiliser.'
 

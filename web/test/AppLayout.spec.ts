@@ -64,6 +64,25 @@ describe('Menu latéral', () => {
     expect(sections()).toEqual(['Atelier'])
   })
 
+  it('met le plan graphique (direction) et l’écran de l’atelier sous « Voir le site », dans un nouvel onglet', async () => {
+    const lien = (wrapper: Awaited<ReturnType<typeof setup>>['wrapper'], nom: string) => wrapper.findAll('a').find((a) => a.text() === nom)
+    const direction = await setup(ADMIN)
+    for (const [nom, href] of [
+      ['Plan graphique', '/plan-atelier'],
+      ['Écran de l’atelier', '/ecran-atelier'],
+    ] as const) {
+      expect(lien(direction.wrapper, nom)?.attributes()).toMatchObject({ href, target: '_blank' })
+    }
+    const textes = direction.wrapper.findAll('.item').map((i) => i.text())
+    expect(textes.indexOf('Voir le site')).toBeLessThan(textes.indexOf('Plan graphique'))
+    expect(textes.indexOf('Plan graphique')).toBeLessThan(textes.indexOf('Écran de l’atelier'))
+    // L'atelier a l'écran, mais pas le plan graphique ; ces liens ne sont pas dans le menu principal
+    const atelier = await setup(ATELIER)
+    expect(lien(atelier.wrapper, 'Plan graphique')).toBeUndefined()
+    expect(lien(atelier.wrapper, 'Écran de l’atelier')).toBeDefined()
+    expect(atelier.links()).not.toContain('Écran de l’atelier')
+  })
+
   it('cache toute la navigation tant que le mot de passe est temporaire', async () => {
     const { links } = await setup({ ...ADMIN, mustChangePassword: true })
     expect(links()).toEqual([])

@@ -16,7 +16,11 @@ const arg = (nom) => {
   const i = process.argv.indexOf(nom)
   return i >= 0 ? process.argv[i + 1] : undefined
 }
-const liste = (noms) => [...new Set(noms)].sort().map((t) => `tests/${t}.spec.ts`).join(' ')
+const liste = (noms) =>
+  [...new Set(noms)]
+    .sort()
+    .map((t) => `tests/${t}.spec.ts`)
+    .join(' ')
 
 if (process.argv.includes('--verifier')) {
   const sansGroupe = fichiers.filter((f) => !affectes.includes(f))
@@ -37,7 +41,9 @@ if (process.argv.includes('--verifier')) {
   }
   console.log(liste(noms.flatMap((n) => GROUPES[n].tests)))
 } else if (arg('--diff')) {
-  const modifies = execFileSync('git', ['diff', '--name-only', `${arg('--diff')}...HEAD`], { encoding: 'utf8' }).split('\n').filter(Boolean)
+  const modifies = execFileSync('git', ['diff', '--name-only', `${arg('--diff')}...HEAD`], { encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean)
   const touche = new Set()
   let tout = false
   for (const f of modifies) {

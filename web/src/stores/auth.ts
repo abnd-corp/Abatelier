@@ -16,6 +16,7 @@ export type Permission =
   | 'billing.manage'
   | 'site.manage'
   | 'products.manage'
+  | 'plan.read'
   | 'stock.manage'
 
 export interface User {

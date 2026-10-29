@@ -98,6 +98,8 @@ export function makeRouter() {
       },
       { path: '/fabrication', name: 'production', component: page('production'), meta: { section: 'Atelier', title: 'Fabrication' } },
       { path: '/fabrication/:id', name: 'production-order', component: page('production-order'), meta: { menu: 'production' } },
+      { path: '/plan-atelier', name: 'plan-atelier', component: page('plan-atelier'), meta: { section: 'Atelier', title: 'Plan de l’atelier' } },
+      { path: '/ecran-atelier', name: 'ecran-atelier', component: page('ecran-atelier'), meta: { title: 'Écran de l’atelier' } },
       { path: '/reception', name: 'reception', component: page('reception'), meta: { section: 'Atelier', title: 'Réception de marchandise' } },
       { path: '/stock', name: 'stock', component: page('stock'), meta: { section: 'Atelier', title: 'Stock de feuilles' } },
       { path: '/salaries', name: 'employees', component: page('employees'), meta: { section: 'Équipe', title: 'Salariés' } },
@@ -138,6 +140,7 @@ export const ADMIN: User = {
     'billing.manage',
     'site.manage',
     'products.manage',
+    'plan.read',
   ],
 }
 
