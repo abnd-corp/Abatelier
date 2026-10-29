@@ -1,6 +1,6 @@
 # Processus métier en BPMN
 
-Les 20 processus d'Alu Pliage Service, dessinés en BPMN 2.0, pour vérifier avec le client que l'application répond à tout le besoin, et mesurer le gain qu'elle apporte.
+Les 29 processus d'Alu Pliage Service, dessinés en BPMN 2.0, pour vérifier avec le client que l'application répond à tout le besoin, et mesurer le gain qu'elle apporte.
 
 - **À regarder** : les images `.png` (les plus simples à ouvrir dans VS Code) ou `.svg` (un navigateur suffit).
 - **À modifier ou à présenter** : les fichiers `.bpmn`, ouverts avec [bpmn.io](https://demo.bpmn.io) (glisser le fichier dans la page) ou avec l'extension « BPMN Editor » de VS Code.
@@ -37,13 +37,13 @@ Le détail de chaque étape (écran concerné, limite) est dans [couverture.md](
 
 **Production** : 8 Fabrication · 9 Livraison et retrait
 
-**Stock de feuilles** : 10 Références et codes-barres · 11 Réception · 12 Suivi du stock
+**Stock de feuilles** : 10 Créer une référence · 11 Faire vivre les références (facultatif) · 12 Commande au fournisseur · 13 Réception · 14 Suivi du stock
 
-**Finance** : 13 Facturation et encaissement · 14 Statistiques
+**Finance** : 15 Facturation · 16 à 23 Statistiques (ventes, audience, finances, atelier, stock, comparateur, alertes, historique)
 
-**Organisation** : 15 Équipe · 16 Paramétrage · 17 Site vitrine · 18 Messages
+**Organisation** : 24 Équipe · 25 Paramétrage · 26 Site vitrine · 27 Messages
 
-**Mise en service et exploitation** : 19 Mise en service · 20 Sauvegarde et exploitation
+**Mise en service et exploitation** : 28 Mise en service · 29 Sauvegarde et exploitation
 
 ## Les modifier
 

@@ -2,15 +2,15 @@
 
 > Généré par `node scripts/bpmn/generer.mjs` à partir de `scripts/bpmn/processus.mjs`. Ne pas modifier à la main.
 
-Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md)). Chaque étape est classée selon ce que fait l’application aujourd’hui.
+Les 29 processus de l’atelier sont décrits en BPMN (voir [README](README.md)). Chaque étape est classée selon ce que fait l’application aujourd’hui.
 
 | Couverture | Étapes | Part |
 |---|---|---|
-| Dans l’application | 106 | 63 % |
-| En partie | 15 | 9 % |
-| Pas encore | 36 | 22 % |
-| Hors application | 10 | 6 % |
-| **Total** | **167** | |
+| Dans l’application | 105 | 52 % |
+| En partie | 17 | 8 % |
+| Pas encore | 70 | 35 % |
+| Hors application | 10 | 5 % |
+| **Total** | **202** | |
 
 ## Ce qu’il reste à faire pour couvrir tout le besoin
 
@@ -38,20 +38,56 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Fabrication à l’atelier** : Décompter les feuilles utilisées du stock (pas encore) : Aujourd’hui saisi à la main dans Stock de feuilles
 - **Fabrication à l’atelier** : Confirmer les chutes obtenues et les remettre au stock (pas encore) : Décidé : le nombre de chutes se confirme à la fin de la fabrication
 - **Fabrication à l’atelier** : Prévenir le client par e-mail que sa commande est prête (pas encore) : Aujourd’hui il le voit seulement dans son espace
-- **Livraison et retrait** : Planifier la tournée et livrer sur chantier (pas encore) : Pas de planning de tournées dans l’application
+- **Livraison et retrait** : Donner au client un code de remise, dans son espace et par e-mail (pas encore) : À définir avec le client : un code que le client donne au livreur ou à l’atelier, une signature sur écran, ou la simple confirmation du livreur
+- **Livraison et retrait** : Planifier la tournée et livrer sur chantier (pas encore) : Pas de planning de tournées dans l’application ; la manière de livrer aujourd’hui est à recueillir
 - **Livraison et retrait** : Éditer le bon de livraison (pas encore) : Prévu : nouveau type de document
-- **Livraison et retrait** : Signer la réception (pas encore) : Pas de signature de réception
-- **Définir les références de feuilles et leurs codes-barres** : Importer toutes les références d’un coup (fichier) (pas encore) : Décidé : plus tard
+- **Livraison et retrait** : Confirmer la réception (en donnant son code ou en signant) (pas encore) : Le client prévient lui-même que tout est arrivé
+- **Faire vivre les références de feuilles (facultatif)** : Importer toutes les références d’un coup (fichier) (pas encore) : Décidé : plus tard
+- **Commande de feuilles au fournisseur** : Enregistrer la commande passée : fournisseur, références, nombre de feuilles de chaque lot, date de livraison prévue (pas encore) : Aujourd’hui l’application ne connaît pas les commandes fournisseur
+- **Commande de feuilles au fournisseur** : Afficher « en commande » sur chaque référence et préparer les quantités attendues à la réception (pas encore) : Permet la comparaison entre commandé et reçu
+- **Commande de feuilles au fournisseur** : Notifier la direction si la livraison n’arrive pas à la date prévue (pas encore) : Notification dans la plateforme
+- **Réception de marchandise au scan** : Ouvrir la commande fournisseur attendue (pas encore) : Reprend aussi une réception laissée en attente
+- **Réception de marchandise au scan** : Comparer à la commande : ce qui reste à recevoir (pas encore) : Dépend de « Commande de feuilles au fournisseur »
+- **Réception de marchandise au scan** : Clore la commande fournisseur (pas encore) : Les feuilles attendues disparaissent de « en commande »
+- **Réception de marchandise au scan** : Notifier la direction de l’écart (manque ou surplus) (pas encore) : Notification dans la plateforme
+- **Réception de marchandise au scan** : Suspendre la réception, la reprendre au camion suivant (pas encore) : Livraison en plusieurs camions : on sort de la réception sans perdre ce qui est scanné
 - **Suivi du stock de feuilles** : Décompter automatiquement ce qu’une commande consomme (pas encore) : Décidé : au lancement, avec confirmation des chutes à la fin
 - **Suivi du stock de feuilles** : Estimer la date d’une commande selon le stock disponible (pas encore) : Si les feuilles manquent : délai standard + délai du fournisseur (données à recueillir)
-- **Facturation et encaissement** : Relancer le client par e-mail (pas encore) : Pas de relance automatique ni de liste des impayés
-- **Pilotage et statistiques** : Collecter les visites du site (anonymes, sans cookie) (pas encore) : Rien n’est mesuré aujourd’hui (ticket Statistiques)
-- **Pilotage et statistiques** : Saisir le prix d’achat à la réception et les autres dépenses (pas encore) : Aucun prix d’achat ni dépense dans l’application
-- **Pilotage et statistiques** : Choisir une période et un intervalle (jour, semaine, mois) (pas encore) : Une seule vue commune à tous les écrans
-- **Pilotage et statistiques** : Calculer les ventes par matière, coloris, modèle ; le chiffre d’affaires, le panier moyen (pas encore) : Les données de commandes existent déjà
-- **Pilotage et statistiques** : Comparer la date estimée et la date réelle de fin : délais tenus (pas encore) : Les deux dates sont déjà enregistrées
-- **Pilotage et statistiques** : Comparer deux périodes (mois, années) (pas encore) : Superposition de courbes
-- **Pilotage et statistiques** : Signaler un coloris ou une matière sans vente depuis longtemps (pas encore) : Règles d’alerte réglables ; suggestion de désactiver ou solder
+- **Facturation et encaissement** : Détecter la remise et émettre la facture toute seule (en partie) : Aujourd’hui la direction clique sur « Facturer » ; numérotation F-AAAA-NNNN sans trou
+- **Facturation et encaissement** : Prévenir le client par e-mail : sa facture est dans son espace (sans pièce jointe) (en partie) : Le message existe ; il part aujourd’hui sur geste de la direction
+- **Facturation et encaissement** : Marquer la facture payée avec la confirmation du prestataire de paiement (pas encore) : Le paiement en ligne est déjà enregistré ; la facture n’est pas encore marquée payée toute seule
+- **Facturation et encaissement** : Relancer le client par e-mail : rappel à l’échéance, puis relances (pas encore) : Pas de relance automatique ni de liste des impayés
+- **Facturation et encaissement** : Constater le paiement sans saisie de la direction (par exemple en lisant le relevé bancaire) (pas encore) : À définir avec le client ; aujourd’hui la direction enregistre le paiement à la main
+- **Statistiques : chiffres clés et ventes** : Choisir une période et un intervalle (jour, semaine, mois) (pas encore) : Sélecteur commun à toutes les vues de statistiques
+- **Statistiques : chiffres clés et ventes** : Calculer le chiffre d’affaires, le nombre de commandes, le panier moyen, les devis acceptés (pas encore) : Les données de commandes existent déjà
+- **Statistiques : chiffres clés et ventes** : Répartir les ventes par matière, coloris, modèle de pièce, sur mesure ou boutique (pas encore) : Les lignes de commande gardent déjà ces informations
+- **Statistiques : chiffres clés et ventes** : Lire les chiffres, les courbes et le classement des références (pas encore) : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone
+- **Statistiques : audience du site et entonnoir** : Compter les visites et les pages vues, sans cookie ni adresse IP conservée (pas encore) : Compteur anonyme agrégé par jour et par page, à valider côté RGPD / CNIL
+- **Statistiques : audience du site et entonnoir** : Enregistrer les abandons du configurateur et du panier, les devis refusés ou expirés et leur motif (pas encore) : Sert au taux de conversion
+- **Statistiques : audience du site et entonnoir** : Calculer l’entonnoir : visite, configurateur, devis, commande (pas encore) : Aussi les demandes de contact
+- **Statistiques : audience du site et entonnoir** : Lire l’audience et l’entonnoir (pas encore) : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone
+- **Statistiques : dépenses, entrées et marge** : Saisir le prix d’achat à la réception de chaque lot (pas encore) : Aucun prix d’achat dans l’application aujourd’hui
+- **Statistiques : dépenses, entrées et marge** : Saisir les autres dépenses par catégorie (pas encore) : Les catégories de dépenses sont à définir avec la direction
+- **Statistiques : dépenses, entrées et marge** : Calculer les entrées (paiements, factures), les sorties et le solde (pas encore) : Les paiements et factures sont déjà horodatés
+- **Statistiques : dépenses, entrées et marge** : Calculer la marge par matière (pas encore) : Dépend du prix d’achat
+- **Statistiques : dépenses, entrées et marge** : Lire les entrées, les sorties et la marge (pas encore) : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone
+- **Statistiques : délais tenus et charge de l’atelier** : Mesurer les délais validée, prête, livrée et les comparer à la date estimée (pas encore) : Les dates sont déjà enregistrées
+- **Statistiques : délais tenus et charge de l’atelier** : Repérer les retards et la charge par semaine (pas encore) : Aucun classement de salariés : des agrégats seulement
+- **Statistiques : délais tenus et charge de l’atelier** : Calculer le rendement matière : feuilles commandées contre consommées, chutes (pas encore) : Dépend du décompte automatique du stock
+- **Statistiques : délais tenus et charge de l’atelier** : Lire les délais, la charge et le rendement (pas encore) : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone
+- **Statistiques : consommation et rotation du stock** : Calculer la consommation par matière et coloris (pas encore) : Dépend du décompte automatique du stock
+- **Statistiques : consommation et rotation du stock** : Calculer la rotation et repérer le stock dormant (pas encore) : Les mouvements de stock sont déjà horodatés
+- **Statistiques : consommation et rotation du stock** : Repérer les ruptures (pas encore) : Complète l’alerte « stock bas »
+- **Statistiques : consommation et rotation du stock** : Lire la consommation et le stock dormant (pas encore) : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone
+- **Statistiques : comparer des périodes** : Choisir deux périodes ou plus et le chiffre à comparer (pas encore) : Mêmes chiffres que les autres statistiques
+- **Statistiques : comparer des périodes** : Superposer les courbes (pas encore) : Courbes lisibles sur téléphone, thème clair et sombre
+- **Statistiques : comparer des périodes** : Lire l’écart (pas encore) : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone
+- **Statistiques : alertes sur le catalogue** : Régler les règles d’alerte (par exemple : sans vente depuis N mois) (pas encore) : À définir avec la direction : quelles actions déclenchent une alerte
+- **Statistiques : alertes sur le catalogue** : Détecter un coloris ou une matière sans vente (pas encore) : Règles réglables
+- **Statistiques : alertes sur le catalogue** : Notifier la direction dans la plateforme, avec une suggestion : désactiver, solder, ne plus réapprovisionner (pas encore) : Dans le centre de notifications
+- **Statistiques : reprise de l’historique** : Choisir le fichier (CSV ou Excel) de l’ancien outil (pas encore) : À recueillir : quelles données existent et sous quelle forme
+- **Statistiques : reprise de l’historique** : Contrôler puis importer l’historique (pas encore) : Les données personnelles ne sont pas reprises dans les statistiques
+- **Statistiques : reprise de l’historique** : Vérifier les courbes dès le départ (pas encore) : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone
 - **Paramétrage par la direction** : Régler les limites par matière, la quantité maximale et le délai selon la quantité (pas encore) : En attente des données des machines de l’atelier
 - **Paramétrage par la direction** : Déclarer les jours fériés et les fermetures (pas encore) : Le délai annoncé saute les week-ends, pas les jours fériés
 - **Messages envoyés par l’application** : Commande prête, accusé de réception d’une demande de contact (pas encore) : Pas encore envoyés au client
@@ -219,22 +255,23 @@ Schéma : [image](08-fabrication.svg) · [fichier BPMN](08-fabrication.bpmn)
 
 ## 9. Livraison et retrait
 
-La commande prête est retirée à l’atelier ou livrée sur chantier.
+La commande prête est retirée à l’atelier ou livrée sur chantier. Le client prouve qu’il l’a reçue avec un code (à valider avec le client) : la remise lance ensuite la facture.
 
 Schéma : [image](09-livraison.svg) · [fichier BPMN](09-livraison.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
+| Donner au client un code de remise, dans son espace et par e-mail | Application (automatique) | Pas encore | À définir avec le client : un code que le client donne au livreur ou à l’atelier, une signature sur écran, ou la simple confirmation du livreur |
 | Venir chercher la commande à l’atelier | Visiteur / Client | Hors application | Le mode « retrait » est choisi à la commande |
 | Fournir l’adresse, la distance et les frais de livraison | Application (automatique) | Dans l’application | Calculés à la commande (distance par la route) |
-| Planifier la tournée et livrer sur chantier | Direction | Pas encore | Pas de planning de tournées dans l’application |
-| Éditer le bon de livraison | Direction | Pas encore | Prévu : nouveau type de document |
-| Signer la réception | Visiteur / Client | Pas encore | Pas de signature de réception |
-| Marquer la commande retirée ou livrée | Atelier | Dans l’application | Le bouton dit « Marquer retirée » ou « Marquer livrée » selon le mode ; elle quitte Fabrication |
+| Planifier la tournée et livrer sur chantier | Direction | Pas encore | Pas de planning de tournées dans l’application ; la manière de livrer aujourd’hui est à recueillir |
+| Éditer le bon de livraison | Application (automatique) | Pas encore | Prévu : nouveau type de document |
+| Confirmer la réception (en donnant son code ou en signant) | Visiteur / Client | Pas encore | Le client prévient lui-même que tout est arrivé |
+| Marquer la commande retirée ou livrée | Atelier | Dans l’application | Le bouton dit « Marquer retirée » ou « Marquer livrée » selon le mode ; elle quitte Fabrication. Avec le code, ce geste peut devenir automatique |
 
-## 10. Définir les références de feuilles et leurs codes-barres
+## 10. Créer une référence de feuille
 
-La direction décrit les feuilles que l’atelier reçoit (matière, coloris, format) et leurs codes-barres, pour que la réception les reconnaisse au scan.
+La direction décrit une feuille que l’atelier reçoit (matière, épaisseur, coloris, format) et son code-barres. Dès lors, la réception la reconnaît au scan. Rien d’autre n’est nécessaire.
 
 Schéma : [image](10-materiaux.svg) · [fichier BPMN](10-materiaux.bpmn)
 
@@ -243,31 +280,58 @@ Schéma : [image](10-materiaux.svg) · [fichier BPMN](10-materiaux.bpmn)
 | Saisir la matière, l’épaisseur, le coloris, le format et le code-barres | Direction | Dans l’application | Direction › Matériaux (champs libres, suggestions du catalogue) |
 | Les créer au catalogue, inactifs et à prix zéro | Application (automatique) | Dans l’application | Jamais vendables à zéro euro : la direction les complète dans Tarifs et catalogue |
 | Créer la référence à zéro en stock, avec son code | Application (automatique) | Dans l’application | Un code désigne une référence ; un code déjà pris est refusé |
+
+## 11. Faire vivre les références de feuilles (facultatif)
+
+Ce qui n’est pas nécessaire pour qu’une référence soit prête : ajouter ou retirer des codes-barres, archiver une référence qui n’est plus utilisée, importer un fichier.
+
+Schéma : [image](11-materiaux-gestion.svg) · [fichier BPMN](11-materiaux-gestion.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
 | Ajouter ou retirer des codes-barres, chercher une référence | Direction | Dans l’application | Plusieurs codes possibles pour une référence ; scan ou saisie |
 | Archiver une référence qui n’est plus utilisée | Direction | Dans l’application | Jamais supprimée : l’historique s’y rapporte ; possible seulement à zéro |
 | Importer toutes les références d’un coup (fichier) | Direction | Pas encore | Décidé : plus tard |
 
-## 11. Réception de marchandise au scan
+## 12. Commande de feuilles au fournisseur
 
-L’atelier reçoit des feuilles : il scanne le code-barres d’une feuille et indique le nombre reçu. Le stock monte, la réception est tracée.
+La commande passée au fournisseur est enregistrée dans la plateforme avec ses feuilles : la réception sait ce qu’elle doit scanner et compare avec ce qui arrive.
 
-Schéma : [image](11-reception.svg) · [fichier BPMN](11-reception.bpmn)
+Schéma : [image](12-commande-fournisseur.svg) · [fichier BPMN](12-commande-fournisseur.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
+| Notifier la direction dans la plateforme : stock bas | Application (automatique) | Dans l’application | Seuil réglable sur chaque référence |
+| Passer la commande au fournisseur (téléphone, e-mail, site du fournisseur) | Direction | Hors application | Le fournisseur n’est pas relié à l’application ; à recueillir : qui commande, à qui, comment |
+| Enregistrer la commande passée : fournisseur, références, nombre de feuilles de chaque lot, date de livraison prévue | Direction | Pas encore | Aujourd’hui l’application ne connaît pas les commandes fournisseur |
+| Afficher « en commande » sur chaque référence et préparer les quantités attendues à la réception | Application (automatique) | Pas encore | Permet la comparaison entre commandé et reçu |
+| Notifier la direction si la livraison n’arrive pas à la date prévue | Application (automatique) | Pas encore | Notification dans la plateforme |
+
+## 13. Réception de marchandise au scan
+
+L’atelier reçoit des feuilles : il scanne le code-barres d’une feuille et indique, sur la plateforme, le nombre reçu. Le stock monte et la réception est comparée à la commande passée au fournisseur. Elle peut être suspendue et reprise au camion suivant.
+
+Schéma : [image](13-reception.svg) · [fichier BPMN](13-reception.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Ouvrir la commande fournisseur attendue | Atelier | Pas encore | Reprend aussi une réception laissée en attente |
 | Décharger et contrôler la livraison | Atelier | Hors application | Contrôle sur place |
 | Scanner le code-barres d’une feuille (caméra du téléphone) ou le saisir | Atelier | Dans l’application | Atelier › Réception ; la caméra demande une connexion sécurisée (HTTPS) |
 | Associer le code à une référence ou en créer une | Atelier | Dans l’application | Le code est reconnu aux réceptions suivantes |
 | Indiquer le nombre de feuilles reçues et une note (bon de livraison) | Atelier | Dans l’application | Un code = une feuille ; on scanne une fois et on indique la quantité |
 | Augmenter le stock et tracer l’entrée (qui, quand, quelle note) | Application (automatique) | Dans l’application | Dernières réceptions affichées à côté |
+| Comparer à la commande : ce qui reste à recevoir | Application (automatique) | Pas encore | Dépend de « Commande de feuilles au fournisseur » |
 | Passer au code suivant | Atelier | Dans l’application | La caméra est prête pour la feuille suivante |
-| Commander des feuilles au fournisseur | Atelier | Hors application | Reste dans l’outil indépendant du client : l’application ne gère pas les commandes fournisseur |
+| Clore la commande fournisseur | Application (automatique) | Pas encore | Les feuilles attendues disparaissent de « en commande » |
+| Notifier la direction de l’écart (manque ou surplus) | Application (automatique) | Pas encore | Notification dans la plateforme |
+| Suspendre la réception, la reprendre au camion suivant | Atelier | Pas encore | Livraison en plusieurs camions : on sort de la réception sans perdre ce qui est scanné |
 
-## 12. Suivi du stock de feuilles
+## 14. Suivi du stock de feuilles
 
 Voir ce qu’il reste, être prévenu quand le stock baisse, compter, et tenir les chutes à part des feuilles entières.
 
-Schéma : [image](12-stock.svg) · [fichier BPMN](12-stock.bpmn)
+Schéma : [image](14-stock.svg) · [fichier BPMN](14-stock.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -279,45 +343,133 @@ Schéma : [image](12-stock.svg) · [fichier BPMN](12-stock.bpmn)
 | Consulter l’historique des mouvements | Direction | Dans l’application | Stock de feuilles › Historique |
 | Estimer la date d’une commande selon le stock disponible | Application (automatique) | Pas encore | Si les feuilles manquent : délai standard + délai du fournisseur (données à recueillir) |
 
-## 13. Facturation et encaissement
+## 15. Facturation et encaissement
 
-De la commande livrée à la facture payée, avec avoir et export pour le comptable. Aucun document n’est joint aux e-mails.
+La remise de la commande (retrait ou livraison) lance la facture toute seule, le client est prévenu et la consulte dans son espace. La direction n’enregistre pas les paiements : ils sont constatés par l’application. Avoir et export pour le comptable restent à sa main.
 
-Schéma : [image](13-facturation.svg) · [fichier BPMN](13-facturation.bpmn)
+Schéma : [image](15-facturation.svg) · [fichier BPMN](15-facturation.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
-| Facturer la commande | Direction | Dans l’application | Commande › Facturer (numérotation F-AAAA-NNNN sans trou) |
+| Détecter la remise et émettre la facture toute seule | Application (automatique) | En partie | Aujourd’hui la direction clique sur « Facturer » ; numérotation F-AAAA-NNNN sans trou |
 | Éditer la facture PDF, avec le fichier Factur-X | Application (automatique) | Dans l’application | Checklist des mentions obligatoires, QR code du site |
-| Prévenir le client par e-mail (sans pièce jointe) | Direction | Dans l’application | Le message renvoie vers l’espace client, ou l’invite à l’activer |
+| Prévenir le client par e-mail : sa facture est dans son espace (sans pièce jointe) | Application (automatique) | En partie | Le message existe ; il part aujourd’hui sur geste de la direction |
 | Consulter et télécharger sa facture dans son espace | Visiteur / Client | Dans l’application | Espace client › Factures |
-| Payer (virement, chèque, espèces, carte) | Visiteur / Client | Hors application | Le règlement hors ligne se fait hors de l’application |
-| Enregistrer le paiement (date, mode) | Direction | Dans l’application | Facture › Enregistrer le paiement (annulable) |
-| Relancer le client par e-mail | Direction | Pas encore | Pas de relance automatique ni de liste des impayés |
+| Marquer la facture payée avec la confirmation du prestataire de paiement | Application (automatique) | Pas encore | Le paiement en ligne est déjà enregistré ; la facture n’est pas encore marquée payée toute seule |
+| Relancer le client par e-mail : rappel à l’échéance, puis relances | Application (automatique) | Pas encore | Pas de relance automatique ni de liste des impayés |
+| Payer (virement, chèque…) | Visiteur / Client | Hors application | À recueillir : quelles commandes partent sans paiement préalable, et comment elles sont réglées |
+| Constater le paiement sans saisie de la direction (par exemple en lisant le relevé bancaire) | Application (automatique) | Pas encore | À définir avec le client ; aujourd’hui la direction enregistre le paiement à la main |
 | Faire un avoir (total) | Direction | Dans l’application | Facture › Faire un avoir ; l’avoir partiel est à faire |
 | Exporter les ventes et encaissements pour le comptable | Direction | Dans l’application | Devis et factures › Exporter pour le comptable (CSV) |
 
-## 14. Pilotage et statistiques
+## 16. Statistiques : chiffres clés et ventes
 
-Lire l’activité dans la durée : ventes par groupe, visites du site, entrées et sorties d’argent, délais tenus, comparaison de périodes, règles d’alerte. Nécessite de la donnée collectée.
+La direction lit ce qu’elle vend, de quoi et combien, sur la période de son choix. Les données de commandes existent déjà.
 
-Schéma : [image](14-statistiques.svg) · [fichier BPMN](14-statistiques.bpmn)
+Schéma : [image](16-stats-ventes.svg) · [fichier BPMN](16-stats-ventes.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
-| Collecter les visites du site (anonymes, sans cookie) | Application (automatique) | Pas encore | Rien n’est mesuré aujourd’hui (ticket Statistiques) |
-| Saisir le prix d’achat à la réception et les autres dépenses | Atelier | Pas encore | Aucun prix d’achat ni dépense dans l’application |
-| Choisir une période et un intervalle (jour, semaine, mois) | Direction | Pas encore | Une seule vue commune à tous les écrans |
-| Calculer les ventes par matière, coloris, modèle ; le chiffre d’affaires, le panier moyen | Application (automatique) | Pas encore | Les données de commandes existent déjà |
-| Comparer la date estimée et la date réelle de fin : délais tenus | Application (automatique) | Pas encore | Les deux dates sont déjà enregistrées |
-| Comparer deux périodes (mois, années) | Direction | Pas encore | Superposition de courbes |
-| Signaler un coloris ou une matière sans vente depuis longtemps | Application (automatique) | Pas encore | Règles d’alerte réglables ; suggestion de désactiver ou solder |
+| Choisir une période et un intervalle (jour, semaine, mois) | Direction | Pas encore | Sélecteur commun à toutes les vues de statistiques |
+| Calculer le chiffre d’affaires, le nombre de commandes, le panier moyen, les devis acceptés | Application (automatique) | Pas encore | Les données de commandes existent déjà |
+| Répartir les ventes par matière, coloris, modèle de pièce, sur mesure ou boutique | Application (automatique) | Pas encore | Les lignes de commande gardent déjà ces informations |
+| Lire les chiffres, les courbes et le classement des références | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
 
-## 15. Équipe : arrivée et départ d’un salarié
+## 17. Statistiques : audience du site et entonnoir
+
+La direction voit si le site attire et si les visiteurs deviennent clients. Rien n’est mesuré aujourd’hui : la collecte doit commencer dès la mise en production.
+
+Schéma : [image](17-stats-audience.svg) · [fichier BPMN](17-stats-audience.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Compter les visites et les pages vues, sans cookie ni adresse IP conservée | Application (automatique) | Pas encore | Compteur anonyme agrégé par jour et par page, à valider côté RGPD / CNIL |
+| Enregistrer les abandons du configurateur et du panier, les devis refusés ou expirés et leur motif | Application (automatique) | Pas encore | Sert au taux de conversion |
+| Calculer l’entonnoir : visite, configurateur, devis, commande | Application (automatique) | Pas encore | Aussi les demandes de contact |
+| Lire l’audience et l’entonnoir | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
+
+## 18. Statistiques : dépenses, entrées et marge
+
+La direction suit l’argent qui entre et qui sort. Il manque les prix d’achat et les dépenses : ils se saisissent à la réception et par catégorie.
+
+Schéma : [image](18-stats-finances.svg) · [fichier BPMN](18-stats-finances.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Saisir le prix d’achat à la réception de chaque lot | Atelier | Pas encore | Aucun prix d’achat dans l’application aujourd’hui |
+| Saisir les autres dépenses par catégorie | Direction | Pas encore | Les catégories de dépenses sont à définir avec la direction |
+| Calculer les entrées (paiements, factures), les sorties et le solde | Application (automatique) | Pas encore | Les paiements et factures sont déjà horodatés |
+| Calculer la marge par matière | Application (automatique) | Pas encore | Dépend du prix d’achat |
+| Lire les entrées, les sorties et la marge | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
+
+## 19. Statistiques : délais tenus et charge de l’atelier
+
+La direction compare ce qu’elle annonce à ce qu’elle fait. Les dates estimée et réelle sont déjà enregistrées.
+
+Schéma : [image](19-stats-atelier.svg) · [fichier BPMN](19-stats-atelier.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Mesurer les délais validée, prête, livrée et les comparer à la date estimée | Application (automatique) | Pas encore | Les dates sont déjà enregistrées |
+| Repérer les retards et la charge par semaine | Application (automatique) | Pas encore | Aucun classement de salariés : des agrégats seulement |
+| Calculer le rendement matière : feuilles commandées contre consommées, chutes | Application (automatique) | Pas encore | Dépend du décompte automatique du stock |
+| Lire les délais, la charge et le rendement | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
+
+## 20. Statistiques : consommation et rotation du stock
+
+La direction voit ce que l’atelier consomme et ce qui dort sur les étagères.
+
+Schéma : [image](20-stats-stock.svg) · [fichier BPMN](20-stats-stock.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Calculer la consommation par matière et coloris | Application (automatique) | Pas encore | Dépend du décompte automatique du stock |
+| Calculer la rotation et repérer le stock dormant | Application (automatique) | Pas encore | Les mouvements de stock sont déjà horodatés |
+| Repérer les ruptures | Application (automatique) | Pas encore | Complète l’alerte « stock bas » |
+| Lire la consommation et le stock dormant | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
+
+## 21. Statistiques : comparer des périodes
+
+La direction superpose deux périodes ou plus, pour le même chiffre (mois contre mois, année contre année).
+
+Schéma : [image](21-stats-comparateur.svg) · [fichier BPMN](21-stats-comparateur.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Choisir deux périodes ou plus et le chiffre à comparer | Direction | Pas encore | Mêmes chiffres que les autres statistiques |
+| Superposer les courbes | Application (automatique) | Pas encore | Courbes lisibles sur téléphone, thème clair et sombre |
+| Lire l’écart | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
+
+## 22. Statistiques : alertes sur le catalogue
+
+L’application signale d’elle-même un produit qui ne se vend plus, avec une suggestion.
+
+Schéma : [image](22-stats-alertes.svg) · [fichier BPMN](22-stats-alertes.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Régler les règles d’alerte (par exemple : sans vente depuis N mois) | Direction | Pas encore | À définir avec la direction : quelles actions déclenchent une alerte |
+| Détecter un coloris ou une matière sans vente | Application (automatique) | Pas encore | Règles réglables |
+| Notifier la direction dans la plateforme, avec une suggestion : désactiver, solder, ne plus réapprovisionner | Application (automatique) | Pas encore | Dans le centre de notifications |
+| Désactiver au catalogue si elle le décide | Direction | Dans l’application | Tarifs et catalogue › désactiver |
+
+## 23. Statistiques : reprise de l’historique
+
+L’entreprise a déjà des données (logiciel de facturation, tableurs) : les reprendre donne des courbes dès le départ.
+
+Schéma : [image](23-stats-historique.svg) · [fichier BPMN](23-stats-historique.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Choisir le fichier (CSV ou Excel) de l’ancien outil | Direction | Pas encore | À recueillir : quelles données existent et sous quelle forme |
+| Contrôler puis importer l’historique | Application (automatique) | Pas encore | Les données personnelles ne sont pas reprises dans les statistiques |
+| Vérifier les courbes dès le départ | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
+
+## 24. Équipe : arrivée et départ d’un salarié
 
 Fiche du salarié, compte personnel, droits par sections, puis désactivation au départ.
 
-Schéma : [image](15-equipe.svg) · [fichier BPMN](15-equipe.bpmn)
+Schéma : [image](24-equipe.svg) · [fichier BPMN](24-equipe.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -329,11 +481,11 @@ Schéma : [image](15-equipe.svg) · [fichier BPMN](15-equipe.bpmn)
 | Enregistrer le départ : désactiver le compte | Direction | Dans l’application | Déconnexion immédiate de tous ses appareils |
 | Garder l’historique et noter chaque action au journal | Application (automatique) | Dans l’application | Journal d’activité (qui, quoi, quand) |
 
-## 16. Paramétrage par la direction
+## 25. Paramétrage par la direction
 
 Tarifs, catalogue, documents : ce que la direction règle sans développeur, en gardant simple ce qui change souvent.
 
-Schéma : [image](16-parametrage.svg) · [fichier BPMN](16-parametrage.bpmn)
+Schéma : [image](25-parametrage.svg) · [fichier BPMN](25-parametrage.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -344,11 +496,11 @@ Schéma : [image](16-parametrage.svg) · [fichier BPMN](16-parametrage.bpmn)
 | Déclarer les jours fériés et les fermetures | Direction | Pas encore | Le délai annoncé saute les week-ends, pas les jours fériés |
 | Appliquer tout de suite aux prochains devis, commandes et au site | Application (automatique) | Dans l’application | Les documents déjà émis ne changent pas |
 
-## 17. Faire vivre le site vitrine et la boutique
+## 26. Faire vivre le site vitrine et la boutique
 
 Produits de la boutique, photos, textes du site et alertes de la messagerie. Les pages légales ne se modifient pas : elles suivent les versions de l’application.
 
-Schéma : [image](17-site-vitrine.svg) · [fichier BPMN](17-site-vitrine.bpmn)
+Schéma : [image](26-site-vitrine.svg) · [fichier BPMN](26-site-vitrine.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -359,11 +511,11 @@ Schéma : [image](17-site-vitrine.svg) · [fichier BPMN](17-site-vitrine.bpmn)
 | Voir les messages envoyés et leur aperçu, s’envoyer un exemple | Direction | Dans l’application | Site vitrine › E-mails |
 | Mettre à jour les pages légales avec les versions de l’application | Maintenance (nous) | Hors application | Mentions légales, confidentialité, cookies, conditions de vente ; hébergeur et médiateur réglés à l’installation |
 
-## 18. Messages envoyés par l’application
+## 27. Messages envoyés par l’application
 
 Les messages automatiques : par e-mail pour les clients, qui ne se connectent pas souvent ; dans la plateforme, en un seul endroit, pour la direction. Jamais de publicité, jamais de document joint, jamais de mot de passe.
 
-Schéma : [image](18-messages.svg) · [fichier BPMN](18-messages.bpmn)
+Schéma : [image](27-messages.svg) · [fichier BPMN](27-messages.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -377,11 +529,11 @@ Schéma : [image](18-messages.svg) · [fichier BPMN](18-messages.bpmn)
 | Envoyer un e-mail d’alerte à la direction si trop de notifications restent non lues | Application (automatique) | Pas encore | Seuil réglable (nombre de notifications non lues) ; seul cas où la direction reçoit un e-mail |
 | Vérifier le rendu de chaque message et se l’envoyer | Direction | Dans l’application | Site vitrine › E-mails › Aperçu des messages (13 modèles) |
 
-## 19. Mise en service chez un client
+## 28. Mise en service chez un client
 
 Ce que nous installons et ce que le client renseigne avant de s’en servir : entreprise, numérotation, tarifs, équipe, références, stock de départ, site.
 
-Schéma : [image](19-mise-en-service.svg) · [fichier BPMN](19-mise-en-service.bpmn)
+Schéma : [image](28-mise-en-service.svg) · [fichier BPMN](28-mise-en-service.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -397,11 +549,11 @@ Schéma : [image](19-mise-en-service.svg) · [fichier BPMN](19-mise-en-service.b
 | Brancher le prestataire de paiement du client et faire un paiement de test | Maintenance (nous) | En partie | Stripe essayé en test ; le choix du prestataire se fait avec le client |
 | Former les utilisateurs | Maintenance (nous) | Hors application | Se fait sur place avec les écrans réels |
 
-## 20. Sauvegarde et exploitation
+## 29. Sauvegarde et exploitation
 
 La sécurité des données et la maintenance au quotidien, sur le serveur du client.
 
-Schéma : [image](20-exploitation.svg) · [fichier BPMN](20-exploitation.bpmn)
+Schéma : [image](29-exploitation.svg) · [fichier BPMN](29-exploitation.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|

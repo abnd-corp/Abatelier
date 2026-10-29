@@ -33,6 +33,14 @@ L'organigramme n'est pas connu, et il est sans doute flou. Il décide des compte
 - Qui est à l'atelier, qui fait l'administratif, qui fait la comptabilité ? Qui remplace qui en cas d'absence ?
 - Qui décide de l'exception : annuler une commande, rembourser, refuser, valider un statut professionnel qu'aucun annuaire ne confirme ?
 
+## Questions précises, processus par processus
+
+- **Livraison** : comment livrez-vous aujourd'hui (un camion, plusieurs, tournées) ? Comment savez-vous que le client a bien reçu : signature, bon de livraison, appel ? Accepteriez-vous un code que le client donne au livreur (envoyé par e-mail et visible dans son espace), ou une signature sur écran ?
+- **Paiement** : une commande peut-elle partir sans paiement préalable (client professionnel, virement, chèque, paiement à la livraison) ? Si oui, comment est-elle réglée, et qui le constate ? La plateforme ne demande pas à la direction de saisir les paiements : par quoi les remplacer (lecture du relevé bancaire, par exemple) ?
+- **Commande de feuilles** : qui commande, à quel fournisseur, comment (téléphone, e-mail, site) ? Les feuilles arrivent-elles en plusieurs camions ? Combien de références par commande ?
+- **Réception** : qui réceptionne, et sur quel appareil (téléphone, tablette) ? Que fait-on quand le camion apporte moins ou plus que commandé ?
+- **Statistiques** : quelles questions voulez-vous poser à vos chiffres ? Quelles données anciennes existent (logiciel de facturation, tableurs) ? Quelles catégories de dépenses voulez-vous suivre ?
+
 ## Chiffres à demander une fois pour toutes
 
 - Coût horaire chargé de la direction, de l'atelier, de l'administratif.
@@ -200,15 +208,16 @@ Schéma : [08-fabrication.svg](bpmn/08-fabrication.svg) · 11 étapes : 6 dans l
 
 ### 9. Livraison et retrait
 
-La commande prête est retirée à l’atelier ou livrée sur chantier.
+La commande prête est retirée à l’atelier ou livrée sur chantier. Le client prouve qu’il l’a reçue avec un code (à valider avec le client) : la remise lance ensuite la facture.
 
-Schéma : [09-livraison.svg](bpmn/09-livraison.svg) · 6 étapes : 2 dans l'application, 0 en partie, 3 pas encore, 1 hors application.
+Schéma : [09-livraison.svg](bpmn/09-livraison.svg) · 7 étapes : 2 dans l'application, 0 en partie, 4 pas encore, 1 hors application.
 
 À développer ou à compléter :
 
+- Donner au client un code de remise, dans son espace et par e-mail (pas encore)
 - Planifier la tournée et livrer sur chantier (pas encore)
 - Éditer le bon de livraison (pas encore)
-- Signer la réception (pas encore)
+- Confirmer la réception (en donnant son code ou en signant) (pas encore)
 
 À demander au client :
 
@@ -219,11 +228,24 @@ Schéma : [09-livraison.svg](bpmn/09-livraison.svg) · 6 étapes : 2 dans l'appl
 
 ## Stock de feuilles
 
-### 10. Définir les références de feuilles et leurs codes-barres
+### 10. Créer une référence de feuille
 
-La direction décrit les feuilles que l’atelier reçoit (matière, coloris, format) et leurs codes-barres, pour que la réception les reconnaisse au scan.
+La direction décrit une feuille que l’atelier reçoit (matière, épaisseur, coloris, format) et son code-barres. Dès lors, la réception la reconnaît au scan. Rien d’autre n’est nécessaire.
 
-Schéma : [10-materiaux.svg](bpmn/10-materiaux.svg) · 6 étapes : 5 dans l'application, 0 en partie, 1 pas encore, 0 hors application.
+Schéma : [10-materiaux.svg](bpmn/10-materiaux.svg) · 3 étapes : 3 dans l'application, 0 en partie, 0 pas encore, 0 hors application.
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 11. Faire vivre les références de feuilles (facultatif)
+
+Ce qui n’est pas nécessaire pour qu’une référence soit prête : ajouter ou retirer des codes-barres, archiver une référence qui n’est plus utilisée, importer un fichier.
+
+Schéma : [11-materiaux-gestion.svg](bpmn/11-materiaux-gestion.svg) · 3 étapes : 2 dans l'application, 0 en partie, 1 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
@@ -236,11 +258,17 @@ Schéma : [10-materiaux.svg](bpmn/10-materiaux.svg) · 6 étapes : 5 dans l'appl
 - Quels problèmes (erreurs, retards, oublis) ?
 - Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
 
-### 11. Réception de marchandise au scan
+### 12. Commande de feuilles au fournisseur
 
-L’atelier reçoit des feuilles : il scanne le code-barres d’une feuille et indique le nombre reçu. Le stock monte, la réception est tracée.
+La commande passée au fournisseur est enregistrée dans la plateforme avec ses feuilles : la réception sait ce qu’elle doit scanner et compare avec ce qui arrive.
 
-Schéma : [11-reception.svg](bpmn/11-reception.svg) · 7 étapes : 5 dans l'application, 0 en partie, 0 pas encore, 2 hors application.
+Schéma : [12-commande-fournisseur.svg](bpmn/12-commande-fournisseur.svg) · 5 étapes : 1 dans l'application, 0 en partie, 3 pas encore, 1 hors application.
+
+À développer ou à compléter :
+
+- Enregistrer la commande passée : fournisseur, références, nombre de feuilles de chaque lot, date de livraison prévue (pas encore)
+- Afficher « en commande » sur chaque référence et préparer les quantités attendues à la réception (pas encore)
+- Notifier la direction si la livraison n’arrive pas à la date prévue (pas encore)
 
 À demander au client :
 
@@ -249,11 +277,32 @@ Schéma : [11-reception.svg](bpmn/11-reception.svg) · 7 étapes : 5 dans l'appl
 - Quels problèmes (erreurs, retards, oublis) ?
 - Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
 
-### 12. Suivi du stock de feuilles
+### 13. Réception de marchandise au scan
+
+L’atelier reçoit des feuilles : il scanne le code-barres d’une feuille et indique, sur la plateforme, le nombre reçu. Le stock monte et la réception est comparée à la commande passée au fournisseur. Elle peut être suspendue et reprise au camion suivant.
+
+Schéma : [13-reception.svg](bpmn/13-reception.svg) · 11 étapes : 5 dans l'application, 0 en partie, 5 pas encore, 1 hors application.
+
+À développer ou à compléter :
+
+- Ouvrir la commande fournisseur attendue (pas encore)
+- Comparer à la commande : ce qui reste à recevoir (pas encore)
+- Clore la commande fournisseur (pas encore)
+- Notifier la direction de l’écart (manque ou surplus) (pas encore)
+- Suspendre la réception, la reprendre au camion suivant (pas encore)
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 14. Suivi du stock de feuilles
 
 Voir ce qu’il reste, être prévenu quand le stock baisse, compter, et tenir les chutes à part des feuilles entières.
 
-Schéma : [12-stock.svg](bpmn/12-stock.svg) · 7 étapes : 5 dans l'application, 0 en partie, 2 pas encore, 0 hors application.
+Schéma : [14-stock.svg](bpmn/14-stock.svg) · 7 étapes : 5 dans l'application, 0 en partie, 2 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
@@ -269,15 +318,19 @@ Schéma : [12-stock.svg](bpmn/12-stock.svg) · 7 étapes : 5 dans l'application,
 
 ## Finance
 
-### 13. Facturation et encaissement
+### 15. Facturation et encaissement
 
-De la commande livrée à la facture payée, avec avoir et export pour le comptable. Aucun document n’est joint aux e-mails.
+La remise de la commande (retrait ou livraison) lance la facture toute seule, le client est prévenu et la consulte dans son espace. La direction n’enregistre pas les paiements : ils sont constatés par l’application. Avoir et export pour le comptable restent à sa main.
 
-Schéma : [13-facturation.svg](bpmn/13-facturation.svg) · 9 étapes : 7 dans l'application, 0 en partie, 1 pas encore, 1 hors application.
+Schéma : [15-facturation.svg](bpmn/15-facturation.svg) · 10 étapes : 4 dans l'application, 2 en partie, 3 pas encore, 1 hors application.
 
 À développer ou à compléter :
 
-- Relancer le client par e-mail (pas encore)
+- Détecter la remise et émettre la facture toute seule (en partie)
+- Prévenir le client par e-mail : sa facture est dans son espace (sans pièce jointe) (en partie)
+- Marquer la facture payée avec la confirmation du prestataire de paiement (pas encore)
+- Relancer le client par e-mail : rappel à l’échéance, puis relances (pas encore)
+- Constater le paiement sans saisie de la direction (par exemple en lisant le relevé bancaire) (pas encore)
 
 À demander au client :
 
@@ -286,21 +339,156 @@ Schéma : [13-facturation.svg](bpmn/13-facturation.svg) · 9 étapes : 7 dans l'
 - Quels problèmes (erreurs, retards, oublis) ?
 - Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
 
-### 14. Pilotage et statistiques
+### 16. Statistiques : chiffres clés et ventes
 
-Lire l’activité dans la durée : ventes par groupe, visites du site, entrées et sorties d’argent, délais tenus, comparaison de périodes, règles d’alerte. Nécessite de la donnée collectée.
+La direction lit ce qu’elle vend, de quoi et combien, sur la période de son choix. Les données de commandes existent déjà.
 
-Schéma : [14-statistiques.svg](bpmn/14-statistiques.svg) · 7 étapes : 0 dans l'application, 0 en partie, 7 pas encore, 0 hors application.
+Schéma : [16-stats-ventes.svg](bpmn/16-stats-ventes.svg) · 4 étapes : 0 dans l'application, 0 en partie, 4 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
-- Collecter les visites du site (anonymes, sans cookie) (pas encore)
-- Saisir le prix d’achat à la réception et les autres dépenses (pas encore)
 - Choisir une période et un intervalle (jour, semaine, mois) (pas encore)
-- Calculer les ventes par matière, coloris, modèle ; le chiffre d’affaires, le panier moyen (pas encore)
-- Comparer la date estimée et la date réelle de fin : délais tenus (pas encore)
-- Comparer deux périodes (mois, années) (pas encore)
-- Signaler un coloris ou une matière sans vente depuis longtemps (pas encore)
+- Calculer le chiffre d’affaires, le nombre de commandes, le panier moyen, les devis acceptés (pas encore)
+- Répartir les ventes par matière, coloris, modèle de pièce, sur mesure ou boutique (pas encore)
+- Lire les chiffres, les courbes et le classement des références (pas encore)
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 17. Statistiques : audience du site et entonnoir
+
+La direction voit si le site attire et si les visiteurs deviennent clients. Rien n’est mesuré aujourd’hui : la collecte doit commencer dès la mise en production.
+
+Schéma : [17-stats-audience.svg](bpmn/17-stats-audience.svg) · 4 étapes : 0 dans l'application, 0 en partie, 4 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Compter les visites et les pages vues, sans cookie ni adresse IP conservée (pas encore)
+- Enregistrer les abandons du configurateur et du panier, les devis refusés ou expirés et leur motif (pas encore)
+- Calculer l’entonnoir : visite, configurateur, devis, commande (pas encore)
+- Lire l’audience et l’entonnoir (pas encore)
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 18. Statistiques : dépenses, entrées et marge
+
+La direction suit l’argent qui entre et qui sort. Il manque les prix d’achat et les dépenses : ils se saisissent à la réception et par catégorie.
+
+Schéma : [18-stats-finances.svg](bpmn/18-stats-finances.svg) · 5 étapes : 0 dans l'application, 0 en partie, 5 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Saisir le prix d’achat à la réception de chaque lot (pas encore)
+- Saisir les autres dépenses par catégorie (pas encore)
+- Calculer les entrées (paiements, factures), les sorties et le solde (pas encore)
+- Calculer la marge par matière (pas encore)
+- Lire les entrées, les sorties et la marge (pas encore)
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 19. Statistiques : délais tenus et charge de l’atelier
+
+La direction compare ce qu’elle annonce à ce qu’elle fait. Les dates estimée et réelle sont déjà enregistrées.
+
+Schéma : [19-stats-atelier.svg](bpmn/19-stats-atelier.svg) · 4 étapes : 0 dans l'application, 0 en partie, 4 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Mesurer les délais validée, prête, livrée et les comparer à la date estimée (pas encore)
+- Repérer les retards et la charge par semaine (pas encore)
+- Calculer le rendement matière : feuilles commandées contre consommées, chutes (pas encore)
+- Lire les délais, la charge et le rendement (pas encore)
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 20. Statistiques : consommation et rotation du stock
+
+La direction voit ce que l’atelier consomme et ce qui dort sur les étagères.
+
+Schéma : [20-stats-stock.svg](bpmn/20-stats-stock.svg) · 4 étapes : 0 dans l'application, 0 en partie, 4 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Calculer la consommation par matière et coloris (pas encore)
+- Calculer la rotation et repérer le stock dormant (pas encore)
+- Repérer les ruptures (pas encore)
+- Lire la consommation et le stock dormant (pas encore)
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 21. Statistiques : comparer des périodes
+
+La direction superpose deux périodes ou plus, pour le même chiffre (mois contre mois, année contre année).
+
+Schéma : [21-stats-comparateur.svg](bpmn/21-stats-comparateur.svg) · 3 étapes : 0 dans l'application, 0 en partie, 3 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Choisir deux périodes ou plus et le chiffre à comparer (pas encore)
+- Superposer les courbes (pas encore)
+- Lire l’écart (pas encore)
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 22. Statistiques : alertes sur le catalogue
+
+L’application signale d’elle-même un produit qui ne se vend plus, avec une suggestion.
+
+Schéma : [22-stats-alertes.svg](bpmn/22-stats-alertes.svg) · 4 étapes : 1 dans l'application, 0 en partie, 3 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Régler les règles d’alerte (par exemple : sans vente depuis N mois) (pas encore)
+- Détecter un coloris ou une matière sans vente (pas encore)
+- Notifier la direction dans la plateforme, avec une suggestion : désactiver, solder, ne plus réapprovisionner (pas encore)
+
+À demander au client :
+
+- Ce processus existe-t-il chez vous ? Est-il décrit correctement ?
+- Qui, avec quel outil, combien de minutes, combien de fois par semaine ?
+- Quels problèmes (erreurs, retards, oublis) ?
+- Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
+
+### 23. Statistiques : reprise de l’historique
+
+L’entreprise a déjà des données (logiciel de facturation, tableurs) : les reprendre donne des courbes dès le départ.
+
+Schéma : [23-stats-historique.svg](bpmn/23-stats-historique.svg) · 3 étapes : 0 dans l'application, 0 en partie, 3 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Choisir le fichier (CSV ou Excel) de l’ancien outil (pas encore)
+- Contrôler puis importer l’historique (pas encore)
+- Vérifier les courbes dès le départ (pas encore)
 
 À demander au client :
 
@@ -311,11 +499,11 @@ Schéma : [14-statistiques.svg](bpmn/14-statistiques.svg) · 7 étapes : 0 dans 
 
 ## Organisation
 
-### 15. Équipe : arrivée et départ d’un salarié
+### 24. Équipe : arrivée et départ d’un salarié
 
 Fiche du salarié, compte personnel, droits par sections, puis désactivation au départ.
 
-Schéma : [15-equipe.svg](bpmn/15-equipe.svg) · 7 étapes : 7 dans l'application, 0 en partie, 0 pas encore, 0 hors application.
+Schéma : [24-equipe.svg](bpmn/24-equipe.svg) · 7 étapes : 7 dans l'application, 0 en partie, 0 pas encore, 0 hors application.
 
 À demander au client :
 
@@ -324,11 +512,11 @@ Schéma : [15-equipe.svg](bpmn/15-equipe.svg) · 7 étapes : 7 dans l'applicatio
 - Quels problèmes (erreurs, retards, oublis) ?
 - Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
 
-### 16. Paramétrage par la direction
+### 25. Paramétrage par la direction
 
 Tarifs, catalogue, documents : ce que la direction règle sans développeur, en gardant simple ce qui change souvent.
 
-Schéma : [16-parametrage.svg](bpmn/16-parametrage.svg) · 6 étapes : 4 dans l'application, 0 en partie, 2 pas encore, 0 hors application.
+Schéma : [25-parametrage.svg](bpmn/25-parametrage.svg) · 6 étapes : 4 dans l'application, 0 en partie, 2 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
@@ -342,11 +530,11 @@ Schéma : [16-parametrage.svg](bpmn/16-parametrage.svg) · 6 étapes : 4 dans l'
 - Quels problèmes (erreurs, retards, oublis) ?
 - Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
 
-### 17. Faire vivre le site vitrine et la boutique
+### 26. Faire vivre le site vitrine et la boutique
 
 Produits de la boutique, photos, textes du site et alertes de la messagerie. Les pages légales ne se modifient pas : elles suivent les versions de l’application.
 
-Schéma : [17-site-vitrine.svg](bpmn/17-site-vitrine.svg) · 6 étapes : 5 dans l'application, 0 en partie, 0 pas encore, 1 hors application.
+Schéma : [26-site-vitrine.svg](bpmn/26-site-vitrine.svg) · 6 étapes : 5 dans l'application, 0 en partie, 0 pas encore, 1 hors application.
 
 À demander au client :
 
@@ -355,11 +543,11 @@ Schéma : [17-site-vitrine.svg](bpmn/17-site-vitrine.svg) · 6 étapes : 5 dans 
 - Quels problèmes (erreurs, retards, oublis) ?
 - Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
 
-### 18. Messages envoyés par l’application
+### 27. Messages envoyés par l’application
 
 Les messages automatiques : par e-mail pour les clients, qui ne se connectent pas souvent ; dans la plateforme, en un seul endroit, pour la direction. Jamais de publicité, jamais de document joint, jamais de mot de passe.
 
-Schéma : [18-messages.svg](bpmn/18-messages.svg) · 9 étapes : 5 dans l'application, 2 en partie, 2 pas encore, 0 hors application.
+Schéma : [27-messages.svg](bpmn/27-messages.svg) · 9 étapes : 5 dans l'application, 2 en partie, 2 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
@@ -377,11 +565,11 @@ Schéma : [18-messages.svg](bpmn/18-messages.svg) · 9 étapes : 5 dans l'applic
 
 ## Mise en service et exploitation
 
-### 19. Mise en service chez un client
+### 28. Mise en service chez un client
 
 Ce que nous installons et ce que le client renseigne avant de s’en servir : entreprise, numérotation, tarifs, équipe, références, stock de départ, site.
 
-Schéma : [19-mise-en-service.svg](bpmn/19-mise-en-service.svg) · 11 étapes : 7 dans l'application, 2 en partie, 1 pas encore, 1 hors application.
+Schéma : [28-mise-en-service.svg](bpmn/28-mise-en-service.svg) · 11 étapes : 7 dans l'application, 2 en partie, 1 pas encore, 1 hors application.
 
 À développer ou à compléter :
 
@@ -396,11 +584,11 @@ Schéma : [19-mise-en-service.svg](bpmn/19-mise-en-service.svg) · 11 étapes : 
 - Quels problèmes (erreurs, retards, oublis) ?
 - Gain attendu de l'application : temps, erreurs évitées, ventes en plus ?
 
-### 20. Sauvegarde et exploitation
+### 29. Sauvegarde et exploitation
 
 La sécurité des données et la maintenance au quotidien, sur le serveur du client.
 
-Schéma : [20-exploitation.svg](bpmn/20-exploitation.svg) · 7 étapes : 3 dans l'application, 1 en partie, 3 pas encore, 0 hors application.
+Schéma : [29-exploitation.svg](bpmn/29-exploitation.svg) · 7 étapes : 3 dans l'application, 1 en partie, 3 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
