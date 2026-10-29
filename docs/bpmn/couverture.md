@@ -6,19 +6,22 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 
 | Couverture | Étapes | Part |
 |---|---|---|
-| Dans l’application | 113 | 72 % |
-| En partie | 6 | 4 % |
-| Pas encore | 28 | 18 % |
+| Dans l’application | 113 | 71 % |
+| En partie | 7 | 4 % |
+| Pas encore | 30 | 19 % |
 | Hors application | 10 | 6 % |
-| **Total** | **157** | |
+| **Total** | **160** | |
 
 ## Ce qu’il reste à faire pour couvrir tout le besoin
 
 - **Demande de contact** : Envoyer un accusé de réception au visiteur (pas encore) : Aujourd’hui seule l’équipe est prévenue
 - **Demande de contact** : Créer la fiche client depuis la demande (pas encore) : Aujourd’hui la fiche se crée à la main dans Clients
 - **Demande de contact** : Supprimer la demande au bout de 12 mois (pas encore) : Suppression à la demande de la personne : faite ; purge automatique : à faire
+- **Espace client : création, activation, mot de passe, fermeture** : Vérifier le SIRET dans l’annuaire officiel des entreprises (en activité, nom concordant) (pas encore) : Annuaire public et gratuit (recherche-entreprises.api.gouv.fr) ; le n° de TVA se contrôle avec VIES. Aujourd’hui la direction vérifie à la main
 - **Configurateur : faisabilité contrôlée, prix et date estimée** : Vérifier la quantité et la charge de l’atelier (pas encore) : Plafond de quantité et capacité par jour : en attente des données de l’atelier
 - **Configurateur : faisabilité contrôlée, prix et date estimée** : Calculer le prix, la livraison et la date estimée (en partie) : Date = jour + délai standard ; pas encore selon la quantité, le stock ni la charge
+- **Devis depuis l’espace client** : Valider la commande tout de suite, sans passer par la direction (pas encore) : Aujourd’hui la direction valide à la main (un clic depuis le devis) ; devis encore valable et prix inchangés
+- **Devis depuis l’espace client** : Prévenir la direction : devis accepté, commande validée (en partie) : Alerte envoyée, mais elle dit encore « attend votre validation »
 - **Commande payée en ligne (sur mesure ou boutique)** : Contrôler et débiter la carte (en partie) : Essayé avec le mode test de Stripe ; le compte du client se branche à la mise en service
 - **Refus d’une commande payée et remboursement** : Rembourser la carte du client (en partie) : Vérifié avec le mode test de Stripe
 - **Fabrication à l’atelier** : Décompter les feuilles utilisées du stock (pas encore) : Aujourd’hui saisi à la main dans Stock de feuilles
@@ -68,7 +71,7 @@ Schéma : [image](01-contact.svg) · [fichier BPMN](01-contact.bpmn)
 
 ## 2. Espace client : création, activation, mot de passe, fermeture
 
-Création de l’espace d’un particulier ou d’un professionnel, activation sur une fiche existante, mot de passe oublié, validation du statut pro, fermeture.
+Création de l’espace d’un particulier ou d’un professionnel, activation sur une fiche existante, mot de passe oublié, vérification automatique du statut pro auprès de l’annuaire officiel, fermeture.
 
 Schéma : [image](02-espace-client.svg) · [fichier BPMN](02-espace-client.bpmn)
 
@@ -81,7 +84,8 @@ Schéma : [image](02-espace-client.svg) · [fichier BPMN](02-espace-client.bpmn)
 | Choisir son mot de passe avec le lien reçu | Visiteur / Client | Dans l’application | Seul le propriétaire de l’adresse peut le faire |
 | Rattacher l’espace à la fiche existante, ouvrir la session | Application (automatique) | Dans l’application | Aucun doublon : ses devis et factures y sont déjà |
 | Compléter « Mes informations » (SIRET, TVA, adresse de facturation) | Visiteur / Client | Dans l’application | Espace client › Mes informations |
-| Vérifier puis valider le statut professionnel | Direction | Dans l’application | Clients › fiche › Valider le statut professionnel |
+| Vérifier le SIRET dans l’annuaire officiel des entreprises (en activité, nom concordant) | Application (automatique) | Pas encore | Annuaire public et gratuit (recherche-entreprises.api.gouv.fr) ; le n° de TVA se contrôle avec VIES. Aujourd’hui la direction vérifie à la main |
+| Examiner à la main seulement si la vérification échoue | Direction | Dans l’application | Clients › fiche › Valider le statut professionnel (exception) |
 | Appliquer la remise professionnelle aux devis suivants | Application (automatique) | Dans l’application | Seulement après validation |
 | Retrouver ses devis, commandes et factures | Visiteur / Client | Dans l’application | Espace client |
 | Envoyer un lien valable 1 heure pour choisir un nouveau mot de passe | Application (automatique) | Dans l’application | Réponse identique que l’adresse existe ou non |
@@ -107,7 +111,7 @@ Schéma : [image](03-configurateur.svg) · [fichier BPMN](03-configurateur.bpmn)
 
 ## 4. Devis depuis l’espace client
 
-Le client enregistre son devis numéroté, l’accepte ou le refuse en ligne ; la direction valide ou non.
+Le client enregistre son devis numéroté, l’accepte ou le refuse en ligne. L’acceptation valide la commande toute seule ; la direction est seulement prévenue, dans les deux cas.
 
 Schéma : [image](04-devis-en-ligne.svg) · [fichier BPMN](04-devis-en-ligne.bpmn)
 
@@ -117,8 +121,10 @@ Schéma : [image](04-devis-en-ligne.svg) · [fichier BPMN](04-devis-en-ligne.bpm
 | Créer la commande et éditer le devis PDF numéroté | Application (automatique) | Dans l’application | Numérotation continue D-AAAA-NNNN |
 | Prévenir la direction par e-mail | Application (automatique) | Dans l’application | Alerte « Devis demandé depuis l’espace client » |
 | Accepter le devis dans son espace | Visiteur / Client | Dans l’application | Espace client › commande › Accepter le devis |
-| Valider la commande | Direction | Dans l’application | Commandes › Valider la commande (un clic depuis le devis) |
-| Refuser le devis | Visiteur / Client | Dans l’application | La commande reste, la direction le voit |
+| Valider la commande tout de suite, sans passer par la direction | Application (automatique) | Pas encore | Aujourd’hui la direction valide à la main (un clic depuis le devis) ; devis encore valable et prix inchangés |
+| Prévenir la direction : devis accepté, commande validée | Application (automatique) | En partie | Alerte envoyée, mais elle dit encore « attend votre validation » |
+| Refuser le devis | Visiteur / Client | Dans l’application | La commande reste, avec la réponse du client |
+| Prévenir la direction du refus par e-mail | Application (automatique) | Dans l’application | Alerte « Devis refusé par … » avec un lien vers la commande |
 
 ## 5. Commande payée en ligne (sur mesure ou boutique)
 

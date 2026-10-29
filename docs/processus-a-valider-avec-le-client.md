@@ -53,9 +53,13 @@ Schéma : [01-contact.svg](bpmn/01-contact.svg) · 8 étapes : 4 dans l'applicat
 
 ### 2. Espace client : création, activation, mot de passe, fermeture
 
-Création de l’espace d’un particulier ou d’un professionnel, activation sur une fiche existante, mot de passe oublié, validation du statut pro, fermeture.
+Création de l’espace d’un particulier ou d’un professionnel, activation sur une fiche existante, mot de passe oublié, vérification automatique du statut pro auprès de l’annuaire officiel, fermeture.
 
-Schéma : [02-espace-client.svg](bpmn/02-espace-client.svg) · 14 étapes : 14 dans l'application, 0 en partie, 0 pas encore, 0 hors application.
+Schéma : [02-espace-client.svg](bpmn/02-espace-client.svg) · 15 étapes : 14 dans l'application, 0 en partie, 1 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Vérifier le SIRET dans l’annuaire officiel des entreprises (en activité, nom concordant) (pas encore)
 
 À demander au client :
 
@@ -84,9 +88,14 @@ Schéma : [03-configurateur.svg](bpmn/03-configurateur.svg) · 7 étapes : 5 dan
 
 ### 4. Devis depuis l’espace client
 
-Le client enregistre son devis numéroté, l’accepte ou le refuse en ligne ; la direction valide ou non.
+Le client enregistre son devis numéroté, l’accepte ou le refuse en ligne. L’acceptation valide la commande toute seule ; la direction est seulement prévenue, dans les deux cas.
 
-Schéma : [04-devis-en-ligne.svg](bpmn/04-devis-en-ligne.svg) · 6 étapes : 6 dans l'application, 0 en partie, 0 pas encore, 0 hors application.
+Schéma : [04-devis-en-ligne.svg](bpmn/04-devis-en-ligne.svg) · 8 étapes : 6 dans l'application, 1 en partie, 1 pas encore, 0 hors application.
+
+À développer ou à compléter :
+
+- Valider la commande tout de suite, sans passer par la direction (pas encore)
+- Prévenir la direction : devis accepté, commande validée (en partie)
 
 À demander au client :
 
