@@ -6,11 +6,11 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 
 | Couverture | Étapes | Part |
 |---|---|---|
-| Dans l’application | 114 | 70 % |
+| Dans l’application | 113 | 68 % |
 | En partie | 8 | 5 % |
-| Pas encore | 32 | 20 % |
+| Pas encore | 35 | 21 % |
 | Hors application | 10 | 6 % |
-| **Total** | **164** | |
+| **Total** | **166** | |
 
 ## Ce qu’il reste à faire pour couvrir tout le besoin
 
@@ -23,9 +23,12 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Configurateur : faisabilité contrôlée, prix et date estimée** : Calculer le prix, la livraison et la date estimée (en partie) : Date = jour + délai standard ; pas encore selon la quantité, le stock ni la charge
 - **Devis depuis l’espace client** : Valider la commande tout de suite, sans passer par la direction (pas encore) : Aujourd’hui la direction valide à la main (un clic depuis le devis) ; devis encore valable et prix inchangés
 - **Devis depuis l’espace client** : Prévenir la direction : devis accepté, commande validée (en partie) : Alerte envoyée, mais elle dit encore « attend votre validation »
+- **Devis depuis l’espace client** : Annuler la commande toute seule (motif : devis refusé par le client) (pas encore) : Aujourd’hui la commande reste ouverte et la direction doit l’annuler à la main
+- **Commande payée en ligne (sur mesure ou boutique)** : Garder le panier dans le compte du client, retrouvé sur tous ses appareils (pas encore) : Aujourd’hui le panier reste dans le navigateur : il ne suit ni le compte ni l’appareil ; à la connexion, on fusionne les deux
 - **Commande payée en ligne (sur mesure ou boutique)** : Contrôler et débiter la carte (en partie) : Essayé avec le mode test de Stripe ; le compte du client se branche à la mise en service
 - **Commande saisie par la direction pour un client** : Éditer le devis numéroté et envoyer au client le lien d’accès à son espace (en partie) : Devis et lien d’activation existent ; l’envoi des deux ensemble, en un seul geste, est à faire
 - **Commande saisie par la direction pour un client** : Valider la commande tout de suite, sans passer par la direction (pas encore) : Même règle que « Devis depuis l’espace client »
+- **Commande saisie par la direction pour un client** : Annuler la commande toute seule (motif : devis refusé par le client) (pas encore) : Même règle que « Devis depuis l’espace client »
 - **Refus d’une commande payée et remboursement** : Rembourser la carte du client (en partie) : Vérifié avec le mode test de Stripe
 - **Fabrication à l’atelier** : Décompter les feuilles utilisées du stock (pas encore) : Aujourd’hui saisi à la main dans Stock de feuilles
 - **Fabrication à l’atelier** : Confirmer les chutes obtenues et les remettre au stock (pas encore) : Décidé : le nombre de chutes se confirme à la fin de la fabrication
@@ -129,7 +132,8 @@ Schéma : [image](04-devis-en-ligne.svg) · [fichier BPMN](04-devis-en-ligne.bpm
 | Valider la commande tout de suite, sans passer par la direction | Application (automatique) | Pas encore | Aujourd’hui la direction valide à la main (un clic depuis le devis) ; devis encore valable et prix inchangés |
 | Prévenir la direction : devis accepté, commande validée | Application (automatique) | En partie | Alerte envoyée, mais elle dit encore « attend votre validation » |
 | Refuser le devis | Visiteur / Client | Dans l’application | La commande reste, avec la réponse du client |
-| Prévenir la direction du refus par e-mail | Application (automatique) | Dans l’application | Alerte « Devis refusé par … » avec un lien vers la commande |
+| Annuler la commande toute seule (motif : devis refusé par le client) | Application (automatique) | Pas encore | Aujourd’hui la commande reste ouverte et la direction doit l’annuler à la main |
+| Prévenir la direction du refus par e-mail | Application (automatique) | Dans l’application | Alerte « Devis refusé par … » avec un lien vers la commande, pour information |
 
 ## 5. Commande payée en ligne (sur mesure ou boutique)
 
@@ -140,6 +144,7 @@ Schéma : [image](05-commande-en-ligne.svg) · [fichier BPMN](05-commande-en-lig
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
 | Se connecter et lancer le paiement | Visiteur / Client | Dans l’application | Compte nécessaire ; prix recalculé par le serveur, jamais envoyé par le navigateur |
+| Garder le panier dans le compte du client, retrouvé sur tous ses appareils | Application (automatique) | Pas encore | Aujourd’hui le panier reste dans le navigateur : il ne suit ni le compte ni l’appareil ; à la connexion, on fusionne les deux |
 | Figer le panier et ouvrir la page de paiement hébergée | Application (automatique) | Dans l’application | Aucune donnée de carte ne passe par l’application |
 | Payer par carte sur la page du prestataire | Visiteur / Client | Dans l’application | Authentification de la banque si elle la demande |
 | Contrôler et débiter la carte | Prestataire de paiement | En partie | Essayé avec le mode test de Stripe ; le compte du client se branche à la mise en service |
@@ -165,8 +170,8 @@ Schéma : [image](06-commande-direction.svg) · [fichier BPMN](06-commande-direc
 | Accepter le devis dans son espace | Visiteur / Client | Dans l’application | Espace client › commande › Accepter le devis |
 | Noter l’acceptation donnée par téléphone (exception) | Direction | Dans l’application | Devis › Accepté par le client |
 | Valider la commande tout de suite, sans passer par la direction | Application (automatique) | Pas encore | Même règle que « Devis depuis l’espace client » |
-| Prévenir la direction du refus par e-mail | Application (automatique) | Dans l’application | Alerte avec un lien vers la commande |
-| Annuler la commande en notant la raison, si besoin | Direction | Dans l’application | Commande › Annuler (la raison est gardée) |
+| Annuler la commande toute seule (motif : devis refusé par le client) | Application (automatique) | Pas encore | Même règle que « Devis depuis l’espace client » |
+| Prévenir la direction du refus par e-mail | Application (automatique) | Dans l’application | Alerte avec un lien vers la commande, pour information |
 
 ## 7. Refus d’une commande payée et remboursement
 

@@ -19,6 +19,7 @@
         <bpmn:flowNodeRef>P4_devis_en_ligne_t3</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P4_devis_en_ligne_t5</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P4_devis_en_ligne_t7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P4_devis_en_ligne_t9</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P4_devis_en_ligne_t8</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P4_devis_en_ligne_f1</bpmn:flowNodeRef>
       </bpmn:lane>
@@ -35,9 +36,10 @@
     <bpmn:serviceTask id="P4_devis_en_ligne_t5" name="Valider la commande tout de suite, sans passer par la direction"><bpmn:documentation>Pas encore : Aujourd’hui la direction valide à la main (un clic depuis le devis) ; devis encore valable et prix inchangés</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux7</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux8</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="P4_devis_en_ligne_t7" name="Prévenir la direction : devis accepté, commande validée"><bpmn:documentation>En partie : Alerte envoyée, mais elle dit encore « attend votre validation »</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux8</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux9</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:userTask id="P4_devis_en_ligne_t6" name="Refuser le devis"><bpmn:documentation>Dans l’application : La commande reste, avec la réponse du client</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux6</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux10</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="P4_devis_en_ligne_t8" name="Prévenir la direction du refus par e-mail"><bpmn:documentation>Dans l’application : Alerte « Devis refusé par … » avec un lien vers la commande</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux10</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux11</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P4_devis_en_ligne_t9" name="Annuler la commande toute seule (motif : devis refusé par le client)"><bpmn:documentation>Pas encore : Aujourd’hui la commande reste ouverte et la direction doit l’annuler à la main</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux10</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux11</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P4_devis_en_ligne_t8" name="Prévenir la direction du refus par e-mail"><bpmn:documentation>Dans l’application : Alerte « Devis refusé par … » avec un lien vers la commande, pour information</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux11</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux12</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:endEvent id="P4_devis_en_ligne_f1" name="Commande validée : voir « Fabrication »"><bpmn:incoming>P4_devis_en_ligne_flux9</bpmn:incoming></bpmn:endEvent>
-    <bpmn:endEvent id="P4_devis_en_ligne_f2" name="Devis refusé, direction prévenue"><bpmn:incoming>P4_devis_en_ligne_flux11</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="P4_devis_en_ligne_f2" name="Devis refusé, commande annulée, direction prévenue"><bpmn:incoming>P4_devis_en_ligne_flux12</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="P4_devis_en_ligne_flux1" sourceRef="P4_devis_en_ligne_d" targetRef="P4_devis_en_ligne_t1" />
     <bpmn:sequenceFlow id="P4_devis_en_ligne_flux2" sourceRef="P4_devis_en_ligne_t1" targetRef="P4_devis_en_ligne_t2" />
     <bpmn:sequenceFlow id="P4_devis_en_ligne_flux3" sourceRef="P4_devis_en_ligne_t2" targetRef="P4_devis_en_ligne_t3" />
@@ -47,8 +49,9 @@
     <bpmn:sequenceFlow id="P4_devis_en_ligne_flux7" sourceRef="P4_devis_en_ligne_t4" targetRef="P4_devis_en_ligne_t5" />
     <bpmn:sequenceFlow id="P4_devis_en_ligne_flux8" sourceRef="P4_devis_en_ligne_t5" targetRef="P4_devis_en_ligne_t7" />
     <bpmn:sequenceFlow id="P4_devis_en_ligne_flux9" sourceRef="P4_devis_en_ligne_t7" targetRef="P4_devis_en_ligne_f1" />
-    <bpmn:sequenceFlow id="P4_devis_en_ligne_flux10" sourceRef="P4_devis_en_ligne_t6" targetRef="P4_devis_en_ligne_t8" />
-    <bpmn:sequenceFlow id="P4_devis_en_ligne_flux11" sourceRef="P4_devis_en_ligne_t8" targetRef="P4_devis_en_ligne_f2" />
+    <bpmn:sequenceFlow id="P4_devis_en_ligne_flux10" sourceRef="P4_devis_en_ligne_t6" targetRef="P4_devis_en_ligne_t9" />
+    <bpmn:sequenceFlow id="P4_devis_en_ligne_flux11" sourceRef="P4_devis_en_ligne_t9" targetRef="P4_devis_en_ligne_t8" />
+    <bpmn:sequenceFlow id="P4_devis_en_ligne_flux12" sourceRef="P4_devis_en_ligne_t8" targetRef="P4_devis_en_ligne_f2" />
     <bpmn:textAnnotation id="P4_devis_en_ligne_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="P4_devis_en_ligne_diagram">
@@ -95,14 +98,17 @@
       <bpmndi:BPMNShape id="P4_devis_en_ligne_t6_di" bpmnElement="P4_devis_en_ligne_t6" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="1090" y="180" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P4_devis_en_ligne_t8_di" bpmnElement="P4_devis_en_ligne_t8" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+      <bpmndi:BPMNShape id="P4_devis_en_ligne_t9_di" bpmnElement="P4_devis_en_ligne_t9" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
         <dc:Bounds x="1280" y="420" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P4_devis_en_ligne_t8_di" bpmnElement="P4_devis_en_ligne_t8" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1470" y="420" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P4_devis_en_ligne_f1_di" bpmnElement="P4_devis_en_ligne_f1">
         <dc:Bounds x="1717" y="322" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P4_devis_en_ligne_f2_di" bpmnElement="P4_devis_en_ligne_f2">
-        <dc:Bounds x="1527" y="682" width="36" height="36" />
+        <dc:Bounds x="1717" y="682" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P4_devis_en_ligne_flux1_di" bpmnElement="P4_devis_en_ligne_flux1">
         <di:waypoint x="233" y="100" />
@@ -156,9 +162,13 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P4_devis_en_ligne_flux11_di" bpmnElement="P4_devis_en_ligne_flux11">
         <di:waypoint x="1430" y="460" />
-        <di:waypoint x="1502" y="460" />
-        <di:waypoint x="1502" y="700" />
-        <di:waypoint x="1527" y="700" />
+        <di:waypoint x="1470" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P4_devis_en_ligne_flux12_di" bpmnElement="P4_devis_en_ligne_flux12">
+        <di:waypoint x="1620" y="460" />
+        <di:waypoint x="1692" y="460" />
+        <di:waypoint x="1692" y="700" />
+        <di:waypoint x="1717" y="700" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="P4_devis_en_ligne_legende_di" bpmnElement="P4_devis_en_ligne_legende">
         <dc:Bounds x="70" y="780" width="760" height="30" />

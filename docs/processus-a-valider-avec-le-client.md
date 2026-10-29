@@ -91,12 +91,13 @@ Schéma : [03-configurateur.svg](bpmn/03-configurateur.svg) · 7 étapes : 5 dan
 
 Le client enregistre son devis numéroté, l’accepte ou le refuse en ligne. L’acceptation valide la commande toute seule ; la direction est seulement prévenue, dans les deux cas.
 
-Schéma : [04-devis-en-ligne.svg](bpmn/04-devis-en-ligne.svg) · 8 étapes : 6 dans l'application, 1 en partie, 1 pas encore, 0 hors application.
+Schéma : [04-devis-en-ligne.svg](bpmn/04-devis-en-ligne.svg) · 9 étapes : 6 dans l'application, 1 en partie, 2 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
 - Valider la commande tout de suite, sans passer par la direction (pas encore)
 - Prévenir la direction : devis accepté, commande validée (en partie)
+- Annuler la commande toute seule (motif : devis refusé par le client) (pas encore)
 
 À demander au client :
 
@@ -109,10 +110,11 @@ Schéma : [04-devis-en-ligne.svg](bpmn/04-devis-en-ligne.svg) · 8 étapes : 6 d
 
 Le client paie par carte avant que la commande n’existe : elle naît validée, avec une date estimée, sans intervention de l’atelier.
 
-Schéma : [05-commande-en-ligne.svg](bpmn/05-commande-en-ligne.svg) · 10 étapes : 9 dans l'application, 1 en partie, 0 pas encore, 0 hors application.
+Schéma : [05-commande-en-ligne.svg](bpmn/05-commande-en-ligne.svg) · 11 étapes : 9 dans l'application, 1 en partie, 1 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
+- Garder le panier dans le compte du client, retrouvé sur tous ses appareils (pas encore)
 - Contrôler et débiter la carte (en partie)
 
 À demander au client :
@@ -126,12 +128,13 @@ Schéma : [05-commande-en-ligne.svg](bpmn/05-commande-en-ligne.svg) · 10 étape
 
 Exception à la commande en ligne : un client qui ne peut ou ne veut pas le faire seul (téléphone, visite). La direction saisit la commande dans l’application, mais le devis, son envoi, l’accès à l’espace et la validation se font tout seuls : le client décide dans son espace.
 
-Schéma : [06-commande-direction.svg](bpmn/06-commande-direction.svg) · 9 étapes : 7 dans l'application, 1 en partie, 1 pas encore, 0 hors application.
+Schéma : [06-commande-direction.svg](bpmn/06-commande-direction.svg) · 9 étapes : 6 dans l'application, 1 en partie, 2 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
 - Éditer le devis numéroté et envoyer au client le lien d’accès à son espace (en partie)
 - Valider la commande tout de suite, sans passer par la direction (pas encore)
+- Annuler la commande toute seule (motif : devis refusé par le client) (pas encore)
 
 À demander au client :
 
