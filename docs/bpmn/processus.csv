@@ -9,7 +9,7 @@
 "8";"Production";"Fabrication à l’atelier";"11";"6";"0";"3";"2";"";"";"";"";"=K9*L9/60";"";"=M9*N9*52";"67";"=O9*P9/100";"";""
 "9";"Production";"Écran d’affichage de l’atelier";"6";"0";"0";"5";"1";"";"";"";"";"=K10*L10/60";"";"=M10*N10*52";"0";"=O10*P10/100";"";""
 "10";"Production";"Plan visuel de l’atelier dans l’application";"6";"0";"0";"6";"0";"";"";"";"";"=K11*L11/60";"";"=M11*N11*52";"0";"=O11*P11/100";"";""
-"11";"Production";"Livraison et retrait";"7";"2";"0";"4";"1";"";"";"";"";"=K12*L12/60";"";"=M12*N12*52";"33";"=O12*P12/100";"";""
+"11";"Production";"Livraison et retrait";"8";"1";"1";"5";"1";"";"";"";"";"=K12*L12/60";"";"=M12*N12*52";"21";"=O12*P12/100";"";""
 "12";"Stock de feuilles";"Créer une référence de feuille";"3";"3";"0";"0";"0";"";"";"";"";"=K13*L13/60";"";"=M13*N13*52";"100";"=O13*P13/100";"";""
 "13";"Stock de feuilles";"Faire vivre les références de feuilles (facultatif)";"3";"2";"0";"1";"0";"";"";"";"";"=K14*L14/60";"";"=M14*N14*52";"67";"=O14*P14/100";"";""
 "14";"Stock de feuilles";"Commande de feuilles au fournisseur";"5";"1";"0";"3";"1";"";"";"";"";"=K15*L15/60";"";"=M15*N15*52";"25";"=O15*P15/100";"";""

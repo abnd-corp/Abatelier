@@ -39,8 +39,8 @@ Le tableau en dernière page est là pour tout noter au même endroit.
 15. **Les références de feuilles** : combien de matières, de coloris, de formats ? Comment les identifiez-vous (étiquettes, codes-barres) ?
 
 ### Livrer
-16. **Remise de la commande** : retrait à l'atelier, livraison sur chantier, les deux ? Un ou plusieurs véhicules, des tournées ? Comment fixez-vous les frais de livraison ?
-17. **La preuve de réception** : comment savez-vous que le client a bien reçu (signature, bon de livraison, appel, rien) ? Que faites-vous en cas de réclamation ?
+16. **Remise de la commande** : retrait à l'atelier, livraison sur chantier, les deux ? Qui livre (des salariés ?), avec quel véhicule, combien de tournées ? Comment groupez-vous les pièces d'une tournée ? Comment fixez-vous les frais de livraison ?
+17. **La preuve de réception** : comment savez-vous que le client a bien reçu (signature, bon de livraison, appel, rien) ? Que faites-vous quand le client est absent ? Que faites-vous en cas de réclamation ?
 
 ### Facturer et suivre l'argent
 18. **La facture** : quand est-elle faite, par qui, avec quel outil ? Comment le client la reçoit-il ?

@@ -6,11 +6,11 @@ Les 35 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 
 | Couverture | Étapes | Part |
 |---|---|---|
-| Dans l’application | 107 | 45 % |
-| En partie | 18 | 8 % |
-| Pas encore | 99 | 42 % |
+| Dans l’application | 106 | 45 % |
+| En partie | 19 | 8 % |
+| Pas encore | 100 | 42 % |
 | Hors application | 12 | 5 % |
-| **Total** | **236** | |
+| **Total** | **237** | |
 
 ## Ce qu’il reste à faire pour couvrir tout le besoin
 
@@ -49,10 +49,12 @@ Les 35 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Plan visuel de l’atelier dans l’application** : Montrer les arrivages : le camion de feuilles sur le parking pendant la réception (pas encore) : Lit les réceptions en cours
 - **Plan visuel de l’atelier dans l’application** : Cliquer une commande ou un rack pour ouvrir sa page (pas encore) : Mène à la commande, ou à la référence de feuille
 - **Plan visuel de l’atelier dans l’application** : Placer les machines, les racks et les pièces sur le plan (une fois) (pas encore) : Dépend de la liste des machines et du plan fourni par le client
-- **Livraison et retrait** : Donner au client un code de remise, dans son espace et par e-mail (pas encore) : À définir avec le client : un code que le client donne au livreur ou à l’atelier, une signature sur écran, ou la simple confirmation du livreur
-- **Livraison et retrait** : Planifier la tournée et livrer sur chantier (pas encore) : Pas de planning de tournées dans l’application ; la manière de livrer aujourd’hui est à recueillir
-- **Livraison et retrait** : Éditer le bon de livraison (pas encore) : Prévu : nouveau type de document
-- **Livraison et retrait** : Confirmer la réception (en donnant son code ou en signant) (pas encore) : Le client prévient lui-même que tout est arrivé
+- **Livraison et retrait** : Générer le code-barres du colis et l’étiquette à imprimer (pas encore) : Un code par colis (ou par commande, à cadrer) ; l’atelier imprime l’étiquette et la colle sur le colis
+- **Livraison et retrait** : Grouper les colis et préparer la tournée du salarié livreur (pas encore) : Les livraisons sont faites par des salariés avec le camion de l’entreprise ; groupes de pièces et ordre de passage à définir avec le client
+- **Livraison et retrait** : Éditer le bon de livraison (pas encore) : Prévu : nouveau type de document ; gardé avec la commande une fois signé
+- **Livraison et retrait** : Scanner le code-barres du colis à la remise (caméra du téléphone) (pas encore) : Comme pour la réception des feuilles ; sans le scan, la remise n’est pas validée
+- **Livraison et retrait** : Signer la réception sur l’écran du salarié (pas encore) : Signature gardée avec la commande ; que faire d’un client absent est à définir
+- **Livraison et retrait** : Valider la remise : la commande passe à « Livrée » ou « Retirée » (en partie) : Aujourd’hui un bouton « Marquer livrée » ou « Marquer retirée » ; avec le scan et la signature, plus de bouton à presser
 - **Faire vivre les références de feuilles (facultatif)** : Importer toutes les références d’un coup (fichier) (pas encore) : Décidé : plus tard
 - **Commande de feuilles au fournisseur** : Enregistrer la commande passée : fournisseur, références, nombre de feuilles de chaque lot, date de livraison prévue (pas encore) : À étudier : voir d’abord comment l’atelier commande, puis importer la commande (fichier ou e-mail du fournisseur) plutôt que la ressaisir
 - **Commande de feuilles au fournisseur** : Afficher « en commande » sur chaque référence et préparer les quantités attendues à la réception (pas encore) : Permet la comparaison entre commandé et reçu
@@ -315,19 +317,20 @@ Schéma : [image](10-plan-atelier.svg) · [fichier BPMN](10-plan-atelier.bpmn)
 
 ## 11. Livraison et retrait
 
-La commande prête est retirée à l’atelier ou livrée sur chantier. Le client prouve qu’il l’a reçue avec un code (à valider avec le client) : la remise lance ensuite la facture.
+La commande prête est retirée à l’atelier, ou livrée sur chantier par un salarié avec le camion de l’entreprise. Chaque colis porte une étiquette code-barres : la remise se valide en la scannant et en faisant signer le client sur l’écran. La remise lance ensuite la facture.
 
 Schéma : [image](11-livraison.svg) · [fichier BPMN](11-livraison.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
-| Donner au client un code de remise, dans son espace et par e-mail | Application (automatique) | Pas encore | À définir avec le client : un code que le client donne au livreur ou à l’atelier, une signature sur écran, ou la simple confirmation du livreur |
+| Générer le code-barres du colis et l’étiquette à imprimer | Application (automatique) | Pas encore | Un code par colis (ou par commande, à cadrer) ; l’atelier imprime l’étiquette et la colle sur le colis |
 | Venir chercher la commande à l’atelier | Visiteur / Client | Hors application | Le mode « retrait » est choisi à la commande |
 | Fournir l’adresse, la distance et les frais de livraison | Application (automatique) | Dans l’application | Calculés à la commande (distance par la route) |
-| Planifier la tournée et livrer sur chantier | Direction | Pas encore | Pas de planning de tournées dans l’application ; la manière de livrer aujourd’hui est à recueillir |
-| Éditer le bon de livraison | Application (automatique) | Pas encore | Prévu : nouveau type de document |
-| Confirmer la réception (en donnant son code ou en signant) | Visiteur / Client | Pas encore | Le client prévient lui-même que tout est arrivé |
-| Marquer la commande retirée ou livrée | Atelier | Dans l’application | Le bouton dit « Marquer retirée » ou « Marquer livrée » selon le mode ; elle quitte Fabrication. Avec le code, ce geste peut devenir automatique |
+| Grouper les colis et préparer la tournée du salarié livreur | Atelier | Pas encore | Les livraisons sont faites par des salariés avec le camion de l’entreprise ; groupes de pièces et ordre de passage à définir avec le client |
+| Éditer le bon de livraison | Application (automatique) | Pas encore | Prévu : nouveau type de document ; gardé avec la commande une fois signé |
+| Scanner le code-barres du colis à la remise (caméra du téléphone) | Atelier | Pas encore | Comme pour la réception des feuilles ; sans le scan, la remise n’est pas validée |
+| Signer la réception sur l’écran du salarié | Visiteur / Client | Pas encore | Signature gardée avec la commande ; que faire d’un client absent est à définir |
+| Valider la remise : la commande passe à « Livrée » ou « Retirée » | Application (automatique) | En partie | Aujourd’hui un bouton « Marquer livrée » ou « Marquer retirée » ; avec le scan et la signature, plus de bouton à presser |
 
 ## 12. Créer une référence de feuille
 

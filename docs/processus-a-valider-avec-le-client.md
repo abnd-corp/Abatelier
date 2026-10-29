@@ -35,7 +35,7 @@ L'organigramme n'est pas connu, et il est sans doute flou. Il décide des compte
 
 ## Questions précises, processus par processus
 
-- **Livraison** : comment livrez-vous aujourd'hui (un camion, plusieurs, tournées) ? Comment savez-vous que le client a bien reçu : signature, bon de livraison, appel ? Accepteriez-vous un code que le client donne au livreur (envoyé par e-mail et visible dans son espace), ou une signature sur écran ?
+- **Livraison** : ce sont des salariés qui livrent avec le camion de l'entreprise : combien de personnes, de camions, de tournées par semaine ? Comment groupez-vous les pièces ? Accepteriez-vous une étiquette code-barres collée sur chaque colis, scannée à la remise, avec la signature du client sur l'écran du salarié ? Que faites-vous quand le client est absent ? Comment livrez-vous aujourd'hui (un camion, plusieurs, tournées) ? Comment savez-vous que le client a bien reçu : signature, bon de livraison, appel ? Accepteriez-vous un code que le client donne au livreur (envoyé par e-mail et visible dans son espace), ou une signature sur écran ?
 - **Paiement** : une commande peut-elle partir sans paiement préalable (client professionnel, virement, chèque, paiement à la livraison) ? Si oui, comment est-elle réglée, et qui le constate ? La plateforme ne demande pas à la direction de saisir les paiements : par quoi les remplacer (lecture du relevé bancaire, par exemple) ?
 - **Commande de feuilles** : qui commande, à quel fournisseur, comment (téléphone, e-mail, site) ? Les feuilles arrivent-elles en plusieurs camions ? Combien de références par commande ?
 - **Réception** : qui réceptionne, et sur quel appareil (téléphone, tablette) ? Que fait-on quand le camion apporte moins ou plus que commandé ?
@@ -253,16 +253,18 @@ Schéma : [10-plan-atelier.svg](bpmn/10-plan-atelier.svg) · 6 étapes : 0 dans 
 
 ### 11. Livraison et retrait
 
-La commande prête est retirée à l’atelier ou livrée sur chantier. Le client prouve qu’il l’a reçue avec un code (à valider avec le client) : la remise lance ensuite la facture.
+La commande prête est retirée à l’atelier, ou livrée sur chantier par un salarié avec le camion de l’entreprise. Chaque colis porte une étiquette code-barres : la remise se valide en la scannant et en faisant signer le client sur l’écran. La remise lance ensuite la facture.
 
-Schéma : [11-livraison.svg](bpmn/11-livraison.svg) · 7 étapes : 2 dans l'application, 0 en partie, 4 pas encore, 1 hors application.
+Schéma : [11-livraison.svg](bpmn/11-livraison.svg) · 8 étapes : 1 dans l'application, 1 en partie, 5 pas encore, 1 hors application.
 
 À développer ou à compléter :
 
-- Donner au client un code de remise, dans son espace et par e-mail (pas encore)
-- Planifier la tournée et livrer sur chantier (pas encore)
+- Générer le code-barres du colis et l’étiquette à imprimer (pas encore)
+- Grouper les colis et préparer la tournée du salarié livreur (pas encore)
 - Éditer le bon de livraison (pas encore)
-- Confirmer la réception (en donnant son code ou en signant) (pas encore)
+- Scanner le code-barres du colis à la remise (caméra du téléphone) (pas encore)
+- Signer la réception sur l’écran du salarié (pas encore)
+- Valider la remise : la commande passe à « Livrée » ou « Retirée » (en partie)
 
 À demander au client :
 
