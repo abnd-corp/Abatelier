@@ -6,11 +6,11 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 
 | Couverture | Étapes | Part |
 |---|---|---|
-| Dans l’application | 106 | 64 % |
+| Dans l’application | 106 | 63 % |
 | En partie | 15 | 9 % |
-| Pas encore | 35 | 21 % |
+| Pas encore | 36 | 22 % |
 | Hors application | 10 | 6 % |
-| **Total** | **166** | |
+| **Total** | **167** | |
 
 ## Ce qu’il reste à faire pour couvrir tout le besoin
 
@@ -55,8 +55,9 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Paramétrage par la direction** : Régler les limites par matière, la quantité maximale et le délai selon la quantité (pas encore) : En attente des données des machines de l’atelier
 - **Paramétrage par la direction** : Déclarer les jours fériés et les fermetures (pas encore) : Le délai annoncé saute les week-ends, pas les jours fériés
 - **Messages envoyés par l’application** : Commande prête, accusé de réception d’une demande de contact (pas encore) : Pas encore envoyés au client
-- **Messages envoyés par l’application** : Notifier la direction dans la plateforme (commande, contact, devis) (en partie) : Centre de notifications unique (lues et non lues, par compte, selon les droits) ; aujourd’hui des e-mails aux adresses réglées
+- **Messages envoyés par l’application** : Notifier la direction dans la plateforme (commande, contact, devis) (en partie) : Centre de notifications unique, partagé par toute la direction (un seul compte, donc personne ne voit moins que l’autre) ; chacun voit selon ses droits ; aujourd’hui des e-mails aux adresses réglées
 - **Messages envoyés par l’application** : Lire la notification et ouvrir la commande ou la demande (en partie) : Un seul endroit pour tout, sans séparer les informations entre e-mail et plateforme
+- **Messages envoyés par l’application** : Envoyer un e-mail d’alerte à la direction si trop de notifications restent non lues (pas encore) : Seuil réglable (nombre de notifications non lues) ; seul cas où la direction reçoit un e-mail
 - **Mise en service chez un client** : Installer l’application, créer le compte administrateur, régler les secrets (e-mail, paiement) (en partie) : Docker prêt ; domaine HTTPS et serveur chez le client à finaliser
 - **Mise en service chez un client** : Importer les clients et l’historique de l’ancien outil (pas encore) : Facultatif ; dépend de la forme des données existantes
 - **Mise en service chez un client** : Brancher le prestataire de paiement du client et faire un paiement de test (en partie) : Stripe essayé en test ; le choix du prestataire se fait avec le client
@@ -371,8 +372,9 @@ Schéma : [image](18-messages.svg) · [fichier BPMN](18-messages.bpmn)
 | Devis, facture ou avoir disponible dans l’espace client | Application (automatique) | Dans l’application | Aucune pièce jointe ; envoyé par la direction, texte modifiable |
 | Commande prête, accusé de réception d’une demande de contact | Application (automatique) | Pas encore | Pas encore envoyés au client |
 | Lire le message (rappel de sécurité et lien vers son espace) | Visiteur / Client | Dans l’application | Version mise en page et version texte |
-| Notifier la direction dans la plateforme (commande, contact, devis) | Application (automatique) | En partie | Centre de notifications unique (lues et non lues, par compte, selon les droits) ; aujourd’hui des e-mails aux adresses réglées |
+| Notifier la direction dans la plateforme (commande, contact, devis) | Application (automatique) | En partie | Centre de notifications unique, partagé par toute la direction (un seul compte, donc personne ne voit moins que l’autre) ; chacun voit selon ses droits ; aujourd’hui des e-mails aux adresses réglées |
 | Lire la notification et ouvrir la commande ou la demande | Direction | En partie | Un seul endroit pour tout, sans séparer les informations entre e-mail et plateforme |
+| Envoyer un e-mail d’alerte à la direction si trop de notifications restent non lues | Application (automatique) | Pas encore | Seuil réglable (nombre de notifications non lues) ; seul cas où la direction reçoit un e-mail |
 | Vérifier le rendu de chaque message et se l’envoyer | Direction | Dans l’application | Site vitrine › E-mails › Aperçu des messages (13 modèles) |
 
 ## 19. Mise en service chez un client

@@ -15,6 +15,7 @@
         <bpmn:flowNodeRef>P18_messages_t3</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P18_messages_t4</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P18_messages_t6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P18_messages_t9</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="P18_messages_voie_client" name="Visiteur / Client">
         <bpmn:flowNodeRef>P18_messages_t5</bpmn:flowNodeRef>
@@ -32,10 +33,11 @@
     <bpmn:serviceTask id="P18_messages_t3" name="Devis, facture ou avoir disponible dans l’espace client"><bpmn:documentation>Dans l’application : Aucune pièce jointe ; envoyé par la direction, texte modifiable</bpmn:documentation><bpmn:incoming>P18_messages_flux5</bpmn:incoming><bpmn:outgoing>P18_messages_flux6</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="P18_messages_t4" name="Commande prête, accusé de réception d’une demande de contact"><bpmn:documentation>Pas encore : Pas encore envoyés au client</bpmn:documentation><bpmn:incoming>P18_messages_flux6</bpmn:incoming><bpmn:outgoing>P18_messages_flux7</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:userTask id="P18_messages_t5" name="Lire le message (rappel de sécurité et lien vers son espace)"><bpmn:documentation>Dans l’application : Version mise en page et version texte</bpmn:documentation><bpmn:incoming>P18_messages_flux7</bpmn:incoming><bpmn:outgoing>P18_messages_flux8</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="P18_messages_t6" name="Notifier la direction dans la plateforme (commande, contact, devis)"><bpmn:documentation>En partie : Centre de notifications unique (lues et non lues, par compte, selon les droits) ; aujourd’hui des e-mails aux adresses réglées</bpmn:documentation><bpmn:incoming>P18_messages_flux3</bpmn:incoming><bpmn:outgoing>P18_messages_flux9</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:userTask id="P18_messages_t7" name="Lire la notification et ouvrir la commande ou la demande"><bpmn:documentation>En partie : Un seul endroit pour tout, sans séparer les informations entre e-mail et plateforme</bpmn:documentation><bpmn:incoming>P18_messages_flux9</bpmn:incoming><bpmn:outgoing>P18_messages_flux10</bpmn:outgoing></bpmn:userTask>
-    <bpmn:userTask id="P18_messages_t8" name="Vérifier le rendu de chaque message et se l’envoyer"><bpmn:documentation>Dans l’application : Site vitrine › E-mails › Aperçu des messages (13 modèles)</bpmn:documentation><bpmn:incoming>P18_messages_flux8</bpmn:incoming><bpmn:incoming>P18_messages_flux10</bpmn:incoming><bpmn:outgoing>P18_messages_flux11</bpmn:outgoing></bpmn:userTask>
-    <bpmn:endEvent id="P18_messages_f" name="Client informé, sans publicité"><bpmn:incoming>P18_messages_flux11</bpmn:incoming></bpmn:endEvent>
+    <bpmn:serviceTask id="P18_messages_t6" name="Notifier la direction dans la plateforme (commande, contact, devis)"><bpmn:documentation>En partie : Centre de notifications unique, partagé par toute la direction (un seul compte, donc personne ne voit moins que l’autre) ; chacun voit selon ses droits ; aujourd’hui des e-mails aux adresses réglées</bpmn:documentation><bpmn:incoming>P18_messages_flux3</bpmn:incoming><bpmn:outgoing>P18_messages_flux9</bpmn:outgoing><bpmn:outgoing>P18_messages_flux10</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P18_messages_t7" name="Lire la notification et ouvrir la commande ou la demande"><bpmn:documentation>En partie : Un seul endroit pour tout, sans séparer les informations entre e-mail et plateforme</bpmn:documentation><bpmn:incoming>P18_messages_flux9</bpmn:incoming><bpmn:incoming>P18_messages_flux11</bpmn:incoming><bpmn:outgoing>P18_messages_flux12</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P18_messages_t9" name="Envoyer un e-mail d’alerte à la direction si trop de notifications restent non lues"><bpmn:documentation>Pas encore : Seuil réglable (nombre de notifications non lues) ; seul cas où la direction reçoit un e-mail</bpmn:documentation><bpmn:incoming>P18_messages_flux10</bpmn:incoming><bpmn:outgoing>P18_messages_flux11</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P18_messages_t8" name="Vérifier le rendu de chaque message et se l’envoyer"><bpmn:documentation>Dans l’application : Site vitrine › E-mails › Aperçu des messages (13 modèles)</bpmn:documentation><bpmn:incoming>P18_messages_flux8</bpmn:incoming><bpmn:incoming>P18_messages_flux12</bpmn:incoming><bpmn:outgoing>P18_messages_flux13</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P18_messages_f" name="Client informé, sans publicité"><bpmn:incoming>P18_messages_flux13</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="P18_messages_flux1" sourceRef="P18_messages_d" targetRef="P18_messages_g1" />
     <bpmn:sequenceFlow id="P18_messages_flux2" name="Client : compte" sourceRef="P18_messages_g1" targetRef="P18_messages_t1" />
     <bpmn:sequenceFlow id="P18_messages_flux3" name="Direction" sourceRef="P18_messages_g1" targetRef="P18_messages_t6" />
@@ -45,8 +47,10 @@
     <bpmn:sequenceFlow id="P18_messages_flux7" sourceRef="P18_messages_t4" targetRef="P18_messages_t5" />
     <bpmn:sequenceFlow id="P18_messages_flux8" sourceRef="P18_messages_t5" targetRef="P18_messages_t8" />
     <bpmn:sequenceFlow id="P18_messages_flux9" sourceRef="P18_messages_t6" targetRef="P18_messages_t7" />
-    <bpmn:sequenceFlow id="P18_messages_flux10" sourceRef="P18_messages_t7" targetRef="P18_messages_t8" />
-    <bpmn:sequenceFlow id="P18_messages_flux11" sourceRef="P18_messages_t8" targetRef="P18_messages_f" />
+    <bpmn:sequenceFlow id="P18_messages_flux10" name="Trop de non lues" sourceRef="P18_messages_t6" targetRef="P18_messages_t9" />
+    <bpmn:sequenceFlow id="P18_messages_flux11" sourceRef="P18_messages_t9" targetRef="P18_messages_t7" />
+    <bpmn:sequenceFlow id="P18_messages_flux12" sourceRef="P18_messages_t7" targetRef="P18_messages_t8" />
+    <bpmn:sequenceFlow id="P18_messages_flux13" sourceRef="P18_messages_t8" targetRef="P18_messages_f" />
     <bpmn:textAnnotation id="P18_messages_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="P18_messages_diagram">
@@ -92,6 +96,9 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_messages_t7_di" bpmnElement="P18_messages_t7" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
         <dc:Bounds x="710" y="540" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P18_messages_t9_di" bpmnElement="P18_messages_t9" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="900" y="180" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_messages_t8_di" bpmnElement="P18_messages_t8" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="1470" y="420" width="150" height="80" />
@@ -144,12 +151,22 @@
         <di:waypoint x="710" y="580" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_messages_flux10_di" bpmnElement="P18_messages_flux10">
+        <di:waypoint x="670" y="220" />
+        <di:waypoint x="900" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P18_messages_flux11_di" bpmnElement="P18_messages_flux11">
+        <di:waypoint x="975" y="260" />
+        <di:waypoint x="975" y="518" />
+        <di:waypoint x="785" y="518" />
+        <di:waypoint x="785" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P18_messages_flux12_di" bpmnElement="P18_messages_flux12">
         <di:waypoint x="860" y="580" />
         <di:waypoint x="1445" y="580" />
         <di:waypoint x="1445" y="460" />
         <di:waypoint x="1470" y="460" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="P18_messages_flux11_di" bpmnElement="P18_messages_flux11">
+      <bpmndi:BPMNEdge id="P18_messages_flux13_di" bpmnElement="P18_messages_flux13">
         <di:waypoint x="1620" y="460" />
         <di:waypoint x="1692" y="460" />
         <di:waypoint x="1692" y="340" />

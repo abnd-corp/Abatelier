@@ -16,6 +16,6 @@
 "15";"Organisation";"Équipe : arrivée et départ d’un salarié";"7";"7";"0";"0";"0";"";"";"";"";"=K16*L16/60";"";"=M16*N16*52";"100";"=O16*P16/100";"";""
 "16";"Organisation";"Paramétrage par la direction";"6";"4";"0";"2";"0";"";"";"";"";"=K17*L17/60";"";"=M17*N17*52";"67";"=O17*P17/100";"";""
 "17";"Organisation";"Faire vivre le site vitrine et la boutique";"6";"5";"0";"0";"1";"";"";"";"";"=K18*L18/60";"";"=M18*N18*52";"100";"=O18*P18/100";"";""
-"18";"Organisation";"Messages envoyés par l’application";"8";"5";"2";"1";"0";"";"";"";"";"=K19*L19/60";"";"=M19*N19*52";"75";"=O19*P19/100";"";""
+"18";"Organisation";"Messages envoyés par l’application";"9";"5";"2";"2";"0";"";"";"";"";"=K19*L19/60";"";"=M19*N19*52";"67";"=O19*P19/100";"";""
 "19";"Mise en service et exploitation";"Mise en service chez un client";"11";"7";"2";"1";"1";"";"";"";"";"=K20*L20/60";"";"=M20*N20*52";"80";"=O20*P20/100";"";""
 "20";"Mise en service et exploitation";"Sauvegarde et exploitation";"7";"3";"1";"3";"0";"";"";"";"";"=K21*L21/60";"";"=M21*N21*52";"50";"=O21*P21/100";"";""

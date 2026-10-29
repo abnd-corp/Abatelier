@@ -347,13 +347,14 @@ Schéma : [17-site-vitrine.svg](bpmn/17-site-vitrine.svg) · 6 étapes : 5 dans 
 
 Les messages automatiques : par e-mail pour les clients, qui ne se connectent pas souvent ; dans la plateforme, en un seul endroit, pour la direction. Jamais de publicité, jamais de document joint, jamais de mot de passe.
 
-Schéma : [18-messages.svg](bpmn/18-messages.svg) · 8 étapes : 5 dans l'application, 2 en partie, 1 pas encore, 0 hors application.
+Schéma : [18-messages.svg](bpmn/18-messages.svg) · 9 étapes : 5 dans l'application, 2 en partie, 2 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
 - Commande prête, accusé de réception d’une demande de contact (pas encore)
 - Notifier la direction dans la plateforme (commande, contact, devis) (en partie)
 - Lire la notification et ouvrir la commande ou la demande (en partie)
+- Envoyer un e-mail d’alerte à la direction si trop de notifications restent non lues (pas encore)
 
 À demander au client :
 
