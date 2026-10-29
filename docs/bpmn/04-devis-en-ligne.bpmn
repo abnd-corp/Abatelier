@@ -30,14 +30,14 @@
     <bpmn:startEvent id="P4_devis_en_ligne_d" name="Le client veut un devis avant de commander"><bpmn:outgoing>P4_devis_en_ligne_flux1</bpmn:outgoing></bpmn:startEvent>
     <bpmn:userTask id="P4_devis_en_ligne_t1" name="Enregistrer son devis depuis le configurateur (compte nécessaire)"><bpmn:documentation>Dans l’application : Voir « Espace client » ; la pièce est conservée</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux1</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux2</bpmn:outgoing></bpmn:userTask>
     <bpmn:serviceTask id="P4_devis_en_ligne_t2" name="Créer la commande et éditer le devis PDF numéroté"><bpmn:documentation>Dans l’application : Numérotation continue D-AAAA-NNNN</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux2</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux3</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P4_devis_en_ligne_t3" name="Prévenir la direction par e-mail"><bpmn:documentation>Dans l’application : Alerte « Devis demandé depuis l’espace client »</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux3</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P4_devis_en_ligne_t3" name="Notifier la direction dans la plateforme : devis demandé"><bpmn:documentation>En partie : Aujourd’hui par e-mail ; passe dans les notifications de la plateforme</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux3</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux4</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:exclusiveGateway id="P4_devis_en_ligne_g1" name="Accepte le devis ?"><bpmn:incoming>P4_devis_en_ligne_flux4</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux5</bpmn:outgoing><bpmn:outgoing>P4_devis_en_ligne_flux6</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:userTask id="P4_devis_en_ligne_t4" name="Accepter le devis dans son espace"><bpmn:documentation>Dans l’application : Espace client › commande › Accepter le devis</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux5</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux7</bpmn:outgoing></bpmn:userTask>
     <bpmn:serviceTask id="P4_devis_en_ligne_t5" name="Valider la commande tout de suite, sans passer par la direction"><bpmn:documentation>Pas encore : Aujourd’hui la direction valide à la main (un clic depuis le devis) ; devis encore valable et prix inchangés</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux7</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux8</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P4_devis_en_ligne_t7" name="Prévenir la direction : devis accepté, commande validée"><bpmn:documentation>En partie : Alerte envoyée, mais elle dit encore « attend votre validation »</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux8</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux9</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P4_devis_en_ligne_t7" name="Notifier la direction dans la plateforme : devis accepté, commande validée"><bpmn:documentation>En partie : Aujourd’hui par e-mail ; passe dans les notifications de la plateforme ; le texte dit encore « attend votre validation »</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux8</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux9</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:userTask id="P4_devis_en_ligne_t6" name="Refuser le devis"><bpmn:documentation>Dans l’application : La commande reste, avec la réponse du client</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux6</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux10</bpmn:outgoing></bpmn:userTask>
     <bpmn:serviceTask id="P4_devis_en_ligne_t9" name="Annuler la commande toute seule (motif : devis refusé par le client)"><bpmn:documentation>Pas encore : Aujourd’hui la commande reste ouverte et la direction doit l’annuler à la main</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux10</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux11</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P4_devis_en_ligne_t8" name="Prévenir la direction du refus par e-mail"><bpmn:documentation>Dans l’application : Alerte « Devis refusé par … » avec un lien vers la commande, pour information</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux11</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux12</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P4_devis_en_ligne_t8" name="Notifier la direction dans la plateforme : devis refusé"><bpmn:documentation>En partie : Avec un lien vers la commande, pour information. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme</bpmn:documentation><bpmn:incoming>P4_devis_en_ligne_flux11</bpmn:incoming><bpmn:outgoing>P4_devis_en_ligne_flux12</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:endEvent id="P4_devis_en_ligne_f1" name="Commande validée : voir « Fabrication »"><bpmn:incoming>P4_devis_en_ligne_flux9</bpmn:incoming></bpmn:endEvent>
     <bpmn:endEvent id="P4_devis_en_ligne_f2" name="Devis refusé, commande annulée, direction prévenue"><bpmn:incoming>P4_devis_en_ligne_flux12</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="P4_devis_en_ligne_flux1" sourceRef="P4_devis_en_ligne_d" targetRef="P4_devis_en_ligne_t1" />
@@ -77,7 +77,7 @@
       <bpmndi:BPMNShape id="P4_devis_en_ligne_t2_di" bpmnElement="P4_devis_en_ligne_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="520" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P4_devis_en_ligne_t3_di" bpmnElement="P4_devis_en_ligne_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+      <bpmndi:BPMNShape id="P4_devis_en_ligne_t3_di" bpmnElement="P4_devis_en_ligne_t3" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
         <dc:Bounds x="710" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P4_devis_en_ligne_g1_di" bpmnElement="P4_devis_en_ligne_g1" isMarkerVisible="true">
@@ -101,7 +101,7 @@
       <bpmndi:BPMNShape id="P4_devis_en_ligne_t9_di" bpmnElement="P4_devis_en_ligne_t9" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
         <dc:Bounds x="1280" y="420" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P4_devis_en_ligne_t8_di" bpmnElement="P4_devis_en_ligne_t8" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+      <bpmndi:BPMNShape id="P4_devis_en_ligne_t8_di" bpmnElement="P4_devis_en_ligne_t8" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
         <dc:Bounds x="1470" y="420" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P4_devis_en_ligne_f1_di" bpmnElement="P4_devis_en_ligne_f1">

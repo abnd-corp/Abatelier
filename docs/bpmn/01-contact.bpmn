@@ -34,7 +34,7 @@
     <bpmn:userTask id="P1_contact_t0" name="Utiliser le configurateur, le devis ou la commande en ligne"><bpmn:documentation>Dans l’application : Voir « Configurateur », « Devis » et « Commande payée en ligne »</bpmn:documentation><bpmn:incoming>P1_contact_flux3</bpmn:incoming><bpmn:outgoing>P1_contact_flux5</bpmn:outgoing></bpmn:userTask>
     <bpmn:endEvent id="P1_contact_f0" name="Aucune demande : la direction n’intervient pas"><bpmn:incoming>P1_contact_flux5</bpmn:incoming></bpmn:endEvent>
     <bpmn:userTask id="P1_contact_t1" name="Remplir le formulaire de contact (plan joint possible)"><bpmn:documentation>Dans l’application : Site public › Contact (consentement RGPD demandé)</bpmn:documentation><bpmn:incoming>P1_contact_flux4</bpmn:incoming><bpmn:outgoing>P1_contact_flux6</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="P1_contact_t2" name="Enregistrer la demande et prévenir la direction par e-mail"><bpmn:documentation>Dans l’application : Alerte avec le plan, la pièce choisie dans le configurateur et un lien</bpmn:documentation><bpmn:incoming>P1_contact_flux6</bpmn:incoming><bpmn:outgoing>P1_contact_flux7</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P1_contact_t2" name="Enregistrer la demande et notifier la direction dans la plateforme"><bpmn:documentation>En partie : Notification avec le plan, la pièce choisie dans le configurateur et un lien. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme</bpmn:documentation><bpmn:incoming>P1_contact_flux6</bpmn:incoming><bpmn:outgoing>P1_contact_flux7</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="P1_contact_t3" name="Envoyer un accusé de réception au visiteur, avec les liens utiles"><bpmn:documentation>Pas encore : Aujourd’hui seule l’équipe est prévenue</bpmn:documentation><bpmn:incoming>P1_contact_flux7</bpmn:incoming><bpmn:outgoing>P1_contact_flux8</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="P1_contact_t5" name="Retrouver ou créer la fiche client depuis la demande"><bpmn:documentation>Pas encore : Par l’adresse e-mail, sans doublon ; aujourd’hui la fiche se crée à la main dans Clients</bpmn:documentation><bpmn:incoming>P1_contact_flux8</bpmn:incoming><bpmn:outgoing>P1_contact_flux9</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:userTask id="P1_contact_t4" name="Lire la demande et télécharger le plan"><bpmn:documentation>Dans l’application : Site vitrine › Demandes reçues</bpmn:documentation><bpmn:incoming>P1_contact_flux9</bpmn:incoming><bpmn:outgoing>P1_contact_flux10</bpmn:outgoing></bpmn:userTask>
@@ -92,7 +92,7 @@
       <bpmndi:BPMNShape id="P1_contact_t1_di" bpmnElement="P1_contact_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="710" y="60" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P1_contact_t2_di" bpmnElement="P1_contact_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+      <bpmndi:BPMNShape id="P1_contact_t2_di" bpmnElement="P1_contact_t2" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
         <dc:Bounds x="900" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P1_contact_t3_di" bpmnElement="P1_contact_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">

@@ -37,7 +37,7 @@
     <bpmn:userTask id="P6_commande_direction_t5b" name="Noter l’acceptation donnée par téléphone (exception)"><bpmn:documentation>Dans l’application : Devis › Accepté par le client</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux7</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux10</bpmn:outgoing></bpmn:userTask>
     <bpmn:serviceTask id="P6_commande_direction_t6" name="Valider la commande tout de suite, sans passer par la direction"><bpmn:documentation>Pas encore : Même règle que « Devis depuis l’espace client »</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux9</bpmn:incoming><bpmn:incoming>P6_commande_direction_flux10</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux11</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="P6_commande_direction_t7" name="Annuler la commande toute seule (motif : devis refusé par le client)"><bpmn:documentation>Pas encore : Même règle que « Devis depuis l’espace client »</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux8</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux12</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P6_commande_direction_t8" name="Prévenir la direction du refus par e-mail"><bpmn:documentation>Dans l’application : Alerte avec un lien vers la commande, pour information</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux12</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux13</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P6_commande_direction_t8" name="Notifier la direction dans la plateforme : devis refusé"><bpmn:documentation>En partie : Avec un lien vers la commande, pour information. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux12</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux13</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:endEvent id="P6_commande_direction_f1" name="Commande validée : voir « Fabrication »"><bpmn:incoming>P6_commande_direction_flux11</bpmn:incoming></bpmn:endEvent>
     <bpmn:endEvent id="P6_commande_direction_f2" name="Commande annulée, direction prévenue"><bpmn:incoming>P6_commande_direction_flux13</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="P6_commande_direction_flux1" sourceRef="P6_commande_direction_d" targetRef="P6_commande_direction_t1" />
@@ -102,7 +102,7 @@
       <bpmndi:BPMNShape id="P6_commande_direction_t7_di" bpmnElement="P6_commande_direction_t7" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
         <dc:Bounds x="1280" y="420" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P6_commande_direction_t8_di" bpmnElement="P6_commande_direction_t8" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+      <bpmndi:BPMNShape id="P6_commande_direction_t8_di" bpmnElement="P6_commande_direction_t8" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
         <dc:Bounds x="1470" y="420" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P6_commande_direction_f1_di" bpmnElement="P6_commande_direction_f1">

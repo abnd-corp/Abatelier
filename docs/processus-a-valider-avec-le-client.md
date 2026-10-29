@@ -36,11 +36,12 @@ Les schémas sont dans [bpmn/](bpmn/) (BPMN 2.0, fichiers `.bpmn` et images `.sv
 
 Dernier recours : le visiteur ne passe par la direction que si le configurateur, le devis et la commande en ligne ne suffisent pas (pièce hors limites, question, cas particulier). Le reste se fait seul.
 
-Schéma : [01-contact.svg](bpmn/01-contact.svg) · 10 étapes : 5 dans l'application, 0 en partie, 4 pas encore, 1 hors application.
+Schéma : [01-contact.svg](bpmn/01-contact.svg) · 10 étapes : 4 dans l'application, 1 en partie, 4 pas encore, 1 hors application.
 
 À développer ou à compléter :
 
 - Proposer d’abord les services en ligne et les réponses aux questions fréquentes (pas encore)
+- Enregistrer la demande et notifier la direction dans la plateforme (en partie)
 - Envoyer un accusé de réception au visiteur, avec les liens utiles (pas encore)
 - Retrouver ou créer la fiche client depuis la demande (pas encore)
 - Supprimer la demande au bout de 12 mois (pas encore)
@@ -91,13 +92,15 @@ Schéma : [03-configurateur.svg](bpmn/03-configurateur.svg) · 7 étapes : 5 dan
 
 Le client enregistre son devis numéroté, l’accepte ou le refuse en ligne. L’acceptation valide la commande toute seule ; la direction est seulement prévenue, dans les deux cas.
 
-Schéma : [04-devis-en-ligne.svg](bpmn/04-devis-en-ligne.svg) · 9 étapes : 6 dans l'application, 1 en partie, 2 pas encore, 0 hors application.
+Schéma : [04-devis-en-ligne.svg](bpmn/04-devis-en-ligne.svg) · 9 étapes : 4 dans l'application, 3 en partie, 2 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
+- Notifier la direction dans la plateforme : devis demandé (en partie)
 - Valider la commande tout de suite, sans passer par la direction (pas encore)
-- Prévenir la direction : devis accepté, commande validée (en partie)
+- Notifier la direction dans la plateforme : devis accepté, commande validée (en partie)
 - Annuler la commande toute seule (motif : devis refusé par le client) (pas encore)
+- Notifier la direction dans la plateforme : devis refusé (en partie)
 
 À demander au client :
 
@@ -110,12 +113,13 @@ Schéma : [04-devis-en-ligne.svg](bpmn/04-devis-en-ligne.svg) · 9 étapes : 6 d
 
 Le client paie par carte avant que la commande n’existe : elle naît validée, avec une date estimée, sans intervention de l’atelier.
 
-Schéma : [05-commande-en-ligne.svg](bpmn/05-commande-en-ligne.svg) · 11 étapes : 9 dans l'application, 1 en partie, 1 pas encore, 0 hors application.
+Schéma : [05-commande-en-ligne.svg](bpmn/05-commande-en-ligne.svg) · 11 étapes : 8 dans l'application, 2 en partie, 1 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
 - Garder le panier dans le compte du client, retrouvé sur tous ses appareils (pas encore)
 - Contrôler et débiter la carte (en partie)
+- Confirmer au client par e-mail et notifier la direction dans la plateforme (en partie)
 
 À demander au client :
 
@@ -128,13 +132,14 @@ Schéma : [05-commande-en-ligne.svg](bpmn/05-commande-en-ligne.svg) · 11 étape
 
 Exception à la commande en ligne : un client qui ne peut ou ne veut pas le faire seul (téléphone, visite). La direction saisit la commande dans l’application, mais le devis, son envoi, l’accès à l’espace et la validation se font tout seuls : le client décide dans son espace.
 
-Schéma : [06-commande-direction.svg](bpmn/06-commande-direction.svg) · 9 étapes : 6 dans l'application, 1 en partie, 2 pas encore, 0 hors application.
+Schéma : [06-commande-direction.svg](bpmn/06-commande-direction.svg) · 9 étapes : 5 dans l'application, 2 en partie, 2 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
 - Éditer le devis numéroté et envoyer au client le lien d’accès à son espace (en partie)
 - Valider la commande tout de suite, sans passer par la direction (pas encore)
 - Annuler la commande toute seule (motif : devis refusé par le client) (pas encore)
+- Notifier la direction dans la plateforme : devis refusé (en partie)
 
 À demander au client :
 
@@ -340,13 +345,15 @@ Schéma : [17-site-vitrine.svg](bpmn/17-site-vitrine.svg) · 6 étapes : 5 dans 
 
 ### 18. Messages envoyés par l’application
 
-Les e-mails automatiques : à qui, quand, avec quelles règles. Jamais de publicité, jamais de document joint, jamais de mot de passe.
+Les messages automatiques : par e-mail pour les clients, qui ne se connectent pas souvent ; dans la plateforme, en un seul endroit, pour la direction. Jamais de publicité, jamais de document joint, jamais de mot de passe.
 
-Schéma : [18-messages.svg](bpmn/18-messages.svg) · 8 étapes : 7 dans l'application, 0 en partie, 1 pas encore, 0 hors application.
+Schéma : [18-messages.svg](bpmn/18-messages.svg) · 8 étapes : 5 dans l'application, 2 en partie, 1 pas encore, 0 hors application.
 
 À développer ou à compléter :
 
 - Commande prête, accusé de réception d’une demande de contact (pas encore)
+- Notifier la direction dans la plateforme (commande, contact, devis) (en partie)
+- Lire la notification et ouvrir la commande ou la demande (en partie)
 
 À demander au client :
 

@@ -41,7 +41,7 @@
     <bpmn:exclusiveGateway id="P5_commande_en_ligne_g1" name="Paiement accepté ?"><bpmn:incoming>P5_commande_en_ligne_flux6</bpmn:incoming><bpmn:outgoing>P5_commande_en_ligne_flux7</bpmn:outgoing><bpmn:outgoing>P5_commande_en_ligne_flux8</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:serviceTask id="P5_commande_en_ligne_t5" name="Recevoir la confirmation signée du prestataire"><bpmn:documentation>Dans l’application : Seule preuve du paiement ; une notification falsifiée ou rejouée est ignorée</bpmn:documentation><bpmn:incoming>P5_commande_en_ligne_flux7</bpmn:incoming><bpmn:outgoing>P5_commande_en_ligne_flux9</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="P5_commande_en_ligne_t6" name="Créer la commande déjà validée avec sa date estimée"><bpmn:documentation>Dans l’application : Elle n’existe qu’après le paiement</bpmn:documentation><bpmn:incoming>P5_commande_en_ligne_flux9</bpmn:incoming><bpmn:outgoing>P5_commande_en_ligne_flux10</bpmn:outgoing><bpmn:outgoing>P5_commande_en_ligne_flux13</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P5_commande_en_ligne_t7" name="Envoyer la confirmation au client et l’alerte à la direction"><bpmn:documentation>Dans l’application : E-mails mis en page, sans publicité</bpmn:documentation><bpmn:incoming>P5_commande_en_ligne_flux10</bpmn:incoming><bpmn:outgoing>P5_commande_en_ligne_flux11</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P5_commande_en_ligne_t7" name="Confirmer au client par e-mail et notifier la direction dans la plateforme"><bpmn:documentation>En partie : E-mail client mis en page, sans publicité. Notification direction : aujourd’hui par e-mail</bpmn:documentation><bpmn:incoming>P5_commande_en_ligne_flux10</bpmn:incoming><bpmn:outgoing>P5_commande_en_ligne_flux11</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:userTask id="P5_commande_en_ligne_t8" name="Fabriquer (voir « Fabrication »)"><bpmn:documentation>Dans l’application : Arrive dans « À lancer »</bpmn:documentation><bpmn:incoming>P5_commande_en_ligne_flux11</bpmn:incoming><bpmn:outgoing>P5_commande_en_ligne_flux12</bpmn:outgoing></bpmn:userTask>
     <bpmn:serviceTask id="P5_commande_en_ligne_t9" name="Ne rien créer, garder le panier"><bpmn:documentation>Dans l’application : Message au retour sur le site : paiement annulé, aucune somme débitée</bpmn:documentation><bpmn:incoming>P5_commande_en_ligne_flux8</bpmn:incoming><bpmn:outgoing>P5_commande_en_ligne_flux15</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:userTask id="P5_commande_en_ligne_t10" name="Suivre sa commande dans son espace"><bpmn:documentation>Dans l’application : Étapes, date estimée, paiement</bpmn:documentation><bpmn:incoming>P5_commande_en_ligne_flux13</bpmn:incoming><bpmn:outgoing>P5_commande_en_ligne_flux14</bpmn:outgoing></bpmn:userTask>
@@ -112,7 +112,7 @@
       <bpmndi:BPMNShape id="P5_commande_en_ligne_t6_di" bpmnElement="P5_commande_en_ligne_t6" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="1470" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P5_commande_en_ligne_t7_di" bpmnElement="P5_commande_en_ligne_t7" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+      <bpmndi:BPMNShape id="P5_commande_en_ligne_t7_di" bpmnElement="P5_commande_en_ligne_t7" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
         <dc:Bounds x="1660" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P5_commande_en_ligne_t8_di" bpmnElement="P5_commande_en_ligne_t8" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">

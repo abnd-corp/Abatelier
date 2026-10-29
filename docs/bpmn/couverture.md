@@ -6,8 +6,8 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 
 | Couverture | Étapes | Part |
 |---|---|---|
-| Dans l’application | 113 | 68 % |
-| En partie | 8 | 5 % |
+| Dans l’application | 106 | 64 % |
+| En partie | 15 | 9 % |
 | Pas encore | 35 | 21 % |
 | Hors application | 10 | 6 % |
 | **Total** | **166** | |
@@ -15,20 +15,25 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 ## Ce qu’il reste à faire pour couvrir tout le besoin
 
 - **Demande de contact** : Proposer d’abord les services en ligne et les réponses aux questions fréquentes (pas encore) : En tête de la page Contact : liens vers configurateur, devis, commande ; délais, matières, livraison
+- **Demande de contact** : Enregistrer la demande et notifier la direction dans la plateforme (en partie) : Notification avec le plan, la pièce choisie dans le configurateur et un lien. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme
 - **Demande de contact** : Envoyer un accusé de réception au visiteur, avec les liens utiles (pas encore) : Aujourd’hui seule l’équipe est prévenue
 - **Demande de contact** : Retrouver ou créer la fiche client depuis la demande (pas encore) : Par l’adresse e-mail, sans doublon ; aujourd’hui la fiche se crée à la main dans Clients
 - **Demande de contact** : Supprimer la demande au bout de 12 mois (pas encore) : Suppression à la demande de la personne : faite ; purge automatique : à faire
 - **Espace client : création, activation, mot de passe, fermeture** : Vérifier le SIRET dans l’annuaire officiel des entreprises (en activité, nom concordant) (pas encore) : Annuaire public et gratuit (recherche-entreprises.api.gouv.fr) ; le n° de TVA se contrôle avec VIES. Aujourd’hui la direction vérifie à la main
 - **Configurateur : faisabilité contrôlée, prix et date estimée** : Vérifier la quantité et la charge de l’atelier (pas encore) : Plafond de quantité et capacité par jour : en attente des données de l’atelier
 - **Configurateur : faisabilité contrôlée, prix et date estimée** : Calculer le prix, la livraison et la date estimée (en partie) : Date = jour + délai standard ; pas encore selon la quantité, le stock ni la charge
+- **Devis depuis l’espace client** : Notifier la direction dans la plateforme : devis demandé (en partie) : Aujourd’hui par e-mail ; passe dans les notifications de la plateforme
 - **Devis depuis l’espace client** : Valider la commande tout de suite, sans passer par la direction (pas encore) : Aujourd’hui la direction valide à la main (un clic depuis le devis) ; devis encore valable et prix inchangés
-- **Devis depuis l’espace client** : Prévenir la direction : devis accepté, commande validée (en partie) : Alerte envoyée, mais elle dit encore « attend votre validation »
+- **Devis depuis l’espace client** : Notifier la direction dans la plateforme : devis accepté, commande validée (en partie) : Aujourd’hui par e-mail ; passe dans les notifications de la plateforme ; le texte dit encore « attend votre validation »
 - **Devis depuis l’espace client** : Annuler la commande toute seule (motif : devis refusé par le client) (pas encore) : Aujourd’hui la commande reste ouverte et la direction doit l’annuler à la main
+- **Devis depuis l’espace client** : Notifier la direction dans la plateforme : devis refusé (en partie) : Avec un lien vers la commande, pour information. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme
 - **Commande payée en ligne (sur mesure ou boutique)** : Garder le panier dans le compte du client, retrouvé sur tous ses appareils (pas encore) : Aujourd’hui le panier reste dans le navigateur : il ne suit ni le compte ni l’appareil ; à la connexion, on fusionne les deux
 - **Commande payée en ligne (sur mesure ou boutique)** : Contrôler et débiter la carte (en partie) : Essayé avec le mode test de Stripe ; le compte du client se branche à la mise en service
+- **Commande payée en ligne (sur mesure ou boutique)** : Confirmer au client par e-mail et notifier la direction dans la plateforme (en partie) : E-mail client mis en page, sans publicité. Notification direction : aujourd’hui par e-mail
 - **Commande saisie par la direction pour un client** : Éditer le devis numéroté et envoyer au client le lien d’accès à son espace (en partie) : Devis et lien d’activation existent ; l’envoi des deux ensemble, en un seul geste, est à faire
 - **Commande saisie par la direction pour un client** : Valider la commande tout de suite, sans passer par la direction (pas encore) : Même règle que « Devis depuis l’espace client »
 - **Commande saisie par la direction pour un client** : Annuler la commande toute seule (motif : devis refusé par le client) (pas encore) : Même règle que « Devis depuis l’espace client »
+- **Commande saisie par la direction pour un client** : Notifier la direction dans la plateforme : devis refusé (en partie) : Avec un lien vers la commande, pour information. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme
 - **Refus d’une commande payée et remboursement** : Rembourser la carte du client (en partie) : Vérifié avec le mode test de Stripe
 - **Fabrication à l’atelier** : Décompter les feuilles utilisées du stock (pas encore) : Aujourd’hui saisi à la main dans Stock de feuilles
 - **Fabrication à l’atelier** : Confirmer les chutes obtenues et les remettre au stock (pas encore) : Décidé : le nombre de chutes se confirme à la fin de la fabrication
@@ -50,6 +55,8 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Paramétrage par la direction** : Régler les limites par matière, la quantité maximale et le délai selon la quantité (pas encore) : En attente des données des machines de l’atelier
 - **Paramétrage par la direction** : Déclarer les jours fériés et les fermetures (pas encore) : Le délai annoncé saute les week-ends, pas les jours fériés
 - **Messages envoyés par l’application** : Commande prête, accusé de réception d’une demande de contact (pas encore) : Pas encore envoyés au client
+- **Messages envoyés par l’application** : Notifier la direction dans la plateforme (commande, contact, devis) (en partie) : Centre de notifications unique (lues et non lues, par compte, selon les droits) ; aujourd’hui des e-mails aux adresses réglées
+- **Messages envoyés par l’application** : Lire la notification et ouvrir la commande ou la demande (en partie) : Un seul endroit pour tout, sans séparer les informations entre e-mail et plateforme
 - **Mise en service chez un client** : Installer l’application, créer le compte administrateur, régler les secrets (e-mail, paiement) (en partie) : Docker prêt ; domaine HTTPS et serveur chez le client à finaliser
 - **Mise en service chez un client** : Importer les clients et l’historique de l’ancien outil (pas encore) : Facultatif ; dépend de la forme des données existantes
 - **Mise en service chez un client** : Brancher le prestataire de paiement du client et faire un paiement de test (en partie) : Stripe essayé en test ; le choix du prestataire se fait avec le client
@@ -69,7 +76,7 @@ Schéma : [image](01-contact.svg) · [fichier BPMN](01-contact.bpmn)
 | Proposer d’abord les services en ligne et les réponses aux questions fréquentes | Application (automatique) | Pas encore | En tête de la page Contact : liens vers configurateur, devis, commande ; délais, matières, livraison |
 | Utiliser le configurateur, le devis ou la commande en ligne | Visiteur / Client | Dans l’application | Voir « Configurateur », « Devis » et « Commande payée en ligne » |
 | Remplir le formulaire de contact (plan joint possible) | Visiteur / Client | Dans l’application | Site public › Contact (consentement RGPD demandé) |
-| Enregistrer la demande et prévenir la direction par e-mail | Application (automatique) | Dans l’application | Alerte avec le plan, la pièce choisie dans le configurateur et un lien |
+| Enregistrer la demande et notifier la direction dans la plateforme | Application (automatique) | En partie | Notification avec le plan, la pièce choisie dans le configurateur et un lien. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme |
 | Envoyer un accusé de réception au visiteur, avec les liens utiles | Application (automatique) | Pas encore | Aujourd’hui seule l’équipe est prévenue |
 | Retrouver ou créer la fiche client depuis la demande | Application (automatique) | Pas encore | Par l’adresse e-mail, sans doublon ; aujourd’hui la fiche se crée à la main dans Clients |
 | Lire la demande et télécharger le plan | Direction | Dans l’application | Site vitrine › Demandes reçues |
@@ -127,13 +134,13 @@ Schéma : [image](04-devis-en-ligne.svg) · [fichier BPMN](04-devis-en-ligne.bpm
 |---|---|---|---|
 | Enregistrer son devis depuis le configurateur (compte nécessaire) | Visiteur / Client | Dans l’application | Voir « Espace client » ; la pièce est conservée |
 | Créer la commande et éditer le devis PDF numéroté | Application (automatique) | Dans l’application | Numérotation continue D-AAAA-NNNN |
-| Prévenir la direction par e-mail | Application (automatique) | Dans l’application | Alerte « Devis demandé depuis l’espace client » |
+| Notifier la direction dans la plateforme : devis demandé | Application (automatique) | En partie | Aujourd’hui par e-mail ; passe dans les notifications de la plateforme |
 | Accepter le devis dans son espace | Visiteur / Client | Dans l’application | Espace client › commande › Accepter le devis |
 | Valider la commande tout de suite, sans passer par la direction | Application (automatique) | Pas encore | Aujourd’hui la direction valide à la main (un clic depuis le devis) ; devis encore valable et prix inchangés |
-| Prévenir la direction : devis accepté, commande validée | Application (automatique) | En partie | Alerte envoyée, mais elle dit encore « attend votre validation » |
+| Notifier la direction dans la plateforme : devis accepté, commande validée | Application (automatique) | En partie | Aujourd’hui par e-mail ; passe dans les notifications de la plateforme ; le texte dit encore « attend votre validation » |
 | Refuser le devis | Visiteur / Client | Dans l’application | La commande reste, avec la réponse du client |
 | Annuler la commande toute seule (motif : devis refusé par le client) | Application (automatique) | Pas encore | Aujourd’hui la commande reste ouverte et la direction doit l’annuler à la main |
-| Prévenir la direction du refus par e-mail | Application (automatique) | Dans l’application | Alerte « Devis refusé par … » avec un lien vers la commande, pour information |
+| Notifier la direction dans la plateforme : devis refusé | Application (automatique) | En partie | Avec un lien vers la commande, pour information. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme |
 
 ## 5. Commande payée en ligne (sur mesure ou boutique)
 
@@ -150,7 +157,7 @@ Schéma : [image](05-commande-en-ligne.svg) · [fichier BPMN](05-commande-en-lig
 | Contrôler et débiter la carte | Prestataire de paiement | En partie | Essayé avec le mode test de Stripe ; le compte du client se branche à la mise en service |
 | Recevoir la confirmation signée du prestataire | Application (automatique) | Dans l’application | Seule preuve du paiement ; une notification falsifiée ou rejouée est ignorée |
 | Créer la commande déjà validée avec sa date estimée | Application (automatique) | Dans l’application | Elle n’existe qu’après le paiement |
-| Envoyer la confirmation au client et l’alerte à la direction | Application (automatique) | Dans l’application | E-mails mis en page, sans publicité |
+| Confirmer au client par e-mail et notifier la direction dans la plateforme | Application (automatique) | En partie | E-mail client mis en page, sans publicité. Notification direction : aujourd’hui par e-mail |
 | Fabriquer (voir « Fabrication ») | Atelier | Dans l’application | Arrive dans « À lancer » |
 | Ne rien créer, garder le panier | Application (automatique) | Dans l’application | Message au retour sur le site : paiement annulé, aucune somme débitée |
 | Suivre sa commande dans son espace | Visiteur / Client | Dans l’application | Étapes, date estimée, paiement |
@@ -171,7 +178,7 @@ Schéma : [image](06-commande-direction.svg) · [fichier BPMN](06-commande-direc
 | Noter l’acceptation donnée par téléphone (exception) | Direction | Dans l’application | Devis › Accepté par le client |
 | Valider la commande tout de suite, sans passer par la direction | Application (automatique) | Pas encore | Même règle que « Devis depuis l’espace client » |
 | Annuler la commande toute seule (motif : devis refusé par le client) | Application (automatique) | Pas encore | Même règle que « Devis depuis l’espace client » |
-| Prévenir la direction du refus par e-mail | Application (automatique) | Dans l’application | Alerte avec un lien vers la commande, pour information |
+| Notifier la direction dans la plateforme : devis refusé | Application (automatique) | En partie | Avec un lien vers la commande, pour information. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme |
 
 ## 7. Refus d’une commande payée et remboursement
 
@@ -264,7 +271,7 @@ Schéma : [image](12-stock.svg) · [fichier BPMN](12-stock.bpmn)
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
 | Voir les feuilles par matière, coloris, format ou état | Atelier | Dans l’application | Atelier › Stock de feuilles (filtres, état vide / critique / bas / ok) |
-| Signaler le stock bas (seuil par référence, aucune alerte sur une chute) | Application (automatique) | Dans l’application | Seuil réglable sur chaque carte |
+| Notifier la direction dans la plateforme quand le stock est bas (seuil par référence, aucune alerte sur une chute) | Application (automatique) | Dans l’application | Seuil réglable sur chaque carte ; à ranger dans le centre de notifications |
 | Ajuster : entrée, sortie, perte, chute récupérée | Atelier | Dans l’application | Chaque mouvement garde qui, quand et pourquoi |
 | Faire l’inventaire (quantité comptée) | Atelier | Dans l’application | Sert aussi à saisir le stock de départ |
 | Décompter automatiquement ce qu’une commande consomme | Application (automatique) | Pas encore | Décidé : au lancement, avec confirmation des chutes à la fin |
@@ -353,7 +360,7 @@ Schéma : [image](17-site-vitrine.svg) · [fichier BPMN](17-site-vitrine.bpmn)
 
 ## 18. Messages envoyés par l’application
 
-Les e-mails automatiques : à qui, quand, avec quelles règles. Jamais de publicité, jamais de document joint, jamais de mot de passe.
+Les messages automatiques : par e-mail pour les clients, qui ne se connectent pas souvent ; dans la plateforme, en un seul endroit, pour la direction. Jamais de publicité, jamais de document joint, jamais de mot de passe.
 
 Schéma : [image](18-messages.svg) · [fichier BPMN](18-messages.bpmn)
 
@@ -364,8 +371,8 @@ Schéma : [image](18-messages.svg) · [fichier BPMN](18-messages.bpmn)
 | Devis, facture ou avoir disponible dans l’espace client | Application (automatique) | Dans l’application | Aucune pièce jointe ; envoyé par la direction, texte modifiable |
 | Commande prête, accusé de réception d’une demande de contact | Application (automatique) | Pas encore | Pas encore envoyés au client |
 | Lire le message (rappel de sécurité et lien vers son espace) | Visiteur / Client | Dans l’application | Version mise en page et version texte |
-| Alerter l’équipe : commande payée, demande de contact, devis demandé ou répondu | Application (automatique) | Dans l’application | Alertes envoyées aux adresses réglées pour l’équipe |
-| Lire l’alerte et ouvrir la commande ou la demande | Direction | Dans l’application | Bouton direct dans le message |
+| Notifier la direction dans la plateforme (commande, contact, devis) | Application (automatique) | En partie | Centre de notifications unique (lues et non lues, par compte, selon les droits) ; aujourd’hui des e-mails aux adresses réglées |
+| Lire la notification et ouvrir la commande ou la demande | Direction | En partie | Un seul endroit pour tout, sans séparer les informations entre e-mail et plateforme |
 | Vérifier le rendu de chaque message et se l’envoyer | Direction | Dans l’application | Site vitrine › E-mails › Aperçu des messages (13 modèles) |
 
 ## 19. Mise en service chez un client
