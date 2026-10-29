@@ -1,5 +1,5 @@
 ﻿"N°";"Groupe";"Processus";"Étapes";"Dans l’application";"En partie";"Pas encore";"Hors application";"Qui le fait aujourd’hui";"Outil ou papier utilisé";"Minutes par fois";"Fois par semaine";"Heures par semaine";"Coût horaire (€)";"Coût par an (€)";"Part prise en charge par l’application (%, à ajuster avec le client)";"Gain par an (€)";"Problèmes constatés (erreurs, retards, oublis)";"Commentaire"
-"1";"Vente et clients";"Demande de contact";"8";"4";"0";"3";"1";"";"";"";"";"=K2*L2/60";"";"=M2*N2*52";"57";"=O2*P2/100";"";""
+"1";"Vente et clients";"Demande de contact";"10";"5";"0";"4";"1";"";"";"";"";"=K2*L2/60";"";"=M2*N2*52";"56";"=O2*P2/100";"";""
 "2";"Vente et clients";"Espace client : création, activation, mot de passe, fermeture";"15";"14";"0";"1";"0";"";"";"";"";"=K3*L3/60";"";"=M3*N3*52";"93";"=O3*P3/100";"";""
 "3";"Vente et clients";"Configurateur : faisabilité contrôlée, prix et date estimée";"7";"5";"1";"1";"0";"";"";"";"";"=K4*L4/60";"";"=M4*N4*52";"79";"=O4*P4/100";"";""
 "4";"Vente et clients";"Devis depuis l’espace client";"8";"6";"1";"1";"0";"";"";"";"";"=K5*L5/60";"";"=M5*N5*52";"81";"=O5*P5/100";"";""

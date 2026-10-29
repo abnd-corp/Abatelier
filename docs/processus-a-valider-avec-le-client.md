@@ -34,14 +34,15 @@ Les schémas sont dans [bpmn/](bpmn/) (BPMN 2.0, fichiers `.bpmn` et images `.sv
 
 ### 1. Demande de contact
 
-Un visiteur écrit à l’atelier depuis le site, avec ou sans plan.
+Dernier recours : le visiteur ne passe par la direction que si le configurateur, le devis et la commande en ligne ne suffisent pas (pièce hors limites, question, cas particulier). Le reste se fait seul.
 
-Schéma : [01-contact.svg](bpmn/01-contact.svg) · 8 étapes : 4 dans l'application, 0 en partie, 3 pas encore, 1 hors application.
+Schéma : [01-contact.svg](bpmn/01-contact.svg) · 10 étapes : 5 dans l'application, 0 en partie, 4 pas encore, 1 hors application.
 
 À développer ou à compléter :
 
-- Envoyer un accusé de réception au visiteur (pas encore)
-- Créer la fiche client depuis la demande (pas encore)
+- Proposer d’abord les services en ligne et les réponses aux questions fréquentes (pas encore)
+- Envoyer un accusé de réception au visiteur, avec les liens utiles (pas encore)
+- Retrouver ou créer la fiche client depuis la demande (pas encore)
 - Supprimer la demande au bout de 12 mois (pas encore)
 
 À demander au client :

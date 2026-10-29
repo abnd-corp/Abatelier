@@ -6,16 +6,17 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 
 | Couverture | Étapes | Part |
 |---|---|---|
-| Dans l’application | 113 | 71 % |
+| Dans l’application | 114 | 70 % |
 | En partie | 7 | 4 % |
-| Pas encore | 30 | 19 % |
+| Pas encore | 31 | 19 % |
 | Hors application | 10 | 6 % |
-| **Total** | **160** | |
+| **Total** | **162** | |
 
 ## Ce qu’il reste à faire pour couvrir tout le besoin
 
-- **Demande de contact** : Envoyer un accusé de réception au visiteur (pas encore) : Aujourd’hui seule l’équipe est prévenue
-- **Demande de contact** : Créer la fiche client depuis la demande (pas encore) : Aujourd’hui la fiche se crée à la main dans Clients
+- **Demande de contact** : Proposer d’abord les services en ligne et les réponses aux questions fréquentes (pas encore) : En tête de la page Contact : liens vers configurateur, devis, commande ; délais, matières, livraison
+- **Demande de contact** : Envoyer un accusé de réception au visiteur, avec les liens utiles (pas encore) : Aujourd’hui seule l’équipe est prévenue
+- **Demande de contact** : Retrouver ou créer la fiche client depuis la demande (pas encore) : Par l’adresse e-mail, sans doublon ; aujourd’hui la fiche se crée à la main dans Clients
 - **Demande de contact** : Supprimer la demande au bout de 12 mois (pas encore) : Suppression à la demande de la personne : faite ; purge automatique : à faire
 - **Espace client : création, activation, mot de passe, fermeture** : Vérifier le SIRET dans l’annuaire officiel des entreprises (en activité, nom concordant) (pas encore) : Annuaire public et gratuit (recherche-entreprises.api.gouv.fr) ; le n° de TVA se contrôle avec VIES. Aujourd’hui la direction vérifie à la main
 - **Configurateur : faisabilité contrôlée, prix et date estimée** : Vérifier la quantité et la charge de l’atelier (pas encore) : Plafond de quantité et capacité par jour : en attente des données de l’atelier
@@ -54,17 +55,19 @@ Les 20 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 
 ## 1. Demande de contact
 
-Un visiteur écrit à l’atelier depuis le site, avec ou sans plan.
+Dernier recours : le visiteur ne passe par la direction que si le configurateur, le devis et la commande en ligne ne suffisent pas (pièce hors limites, question, cas particulier). Le reste se fait seul.
 
 Schéma : [image](01-contact.svg) · [fichier BPMN](01-contact.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
+| Proposer d’abord les services en ligne et les réponses aux questions fréquentes | Application (automatique) | Pas encore | En tête de la page Contact : liens vers configurateur, devis, commande ; délais, matières, livraison |
+| Utiliser le configurateur, le devis ou la commande en ligne | Visiteur / Client | Dans l’application | Voir « Configurateur », « Devis » et « Commande payée en ligne » |
 | Remplir le formulaire de contact (plan joint possible) | Visiteur / Client | Dans l’application | Site public › Contact (consentement RGPD demandé) |
 | Enregistrer la demande et prévenir la direction par e-mail | Application (automatique) | Dans l’application | Alerte avec le plan, la pièce choisie dans le configurateur et un lien |
-| Envoyer un accusé de réception au visiteur | Application (automatique) | Pas encore | Aujourd’hui seule l’équipe est prévenue |
+| Envoyer un accusé de réception au visiteur, avec les liens utiles | Application (automatique) | Pas encore | Aujourd’hui seule l’équipe est prévenue |
+| Retrouver ou créer la fiche client depuis la demande | Application (automatique) | Pas encore | Par l’adresse e-mail, sans doublon ; aujourd’hui la fiche se crée à la main dans Clients |
 | Lire la demande et télécharger le plan | Direction | Dans l’application | Site vitrine › Demandes reçues |
-| Créer la fiche client depuis la demande | Direction | Pas encore | Aujourd’hui la fiche se crée à la main dans Clients |
 | Répondre au client (téléphone ou e-mail) | Direction | Hors application | La réponse part de la messagerie habituelle |
 | Marquer la demande comme traitée | Direction | Dans l’application | Site vitrine › Demandes reçues |
 | Supprimer la demande au bout de 12 mois | Application (automatique) | Pas encore | Suppression à la demande de la personne : faite ; purge automatique : à faire |
