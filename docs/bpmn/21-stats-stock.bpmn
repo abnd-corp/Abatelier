@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P21_stats_stock_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P21_stats_stock_collab">
+    <bpmn:participant id="P21_stats_stock_pool" name="Statistiques : consommation et rotation du stock" processRef="P21_stats_stock" />
+  </bpmn:collaboration>
+  <bpmn:process id="P21_stats_stock" name="Statistiques : consommation et rotation du stock" isExecutable="false">
+    <bpmn:documentation>La direction voit ce que l’atelier consomme et ce qui dort sur les étagères.</bpmn:documentation>
+    <bpmn:laneSet id="P21_stats_stock_voies">
+      <bpmn:lane id="P21_stats_stock_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P21_stats_stock_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P21_stats_stock_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P21_stats_stock_t3</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P21_stats_stock_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P21_stats_stock_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P21_stats_stock_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P21_stats_stock_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P21_stats_stock_d" name="La direction veut savoir ce que consomme l’atelier"><bpmn:outgoing>P21_stats_stock_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="P21_stats_stock_t1" name="Calculer la consommation par matière et coloris"><bpmn:documentation>Pas encore : Dépend du décompte automatique du stock</bpmn:documentation><bpmn:incoming>P21_stats_stock_flux1</bpmn:incoming><bpmn:outgoing>P21_stats_stock_flux2</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P21_stats_stock_t2" name="Calculer la rotation et repérer le stock dormant"><bpmn:documentation>Pas encore : Les mouvements de stock sont déjà horodatés</bpmn:documentation><bpmn:incoming>P21_stats_stock_flux2</bpmn:incoming><bpmn:outgoing>P21_stats_stock_flux3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P21_stats_stock_t3" name="Repérer les ruptures"><bpmn:documentation>Pas encore : Complète l’alerte « stock bas »</bpmn:documentation><bpmn:incoming>P21_stats_stock_flux3</bpmn:incoming><bpmn:outgoing>P21_stats_stock_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P21_stats_stock_t4" name="Lire la consommation et le stock dormant"><bpmn:documentation>Pas encore : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone</bpmn:documentation><bpmn:incoming>P21_stats_stock_flux4</bpmn:incoming><bpmn:outgoing>P21_stats_stock_flux5</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P21_stats_stock_f" name="Décision : réapprovisionner, solder"><bpmn:incoming>P21_stats_stock_flux5</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P21_stats_stock_flux1" sourceRef="P21_stats_stock_d" targetRef="P21_stats_stock_t1" />
+    <bpmn:sequenceFlow id="P21_stats_stock_flux2" sourceRef="P21_stats_stock_t1" targetRef="P21_stats_stock_t2" />
+    <bpmn:sequenceFlow id="P21_stats_stock_flux3" sourceRef="P21_stats_stock_t2" targetRef="P21_stats_stock_t3" />
+    <bpmn:sequenceFlow id="P21_stats_stock_flux4" sourceRef="P21_stats_stock_t3" targetRef="P21_stats_stock_t4" />
+    <bpmn:sequenceFlow id="P21_stats_stock_flux5" sourceRef="P21_stats_stock_t4" targetRef="P21_stats_stock_f" />
+    <bpmn:textAnnotation id="P21_stats_stock_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P21_stats_stock_diagram">
+    <bpmndi:BPMNPlane id="P21_stats_stock_plane" bpmnElement="P21_stats_stock_collab">
+      <bpmndi:BPMNShape id="P21_stats_stock_pool_di" bpmnElement="P21_stats_stock_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1250" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P21_stats_stock_voie_systeme_di" bpmnElement="P21_stats_stock_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1220" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P21_stats_stock_voie_direction_di" bpmnElement="P21_stats_stock_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1220" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P21_stats_stock_d_di" bpmnElement="P21_stats_stock_d">
+        <dc:Bounds x="197" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P21_stats_stock_t1_di" bpmnElement="P21_stats_stock_t1" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P21_stats_stock_t2_di" bpmnElement="P21_stats_stock_t2" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="520" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P21_stats_stock_t3_di" bpmnElement="P21_stats_stock_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="710" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P21_stats_stock_t4_di" bpmnElement="P21_stats_stock_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="900" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P21_stats_stock_f_di" bpmnElement="P21_stats_stock_f">
+        <dc:Bounds x="1147" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P21_stats_stock_flux1_di" bpmnElement="P21_stats_stock_flux1">
+        <di:waypoint x="233" y="220" />
+        <di:waypoint x="305" y="220" />
+        <di:waypoint x="305" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P21_stats_stock_flux2_di" bpmnElement="P21_stats_stock_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="520" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P21_stats_stock_flux3_di" bpmnElement="P21_stats_stock_flux3">
+        <di:waypoint x="670" y="100" />
+        <di:waypoint x="710" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P21_stats_stock_flux4_di" bpmnElement="P21_stats_stock_flux4">
+        <di:waypoint x="860" y="100" />
+        <di:waypoint x="875" y="100" />
+        <di:waypoint x="875" y="220" />
+        <di:waypoint x="900" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P21_stats_stock_flux5_di" bpmnElement="P21_stats_stock_flux5">
+        <di:waypoint x="1050" y="220" />
+        <di:waypoint x="1147" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P21_stats_stock_legende_di" bpmnElement="P21_stats_stock_legende">
+        <dc:Bounds x="70" y="300" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
