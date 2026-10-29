@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P18_stats_ventes_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P18_stats_ventes_collab">
+    <bpmn:participant id="P18_stats_ventes_pool" name="Statistiques : chiffres clés et ventes" processRef="P18_stats_ventes" />
+  </bpmn:collaboration>
+  <bpmn:process id="P18_stats_ventes" name="Statistiques : chiffres clés et ventes" isExecutable="false">
+    <bpmn:documentation>La direction lit ce qu’elle vend, de quoi et combien, sur la période de son choix. Les données de commandes existent déjà.</bpmn:documentation>
+    <bpmn:laneSet id="P18_stats_ventes_voies">
+      <bpmn:lane id="P18_stats_ventes_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P18_stats_ventes_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P18_stats_ventes_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P18_stats_ventes_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P18_stats_ventes_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P18_stats_ventes_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P18_stats_ventes_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P18_stats_ventes_t3</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P18_stats_ventes_d" name="La direction veut savoir combien elle vend, et de quoi"><bpmn:outgoing>P18_stats_ventes_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="P18_stats_ventes_t1" name="Choisir une période et un intervalle (jour, semaine, mois)"><bpmn:documentation>Pas encore : Sélecteur commun à toutes les vues de statistiques</bpmn:documentation><bpmn:incoming>P18_stats_ventes_flux1</bpmn:incoming><bpmn:outgoing>P18_stats_ventes_flux2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P18_stats_ventes_t2" name="Calculer le chiffre d’affaires, le nombre de commandes, le panier moyen, les devis acceptés"><bpmn:documentation>Pas encore : Les données de commandes existent déjà</bpmn:documentation><bpmn:incoming>P18_stats_ventes_flux2</bpmn:incoming><bpmn:outgoing>P18_stats_ventes_flux3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P18_stats_ventes_t3" name="Répartir les ventes par matière, coloris, modèle de pièce, sur mesure ou boutique"><bpmn:documentation>Pas encore : Les lignes de commande gardent déjà ces informations</bpmn:documentation><bpmn:incoming>P18_stats_ventes_flux3</bpmn:incoming><bpmn:outgoing>P18_stats_ventes_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P18_stats_ventes_t4" name="Lire les chiffres, les courbes et le classement des références"><bpmn:documentation>Pas encore : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone</bpmn:documentation><bpmn:incoming>P18_stats_ventes_flux4</bpmn:incoming><bpmn:outgoing>P18_stats_ventes_flux5</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P18_stats_ventes_f" name="Décision : quoi vendre, quoi mettre en avant"><bpmn:incoming>P18_stats_ventes_flux5</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P18_stats_ventes_flux1" sourceRef="P18_stats_ventes_d" targetRef="P18_stats_ventes_t1" />
+    <bpmn:sequenceFlow id="P18_stats_ventes_flux2" sourceRef="P18_stats_ventes_t1" targetRef="P18_stats_ventes_t2" />
+    <bpmn:sequenceFlow id="P18_stats_ventes_flux3" sourceRef="P18_stats_ventes_t2" targetRef="P18_stats_ventes_t3" />
+    <bpmn:sequenceFlow id="P18_stats_ventes_flux4" sourceRef="P18_stats_ventes_t3" targetRef="P18_stats_ventes_t4" />
+    <bpmn:sequenceFlow id="P18_stats_ventes_flux5" sourceRef="P18_stats_ventes_t4" targetRef="P18_stats_ventes_f" />
+    <bpmn:textAnnotation id="P18_stats_ventes_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P18_stats_ventes_diagram">
+    <bpmndi:BPMNPlane id="P18_stats_ventes_plane" bpmnElement="P18_stats_ventes_collab">
+      <bpmndi:BPMNShape id="P18_stats_ventes_pool_di" bpmnElement="P18_stats_ventes_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1250" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P18_stats_ventes_voie_direction_di" bpmnElement="P18_stats_ventes_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1220" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P18_stats_ventes_voie_systeme_di" bpmnElement="P18_stats_ventes_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1220" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P18_stats_ventes_d_di" bpmnElement="P18_stats_ventes_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P18_stats_ventes_t1_di" bpmnElement="P18_stats_ventes_t1" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P18_stats_ventes_t2_di" bpmnElement="P18_stats_ventes_t2" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="520" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P18_stats_ventes_t3_di" bpmnElement="P18_stats_ventes_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="710" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P18_stats_ventes_t4_di" bpmnElement="P18_stats_ventes_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="900" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P18_stats_ventes_f_di" bpmnElement="P18_stats_ventes_f">
+        <dc:Bounds x="1147" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P18_stats_ventes_flux1_di" bpmnElement="P18_stats_ventes_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P18_stats_ventes_flux2_di" bpmnElement="P18_stats_ventes_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="495" y="100" />
+        <di:waypoint x="495" y="220" />
+        <di:waypoint x="520" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P18_stats_ventes_flux3_di" bpmnElement="P18_stats_ventes_flux3">
+        <di:waypoint x="670" y="220" />
+        <di:waypoint x="710" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P18_stats_ventes_flux4_di" bpmnElement="P18_stats_ventes_flux4">
+        <di:waypoint x="860" y="220" />
+        <di:waypoint x="875" y="220" />
+        <di:waypoint x="875" y="100" />
+        <di:waypoint x="900" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P18_stats_ventes_flux5_di" bpmnElement="P18_stats_ventes_flux5">
+        <di:waypoint x="1050" y="100" />
+        <di:waypoint x="1147" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P18_stats_ventes_legende_di" bpmnElement="P18_stats_ventes_legende">
+        <dc:Bounds x="70" y="300" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

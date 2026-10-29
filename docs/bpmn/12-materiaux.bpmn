@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P12_materiaux_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P12_materiaux_collab">
+    <bpmn:participant id="P12_materiaux_pool" name="Créer une référence de feuille" processRef="P12_materiaux" />
+  </bpmn:collaboration>
+  <bpmn:process id="P12_materiaux" name="Créer une référence de feuille" isExecutable="false">
+    <bpmn:documentation>La direction décrit une feuille que l’atelier reçoit (matière, épaisseur, coloris, format) et son code-barres. Dès lors, la réception la reconnaît au scan. Rien d’autre n’est nécessaire.</bpmn:documentation>
+    <bpmn:laneSet id="P12_materiaux_voies">
+      <bpmn:lane id="P12_materiaux_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P12_materiaux_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_materiaux_t1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P12_materiaux_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P12_materiaux_g1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_materiaux_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_materiaux_t3</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P12_materiaux_voie_atelier" name="Atelier">
+        <bpmn:flowNodeRef>P12_materiaux_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P12_materiaux_d" name="Une nouvelle feuille entre dans l’atelier"><bpmn:outgoing>P12_materiaux_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="P12_materiaux_t1" name="Saisir la matière, l’épaisseur, le coloris, le format et le code-barres"><bpmn:documentation>Dans l’application : Direction › Matériaux (champs libres, suggestions du catalogue)</bpmn:documentation><bpmn:incoming>P12_materiaux_flux1</bpmn:incoming><bpmn:outgoing>P12_materiaux_flux2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:exclusiveGateway id="P12_materiaux_g1" name="Matière ou coloris absent du catalogue ?"><bpmn:incoming>P12_materiaux_flux2</bpmn:incoming><bpmn:outgoing>P12_materiaux_flux3</bpmn:outgoing><bpmn:outgoing>P12_materiaux_flux4</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P12_materiaux_t2" name="Les créer au catalogue, inactifs et à prix zéro"><bpmn:documentation>Dans l’application : Jamais vendables à zéro euro : la direction les complète dans Tarifs et catalogue</bpmn:documentation><bpmn:incoming>P12_materiaux_flux3</bpmn:incoming><bpmn:outgoing>P12_materiaux_flux5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P12_materiaux_t3" name="Créer la référence à zéro en stock, avec son code"><bpmn:documentation>Dans l’application : Un code désigne une référence ; un code déjà pris est refusé</bpmn:documentation><bpmn:incoming>P12_materiaux_flux4</bpmn:incoming><bpmn:incoming>P12_materiaux_flux5</bpmn:incoming><bpmn:outgoing>P12_materiaux_flux6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="P12_materiaux_f" name="Référence prête pour la réception"><bpmn:incoming>P12_materiaux_flux6</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P12_materiaux_flux1" sourceRef="P12_materiaux_d" targetRef="P12_materiaux_t1" />
+    <bpmn:sequenceFlow id="P12_materiaux_flux2" sourceRef="P12_materiaux_t1" targetRef="P12_materiaux_g1" />
+    <bpmn:sequenceFlow id="P12_materiaux_flux3" name="Oui" sourceRef="P12_materiaux_g1" targetRef="P12_materiaux_t2" />
+    <bpmn:sequenceFlow id="P12_materiaux_flux4" name="Non" sourceRef="P12_materiaux_g1" targetRef="P12_materiaux_t3" />
+    <bpmn:sequenceFlow id="P12_materiaux_flux5" sourceRef="P12_materiaux_t2" targetRef="P12_materiaux_t3" />
+    <bpmn:sequenceFlow id="P12_materiaux_flux6" sourceRef="P12_materiaux_t3" targetRef="P12_materiaux_f" />
+    <bpmn:textAnnotation id="P12_materiaux_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P12_materiaux_diagram">
+    <bpmndi:BPMNPlane id="P12_materiaux_plane" bpmnElement="P12_materiaux_collab">
+      <bpmndi:BPMNShape id="P12_materiaux_pool_di" bpmnElement="P12_materiaux_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1250" height="480" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_materiaux_voie_direction_di" bpmnElement="P12_materiaux_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1220" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_materiaux_voie_systeme_di" bpmnElement="P12_materiaux_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1220" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_materiaux_voie_atelier_di" bpmnElement="P12_materiaux_voie_atelier" isHorizontal="true">
+        <dc:Bounds x="70" y="400" width="1220" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_materiaux_d_di" bpmnElement="P12_materiaux_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_materiaux_t1_di" bpmnElement="P12_materiaux_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_materiaux_g1_di" bpmnElement="P12_materiaux_g1" isMarkerVisible="true">
+        <dc:Bounds x="570" y="195" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="490" y="163" width="110" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_materiaux_t2_di" bpmnElement="P12_materiaux_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="710" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_materiaux_t3_di" bpmnElement="P12_materiaux_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="900" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_materiaux_f_di" bpmnElement="P12_materiaux_f">
+        <dc:Bounds x="1147" y="442" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P12_materiaux_flux1_di" bpmnElement="P12_materiaux_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_materiaux_flux2_di" bpmnElement="P12_materiaux_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="545" y="100" />
+        <di:waypoint x="545" y="220" />
+        <di:waypoint x="570" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_materiaux_flux3_di" bpmnElement="P12_materiaux_flux3">
+        <di:waypoint x="620" y="220" />
+        <di:waypoint x="685" y="220" />
+        <di:waypoint x="685" y="340" />
+        <di:waypoint x="710" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_materiaux_flux4_di" bpmnElement="P12_materiaux_flux4">
+        <di:waypoint x="620" y="220" />
+        <di:waypoint x="900" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_materiaux_flux5_di" bpmnElement="P12_materiaux_flux5">
+        <di:waypoint x="860" y="340" />
+        <di:waypoint x="875" y="340" />
+        <di:waypoint x="875" y="220" />
+        <di:waypoint x="900" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_materiaux_flux6_di" bpmnElement="P12_materiaux_flux6">
+        <di:waypoint x="1050" y="220" />
+        <di:waypoint x="1122" y="220" />
+        <di:waypoint x="1122" y="460" />
+        <di:waypoint x="1147" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P12_materiaux_legende_di" bpmnElement="P12_materiaux_legende">
+        <dc:Bounds x="70" y="540" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
