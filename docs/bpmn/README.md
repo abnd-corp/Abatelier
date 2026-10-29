@@ -2,7 +2,7 @@
 
 Les 20 processus d'Alu Pliage Service, dessinés en BPMN 2.0, pour vérifier avec le client que l'application répond à tout le besoin, et mesurer le gain qu'elle apporte.
 
-- **À regarder** : les images `.svg` (un navigateur suffit).
+- **À regarder** : les images `.png` (les plus simples à ouvrir dans VS Code) ou `.svg` (un navigateur suffit).
 - **À modifier ou à présenter** : les fichiers `.bpmn`, ouverts avec [bpmn.io](https://demo.bpmn.io) (glisser le fichier dans la page) ou avec l'extension « BPMN Editor » de VS Code.
 - **Le bilan** : [couverture.md](couverture.md), avec chaque étape, qui la fait, et si l'application la couvre.
 - **Le tableur du gain** : [processus.csv](processus.csv), une ligne par processus, à remplir avec le client (voir [le questionnaire](../processus-a-valider-avec-le-client.md)).
@@ -51,7 +51,7 @@ Les fichiers sont **générés** : on modifie `scripts/bpmn/processus.mjs` (les 
 
 ```sh
 node scripts/bpmn/generer.mjs   # écrit les .bpmn, couverture.md et processus.csv
-node scripts/bpmn/rendre.mjs    # redessine les .svg (internet requis, Playwright installé par « make setup »)
+node scripts/bpmn/rendre.mjs    # redessine les .svg et les .png (internet requis, Playwright installé par « make setup »)
 ```
 
 Quand une fonctionnalité sort, on passe son étape de « manque » à « ok » dans `processus.mjs` et on régénère : le bilan reste vrai. Ces schémas ne contiennent aucune donnée de l'entreprise (le dépôt est public).

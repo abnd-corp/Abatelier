@@ -6,7 +6,7 @@ import { GROUPES, PROCESSUS, VOIES } from './processus.mjs'
 const SORTIE = new URL('../../docs/bpmn/', import.meta.url)
 mkdirSync(SORTIE, { recursive: true })
 // Les fichiers sont renumérotés à chaque génération : on retire les anciens pour qu'aucun schéma périmé ne reste
-for (const f of readdirSync(SORTIE)) if (/^\d+-.*\.(bpmn|svg)$/.test(f)) rmSync(new URL(f, SORTIE))
+for (const f of readdirSync(SORTIE)) if (/^\d+-.*\.(bpmn|svg|png)$/.test(f)) rmSync(new URL(f, SORTIE))
 
 const COUVERTURE = {
   ok: { libelle: 'Dans l’application', fill: '#d8f0dc', stroke: '#2e7d32' },
