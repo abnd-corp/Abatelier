@@ -1,14 +1,15 @@
 # Processus métier en BPMN
 
-Les 12 processus d'Alu Pliage Service, dessinés en BPMN 2.0, pour vérifier avec le client que l'application répond à tout le besoin.
+Les 20 processus d'Alu Pliage Service, dessinés en BPMN 2.0, pour vérifier avec le client que l'application répond à tout le besoin, et mesurer le gain qu'elle apporte.
 
 - **À regarder** : les images `.svg` (un navigateur suffit).
 - **À modifier ou à présenter** : les fichiers `.bpmn`, ouverts avec [bpmn.io](https://demo.bpmn.io) (glisser le fichier dans la page) ou avec l'extension « BPMN Editor » de VS Code.
 - **Le bilan** : [couverture.md](couverture.md), avec chaque étape, qui la fait, et si l'application la couvre.
+- **Le tableur du gain** : [processus.csv](processus.csv), une ligne par processus, à remplir avec le client (voir [le questionnaire](../processus-a-valider-avec-le-client.md)).
 
 ## Comment lire un schéma
 
-Chaque ligne horizontale (« voie ») est une personne ou l'application : Visiteur / Client, Direction, Atelier, Application (automatique). Les formes :
+Chaque ligne horizontale (« voie ») est une personne ou l'application : Visiteur / Client, Direction, Atelier, Application (automatique), Prestataire de paiement, Maintenance (nous). Les formes :
 
 | Forme | Sens |
 |---|---|
@@ -32,25 +33,24 @@ Le détail de chaque étape (écran concerné, limite) est dans [couverture.md](
 
 ## Les processus
 
-1. Demande de contact
-2. Espace client : inscription, accès, fermeture
-3. Devis en ligne avec le configurateur
-4. Commande sur mesure saisie par la direction
-5. Fabrication à l'atelier
-6. Livraison et retrait
-7. Facturation et encaissement
-8. Boutique en ligne
-9. Stock de feuilles
-10. Équipe : arrivée et départ d'un salarié
-11. Paramétrage par la direction
-12. Sauvegarde et exploitation
+**Vente et clients** : 1 Demande de contact · 2 Espace client · 3 Configurateur · 4 Devis en ligne · 5 Commande payée en ligne · 6 Commande saisie par la direction · 7 Refus et remboursement
+
+**Production** : 8 Fabrication · 9 Livraison et retrait
+
+**Stock de feuilles** : 10 Références et codes-barres · 11 Réception · 12 Suivi du stock
+
+**Finance** : 13 Facturation et encaissement · 14 Statistiques
+
+**Organisation** : 15 Équipe · 16 Paramétrage · 17 Site vitrine · 18 Messages
+
+**Mise en service et exploitation** : 19 Mise en service · 20 Sauvegarde et exploitation
 
 ## Les modifier
 
 Les fichiers sont **générés** : on modifie `scripts/bpmn/processus.mjs` (les étapes, les flèches et la couverture), puis :
 
 ```sh
-node scripts/bpmn/generer.mjs   # écrit les .bpmn et couverture.md
+node scripts/bpmn/generer.mjs   # écrit les .bpmn, couverture.md et processus.csv
 node scripts/bpmn/rendre.mjs    # redessine les .svg (internet requis, Playwright installé par « make setup »)
 ```
 

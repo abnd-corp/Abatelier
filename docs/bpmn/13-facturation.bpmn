@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P13_facturation_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P13_facturation_collab">
+    <bpmn:participant id="P13_facturation_pool" name="Facturation et encaissement" processRef="P13_facturation" />
+  </bpmn:collaboration>
+  <bpmn:process id="P13_facturation" name="Facturation et encaissement" isExecutable="false">
+    <bpmn:documentation>De la commande livrée à la facture payée, avec avoir et export pour le comptable. Aucun document n’est joint aux e-mails.</bpmn:documentation>
+    <bpmn:laneSet id="P13_facturation_voies">
+      <bpmn:lane id="P13_facturation_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P13_facturation_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P13_facturation_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P13_facturation_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P13_facturation_g1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P13_facturation_t6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P13_facturation_t7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P13_facturation_g2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P13_facturation_t8</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P13_facturation_t9</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P13_facturation_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P13_facturation_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P13_facturation_t2</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P13_facturation_voie_client" name="Visiteur / Client">
+        <bpmn:flowNodeRef>P13_facturation_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P13_facturation_t5</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P13_facturation_d" name="Commande livrée ou retirée"><bpmn:outgoing>P13_facturation_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="P13_facturation_t1" name="Facturer la commande"><bpmn:documentation>Dans l’application : Commande › Facturer (numérotation F-AAAA-NNNN sans trou)</bpmn:documentation><bpmn:incoming>P13_facturation_flux1</bpmn:incoming><bpmn:outgoing>P13_facturation_flux2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P13_facturation_t2" name="Éditer la facture PDF, avec le fichier Factur-X"><bpmn:documentation>Dans l’application : Checklist des mentions obligatoires, QR code du site</bpmn:documentation><bpmn:incoming>P13_facturation_flux2</bpmn:incoming><bpmn:outgoing>P13_facturation_flux3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P13_facturation_t3" name="Prévenir le client par e-mail (sans pièce jointe)"><bpmn:documentation>Dans l’application : Le message renvoie vers l’espace client, ou l’invite à l’activer</bpmn:documentation><bpmn:incoming>P13_facturation_flux3</bpmn:incoming><bpmn:outgoing>P13_facturation_flux4</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P13_facturation_t4" name="Consulter et télécharger sa facture dans son espace"><bpmn:documentation>Dans l’application : Espace client › Factures</bpmn:documentation><bpmn:incoming>P13_facturation_flux4</bpmn:incoming><bpmn:outgoing>P13_facturation_flux5</bpmn:outgoing></bpmn:userTask>
+    <bpmn:manualTask id="P13_facturation_t5" name="Payer (virement, chèque, espèces, carte)"><bpmn:documentation>Hors application : Le règlement hors ligne se fait hors de l’application</bpmn:documentation><bpmn:incoming>P13_facturation_flux5</bpmn:incoming><bpmn:outgoing>P13_facturation_flux6</bpmn:outgoing></bpmn:manualTask>
+    <bpmn:exclusiveGateway id="P13_facturation_g1" name="Payée dans les délais ?"><bpmn:incoming>P13_facturation_flux6</bpmn:incoming><bpmn:outgoing>P13_facturation_flux7</bpmn:outgoing><bpmn:outgoing>P13_facturation_flux8</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:userTask id="P13_facturation_t6" name="Enregistrer le paiement (date, mode)"><bpmn:documentation>Dans l’application : Facture › Enregistrer le paiement (annulable)</bpmn:documentation><bpmn:incoming>P13_facturation_flux7</bpmn:incoming><bpmn:incoming>P13_facturation_flux9</bpmn:incoming><bpmn:outgoing>P13_facturation_flux10</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P13_facturation_t7" name="Relancer le client par e-mail"><bpmn:documentation>Pas encore : Pas de relance automatique ni de liste des impayés</bpmn:documentation><bpmn:incoming>P13_facturation_flux8</bpmn:incoming><bpmn:outgoing>P13_facturation_flux9</bpmn:outgoing></bpmn:userTask>
+    <bpmn:exclusiveGateway id="P13_facturation_g2" name="Erreur ou geste commercial ?"><bpmn:incoming>P13_facturation_flux10</bpmn:incoming><bpmn:outgoing>P13_facturation_flux11</bpmn:outgoing><bpmn:outgoing>P13_facturation_flux12</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:userTask id="P13_facturation_t8" name="Faire un avoir (total)"><bpmn:documentation>Dans l’application : Facture › Faire un avoir ; l’avoir partiel est à faire</bpmn:documentation><bpmn:incoming>P13_facturation_flux11</bpmn:incoming><bpmn:outgoing>P13_facturation_flux13</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P13_facturation_t9" name="Exporter les ventes et encaissements pour le comptable"><bpmn:documentation>Dans l’application : Devis et factures › Exporter pour le comptable (CSV)</bpmn:documentation><bpmn:incoming>P13_facturation_flux12</bpmn:incoming><bpmn:incoming>P13_facturation_flux13</bpmn:incoming><bpmn:outgoing>P13_facturation_flux14</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P13_facturation_f" name="Facture classée"><bpmn:incoming>P13_facturation_flux14</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P13_facturation_flux1" sourceRef="P13_facturation_d" targetRef="P13_facturation_t1" />
+    <bpmn:sequenceFlow id="P13_facturation_flux2" sourceRef="P13_facturation_t1" targetRef="P13_facturation_t2" />
+    <bpmn:sequenceFlow id="P13_facturation_flux3" sourceRef="P13_facturation_t2" targetRef="P13_facturation_t3" />
+    <bpmn:sequenceFlow id="P13_facturation_flux4" sourceRef="P13_facturation_t3" targetRef="P13_facturation_t4" />
+    <bpmn:sequenceFlow id="P13_facturation_flux5" sourceRef="P13_facturation_t4" targetRef="P13_facturation_t5" />
+    <bpmn:sequenceFlow id="P13_facturation_flux6" sourceRef="P13_facturation_t5" targetRef="P13_facturation_g1" />
+    <bpmn:sequenceFlow id="P13_facturation_flux7" name="Oui" sourceRef="P13_facturation_g1" targetRef="P13_facturation_t6" />
+    <bpmn:sequenceFlow id="P13_facturation_flux8" name="Non" sourceRef="P13_facturation_g1" targetRef="P13_facturation_t7" />
+    <bpmn:sequenceFlow id="P13_facturation_flux9" sourceRef="P13_facturation_t7" targetRef="P13_facturation_t6" />
+    <bpmn:sequenceFlow id="P13_facturation_flux10" sourceRef="P13_facturation_t6" targetRef="P13_facturation_g2" />
+    <bpmn:sequenceFlow id="P13_facturation_flux11" name="Oui" sourceRef="P13_facturation_g2" targetRef="P13_facturation_t8" />
+    <bpmn:sequenceFlow id="P13_facturation_flux12" name="Non" sourceRef="P13_facturation_g2" targetRef="P13_facturation_t9" />
+    <bpmn:sequenceFlow id="P13_facturation_flux13" sourceRef="P13_facturation_t8" targetRef="P13_facturation_t9" />
+    <bpmn:sequenceFlow id="P13_facturation_flux14" sourceRef="P13_facturation_t9" targetRef="P13_facturation_f" />
+    <bpmn:textAnnotation id="P13_facturation_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P13_facturation_diagram">
+    <bpmndi:BPMNPlane id="P13_facturation_plane" bpmnElement="P13_facturation_collab">
+      <bpmndi:BPMNShape id="P13_facturation_pool_di" bpmnElement="P13_facturation_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="2390" height="480" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_voie_direction_di" bpmnElement="P13_facturation_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="2360" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_voie_systeme_di" bpmnElement="P13_facturation_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="2360" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_voie_client_di" bpmnElement="P13_facturation_voie_client" isHorizontal="true">
+        <dc:Bounds x="70" y="400" width="2360" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_d_di" bpmnElement="P13_facturation_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_t1_di" bpmnElement="P13_facturation_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_t2_di" bpmnElement="P13_facturation_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="520" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_t3_di" bpmnElement="P13_facturation_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="710" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_t4_di" bpmnElement="P13_facturation_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="900" y="420" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_t5_di" bpmnElement="P13_facturation_t5" bioc:stroke="#616161" bioc:fill="#e8e8e8">
+        <dc:Bounds x="1090" y="420" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_g1_di" bpmnElement="P13_facturation_g1" isMarkerVisible="true">
+        <dc:Bounds x="1330" y="75" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1250" y="43" width="110" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_t6_di" bpmnElement="P13_facturation_t6" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1470" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_t7_di" bpmnElement="P13_facturation_t7" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1280" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_g2_di" bpmnElement="P13_facturation_g2" isMarkerVisible="true">
+        <dc:Bounds x="1710" y="75" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1630" y="43" width="110" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_t8_di" bpmnElement="P13_facturation_t8" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1850" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_t9_di" bpmnElement="P13_facturation_t9" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="2040" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P13_facturation_f_di" bpmnElement="P13_facturation_f">
+        <dc:Bounds x="2287" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P13_facturation_flux1_di" bpmnElement="P13_facturation_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux2_di" bpmnElement="P13_facturation_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="495" y="100" />
+        <di:waypoint x="495" y="340" />
+        <di:waypoint x="520" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux3_di" bpmnElement="P13_facturation_flux3">
+        <di:waypoint x="670" y="340" />
+        <di:waypoint x="685" y="340" />
+        <di:waypoint x="685" y="100" />
+        <di:waypoint x="710" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux4_di" bpmnElement="P13_facturation_flux4">
+        <di:waypoint x="860" y="100" />
+        <di:waypoint x="875" y="100" />
+        <di:waypoint x="875" y="460" />
+        <di:waypoint x="900" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux5_di" bpmnElement="P13_facturation_flux5">
+        <di:waypoint x="1050" y="460" />
+        <di:waypoint x="1090" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux6_di" bpmnElement="P13_facturation_flux6">
+        <di:waypoint x="1240" y="460" />
+        <di:waypoint x="1305" y="460" />
+        <di:waypoint x="1305" y="100" />
+        <di:waypoint x="1330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux7_di" bpmnElement="P13_facturation_flux7">
+        <di:waypoint x="1380" y="100" />
+        <di:waypoint x="1470" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux8_di" bpmnElement="P13_facturation_flux8">
+        <di:waypoint x="1355" y="125" />
+        <di:waypoint x="1355" y="158" />
+        <di:waypoint x="1355" y="158" />
+        <di:waypoint x="1355" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux9_di" bpmnElement="P13_facturation_flux9">
+        <di:waypoint x="1430" y="220" />
+        <di:waypoint x="1445" y="220" />
+        <di:waypoint x="1445" y="100" />
+        <di:waypoint x="1470" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux10_di" bpmnElement="P13_facturation_flux10">
+        <di:waypoint x="1620" y="100" />
+        <di:waypoint x="1710" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux11_di" bpmnElement="P13_facturation_flux11">
+        <di:waypoint x="1760" y="100" />
+        <di:waypoint x="1825" y="100" />
+        <di:waypoint x="1825" y="220" />
+        <di:waypoint x="1850" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux12_di" bpmnElement="P13_facturation_flux12">
+        <di:waypoint x="1760" y="100" />
+        <di:waypoint x="2040" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux13_di" bpmnElement="P13_facturation_flux13">
+        <di:waypoint x="2000" y="220" />
+        <di:waypoint x="2015" y="220" />
+        <di:waypoint x="2015" y="100" />
+        <di:waypoint x="2040" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P13_facturation_flux14_di" bpmnElement="P13_facturation_flux14">
+        <di:waypoint x="2190" y="100" />
+        <di:waypoint x="2287" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P13_facturation_legende_di" bpmnElement="P13_facturation_legende">
+        <dc:Bounds x="70" y="540" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

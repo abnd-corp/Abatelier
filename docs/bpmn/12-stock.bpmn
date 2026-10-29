@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P12_stock_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P12_stock_collab">
+    <bpmn:participant id="P12_stock_pool" name="Suivi du stock de feuilles" processRef="P12_stock" />
+  </bpmn:collaboration>
+  <bpmn:process id="P12_stock" name="Suivi du stock de feuilles" isExecutable="false">
+    <bpmn:documentation>Voir ce qu’il reste, être prévenu quand le stock baisse, compter, et tenir les chutes à part des feuilles entières.</bpmn:documentation>
+    <bpmn:laneSet id="P12_stock_voies">
+      <bpmn:lane id="P12_stock_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P12_stock_t6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_stock_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P12_stock_voie_atelier" name="Atelier">
+        <bpmn:flowNodeRef>P12_stock_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_stock_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_stock_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_stock_t4</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P12_stock_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P12_stock_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_stock_t5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_stock_t7</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P12_stock_d" name="Besoin de savoir ce qu’il reste"><bpmn:outgoing>P12_stock_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="P12_stock_t1" name="Voir les feuilles par matière, coloris, format ou état"><bpmn:documentation>Dans l’application : Atelier › Stock de feuilles (filtres, état vide / critique / bas / ok)</bpmn:documentation><bpmn:incoming>P12_stock_flux1</bpmn:incoming><bpmn:outgoing>P12_stock_flux2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P12_stock_t2" name="Signaler le stock bas (seuil par référence, aucune alerte sur une chute)"><bpmn:documentation>Dans l’application : Seuil réglable sur chaque carte</bpmn:documentation><bpmn:incoming>P12_stock_flux2</bpmn:incoming><bpmn:outgoing>P12_stock_flux3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P12_stock_t3" name="Ajuster : entrée, sortie, perte, chute récupérée"><bpmn:documentation>Dans l’application : Chaque mouvement garde qui, quand et pourquoi</bpmn:documentation><bpmn:incoming>P12_stock_flux3</bpmn:incoming><bpmn:outgoing>P12_stock_flux4</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P12_stock_t4" name="Faire l’inventaire (quantité comptée)"><bpmn:documentation>Dans l’application : Sert aussi à saisir le stock de départ</bpmn:documentation><bpmn:incoming>P12_stock_flux4</bpmn:incoming><bpmn:outgoing>P12_stock_flux5</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P12_stock_t5" name="Décompter automatiquement ce qu’une commande consomme"><bpmn:documentation>Pas encore : Décidé : au lancement, avec confirmation des chutes à la fin</bpmn:documentation><bpmn:incoming>P12_stock_flux5</bpmn:incoming><bpmn:outgoing>P12_stock_flux6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P12_stock_t6" name="Consulter l’historique des mouvements"><bpmn:documentation>Dans l’application : Stock de feuilles › Historique</bpmn:documentation><bpmn:incoming>P12_stock_flux6</bpmn:incoming><bpmn:outgoing>P12_stock_flux7</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P12_stock_t7" name="Estimer la date d’une commande selon le stock disponible"><bpmn:documentation>Pas encore : Si les feuilles manquent : délai standard + délai du fournisseur (données à recueillir)</bpmn:documentation><bpmn:incoming>P12_stock_flux7</bpmn:incoming><bpmn:outgoing>P12_stock_flux8</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="P12_stock_f" name="Stock à jour"><bpmn:incoming>P12_stock_flux8</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P12_stock_flux1" sourceRef="P12_stock_d" targetRef="P12_stock_t1" />
+    <bpmn:sequenceFlow id="P12_stock_flux2" sourceRef="P12_stock_t1" targetRef="P12_stock_t2" />
+    <bpmn:sequenceFlow id="P12_stock_flux3" sourceRef="P12_stock_t2" targetRef="P12_stock_t3" />
+    <bpmn:sequenceFlow id="P12_stock_flux4" sourceRef="P12_stock_t3" targetRef="P12_stock_t4" />
+    <bpmn:sequenceFlow id="P12_stock_flux5" sourceRef="P12_stock_t4" targetRef="P12_stock_t5" />
+    <bpmn:sequenceFlow id="P12_stock_flux6" sourceRef="P12_stock_t5" targetRef="P12_stock_t6" />
+    <bpmn:sequenceFlow id="P12_stock_flux7" sourceRef="P12_stock_t6" targetRef="P12_stock_t7" />
+    <bpmn:sequenceFlow id="P12_stock_flux8" sourceRef="P12_stock_t7" targetRef="P12_stock_f" />
+    <bpmn:textAnnotation id="P12_stock_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P12_stock_diagram">
+    <bpmndi:BPMNPlane id="P12_stock_plane" bpmnElement="P12_stock_collab">
+      <bpmndi:BPMNShape id="P12_stock_pool_di" bpmnElement="P12_stock_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1820" height="360" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_voie_direction_di" bpmnElement="P12_stock_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1790" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_voie_atelier_di" bpmnElement="P12_stock_voie_atelier" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1790" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_voie_systeme_di" bpmnElement="P12_stock_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="1790" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_d_di" bpmnElement="P12_stock_d">
+        <dc:Bounds x="197" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_t1_di" bpmnElement="P12_stock_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="330" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_t2_di" bpmnElement="P12_stock_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="520" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_t3_di" bpmnElement="P12_stock_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="710" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_t4_di" bpmnElement="P12_stock_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="900" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_t5_di" bpmnElement="P12_stock_t5" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1090" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_t6_di" bpmnElement="P12_stock_t6" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1280" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_t7_di" bpmnElement="P12_stock_t7" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1470" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_stock_f_di" bpmnElement="P12_stock_f">
+        <dc:Bounds x="1717" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P12_stock_flux1_di" bpmnElement="P12_stock_flux1">
+        <di:waypoint x="233" y="220" />
+        <di:waypoint x="330" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_stock_flux2_di" bpmnElement="P12_stock_flux2">
+        <di:waypoint x="480" y="220" />
+        <di:waypoint x="495" y="220" />
+        <di:waypoint x="495" y="340" />
+        <di:waypoint x="520" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_stock_flux3_di" bpmnElement="P12_stock_flux3">
+        <di:waypoint x="670" y="340" />
+        <di:waypoint x="685" y="340" />
+        <di:waypoint x="685" y="220" />
+        <di:waypoint x="710" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_stock_flux4_di" bpmnElement="P12_stock_flux4">
+        <di:waypoint x="860" y="220" />
+        <di:waypoint x="900" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_stock_flux5_di" bpmnElement="P12_stock_flux5">
+        <di:waypoint x="1050" y="220" />
+        <di:waypoint x="1065" y="220" />
+        <di:waypoint x="1065" y="340" />
+        <di:waypoint x="1090" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_stock_flux6_di" bpmnElement="P12_stock_flux6">
+        <di:waypoint x="1240" y="340" />
+        <di:waypoint x="1255" y="340" />
+        <di:waypoint x="1255" y="100" />
+        <di:waypoint x="1280" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_stock_flux7_di" bpmnElement="P12_stock_flux7">
+        <di:waypoint x="1430" y="100" />
+        <di:waypoint x="1445" y="100" />
+        <di:waypoint x="1445" y="340" />
+        <di:waypoint x="1470" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_stock_flux8_di" bpmnElement="P12_stock_flux8">
+        <di:waypoint x="1620" y="340" />
+        <di:waypoint x="1692" y="340" />
+        <di:waypoint x="1692" y="100" />
+        <di:waypoint x="1717" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P12_stock_legende_di" bpmnElement="P12_stock_legende">
+        <dc:Bounds x="70" y="420" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
