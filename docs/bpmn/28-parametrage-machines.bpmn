@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P28_parametrage_machines_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P28_parametrage_machines_collab">
+    <bpmn:participant id="P28_parametrage_machines_pool" name="Paramétrer les machines de l’atelier" processRef="P28_parametrage_machines" />
+  </bpmn:collaboration>
+  <bpmn:process id="P28_parametrage_machines" name="Paramétrer les machines de l’atelier" isExecutable="false">
+    <bpmn:documentation>La direction décrit les machines (type, longueur et épaisseur maximales, cadence) : l’application s’en sert pour contrôler la faisabilité d’une pièce et estimer la charge. Les limites réelles sont à recueillir chez le client.</bpmn:documentation>
+    <bpmn:laneSet id="P28_parametrage_machines_voies">
+      <bpmn:lane id="P28_parametrage_machines_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P28_parametrage_machines_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P28_parametrage_machines_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P28_parametrage_machines_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P28_parametrage_machines_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P28_parametrage_machines_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P28_parametrage_machines_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P28_parametrage_machines_t4</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P28_parametrage_machines_d" name="Une machine arrive à l’atelier, change ou en sort"><bpmn:outgoing>P28_parametrage_machines_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="P28_parametrage_machines_t1" name="Ajouter ou modifier une machine : type, longueur maximale, épaisseur par matière, cadence"><bpmn:documentation>Pas encore : Données à recueillir chez le client (limites des machines)</bpmn:documentation><bpmn:incoming>P28_parametrage_machines_flux1</bpmn:incoming><bpmn:outgoing>P28_parametrage_machines_flux2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P28_parametrage_machines_t2" name="Mettre une machine hors service (panne, maintenance) ou la retirer"><bpmn:documentation>Pas encore : La capacité baisse tant qu’elle est arrêtée</bpmn:documentation><bpmn:incoming>P28_parametrage_machines_flux2</bpmn:incoming><bpmn:outgoing>P28_parametrage_machines_flux3</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P28_parametrage_machines_t3" name="Appliquer les limites des machines au contrôle du configurateur"><bpmn:documentation>Pas encore : Plafond de quantité, longueur et épaisseur maximales</bpmn:documentation><bpmn:incoming>P28_parametrage_machines_flux3</bpmn:incoming><bpmn:outgoing>P28_parametrage_machines_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P28_parametrage_machines_t4" name="Calculer la capacité par jour pour la date estimée"><bpmn:documentation>Pas encore : Dépend du recensement des machines et de leurs cadences</bpmn:documentation><bpmn:incoming>P28_parametrage_machines_flux4</bpmn:incoming><bpmn:outgoing>P28_parametrage_machines_flux5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="P28_parametrage_machines_f" name="Machines à jour"><bpmn:incoming>P28_parametrage_machines_flux5</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P28_parametrage_machines_flux1" sourceRef="P28_parametrage_machines_d" targetRef="P28_parametrage_machines_t1" />
+    <bpmn:sequenceFlow id="P28_parametrage_machines_flux2" sourceRef="P28_parametrage_machines_t1" targetRef="P28_parametrage_machines_t2" />
+    <bpmn:sequenceFlow id="P28_parametrage_machines_flux3" sourceRef="P28_parametrage_machines_t2" targetRef="P28_parametrage_machines_t3" />
+    <bpmn:sequenceFlow id="P28_parametrage_machines_flux4" sourceRef="P28_parametrage_machines_t3" targetRef="P28_parametrage_machines_t4" />
+    <bpmn:sequenceFlow id="P28_parametrage_machines_flux5" sourceRef="P28_parametrage_machines_t4" targetRef="P28_parametrage_machines_f" />
+    <bpmn:textAnnotation id="P28_parametrage_machines_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P28_parametrage_machines_diagram">
+    <bpmndi:BPMNPlane id="P28_parametrage_machines_plane" bpmnElement="P28_parametrage_machines_collab">
+      <bpmndi:BPMNShape id="P28_parametrage_machines_pool_di" bpmnElement="P28_parametrage_machines_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1250" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P28_parametrage_machines_voie_direction_di" bpmnElement="P28_parametrage_machines_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1220" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P28_parametrage_machines_voie_systeme_di" bpmnElement="P28_parametrage_machines_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1220" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P28_parametrage_machines_d_di" bpmnElement="P28_parametrage_machines_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P28_parametrage_machines_t1_di" bpmnElement="P28_parametrage_machines_t1" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P28_parametrage_machines_t2_di" bpmnElement="P28_parametrage_machines_t2" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="520" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P28_parametrage_machines_t3_di" bpmnElement="P28_parametrage_machines_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="710" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P28_parametrage_machines_t4_di" bpmnElement="P28_parametrage_machines_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="900" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P28_parametrage_machines_f_di" bpmnElement="P28_parametrage_machines_f">
+        <dc:Bounds x="1147" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P28_parametrage_machines_flux1_di" bpmnElement="P28_parametrage_machines_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P28_parametrage_machines_flux2_di" bpmnElement="P28_parametrage_machines_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="520" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P28_parametrage_machines_flux3_di" bpmnElement="P28_parametrage_machines_flux3">
+        <di:waypoint x="670" y="100" />
+        <di:waypoint x="685" y="100" />
+        <di:waypoint x="685" y="220" />
+        <di:waypoint x="710" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P28_parametrage_machines_flux4_di" bpmnElement="P28_parametrage_machines_flux4">
+        <di:waypoint x="860" y="220" />
+        <di:waypoint x="900" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P28_parametrage_machines_flux5_di" bpmnElement="P28_parametrage_machines_flux5">
+        <di:waypoint x="1050" y="220" />
+        <di:waypoint x="1122" y="220" />
+        <di:waypoint x="1122" y="100" />
+        <di:waypoint x="1147" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P28_parametrage_machines_legende_di" bpmnElement="P28_parametrage_machines_legende">
+        <dc:Bounds x="70" y="300" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
