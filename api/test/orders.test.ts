@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { accessories, auditLog, colors, materials, orderLines, orders, sheetStock } from '../src/db/schema.js'
+import { accessories, auditLog, colors, documentTemplate, materials, orderLines, orders, sheetStock } from '../src/db/schema.js'
 import { yearOf } from '../src/documents.js'
 import { addWorkingDays, quantityDiscount } from '../src/quote.js'
 import { todayParis } from '../src/departures.js'
-import { accessoryTotals, renderProductionSheet } from '../src/production-sheet.js'
+import { accessoryTotals, CHUTE_MIN, chutesOf, groupChutes, renderProductionSheet, sheetGroups } from '../src/production-sheet.js'
 import { buildApp, client, createUser, loginAs, M, pdfText, resetDb, seedModels, type App, type Client } from './helpers.js'
 
 let app: App
@@ -528,32 +528,104 @@ describe('Fiche de fabrication (PDF)', () => {
     expect(entry).toMatchObject({ targetType: 'order', targetId: o.id, details: { numero: o.numero, statut: 'validee' } })
   })
 
-  it('détaille la découpe de la feuille et toutes les étapes de l’atelier, avec « Remise » pour retrait ou livraison', async () => {
+  it('met le rendu des pièces d’abord, puis l’ordre de fabrication feuille par feuille, avec la chute, sans étapes en atelier ni QR code', async () => {
     const o = await validated()
     await db.insert(sheetStock).values({ materialId: ids.alu, colorId: ids.anthracite, largeur: 1250, longueur: 3000, quantite: 10 })
-    const txt = pdfText((await direction.get(`/api/production/${o.id}/fiche.pdf`)).rawPayload)
+    await db.update(documentTemplate).set({ qrCode: true })
+    const res = await direction.get(`/api/production/${o.id}/fiche.pdf`)
+    const txt = pdfText(res.rawPayload)
     for (const attendu of [
+      'CRÉÉE LE',
       'REMISE',
       'Retrait à l’atelier',
-      'Découpe',
-      '2 feuilles 1 250 × 3 000 mm',
-      '2 bandes de 480 mm par feuille',
-      'Feuille 1 250 × 3 000 mm · 2 bandes',
-      'Étapes en atelier',
-      '1. Préparer la matière',
-      '2. Découper à la cisaille',
+      'LES PIÈCES',
+      'FEUILLE 1 SUR 1',
+      '1. Récupérer la matière',
+      '2 × feuille 1 250 × 3 000 mm',
+      '2. Découper',
+      'toutes les découpes d’abord',
       '4 bandes de 480 mm de large × 3 000 mm de long',
-      '3. Plier à la presse',
-      '4 plis',
-      '4. Contrôler',
-      'cotes A 20 · B 70 · C 300 · D 70 · E 20',
-      '5. Préparer les accessoires',
-      '6. Étiqueter et emballer',
-      '7. Mettre à jour le stock de feuilles',
-      '8. Remise : retrait à l’atelier',
+      '2 bandes par feuille',
+      '3. Plier',
+      'puis tous les pliages',
+      '4 plis à la presse, dans l’ordre 1 à 4',
+      'Traits de pli à partir du bord (mm) : 20 · 90 · 390 · 460',
+      '4. Mettre de côté',
+      'CHUTE DE CETTE FEUILLE',
+      'À GARDER',
+      '2 × 290 × 3 000 mm',
+      'À JETER',
+      'À PRÉPARER À PART',
+      '2 × Bouchon de couvertine',
     ])
       expect(txt, attendu).toContain(attendu)
-    expect(txt).not.toContain('DÉPART')
+    // Les pièces d'abord, l'ordre de fabrication ensuite
+    expect(txt.indexOf('LES PIÈCES')).toBeLessThan(txt.indexOf('FEUILLE 1 SUR 1'))
+    // Plus d'estimation de délai, plus d'étapes en atelier, plus de QR code
+    for (const absent of ['PRÉVUE LE', 'Non fixée', 'Étapes en atelier', 'Découper à la cisaille', 'Mettre à jour le stock de feuilles', 'DÉPART']) expect(txt, absent).not.toContain(absent)
+    expect(res.rawPayload.toString('latin1')).not.toMatch(/\/Subtype \/Image/)
+  })
+
+  it('range le travail feuille par feuille : toutes les découpes puis tous les pliages avant la feuille suivante', () => {
+    const ligne = (repere: string, sheetId: string | null, quantite = 2) => ({
+      repere,
+      modeleLabel: 'Couvertine',
+      cap: 0,
+      materialLabel: 'Aluminium 1,5 mm',
+      colorLabel: 'Blanc',
+      colorHex: '#fff',
+      cotes: [100, 200],
+      angles: [90],
+      longueur: 1000,
+      quantite,
+      accessoires: [],
+      decoupe: sheetId
+        ? {
+            sheetId,
+            libelle: sheetId,
+            chute: false,
+            feuilleLargeur: 1250,
+            feuilleLongueur: 3000,
+            parFeuille: 4,
+            feuilles: 1,
+            disposition: { sensLongueur: true, colonnes: 4, rangees: 3 },
+            perte: 0,
+            enStock: 5,
+          }
+        : null,
+    })
+    const groupes = sheetGroups([ligne('A', 'x'), ligne('B', 'y'), ligne('C', 'x'), ligne('D', null)])
+    expect(groupes.map((g) => g.lignes.map((l) => l.l.repere))).toEqual([['A', 'C'], ['B'], ['D']])
+  })
+
+  it('calcule la chute d’une feuille : ce qui se garde et ce qui se jette', () => {
+    const bande = { cotes: [480], longueur: 3000 }
+    const feuille = {
+      sheetId: 's',
+      libelle: 's',
+      chute: false,
+      feuilleLargeur: 1250,
+      feuilleLongueur: 3000,
+      parFeuille: 2,
+      feuilles: 2,
+      disposition: { sensLongueur: true, colonnes: 2, rangees: 1 },
+      perte: 0,
+      enStock: 9,
+    }
+    // 4 bandes sur 2 feuilles de 2 : il reste 290 mm de large sur toute la longueur, par feuille
+    expect(chutesOf({ ...bande, quantite: 4 }, feuille)).toEqual([
+      { largeur: 290, longueur: 3000, garder: true },
+      { largeur: 290, longueur: 3000, garder: true },
+    ])
+    // 3 bandes : la dernière feuille n'en porte qu'une, donc une plus grande chute
+    expect(groupChutes(chutesOf({ ...bande, quantite: 3 }, feuille)).map((c) => [c.nombre, c.largeur, c.longueur])).toEqual([
+      [1, 770, 3000],
+      [1, 290, 3000],
+    ])
+    // Un morceau étroit part au rebut
+    const etroite = chutesOf({ cotes: [600], longueur: 3000, quantite: 2 }, { ...feuille, parFeuille: 2, feuilles: 1 })
+    expect(etroite).toEqual([{ largeur: 50, longueur: 3000, garder: false }])
+    expect(CHUTE_MIN).toBe(200)
   })
 
   it('dit quand aucune feuille du stock ne convient, sans bloquer la fiche', async () => {
@@ -602,12 +674,12 @@ describe('Fiche de fabrication (PDF)', () => {
       { nom: 'Angle', unite: 'paire', quantite: 4 },
     ])
     const pdf = await renderProductionSheet(
-      { numero: 'C-2026-0042', client: 'Client Test', statutLabel: 'En fabrication', datePrevue: null, livraisonMode: 'retrait', imprimeLe: new Date(), lignes },
+      { numero: 'C-2026-0042', client: 'Client Test', statutLabel: 'En fabrication', creeLe: new Date('2026-10-28T13:47:00Z'), livraisonMode: 'retrait', imprimeLe: new Date(), lignes },
       { accent: '#6b3fa0', logo: null },
     )
     expect((pdf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length).toBeGreaterThan(1)
     const txt = pdfText(pdf)
-    for (const attendu of ['Repère 9', '______ / 50', 'C-2026-0042 · suite', 'Non fixée', 'Retrait à l’atelier', '18 × Éclisse', '4 × Angle (paires)', 'Autre profil'])
+    for (const attendu of ['Repère 9', '______ / 50', 'C-2026-0042 · suite', 'CRÉÉE LE', '28 octobre 2026', 'Retrait à l’atelier', '18 × Éclisse', '4 × Angle (paires)', 'Autre profil'])
       expect(txt, attendu).toContain(attendu)
   })
 })

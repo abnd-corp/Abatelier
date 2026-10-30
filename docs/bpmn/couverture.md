@@ -290,8 +290,8 @@ Schéma : [image](09-fabrication.svg) · [fichier BPMN](09-fabrication.bpmn)
 |---|---|---|---|
 | Voir les commandes par étape : à lancer, en fabrication, prêtes à retirer, prêtes à livrer | Atelier | Dans l’application | Fabrication ; retards signalés par une pastille et un compteur |
 | Prendre la commande en charge, ou annuler / reprendre celle d’un collègue | Atelier | Dans l’application | Rien ne lie une commande à un salarié |
-| Imprimer la fiche de fabrication (QR code du site, option) | Atelier | Dans l’application | Fabrication › Imprimer la fiche (PDF) : nom du client, jamais l’adresse ni les prix |
-| Conseiller la feuille à prendre : chutes d’abord, moins de perte | Application (automatique) | Dans l’application | Fabrication › Feuilles à prendre |
+| Imprimer la fiche de fabrication : rendu des pièces, puis feuille par feuille (récupérer, toutes les découpes, tous les pliages, mettre de côté) | Atelier | Dans l’application | Fabrication › Imprimer la fiche (PDF) : date de création de la commande, nom du client, jamais l’adresse ni les prix ; pas de QR code |
+| Conseiller la feuille à prendre : chutes d’abord, moins de perte, et dire ce qui reste en chute à garder ou à jeter | Application (automatique) | Dans l’application | Fabrication › Feuilles à prendre ; sur la fiche : un morceau dont tous les côtés font au moins 200 mm se garde |
 | Lancer la fabrication | Atelier | Dans l’application | Bouton « Lancer la fabrication » : prend aussi la commande en charge |
 | Décompter les feuilles utilisées du stock | Application (automatique) | Pas encore | Aujourd’hui saisi à la main dans Stock de feuilles |
 | Découper et plier les pièces | Atelier | Hors application | Travail sur machine |
