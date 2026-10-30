@@ -101,8 +101,14 @@ async function closeAccount() {
         <p class="muted">Vos coordonnées sont effacées. Vos factures restent conservées 10 ans, comme la loi l’impose, sans lien avec votre identité. Cette action est définitive.</p>
         <button v-if="!closing" class="s-btn" type="button" @click="closing = true">Fermer mon espace…</button>
         <form v-else class="close-form" @submit.prevent="closeAccount">
-          <label for="close-password">Mot de passe pour confirmer</label>
-          <PasswordInput id="close-password" v-model="closePassword" autocomplete="current-password" />
+          <template v-if="espace.compte?.motDePasse !== false">
+            <label for="close-password">Mot de passe pour confirmer</label>
+            <PasswordInput id="close-password" v-model="closePassword" autocomplete="current-password" />
+          </template>
+          <template v-else>
+            <label for="close-email">Votre adresse e-mail, pour confirmer</label>
+            <input id="close-email" v-model="closePassword" type="email" class="input" autocomplete="email" />
+          </template>
           <p v-if="closeError" class="alert bad" role="alert">{{ closeError }}</p>
           <div class="actions">
             <button class="s-btn danger" type="submit" :disabled="closeBusy || !closePassword">Fermer définitivement mon espace</button>

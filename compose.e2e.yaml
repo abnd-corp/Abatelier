@@ -33,6 +33,8 @@ services:
       # Faux paiement en ligne : la boutique se teste de bout en bout sans prestataire
       PAYMENT_PROVIDER: simulation
       ALLOW_FAKE_PAYMENT: "true"
+      GOOGLE_OAUTH_PROVIDER: simulation
+      ALLOW_FAKE_GOOGLE: "true"
   web:
     ports:
       - "127.0.0.1:${E2E_PORT:-8090}:8080"

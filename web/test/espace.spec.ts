@@ -11,7 +11,7 @@ import { useEspaceStore } from '@/stores/espace'
 import { freshPinia, makeRouter, mockApi } from './helpers'
 
 const norm = (t: string) => t.replace(/[  ]/g, ' ')
-const COMPTE = { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: null, type: 'particulier' as const, proVerifie: false }
+const COMPTE = { prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: null, type: 'particulier' as const, proVerifie: false, motDePasse: true }
 
 async function mountAt(component: object, path: string, routes: Parameters<typeof mockApi>[0], props: Record<string, unknown> = {}, logged = true) {
   const calls = mockApi(routes)

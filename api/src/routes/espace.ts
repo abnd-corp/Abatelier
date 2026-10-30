@@ -13,6 +13,7 @@ import { audit, userAgentOf } from '../audit.js'
 import { avoirAlias, BillingConflict, issueFromOrder, statutSql } from '../billing.js'
 import { todayParis } from '../departures.js'
 import { env } from '../env.js'
+import { authorizationUrl, googleEnabled, googleSimulated, identityFromCode, pkceChallenge, randomToken, sign, unsign, type GoogleIdentity } from '../google-oauth.js'
 import { alertRecipients, sendMail, withTimeout } from '../mail.js'
 import { activationMail, espaceAnswerAlert, espaceQuoteAlert, passwordChangedMail, passwordResetMail, welcomeMail } from '../mail-texts.js'
 import { getCompany } from '../documents.js'
@@ -68,7 +69,7 @@ const nouveauMotDePasseBody = z.object({ jeton: z.string().min(1).max(200), pass
 const fermetureBody = z.object({ password: z.string().min(1, 'Saisissez votre mot de passe pour confirmer.').max(200) })
 const reponseBody = z.object({ reponse: z.enum(DEVIS_REPONSES, { error: 'Indiquez si vous acceptez ou refusez le devis.' }) })
 
-const publicAccount = (a: ClientAccount) => ({ prenom: a.prenom, nom: a.nom, email: a.email, telephone: a.telephone, type: a.type, proVerifie: a.proVerifie })
+const publicAccount = (a: ClientAccount) => ({ prenom: a.prenom, nom: a.nom, email: a.email, telephone: a.telephone, type: a.type, proVerifie: a.proVerifie, motDePasse: a.motDePasse })
 const isUuid = (id: string) => z.uuid().safeParse(id).success
 /** Pour le journal : le client n'est pas un utilisateur de l'atelier, on le désigne par sa fiche. */
 const who = (a: Pick<ClientAccount, 'clientId'>) => ({ actor: null, identifiant: `espace:${a.clientId}` })
@@ -131,7 +132,7 @@ export async function espaceRoutes(app: FastifyInstance) {
         details: { nom: clientName(created.client), type: created.client.type },
       })
       notify(created.client, (entreprise) => welcomeMail({ nom: clientName(created.client), espace: `${baseUrl(req)}/espace`, entreprise }))
-      return reply.code(201).send({ compte: publicAccount({ ...created.client, clientId: created.client.id, id: created.account.id } as ClientAccount) })
+      return reply.code(201).send({ compte: publicAccount({ ...created.client, clientId: created.client.id, id: created.account.id, motDePasse: true } as ClientAccount) })
     } catch (e) {
       // Une adresse e-mail désigne une seule fiche client. Si cette fiche existe sans espace (créée par l'atelier), un lien d'activation
       // part à cette adresse : seul son propriétaire peut s'y rattacher. La réponse est la même dans tous les cas.
@@ -161,7 +162,7 @@ export async function espaceRoutes(app: FastifyInstance) {
       .from(clientAccounts)
       .innerJoin(clients, eq(clients.id, clientAccounts.clientId))
       .where(sql`lower(${clients.email}) = ${email}`)
-    const ok = await verifyPassword(row?.account.passwordHash, password)
+    const ok = await verifyPassword(row?.account.passwordHash ?? undefined, password)
     if (!ok || !row) {
       const { failures, lockedUntil } = await recordFailure(key)
       await audit(req, 'espace.login_failed', { actor: null, identifiant: row ? `espace:${row.client.id}` : undefined })
@@ -177,7 +178,141 @@ export async function espaceRoutes(app: FastifyInstance) {
     await db.update(clientAccounts).set({ lastLoginAt: new Date() }).where(eq(clientAccounts.id, row.account.id))
     await startSession(req, reply, row.account.id, remember)
     await audit(req, 'espace.login', { ...who({ clientId: row.client.id }) })
-    return { compte: publicAccount({ ...row.client, clientId: row.client.id, id: row.account.id } as ClientAccount) }
+    return { compte: publicAccount({ ...row.client, clientId: row.client.id, id: row.account.id, motDePasse: row.account.passwordHash !== null } as ClientAccount) }
+  })
+
+  // --- Connexion avec Google ---
+  // Le navigateur part chez Google puis revient sur /google/retour. L'état, le nonce et la clé PKCE restent dans un cookie
+  // HttpOnly signé de 10 minutes : un retour qui ne vient pas d'ici est refusé. Google a vérifié l'adresse e-mail,
+  // ce qui suffit à retrouver la fiche (ou à rattacher Google à l'espace existant) sans doublon.
+  const GOOGLE_COOKIE = 'aps_google'
+  const GOOGLE_PENDING = 'aps_google_nouveau'
+  const googleCookie = { path: '/api/espace/google', httpOnly: true, sameSite: 'lax' as const, secure: env.COOKIE_SECURE }
+  // Seulement une page de l'espace ou du parcours d'achat : jamais une adresse extérieure
+  const retourSur = (v: unknown) => (typeof v === 'string' && /^\/(espace|configurateur|boutique|panier)(\/|\?|$)[A-Za-z0-9/_\-.?=&%]{0,200}$/.test(v) ? v : '/espace')
+  const googleRedirectUri = (req: Parameters<typeof baseUrl>[0]) => `${baseUrl(req)}/api/espace/google/retour`
+  const googleErreur = (reply: FastifyReply, code: 'indisponible' | 'echec' | 'desactive') => reply.redirect(`/espace/connexion?google=${code}`)
+
+  app.get('/google/debut', { config: { rateLimit: { max: env.LOGIN_RATE_LIMIT, timeWindow: '1 minute' } } }, async (req, reply) => {
+    if (!googleEnabled()) return googleErreur(reply, 'indisponible')
+    const q = req.query as { retour?: string; simule?: string }
+    const state = randomToken()
+    const nonce = randomToken()
+    const verifier = randomToken()
+    reply.setCookie(GOOGLE_COOKIE, sign({ state, nonce, verifier, retour: retourSur(q.retour), exp: Date.now() + 10 * 60_000 }), { ...googleCookie, maxAge: 600 })
+    const redirectUri = googleRedirectUri(req)
+    // Faux Google : le retour arrive tout de suite, avec l'identité donnée dans « simule » (e-mail:prénom:nom)
+    if (googleSimulated()) return reply.redirect(`${redirectUri}?${new URLSearchParams({ code: `fake:${q.simule ?? ''}`, state })}`)
+    return reply.redirect(authorizationUrl({ redirectUri, state, nonce, challenge: pkceChallenge(verifier) }))
+  })
+
+  app.get('/google/retour', { config: { rateLimit: { max: env.LOGIN_RATE_LIMIT, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const q = req.query as { code?: string; state?: string; error?: string }
+    const saved = unsign<{ state: string; nonce: string; verifier: string; retour: string; exp: number }>(req.cookies[GOOGLE_COOKIE])
+    reply.clearCookie(GOOGLE_COOKIE, googleCookie)
+    if (!googleEnabled()) return googleErreur(reply, 'indisponible')
+    if (!saved || saved.exp < Date.now() || !q.state || q.state !== saved.state || !q.code || q.error) return googleErreur(reply, 'echec')
+    let identity: GoogleIdentity | null = null
+    try {
+      identity = await identityFromCode(q.code, { redirectUri: googleRedirectUri(req), verifier: saved.verifier, nonce: saved.nonce })
+    } catch (e) {
+      req.log.error(e, 'Connexion Google : échange du code impossible')
+    }
+    if (!identity) {
+      await audit(req, 'espace.google_failed', { actor: null })
+      return googleErreur(reply, 'echec')
+    }
+
+    const [bySub] = await db
+      .select({ account: clientAccounts, client: clients })
+      .from(clientAccounts)
+      .innerJoin(clients, eq(clients.id, clientAccounts.clientId))
+      .where(eq(clientAccounts.googleSub, identity.sub))
+    let row = bySub ?? null
+    let first = false
+    if (!row) {
+      const fiche = await fichePar(identity.email)
+      if (!fiche) {
+        // Personne de connu : le client choisit particulier ou professionnel avant la création
+        reply.setCookie(GOOGLE_PENDING, sign({ ...identity, exp: Date.now() + 15 * 60_000 }), { ...googleCookie, maxAge: 900 })
+        return reply.redirect(`/espace/google-inscription?${new URLSearchParams({ retour: saved.retour })}`)
+      }
+      if (fiche.client.archivedAt || fiche.account?.disabledAt) return googleErreur(reply, 'desactive')
+      if (fiche.account) {
+        // Un espace avec ce même e-mail, déjà lié à un autre compte Google : on ne le prend pas
+        if (fiche.account.googleSub && fiche.account.googleSub !== identity.sub) return googleErreur(reply, 'echec')
+        await db.update(clientAccounts).set({ googleSub: identity.sub }).where(eq(clientAccounts.id, fiche.account.id))
+        row = { account: { ...fiche.account, googleSub: identity.sub }, client: fiche.client }
+        await audit(req, 'espace.google_linked', { ...who({ clientId: fiche.client.id }), targetType: 'client', targetId: fiche.client.id })
+      } else {
+        // Fiche créée par l'atelier, sans espace : Google prouve que l'adresse est la sienne
+        const [account] = await db.insert(clientAccounts).values({ clientId: fiche.client.id, passwordHash: null, googleSub: identity.sub }).returning()
+        row = { account: account!, client: fiche.client }
+        first = true
+      }
+    }
+    if (row.account.disabledAt || row.client.archivedAt) return googleErreur(reply, 'desactive')
+    await db.update(clientAccounts).set({ lastLoginAt: new Date() }).where(eq(clientAccounts.id, row.account.id))
+    await startSession(req, reply, row.account.id, false)
+    await audit(req, first ? 'espace.google_activated' : 'espace.login', { ...who({ clientId: row.client.id }), details: { via: 'google' } })
+    return reply.redirect(saved.retour)
+  })
+
+  // Ce que Google a donné, pour pré-remplir la dernière étape de l'inscription
+  app.get('/google/en-attente', async (req, reply) => {
+    const pending = unsign<GoogleIdentity & { exp: number }>(req.cookies[GOOGLE_PENDING])
+    if (!pending || pending.exp < Date.now()) return reply.code(404).send({ error: 'Cette inscription a expiré. Recommencez avec Google.' })
+    return { email: pending.email, prenom: pending.prenom, nom: pending.nom }
+  })
+
+  const googleSignupBody = z
+    .object({
+      type: clientType.default('particulier'),
+      raisonSociale: optText(120, 'Raison sociale'),
+      telephone: optText(30, 'Téléphone').refine((v) => v === null || /^\+?[0-9 .()-]{6,25}$/.test(v), 'Numéro de téléphone invalide.'),
+      consentement: z.literal(true, { error: 'Cochez la case pour accepter l’utilisation de vos données pour gérer votre espace client.' }),
+    })
+    .superRefine((b, ctx) => {
+      if (b.type === 'professionnel' && !b.raisonSociale) ctx.addIssue({ code: 'custom', path: ['raisonSociale'], message: 'Indiquez la raison sociale de votre entreprise.' })
+    })
+
+  app.post('/google/inscription', { config: { rateLimit: { max: env.CONTACT_RATE_LIMIT, timeWindow: '1 hour' } } }, async (req, reply) => {
+    const pending = unsign<GoogleIdentity & { exp: number }>(req.cookies[GOOGLE_PENDING])
+    if (!pending || pending.exp < Date.now()) return reply.code(400).send({ error: 'Cette inscription a expiré. Recommencez avec Google.' })
+    const parsed = googleSignupBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const { consentement: _c, ...data } = parsed.data
+    try {
+      const created = await db.transaction(async (tx) => {
+        const [c] = await tx
+          .insert(clients)
+          .values({
+            origine: 'site',
+            ...data,
+            raisonSociale: data.type === 'professionnel' ? data.raisonSociale : null,
+            prenom: pending.prenom,
+            nom: pending.nom,
+            email: pending.email,
+            proVerifie: false,
+          })
+          .returning()
+        const [a] = await tx.insert(clientAccounts).values({ clientId: c!.id, passwordHash: null, googleSub: pending.sub, lastLoginAt: new Date() }).returning()
+        return { client: c!, account: a! }
+      })
+      reply.clearCookie(GOOGLE_PENDING, googleCookie)
+      await startSession(req, reply, created.account.id, false)
+      await audit(req, 'espace.registered', {
+        ...who({ clientId: created.client.id }),
+        targetType: 'client',
+        targetId: created.client.id,
+        details: { nom: clientName(created.client), type: created.client.type, via: 'google' },
+      })
+      notify(created.client, (entreprise) => welcomeMail({ nom: clientName(created.client), espace: `${baseUrl(req)}/espace`, entreprise }))
+      return reply.code(201).send({ compte: publicAccount({ ...created.client, clientId: created.client.id, id: created.account.id, motDePasse: false } as ClientAccount) })
+    } catch (e) {
+      if (isUniqueViolation(e)) return reply.code(409).send({ error: EMAIL_TAKEN })
+      throw e
+    }
   })
 
   // --- Mot de passe oublié, activation d'un espace sur une fiche existante ---
@@ -257,7 +392,7 @@ export async function espaceRoutes(app: FastifyInstance) {
       await startSession(req, reply, account!.id, false)
       await audit(req, 'espace.activated', { ...who({ clientId: client.id }), targetType: 'client', targetId: client.id })
       notify(client, (entreprise) => welcomeMail({ nom: clientName(client), espace: `${baseUrl(req)}/espace`, entreprise }))
-      return reply.code(201).send({ compte: publicAccount({ ...client, clientId: client.id, id: account!.id } as ClientAccount) })
+      return reply.code(201).send({ compte: publicAccount({ ...client, clientId: client.id, id: account!.id, motDePasse: true } as ClientAccount) })
     } catch (e) {
       if (isUniqueViolation(e)) return reply.code(400).send({ error: LIEN_INVALIDE, field: 'jeton' })
       throw e
@@ -279,7 +414,12 @@ export async function espaceRoutes(app: FastifyInstance) {
     const parsed = fermetureBody.safeParse(req.body)
     if (!parsed.success) return invalid(reply, parsed.error)
     const [acc] = await db.select({ passwordHash: clientAccounts.passwordHash }).from(clientAccounts).where(eq(clientAccounts.id, me.id))
-    if (!(await verifyPassword(acc?.passwordHash, parsed.data.password))) return reply.code(403).send({ error: 'Mot de passe incorrect.', field: 'password' })
+    // Un espace créé avec Google n'a pas de mot de passe : le client confirme en saisissant son adresse e-mail
+    if (acc?.passwordHash) {
+      if (!(await verifyPassword(acc.passwordHash, parsed.data.password))) return reply.code(403).send({ error: 'Mot de passe incorrect.', field: 'password' })
+    } else if (parsed.data.password.trim().toLowerCase() !== me.email.toLowerCase()) {
+      return reply.code(403).send({ error: 'Adresse e-mail incorrecte.', field: 'password' })
+    }
 
     const [{ ouvertes }] = (await db
       .select({ ouvertes: count() })
@@ -418,7 +558,7 @@ export async function espaceRoutes(app: FastifyInstance) {
   })
 
   // Toujours 200, avec compte à null sans session : pas d'erreur 401 dans la console du navigateur
-  app.get('/session', async (req) => ({ compte: req.account ? publicAccount(req.account) : null }))
+  app.get('/session', async (req) => ({ compte: req.account ? publicAccount(req.account) : null, google: googleEnabled() }))
 
   // --- Devis : on compose dans le configurateur, le devis est tout de suite dans l'espace du client ---
 

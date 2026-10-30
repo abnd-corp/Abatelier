@@ -59,6 +59,7 @@ export function makeRouter() {
       { path: '/espace/connexion', name: 'espace-connexion', component: page('espace-connexion'), meta: { public: true, site: true, espace: 'invite' } },
       { path: '/espace/mot-de-passe-oublie', name: 'espace-mot-de-passe-oublie', component: page('espace-mot-de-passe-oublie'), meta: { public: true, site: true } },
       { path: '/espace/nouveau-mot-de-passe', name: 'espace-nouveau-mot-de-passe', component: page('espace-nouveau-mot-de-passe'), meta: { public: true, site: true } },
+      { path: '/espace/google-inscription', name: 'espace-google-inscription', component: page('espace-google-inscription'), meta: { public: true, site: true, espace: 'invite' } },
       { path: '/espace/inscription', name: 'espace-inscription', component: page('espace-inscription'), meta: { public: true, site: true, espace: 'invite' } },
       { path: '/espace/profil', name: 'espace-profil', component: page('espace-profil'), meta: { public: true, site: true, espace: 'connecte' } },
       { path: '/espace/commandes/:id', name: 'espace-commande', component: page('espace-commande'), meta: { public: true, site: true, espace: 'connecte' } },

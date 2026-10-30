@@ -13,6 +13,12 @@ const inscription = computed(() => props.mode === 'inscription')
 const expired = computed(() => route.query.expire === '1')
 // On garde la page où revenir quand on passe d'un formulaire à l'autre
 const other = computed(() => ({ name: inscription.value ? 'espace-connexion' : 'espace-inscription', query: route.query.redirect ? { redirect: String(route.query.redirect) } : {} }))
+const MESSAGES: Record<string, string> = {
+  echec: 'La connexion avec Google n’a pas abouti. Réessayez, ou utilisez votre adresse e-mail.',
+  desactive: 'Cet espace client est désactivé. Contactez l’atelier.',
+  indisponible: 'La connexion avec Google n’est pas disponible pour le moment.',
+}
+const googleMessage = computed(() => MESSAGES[String(route.query.google ?? '')] ?? '')
 const done = () => router.replace(retourEspace(route.query.redirect))
 </script>
 
@@ -25,7 +31,8 @@ const done = () => router.replace(retourEspace(route.query.redirect))
         {{ inscription ? 'Gratuit, en une minute. Vous retrouvez vos devis, suivez vos commandes et téléchargez vos factures.' : 'Retrouvez vos devis, le suivi de vos commandes et vos factures.' }}
       </p>
       <p v-if="expired" class="alert bad" role="alert">Votre session a expiré. Reconnectez-vous.</p>
-      <EspaceAuthForm :mode="mode" :submit-text="inscription ? 'Créer mon espace' : 'Me connecter'" id-prefix="auth" :after="done" />
+      <p v-if="googleMessage" class="alert bad" role="alert">{{ googleMessage }}</p>
+      <EspaceAuthForm :mode="mode" :submit-text="inscription ? 'Créer mon espace' : 'Me connecter'" id-prefix="auth" :after="done" avec-google />
       <p class="switch">
         <template v-if="inscription">Déjà un espace client ? <RouterLink :to="other">Me connecter</RouterLink></template>
         <template v-else>Pas encore d’espace client ? <RouterLink :to="other">Créer mon espace</RouterLink></template>

@@ -9,6 +9,8 @@ export interface Compte {
   type: 'particulier' | 'professionnel'
   /** Statut professionnel validé par l'atelier : seul à donner droit à la remise pro. */
   proVerifie: boolean
+  /** Faux pour un espace créé avec Google : la fermeture se confirme alors avec l'adresse e-mail */
+  motDePasse: boolean
 }
 
 /** « Mes informations » : coordonnées et adresse de facturation du client. */

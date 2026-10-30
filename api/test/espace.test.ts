@@ -88,7 +88,7 @@ describe('Création du compte', () => {
   it('crée la fiche client, le compte et la session, sans jamais stocker le mot de passe ni le jeton en clair', async () => {
     const res = await visitor.post('/api/espace/inscription', signup())
     expect(res.statusCode, res.body).toBe(201)
-    expect(res.json().compte).toEqual({ prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: '06 12 34 56 78', type: 'particulier', proVerifie: false })
+    expect(res.json().compte).toEqual({ prenom: 'Jean', nom: 'Dupont', email: 'jean@example.com', telephone: '06 12 34 56 78', type: 'particulier', proVerifie: false, motDePasse: true })
     expect(res.body).not.toMatch(/password|hash/i)
     const [c] = await db.select().from(clients)
     expect(c).toMatchObject({ type: 'particulier', origine: 'site', email: 'jean@example.com' })
@@ -245,7 +245,7 @@ describe('Connexion', () => {
     expect((await entries('espace.login')).length).toBe(1)
     expect((await c.post('/api/espace/deconnexion')).statusCode).toBe(204)
     expect((await c.get('/api/espace/commandes')).statusCode).toBe(401)
-    expect((await c.get('/api/espace/session')).json()).toEqual({ compte: null })
+    expect((await c.get('/api/espace/session')).json()).toEqual({ compte: null, google: false })
   })
 
   it('refuse un mauvais mot de passe ou une adresse inconnue avec le même message, puis bloque après 5 échecs', async () => {

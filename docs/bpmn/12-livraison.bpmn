@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P12_livraison_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P12_livraison_collab">
+    <bpmn:participant id="P12_livraison_pool" name="Livraison et retrait" processRef="P12_livraison" />
+  </bpmn:collaboration>
+  <bpmn:process id="P12_livraison" name="Livraison et retrait" isExecutable="false">
+    <bpmn:documentation>La commande prête est retirée à l’atelier, ou livrée sur chantier par un salarié avec le camion de l’entreprise. Chaque colis porte une étiquette code-barres : la remise se valide en la scannant et en faisant signer le client sur l’écran. La remise lance ensuite la facture.</bpmn:documentation>
+    <bpmn:laneSet id="P12_livraison_voies">
+      <bpmn:lane id="P12_livraison_voie_atelier" name="Atelier">
+        <bpmn:flowNodeRef>P12_livraison_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_livraison_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_livraison_t7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_livraison_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P12_livraison_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P12_livraison_g1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P12_livraison_voie_client" name="Visiteur / Client">
+        <bpmn:flowNodeRef>P12_livraison_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_livraison_t6</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P12_livraison_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P12_livraison_t5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_livraison_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_livraison_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_livraison_t8</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P12_livraison_d" name="Commande prête"><bpmn:outgoing>P12_livraison_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="P12_livraison_t5" name="Générer le code-barres du colis et l’étiquette à imprimer"><bpmn:documentation>Pas encore : Un code par colis (ou par commande, à cadrer) ; l’atelier imprime l’étiquette et la colle sur le colis</bpmn:documentation><bpmn:incoming>P12_livraison_flux1</bpmn:incoming><bpmn:outgoing>P12_livraison_flux2</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P12_livraison_g1" name="Retrait ou livraison ?"><bpmn:incoming>P12_livraison_flux2</bpmn:incoming><bpmn:outgoing>P12_livraison_flux3</bpmn:outgoing><bpmn:outgoing>P12_livraison_flux4</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:userTask id="P12_livraison_t1" name="Venir chercher la commande à l’atelier"><bpmn:documentation>Hors application : Le mode « retrait » est choisi à la commande</bpmn:documentation><bpmn:incoming>P12_livraison_flux3</bpmn:incoming><bpmn:outgoing>P12_livraison_flux8</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P12_livraison_t2" name="Fournir l’adresse, la distance et les frais de livraison"><bpmn:documentation>Dans l’application : Calculés à la commande (distance par la route)</bpmn:documentation><bpmn:incoming>P12_livraison_flux4</bpmn:incoming><bpmn:outgoing>P12_livraison_flux5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P12_livraison_t3" name="Grouper les colis et préparer la tournée du salarié livreur"><bpmn:documentation>Pas encore : Les livraisons sont faites par des salariés avec le camion de l’entreprise ; groupes de pièces et ordre de passage à définir avec le client</bpmn:documentation><bpmn:incoming>P12_livraison_flux5</bpmn:incoming><bpmn:outgoing>P12_livraison_flux6</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P12_livraison_t4" name="Éditer le bon de livraison"><bpmn:documentation>Pas encore : Prévu : nouveau type de document ; gardé avec la commande une fois signé</bpmn:documentation><bpmn:incoming>P12_livraison_flux6</bpmn:incoming><bpmn:outgoing>P12_livraison_flux7</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P12_livraison_t7" name="Scanner le code-barres du colis à la remise (caméra du téléphone)"><bpmn:documentation>Pas encore : Comme pour la réception des feuilles ; sans le scan, la remise n’est pas validée</bpmn:documentation><bpmn:incoming>P12_livraison_flux7</bpmn:incoming><bpmn:incoming>P12_livraison_flux8</bpmn:incoming><bpmn:outgoing>P12_livraison_flux9</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P12_livraison_t6" name="Signer la réception sur l’écran du salarié"><bpmn:documentation>Pas encore : Signature gardée avec la commande ; que faire d’un client absent est à définir</bpmn:documentation><bpmn:incoming>P12_livraison_flux9</bpmn:incoming><bpmn:outgoing>P12_livraison_flux10</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P12_livraison_t8" name="Valider la remise : la commande passe à « Livrée » ou « Retirée »"><bpmn:documentation>En partie : Aujourd’hui un bouton « Marquer livrée » ou « Marquer retirée » ; avec le scan et la signature, plus de bouton à presser</bpmn:documentation><bpmn:incoming>P12_livraison_flux10</bpmn:incoming><bpmn:outgoing>P12_livraison_flux11</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="P12_livraison_f" name="Commande remise : la facturation démarre, voir « Facturation »"><bpmn:incoming>P12_livraison_flux11</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P12_livraison_flux1" sourceRef="P12_livraison_d" targetRef="P12_livraison_t5" />
+    <bpmn:sequenceFlow id="P12_livraison_flux2" sourceRef="P12_livraison_t5" targetRef="P12_livraison_g1" />
+    <bpmn:sequenceFlow id="P12_livraison_flux3" name="Retrait" sourceRef="P12_livraison_g1" targetRef="P12_livraison_t1" />
+    <bpmn:sequenceFlow id="P12_livraison_flux4" name="Livraison" sourceRef="P12_livraison_g1" targetRef="P12_livraison_t2" />
+    <bpmn:sequenceFlow id="P12_livraison_flux5" sourceRef="P12_livraison_t2" targetRef="P12_livraison_t3" />
+    <bpmn:sequenceFlow id="P12_livraison_flux6" sourceRef="P12_livraison_t3" targetRef="P12_livraison_t4" />
+    <bpmn:sequenceFlow id="P12_livraison_flux7" sourceRef="P12_livraison_t4" targetRef="P12_livraison_t7" />
+    <bpmn:sequenceFlow id="P12_livraison_flux8" sourceRef="P12_livraison_t1" targetRef="P12_livraison_t7" />
+    <bpmn:sequenceFlow id="P12_livraison_flux9" sourceRef="P12_livraison_t7" targetRef="P12_livraison_t6" />
+    <bpmn:sequenceFlow id="P12_livraison_flux10" sourceRef="P12_livraison_t6" targetRef="P12_livraison_t8" />
+    <bpmn:sequenceFlow id="P12_livraison_flux11" sourceRef="P12_livraison_t8" targetRef="P12_livraison_f" />
+    <bpmn:textAnnotation id="P12_livraison_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P12_livraison_diagram">
+    <bpmndi:BPMNPlane id="P12_livraison_plane" bpmnElement="P12_livraison_collab">
+      <bpmndi:BPMNShape id="P12_livraison_pool_di" bpmnElement="P12_livraison_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="2010" height="720" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_voie_atelier_di" bpmnElement="P12_livraison_voie_atelier" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1980" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_voie_direction_di" bpmnElement="P12_livraison_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="1980" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_voie_client_di" bpmnElement="P12_livraison_voie_client" isHorizontal="true">
+        <dc:Bounds x="70" y="400" width="1980" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_voie_systeme_di" bpmnElement="P12_livraison_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="520" width="1980" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_d_di" bpmnElement="P12_livraison_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_t5_di" bpmnElement="P12_livraison_t5" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="330" y="540" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_g1_di" bpmnElement="P12_livraison_g1" isMarkerVisible="true">
+        <dc:Bounds x="570" y="315" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="490" y="283" width="110" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_t1_di" bpmnElement="P12_livraison_t1" bioc:stroke="#616161" bioc:fill="#e8e8e8">
+        <dc:Bounds x="710" y="420" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_t2_di" bpmnElement="P12_livraison_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="710" y="660" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_t3_di" bpmnElement="P12_livraison_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="900" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_t4_di" bpmnElement="P12_livraison_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1090" y="660" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_t7_di" bpmnElement="P12_livraison_t7" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1280" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_t6_di" bpmnElement="P12_livraison_t6" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1470" y="420" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_t8_di" bpmnElement="P12_livraison_t8" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
+        <dc:Bounds x="1660" y="540" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_livraison_f_di" bpmnElement="P12_livraison_f">
+        <dc:Bounds x="1907" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P12_livraison_flux1_di" bpmnElement="P12_livraison_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="305" y="100" />
+        <di:waypoint x="305" y="580" />
+        <di:waypoint x="330" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_livraison_flux2_di" bpmnElement="P12_livraison_flux2">
+        <di:waypoint x="480" y="580" />
+        <di:waypoint x="545" y="580" />
+        <di:waypoint x="545" y="340" />
+        <di:waypoint x="570" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_livraison_flux3_di" bpmnElement="P12_livraison_flux3">
+        <di:waypoint x="620" y="340" />
+        <di:waypoint x="685" y="340" />
+        <di:waypoint x="685" y="460" />
+        <di:waypoint x="710" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_livraison_flux4_di" bpmnElement="P12_livraison_flux4">
+        <di:waypoint x="620" y="340" />
+        <di:waypoint x="685" y="340" />
+        <di:waypoint x="685" y="700" />
+        <di:waypoint x="710" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_livraison_flux5_di" bpmnElement="P12_livraison_flux5">
+        <di:waypoint x="860" y="700" />
+        <di:waypoint x="875" y="700" />
+        <di:waypoint x="875" y="220" />
+        <di:waypoint x="900" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_livraison_flux6_di" bpmnElement="P12_livraison_flux6">
+        <di:waypoint x="1050" y="220" />
+        <di:waypoint x="1065" y="220" />
+        <di:waypoint x="1065" y="700" />
+        <di:waypoint x="1090" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_livraison_flux7_di" bpmnElement="P12_livraison_flux7">
+        <di:waypoint x="1240" y="700" />
+        <di:waypoint x="1255" y="700" />
+        <di:waypoint x="1255" y="100" />
+        <di:waypoint x="1280" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_livraison_flux8_di" bpmnElement="P12_livraison_flux8">
+        <di:waypoint x="860" y="460" />
+        <di:waypoint x="1255" y="460" />
+        <di:waypoint x="1255" y="100" />
+        <di:waypoint x="1280" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_livraison_flux9_di" bpmnElement="P12_livraison_flux9">
+        <di:waypoint x="1430" y="100" />
+        <di:waypoint x="1445" y="100" />
+        <di:waypoint x="1445" y="460" />
+        <di:waypoint x="1470" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_livraison_flux10_di" bpmnElement="P12_livraison_flux10">
+        <di:waypoint x="1620" y="460" />
+        <di:waypoint x="1635" y="460" />
+        <di:waypoint x="1635" y="580" />
+        <di:waypoint x="1660" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_livraison_flux11_di" bpmnElement="P12_livraison_flux11">
+        <di:waypoint x="1810" y="580" />
+        <di:waypoint x="1882" y="580" />
+        <di:waypoint x="1882" y="100" />
+        <di:waypoint x="1907" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P12_livraison_legende_di" bpmnElement="P12_livraison_legende">
+        <dc:Bounds x="70" y="780" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

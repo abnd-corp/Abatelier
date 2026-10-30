@@ -57,12 +57,16 @@ services:
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-none}
       STRIPE_SECRET_KEY_FILE: /run/secrets/stripe_secret_key
       STRIPE_WEBHOOK_SECRET_FILE: /run/secrets/stripe_webhook_secret
+      # Connexion avec Google à l'espace client : none (fermée) ou google (identifiant dans .env, secret dans secrets/google_oauth_client_secret.txt)
+      GOOGLE_OAUTH_PROVIDER: ${GOOGLE_OAUTH_PROVIDER:-none}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET_FILE: /run/secrets/google_oauth_client_secret
       ADMIN_IDENTIFIANT: ${ADMIN_IDENTIFIANT:-admin}
       ADMIN_NOM: ${ADMIN_NOM:-Administrateur}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
       IDLE_TIMEOUT_HOURS: ${IDLE_TIMEOUT_HOURS:-12}
-    secrets: [db_password, admin_password, google_places_api_key, smtp_password, stripe_secret_key, stripe_webhook_secret]
+    secrets: [db_password, admin_password, google_places_api_key, smtp_password, stripe_secret_key, stripe_webhook_secret, google_oauth_client_secret]
     tmpfs: [/tmp]
     networks: [backend, frontend]
     healthcheck:
@@ -118,6 +122,8 @@ secrets:
     file: ./secrets/stripe_secret_key.txt
   stripe_webhook_secret:
     file: ./secrets/stripe_webhook_secret.txt
+  google_oauth_client_secret:
+    file: ./secrets/google_oauth_client_secret.txt
 
 networks:
   # La base n'est joignable que par l'API, et n'a pas accès à Internet

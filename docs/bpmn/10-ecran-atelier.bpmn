@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P10_ecran_atelier_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P10_ecran_atelier_collab">
+    <bpmn:participant id="P10_ecran_atelier_pool" name="Écran d’affichage de l’atelier" processRef="P10_ecran_atelier" />
+  </bpmn:collaboration>
+  <bpmn:process id="P10_ecran_atelier" name="Écran d’affichage de l’atelier" isExecutable="false">
+    <bpmn:documentation>Un écran fixé dans l’atelier montre en permanence les commandes en cours, en lecture seule : pas de menu, pas de bouton, rien à toucher. La page n’est servie que depuis le réseau interne de l’atelier ; tout le reste de l’application exige une connexion.</bpmn:documentation>
+    <bpmn:laneSet id="P10_ecran_atelier_voies">
+      <bpmn:lane id="P10_ecran_atelier_voie_maintenance" name="Maintenance (nous)">
+        <bpmn:flowNodeRef>P10_ecran_atelier_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_ecran_atelier_t1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P10_ecran_atelier_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P10_ecran_atelier_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_ecran_atelier_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_ecran_atelier_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_ecran_atelier_t5</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P10_ecran_atelier_voie_atelier" name="Atelier">
+        <bpmn:flowNodeRef>P10_ecran_atelier_t6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_ecran_atelier_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P10_ecran_atelier_d" name="Un écran est installé dans l’atelier"><bpmn:outgoing>P10_ecran_atelier_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:manualTask id="P10_ecran_atelier_t1" name="Brancher l’écran et ouvrir la page d’affichage en plein écran (mode kiosque)"><bpmn:documentation>Hors application : Sur le Raspberry lui-même (HDMI) ou sur un petit boîtier du réseau de l’atelier</bpmn:documentation><bpmn:incoming>P10_ecran_atelier_flux1</bpmn:incoming><bpmn:outgoing>P10_ecran_atelier_flux2</bpmn:outgoing></bpmn:manualTask>
+    <bpmn:serviceTask id="P10_ecran_atelier_t2" name="Servir la page seulement depuis le réseau interne, jamais depuis internet"><bpmn:documentation>Pas encore : Restriction au niveau du réseau (pas seulement dans l’application : l’adresse d’un visiteur peut être falsifiée derrière un relais)</bpmn:documentation><bpmn:incoming>P10_ecran_atelier_flux2</bpmn:incoming><bpmn:outgoing>P10_ecran_atelier_flux3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P10_ecran_atelier_t3" name="Afficher les commandes en colonnes : À lancer, En fabrication, Prêtes"><bpmn:documentation>Pas encore : Lecture seule, sans menu ni bouton, lisible de loin (grands caractères, thème sombre)</bpmn:documentation><bpmn:incoming>P10_ecran_atelier_flux3</bpmn:incoming><bpmn:outgoing>P10_ecran_atelier_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P10_ecran_atelier_t4" name="Montrer le numéro, les pièces, la date prévue et les retards, jamais le nom du client"><bpmn:documentation>Pas encore : Règle de l’atelier : on voit la commande, jamais le client</bpmn:documentation><bpmn:incoming>P10_ecran_atelier_flux4</bpmn:incoming><bpmn:outgoing>P10_ecran_atelier_flux5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P10_ecran_atelier_t5" name="Se rafraîchir toute seule et signaler une coupure"><bpmn:documentation>Pas encore : Un message clair si la connexion au serveur est perdue, pour ne pas lire une information périmée</bpmn:documentation><bpmn:incoming>P10_ecran_atelier_flux5</bpmn:incoming><bpmn:outgoing>P10_ecran_atelier_flux6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P10_ecran_atelier_t6" name="Regarder l’écran pour savoir quoi lancer et ce qui est en retard"><bpmn:documentation>Pas encore : Rien à saisir : les gestes se font sur la page Fabrication, avec connexion</bpmn:documentation><bpmn:incoming>P10_ecran_atelier_flux6</bpmn:incoming><bpmn:outgoing>P10_ecran_atelier_flux7</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P10_ecran_atelier_f" name="Atelier informé en continu"><bpmn:incoming>P10_ecran_atelier_flux7</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P10_ecran_atelier_flux1" sourceRef="P10_ecran_atelier_d" targetRef="P10_ecran_atelier_t1" />
+    <bpmn:sequenceFlow id="P10_ecran_atelier_flux2" sourceRef="P10_ecran_atelier_t1" targetRef="P10_ecran_atelier_t2" />
+    <bpmn:sequenceFlow id="P10_ecran_atelier_flux3" sourceRef="P10_ecran_atelier_t2" targetRef="P10_ecran_atelier_t3" />
+    <bpmn:sequenceFlow id="P10_ecran_atelier_flux4" sourceRef="P10_ecran_atelier_t3" targetRef="P10_ecran_atelier_t4" />
+    <bpmn:sequenceFlow id="P10_ecran_atelier_flux5" sourceRef="P10_ecran_atelier_t4" targetRef="P10_ecran_atelier_t5" />
+    <bpmn:sequenceFlow id="P10_ecran_atelier_flux6" sourceRef="P10_ecran_atelier_t5" targetRef="P10_ecran_atelier_t6" />
+    <bpmn:sequenceFlow id="P10_ecran_atelier_flux7" sourceRef="P10_ecran_atelier_t6" targetRef="P10_ecran_atelier_f" />
+    <bpmn:textAnnotation id="P10_ecran_atelier_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P10_ecran_atelier_diagram">
+    <bpmndi:BPMNPlane id="P10_ecran_atelier_plane" bpmnElement="P10_ecran_atelier_collab">
+      <bpmndi:BPMNShape id="P10_ecran_atelier_pool_di" bpmnElement="P10_ecran_atelier_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1630" height="360" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_voie_maintenance_di" bpmnElement="P10_ecran_atelier_voie_maintenance" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1600" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_voie_systeme_di" bpmnElement="P10_ecran_atelier_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1600" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_voie_atelier_di" bpmnElement="P10_ecran_atelier_voie_atelier" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="1600" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_d_di" bpmnElement="P10_ecran_atelier_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_t1_di" bpmnElement="P10_ecran_atelier_t1" bioc:stroke="#616161" bioc:fill="#e8e8e8">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_t2_di" bpmnElement="P10_ecran_atelier_t2" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="520" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_t3_di" bpmnElement="P10_ecran_atelier_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="710" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_t4_di" bpmnElement="P10_ecran_atelier_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="900" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_t5_di" bpmnElement="P10_ecran_atelier_t5" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1090" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_t6_di" bpmnElement="P10_ecran_atelier_t6" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1280" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_f_di" bpmnElement="P10_ecran_atelier_f">
+        <dc:Bounds x="1527" y="322" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P10_ecran_atelier_flux1_di" bpmnElement="P10_ecran_atelier_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P10_ecran_atelier_flux2_di" bpmnElement="P10_ecran_atelier_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="495" y="100" />
+        <di:waypoint x="495" y="220" />
+        <di:waypoint x="520" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P10_ecran_atelier_flux3_di" bpmnElement="P10_ecran_atelier_flux3">
+        <di:waypoint x="670" y="220" />
+        <di:waypoint x="710" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P10_ecran_atelier_flux4_di" bpmnElement="P10_ecran_atelier_flux4">
+        <di:waypoint x="860" y="220" />
+        <di:waypoint x="900" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P10_ecran_atelier_flux5_di" bpmnElement="P10_ecran_atelier_flux5">
+        <di:waypoint x="1050" y="220" />
+        <di:waypoint x="1090" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P10_ecran_atelier_flux6_di" bpmnElement="P10_ecran_atelier_flux6">
+        <di:waypoint x="1240" y="220" />
+        <di:waypoint x="1255" y="220" />
+        <di:waypoint x="1255" y="340" />
+        <di:waypoint x="1280" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P10_ecran_atelier_flux7_di" bpmnElement="P10_ecran_atelier_flux7">
+        <di:waypoint x="1430" y="340" />
+        <di:waypoint x="1527" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P10_ecran_atelier_legende_di" bpmnElement="P10_ecran_atelier_legende">
+        <dc:Bounds x="70" y="420" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

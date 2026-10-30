@@ -57,6 +57,12 @@ const schema = z.object({
   // Stripe : clé secrète et secret de signature des notifications (webhooks), dans secrets/
   STRIPE_SECRET_KEY: z.string().trim().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().trim().optional(),
+  // Connexion avec Google à l'espace client : none (désactivée), simulation (faux Google pour le développement et les tests) ou google
+  GOOGLE_OAUTH_PROVIDER: z.enum(['none', 'simulation', 'google']).default('none'),
+  GOOGLE_OAUTH_CLIENT_ID: z.string().trim().optional(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().trim().optional(),
+  // Autorise le faux Google dans une pile de production jetable (tests de bout en bout) ; jamais sur un vrai serveur
+  ALLOW_FAKE_GOOGLE: bool,
   // Autorise le faux paiement dans une pile de production jetable (tests de bout en bout) ; jamais sur un vrai serveur
   ALLOW_FAKE_PAYMENT: bool,
   // À mettre à true dès que le site est servi en HTTPS
@@ -81,6 +87,7 @@ const parsed = schema.safeParse({
   SMTP_PASSWORD: secret('SMTP_PASSWORD'),
   STRIPE_SECRET_KEY: secret('STRIPE_SECRET_KEY'),
   STRIPE_WEBHOOK_SECRET: secret('STRIPE_WEBHOOK_SECRET'),
+  GOOGLE_OAUTH_CLIENT_SECRET: secret('GOOGLE_OAUTH_CLIENT_SECRET'),
 })
 if (!parsed.success) {
   console.error('Configuration invalide :', z.prettifyError(parsed.error))
@@ -90,6 +97,14 @@ const e = parsed.data
 
 if (e.PAYMENT_PROVIDER === 'stripe' && (!e.STRIPE_SECRET_KEY || !e.STRIPE_WEBHOOK_SECRET)) {
   console.error('Configuration invalide : PAYMENT_PROVIDER=stripe demande STRIPE_SECRET_KEY et STRIPE_WEBHOOK_SECRET (ou leurs fichiers _FILE).')
+  process.exit(1)
+}
+if (e.GOOGLE_OAUTH_PROVIDER === 'google' && (!e.GOOGLE_OAUTH_CLIENT_ID || !e.GOOGLE_OAUTH_CLIENT_SECRET)) {
+  console.error('Configuration invalide : GOOGLE_OAUTH_PROVIDER=google demande GOOGLE_OAUTH_CLIENT_ID et GOOGLE_OAUTH_CLIENT_SECRET (ou son fichier _FILE).')
+  process.exit(1)
+}
+if (e.GOOGLE_OAUTH_PROVIDER === 'simulation' && e.NODE_ENV === 'production' && !e.ALLOW_FAKE_GOOGLE) {
+  console.error('Configuration invalide : le faux Google « simulation » est interdit en production (sauf ALLOW_FAKE_GOOGLE=true, pour les tests de bout en bout).')
   process.exit(1)
 }
 if (e.PAYMENT_PROVIDER === 'simulation' && e.NODE_ENV === 'production' && !e.ALLOW_FAKE_PAYMENT) {
