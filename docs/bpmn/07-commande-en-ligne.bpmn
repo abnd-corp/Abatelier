@@ -106,7 +106,7 @@
       <bpmndi:BPMNShape id="P7_commande_en_ligne_g1_di" bpmnElement="P7_commande_en_ligne_g1" isMarkerVisible="true">
         <dc:Bounds x="1140" y="675" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1060" y="643" width="110" height="30" />
+          <dc:Bounds x="1053" y="643" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_t5_di" bpmnElement="P7_commande_en_ligne_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -174,12 +174,18 @@
         <di:waypoint x="1255" y="700" />
         <di:waypoint x="1255" y="340" />
         <di:waypoint x="1280" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1249" y="321" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux8_di" bpmnElement="P7_commande_en_ligne_flux8">
         <di:waypoint x="1190" y="700" />
         <di:waypoint x="1255" y="700" />
         <di:waypoint x="1255" y="460" />
         <di:waypoint x="1280" y="460" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1225" y="441" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux9_di" bpmnElement="P7_commande_en_ligne_flux9">
         <di:waypoint x="1430" y="340" />
@@ -215,8 +221,8 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux16_di" bpmnElement="P7_commande_en_ligne_flux16">
         <di:waypoint x="1735" y="315" />
-        <di:waypoint x="1735" y="282" />
-        <di:waypoint x="1545" y="282" />
+        <di:waypoint x="1735" y="290" />
+        <di:waypoint x="1545" y="290" />
         <di:waypoint x="1545" y="260" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_legende_di" bpmnElement="P7_commande_en_ligne_legende">

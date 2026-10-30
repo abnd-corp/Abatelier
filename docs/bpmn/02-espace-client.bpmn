@@ -111,7 +111,7 @@
       <bpmndi:BPMNShape id="P2_espace_client_g1_di" bpmnElement="P2_espace_client_g1" isMarkerVisible="true">
         <dc:Bounds x="570" y="315" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="490" y="283" width="110" height="30" />
+          <dc:Bounds x="597" y="283" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t2_di" bpmnElement="P2_espace_client_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -132,7 +132,7 @@
       <bpmndi:BPMNShape id="P2_espace_client_g2_di" bpmnElement="P2_espace_client_g2" isMarkerVisible="true">
         <dc:Bounds x="1330" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1250" y="43" width="110" height="30" />
+          <dc:Bounds x="1258" y="56" width="95" height="17" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t7_di" bpmnElement="P2_espace_client_t7" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -153,7 +153,7 @@
       <bpmndi:BPMNShape id="P2_espace_client_g3_di" bpmnElement="P2_espace_client_g3" isMarkerVisible="true">
         <dc:Bounds x="3040" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="2960" y="43" width="110" height="30" />
+          <dc:Bounds x="2953" y="43" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t11_di" bpmnElement="P2_espace_client_t11" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -174,20 +174,14 @@
       <bpmndi:BPMNShape id="P2_espace_client_gs1_di" bpmnElement="P2_espace_client_gs1" isMarkerVisible="true">
         <dc:Bounds x="1900" y="315" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1820" y="283" width="110" height="30" />
+          <dc:Bounds x="1813" y="283" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_gj2_di" bpmnElement="P2_espace_client_gj2" isMarkerVisible="true">
         <dc:Bounds x="2280" y="315" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="2200" y="283" width="110" height="30" />
-        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_gj3_di" bpmnElement="P2_espace_client_gj3" isMarkerVisible="true">
         <dc:Bounds x="2660" y="75" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="2580" y="43" width="110" height="30" />
-        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P2_espace_client_flux1_di" bpmnElement="P2_espace_client_flux1">
         <di:waypoint x="233" y="100" />
@@ -202,12 +196,18 @@
       <bpmndi:BPMNEdge id="P2_espace_client_flux3_di" bpmnElement="P2_espace_client_flux3">
         <di:waypoint x="620" y="340" />
         <di:waypoint x="710" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="626" y="321" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux4_di" bpmnElement="P2_espace_client_flux4">
         <di:waypoint x="620" y="340" />
         <di:waypoint x="685" y="340" />
         <di:waypoint x="685" y="460" />
         <di:waypoint x="710" y="460" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="580" y="437" width="101" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux5_di" bpmnElement="P2_espace_client_flux5">
         <di:waypoint x="860" y="340" />
@@ -242,10 +242,16 @@
         <di:waypoint x="1445" y="100" />
         <di:waypoint x="1445" y="220" />
         <di:waypoint x="1470" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1449" y="106" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux11_di" bpmnElement="P2_espace_client_flux11">
         <di:waypoint x="1380" y="100" />
         <di:waypoint x="2660" y="100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1386" y="81" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux12_di" bpmnElement="P2_espace_client_flux12">
         <di:waypoint x="1620" y="220" />
@@ -274,6 +280,9 @@
         <di:waypoint x="3155" y="100" />
         <di:waypoint x="3155" y="460" />
         <di:waypoint x="3180" y="460" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3126" y="106" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux17_di" bpmnElement="P2_espace_client_flux17">
         <di:waypoint x="3330" y="460" />
@@ -290,6 +299,9 @@
       <bpmndi:BPMNEdge id="P2_espace_client_flux19_di" bpmnElement="P2_espace_client_flux19">
         <di:waypoint x="3090" y="100" />
         <di:waypoint x="3180" y="100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3096" y="81" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux20_di" bpmnElement="P2_espace_client_flux20">
         <di:waypoint x="3330" y="100" />
@@ -310,12 +322,18 @@
       <bpmndi:BPMNEdge id="P2_espace_client_flux23_di" bpmnElement="P2_espace_client_flux23">
         <di:waypoint x="1950" y="340" />
         <di:waypoint x="2280" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1956" y="321" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux24_di" bpmnElement="P2_espace_client_flux24">
         <di:waypoint x="1950" y="340" />
         <di:waypoint x="2015" y="340" />
         <di:waypoint x="2015" y="580" />
         <di:waypoint x="2040" y="580" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2019" y="346" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux25_di" bpmnElement="P2_espace_client_flux25">
         <di:waypoint x="2330" y="340" />

@@ -85,7 +85,7 @@
       <bpmndi:BPMNShape id="P10_fabrication_g1_di" bpmnElement="P10_fabrication_g1" isMarkerVisible="true">
         <dc:Bounds x="570" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="490" y="43" width="110" height="30" />
+          <dc:Bounds x="483" y="43" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P10_fabrication_t2_di" bpmnElement="P10_fabrication_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -123,9 +123,6 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P10_fabrication_gj1_di" bpmnElement="P10_fabrication_gj1" isMarkerVisible="true">
         <dc:Bounds x="950" y="75" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="870" y="43" width="110" height="30" />
-        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P10_fabrication_flux1_di" bpmnElement="P10_fabrication_flux1">
         <di:waypoint x="233" y="100" />
@@ -140,10 +137,16 @@
         <di:waypoint x="685" y="100" />
         <di:waypoint x="685" y="220" />
         <di:waypoint x="710" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="689" y="106" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P10_fabrication_flux4_di" bpmnElement="P10_fabrication_flux4">
         <di:waypoint x="620" y="100" />
         <di:waypoint x="950" y="100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="626" y="81" width="72" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P10_fabrication_flux5_di" bpmnElement="P10_fabrication_flux5">
         <di:waypoint x="860" y="220" />

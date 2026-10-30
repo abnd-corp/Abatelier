@@ -83,7 +83,7 @@
       <bpmndi:BPMNShape id="P3_connexion_google_g1_di" bpmnElement="P3_connexion_google_g1" isMarkerVisible="true">
         <dc:Bounds x="1140" y="435" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1060" y="403" width="110" height="30" />
+          <dc:Bounds x="1053" y="487" width="110" height="43" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P3_connexion_google_t5_di" bpmnElement="P3_connexion_google_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -106,9 +106,6 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P3_connexion_google_gj1_di" bpmnElement="P3_connexion_google_gj1" isMarkerVisible="true">
         <dc:Bounds x="1710" y="75" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1630" y="43" width="110" height="30" />
-        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P3_connexion_google_flux1_di" bpmnElement="P3_connexion_google_flux1">
         <di:waypoint x="233" y="100" />
@@ -139,18 +136,27 @@
       <bpmndi:BPMNEdge id="P3_connexion_google_flux6_di" bpmnElement="P3_connexion_google_flux6">
         <di:waypoint x="1190" y="460" />
         <di:waypoint x="1280" y="460" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1196" y="415" width="50" height="43" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P3_connexion_google_flux7_di" bpmnElement="P3_connexion_google_flux7">
         <di:waypoint x="1190" y="460" />
         <di:waypoint x="1255" y="460" />
         <di:waypoint x="1255" y="580" />
         <di:waypoint x="1280" y="580" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1121" y="544" width="130" height="30" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P3_connexion_google_flux8_di" bpmnElement="P3_connexion_google_flux8">
         <di:waypoint x="1190" y="460" />
         <di:waypoint x="1255" y="460" />
         <di:waypoint x="1255" y="340" />
         <di:waypoint x="1280" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1127" y="346" width="124" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P3_connexion_google_flux9_di" bpmnElement="P3_connexion_google_flux9">
         <di:waypoint x="1430" y="340" />

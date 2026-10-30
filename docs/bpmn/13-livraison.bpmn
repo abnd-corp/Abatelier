@@ -80,7 +80,7 @@
       <bpmndi:BPMNShape id="P13_livraison_g1_di" bpmnElement="P13_livraison_g1" isMarkerVisible="true">
         <dc:Bounds x="570" y="315" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="490" y="283" width="110" height="30" />
+          <dc:Bounds x="483" y="283" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P13_livraison_t1_di" bpmnElement="P13_livraison_t1" bioc:stroke="#616161" bioc:fill="#e8e8e8">
@@ -109,9 +109,6 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P13_livraison_gj1_di" bpmnElement="P13_livraison_gj1" isMarkerVisible="true">
         <dc:Bounds x="1330" y="75" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1250" y="43" width="110" height="30" />
-        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P13_livraison_flux1_di" bpmnElement="P13_livraison_flux1">
         <di:waypoint x="233" y="100" />
@@ -130,12 +127,18 @@
         <di:waypoint x="685" y="340" />
         <di:waypoint x="685" y="460" />
         <di:waypoint x="710" y="460" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="631" y="441" width="49" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P13_livraison_flux4_di" bpmnElement="P13_livraison_flux4">
         <di:waypoint x="620" y="340" />
         <di:waypoint x="685" y="340" />
         <di:waypoint x="685" y="700" />
         <di:waypoint x="710" y="700" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="644" y="702" width="60" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P13_livraison_flux5_di" bpmnElement="P13_livraison_flux5">
         <di:waypoint x="860" y="700" />
@@ -157,8 +160,8 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P13_livraison_flux8_di" bpmnElement="P13_livraison_flux8">
         <di:waypoint x="860" y="460" />
-        <di:waypoint x="1305" y="460" />
-        <di:waypoint x="1305" y="100" />
+        <di:waypoint x="870" y="460" />
+        <di:waypoint x="870" y="100" />
         <di:waypoint x="1330" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P13_livraison_flux9_di" bpmnElement="P13_livraison_flux9">

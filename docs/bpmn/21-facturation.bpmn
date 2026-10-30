@@ -94,7 +94,7 @@
       <bpmndi:BPMNShape id="P21_facturation_g1_di" bpmnElement="P21_facturation_g1" isMarkerVisible="true">
         <dc:Bounds x="1140" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1060" y="43" width="110" height="30" />
+          <dc:Bounds x="1085" y="56" width="78" height="17" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P21_facturation_t5_di" bpmnElement="P21_facturation_t5" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
@@ -112,7 +112,7 @@
       <bpmndi:BPMNShape id="P21_facturation_g2_di" bpmnElement="P21_facturation_g2" isMarkerVisible="true">
         <dc:Bounds x="1900" y="555" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1820" y="523" width="110" height="30" />
+          <dc:Bounds x="1927" y="523" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P21_facturation_t9_di" bpmnElement="P21_facturation_t9" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -126,9 +126,6 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P21_facturation_gj1_di" bpmnElement="P21_facturation_gj1" isMarkerVisible="true">
         <dc:Bounds x="2280" y="555" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="2200" y="523" width="110" height="30" />
-        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P21_facturation_flux1_di" bpmnElement="P21_facturation_flux1">
         <di:waypoint x="233" y="100" />
@@ -157,12 +154,18 @@
       <bpmndi:BPMNEdge id="P21_facturation_flux6_di" bpmnElement="P21_facturation_flux6">
         <di:waypoint x="1190" y="100" />
         <di:waypoint x="1280" y="100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1196" y="81" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P21_facturation_flux7_di" bpmnElement="P21_facturation_flux7">
         <di:waypoint x="1190" y="100" />
         <di:waypoint x="1255" y="100" />
         <di:waypoint x="1255" y="220" />
         <di:waypoint x="1280" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1226" y="106" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P21_facturation_flux8_di" bpmnElement="P21_facturation_flux8">
         <di:waypoint x="1430" y="220" />
@@ -193,10 +196,16 @@
         <di:waypoint x="2015" y="580" />
         <di:waypoint x="2015" y="700" />
         <di:waypoint x="2040" y="700" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2019" y="586" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P21_facturation_flux13_di" bpmnElement="P21_facturation_flux13">
         <di:waypoint x="1950" y="580" />
         <di:waypoint x="2280" y="580" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1956" y="561" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P21_facturation_flux14_di" bpmnElement="P21_facturation_flux14">
         <di:waypoint x="2190" y="700" />

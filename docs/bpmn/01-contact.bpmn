@@ -80,7 +80,7 @@
       <bpmndi:BPMNShape id="P1_contact_g0_di" bpmnElement="P1_contact_g0" isMarkerVisible="true">
         <dc:Bounds x="570" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="490" y="43" width="110" height="30" />
+          <dc:Bounds x="293" y="43" width="300" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P1_contact_t0_di" bpmnElement="P1_contact_t0" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -133,10 +133,16 @@
         <di:waypoint x="685" y="100" />
         <di:waypoint x="685" y="220" />
         <di:waypoint x="710" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="656" y="106" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P1_contact_flux4_di" bpmnElement="P1_contact_flux4">
         <di:waypoint x="620" y="100" />
         <di:waypoint x="710" y="100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="626" y="81" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P1_contact_flux5_di" bpmnElement="P1_contact_flux5">
         <di:waypoint x="860" y="220" />

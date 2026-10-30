@@ -82,14 +82,11 @@
       <bpmndi:BPMNShape id="P35_notifications_gs1_di" bpmnElement="P35_notifications_gs1" isMarkerVisible="true">
         <dc:Bounds x="570" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="490" y="43" width="110" height="30" />
+          <dc:Bounds x="483" y="43" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P35_notifications_gj2_di" bpmnElement="P35_notifications_gj2" isMarkerVisible="true">
         <dc:Bounds x="950" y="315" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="870" y="283" width="110" height="30" />
-        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P35_notifications_flux1_di" bpmnElement="P35_notifications_flux1">
         <di:waypoint x="233" y="100" />
@@ -130,12 +127,18 @@
         <di:waypoint x="925" y="100" />
         <di:waypoint x="925" y="340" />
         <di:waypoint x="950" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="929" y="106" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P35_notifications_flux9_di" bpmnElement="P35_notifications_flux9">
         <di:waypoint x="620" y="100" />
         <di:waypoint x="685" y="100" />
         <di:waypoint x="685" y="220" />
         <di:waypoint x="710" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="689" y="106" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P35_notifications_flux10_di" bpmnElement="P35_notifications_flux10">
         <di:waypoint x="1000" y="340" />

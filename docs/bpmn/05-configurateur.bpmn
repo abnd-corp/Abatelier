@@ -81,7 +81,7 @@
       <bpmndi:BPMNShape id="P5_configurateur_g1_di" bpmnElement="P5_configurateur_g1" isMarkerVisible="true">
         <dc:Bounds x="950" y="315" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="870" y="283" width="110" height="30" />
+          <dc:Bounds x="863" y="283" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P5_configurateur_t3_di" bpmnElement="P5_configurateur_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -93,7 +93,7 @@
       <bpmndi:BPMNShape id="P5_configurateur_g2_di" bpmnElement="P5_configurateur_g2" isMarkerVisible="true">
         <dc:Bounds x="1330" y="315" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1250" y="283" width="110" height="30" />
+          <dc:Bounds x="1243" y="283" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P5_configurateur_t5_di" bpmnElement="P5_configurateur_t5" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
@@ -113,9 +113,6 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P5_configurateur_gj1_di" bpmnElement="P5_configurateur_gj1" isMarkerVisible="true">
         <dc:Bounds x="380" y="75" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="300" y="43" width="110" height="30" />
-        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P5_configurateur_flux1_di" bpmnElement="P5_configurateur_flux1">
         <di:waypoint x="233" y="100" />
@@ -134,12 +131,18 @@
       <bpmndi:BPMNEdge id="P5_configurateur_flux4_di" bpmnElement="P5_configurateur_flux4">
         <di:waypoint x="1000" y="340" />
         <di:waypoint x="1090" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1006" y="321" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P5_configurateur_flux5_di" bpmnElement="P5_configurateur_flux5">
         <di:waypoint x="1000" y="340" />
         <di:waypoint x="1065" y="340" />
         <di:waypoint x="1065" y="460" />
         <di:waypoint x="1090" y="460" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1036" y="346" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P5_configurateur_flux6_di" bpmnElement="P5_configurateur_flux6">
         <di:waypoint x="1165" y="500" />
@@ -154,12 +157,18 @@
       <bpmndi:BPMNEdge id="P5_configurateur_flux8_di" bpmnElement="P5_configurateur_flux8">
         <di:waypoint x="1380" y="340" />
         <di:waypoint x="1470" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1386" y="321" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P5_configurateur_flux9_di" bpmnElement="P5_configurateur_flux9">
         <di:waypoint x="1380" y="340" />
         <di:waypoint x="1445" y="340" />
         <di:waypoint x="1445" y="220" />
         <di:waypoint x="1470" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1416" y="317" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P5_configurateur_flux10_di" bpmnElement="P5_configurateur_flux10">
         <di:waypoint x="1620" y="340" />

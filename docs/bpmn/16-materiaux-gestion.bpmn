@@ -48,7 +48,7 @@
       <bpmndi:BPMNShape id="P16_materiaux_gestion_g1_di" bpmnElement="P16_materiaux_gestion_g1" isMarkerVisible="true">
         <dc:Bounds x="380" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="300" y="43" width="110" height="30" />
+          <dc:Bounds x="331" y="56" width="72" height="17" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P16_materiaux_gestion_t1_di" bpmnElement="P16_materiaux_gestion_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -65,9 +65,6 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P16_materiaux_gestion_gj1_di" bpmnElement="P16_materiaux_gestion_gj1" isMarkerVisible="true">
         <dc:Bounds x="760" y="75" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="680" y="43" width="110" height="30" />
-        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P16_materiaux_gestion_flux1_di" bpmnElement="P16_materiaux_gestion_flux1">
         <di:waypoint x="233" y="100" />
@@ -76,18 +73,27 @@
       <bpmndi:BPMNEdge id="P16_materiaux_gestion_flux2_di" bpmnElement="P16_materiaux_gestion_flux2">
         <di:waypoint x="430" y="100" />
         <di:waypoint x="520" y="100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="436" y="81" width="78" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P16_materiaux_gestion_flux3_di" bpmnElement="P16_materiaux_gestion_flux3">
         <di:waypoint x="430" y="100" />
         <di:waypoint x="495" y="100" />
         <di:waypoint x="495" y="220" />
         <di:waypoint x="520" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="436" y="201" width="54" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P16_materiaux_gestion_flux4_di" bpmnElement="P16_materiaux_gestion_flux4">
         <di:waypoint x="430" y="100" />
         <di:waypoint x="495" y="100" />
         <di:waypoint x="495" y="340" />
         <di:waypoint x="520" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="460" y="342" width="54" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P16_materiaux_gestion_flux5_di" bpmnElement="P16_materiaux_gestion_flux5">
         <di:waypoint x="670" y="100" />

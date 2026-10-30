@@ -140,7 +140,19 @@ function traverse(pts, f) {
     return x1 < f.x + f.w && x2 > f.x && y1 < f.y + f.h && y2 > f.y
   })
 }
-function acheminer(p, forme) {
+/** Nombre de croisements entre deux tracés (une flèche horizontale et une verticale qui se coupent en plein milieu). */
+function croisements(pts, autre) {
+  let n = 0
+  for (const s of segmentsDe(pts))
+    for (const t of segmentsDe(autre)) {
+      const [h, v] = s.y1 === s.y2 && t.x1 === t.x2 ? [s, t] : t.y1 === t.y2 && s.x1 === s.x2 ? [t, s] : [null, null]
+      if (!h) continue
+      if (v.x1 > Math.min(h.x1, h.x2) && v.x1 < Math.max(h.x1, h.x2) && h.y1 > Math.min(v.y1, v.y2) && h.y1 < Math.max(v.y1, v.y2)) n++
+    }
+  return n
+}
+
+function acheminer(p, forme, bords) {
   const problemes = []
   const choisies = []
   p.flux.forEach(([de, vers]) => {
@@ -149,9 +161,15 @@ function acheminer(p, forme) {
       const croise = [...forme].find(([id, f]) => id !== de && id !== vers && traverse(pts, f))
       if (croise) return `traverse « ${croise[0]} »`
       const autre = choisies.find((c) => c.de !== de && c.vers !== vers && segmentsDe(c.pts).some((s) => segmentsDe(pts).some((t) => recouvre(s, t))))
-      return autre ? `se superpose à ${autre.de}→${autre.vers}` : null
+      if (autre) return `se superpose à ${autre.de}→${autre.vers}`
+      // Une ligne qui longe la bordure d'une voie se confond avec elle
+      if (segmentsDe(pts).some((s) => s.y1 === s.y2 && Math.abs(s.x2 - s.x1) > 4 && bords.some((y) => Math.abs(s.y1 - y) < 8))) return 'longe la bordure d’une voie'
+      return null
     }
-    const ok = liste.find((pts) => !gene(pts))
+    // Parmi les tracés qui ne gênent rien, celui qui croise le moins de flèches ; à égalité, le plus simple (le premier)
+    const valides = liste.filter((pts) => !gene(pts))
+    const cout = (pts) => choisies.reduce((n, c) => n + croisements(pts, c.pts), 0)
+    const ok = valides.reduce((meilleur, pts) => (meilleur && cout(meilleur) <= cout(pts) ? meilleur : pts), null)
     const pts = ok ?? liste[0]
     if (!ok) problemes.push(`la flèche ${de}→${vers} ${gene(pts)}`)
     choisies.push({ de, vers, pts })
@@ -202,10 +220,132 @@ function candidats(a, b) {
   return out
 }
 
+/** Rectangle occupé par un libellé : estimé d'après le nombre de caractères (police du schéma, environ 5,8 px par caractère). */
+const tailleTexte = (texte, largeurMax) => {
+  const brut = texte.length * 5.8 + 8
+  const lignes = Math.max(1, Math.ceil(brut / largeurMax))
+  return { w: lignes > 1 ? largeurMax : Math.round(brut), h: lignes * 13 + 4 }
+}
+const croiseRect = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+
+/**
+ * Place les libellés des flèches (Oui, Non…) et les questions des losanges : jamais sur une étape, une flèche ou un autre libellé.
+ * Chaque libellé essaie plusieurs emplacements, en commençant par le plus naturel (juste après la sortie du losange).
+ */
+function etiqueter(p, forme, routes, bords) {
+  const problemes = []
+  const obstacles = [...forme.values()].map((f) => ({ x: f.x - 2, y: f.y - 2, w: f.w + 4, h: f.h + 4 }))
+  for (const pts of routes)
+    for (const s of segmentsDe(pts)) obstacles.push({ x: Math.min(s.x1, s.x2) - 1, y: Math.min(s.y1, s.y2) - 1, w: Math.abs(s.x2 - s.x1) + 2, h: Math.abs(s.y2 - s.y1) + 2 })
+  // Un libellé ne doit pas chevaucher la ligne qui sépare deux voies
+  for (const y of bords) obstacles.push({ x: 0, y: y - 1, w: 100000, h: 2 })
+  const posees = []
+  const libre = (r) => !obstacles.some((o) => croiseRect(r, o)) && !posees.some((q) => croiseRect(r, q))
+  const choisir = (nom, candidatsRect, quoi) => {
+    const ok = candidatsRect.find(libre)
+    const r = ok ?? candidatsRect[0]
+    if (!ok) problemes.push(`le libellé « ${nom} » ${quoi} ne trouve pas de place libre`)
+    posees.push(r)
+    return r
+  }
+  const questions = new Map()
+  for (const [id, type, , , , nom] of p.noeuds) {
+    if (type !== 'choix' || !nom) continue
+    const f = forme.get(id)
+    // Au-dessus à gauche d'abord (les flèches partent à droite, en haut ou en bas), puis les autres coins ; plus large si le texte est long
+    const candidatsRect = []
+    for (const largeurMax of [110, 160, 220, 300, 400]) {
+      const { w, h } = tailleTexte(nom, largeurMax)
+      candidatsRect.push(
+        { x: f.cx - w - 2, y: f.y - h - 2, w, h },
+        { x: f.cx + 2, y: f.y - h - 2, w, h },
+        { x: f.cx - w - 2, y: f.y + f.h + 2, w, h },
+        { x: f.cx + 2, y: f.y + f.h + 2, w, h },
+      )
+    }
+    const r = choisir(nom, candidatsRect, 'du losange')
+    questions.set(id, r)
+  }
+  const flux = new Map()
+  p.flux.forEach(([de, vers, nom], i) => {
+    if (!nom) return
+    const cand = []
+    const segs = segmentsDe(routes[i])
+    // D'abord sur une ligne ; faute de place, sur deux (plus étroit)
+    const tailles = [tailleTexte(nom, 130), tailleTexte(nom, 64), tailleTexte(nom, 50)].filter((t, k, a) => k === 0 || t.w !== a[0].w)
+    for (const { w, h } of tailles) {
+    // Le long de chaque segment : près du départ d'abord, puis près de l'arrivée, puis au milieu, de part et d'autre de la ligne
+    // Les segments partagés avec une autre flèche de la même décision passent en dernier : le libellé doit désigner sa propre branche
+    const partage = (k) => p.flux.some((g, j) => j !== i && g[0] === de && segmentsDe(routes[j]).some((t) => recouvre(segs[k], t)))
+    const ordre = [0, ...segs.keys(), segs.length - 1].filter((k, j, t) => t.indexOf(k) === j)
+    ordre.sort((a, b) => Number(partage(a)) - Number(partage(b)))
+    for (const k of ordre) {
+      const s = segs[k]
+      if (s.y1 === s.y2) {
+        const sens = s.x2 >= s.x1 ? 1 : -1
+        const debutX = sens > 0 ? s.x1 + 6 : s.x1 - 6 - w
+        const finX = sens > 0 ? s.x2 - 6 - w : s.x2 + 6
+        const milieuX = (s.x1 + s.x2 - w) / 2
+        for (const x of [debutX, finX, milieuX, debutX + sens * 24, finX - sens * 24])
+          for (const ecart of [0, 16]) {
+            cand.push({ x, y: s.y1 - h - 2 - ecart, w, h })
+            cand.push({ x, y: s.y1 + 2 + ecart, w, h })
+          }
+      } else {
+        const bas = s.y2 >= s.y1 ? 1 : -1
+        const debutY = bas > 0 ? s.y1 + 6 : s.y1 - 6 - h
+        const finY = bas > 0 ? s.y2 - 6 - h : s.y2 + 6
+        const milieuY = (s.y1 + s.y2 - h) / 2
+        for (const y of [debutY, finY, milieuY, debutY + bas * 24, finY - bas * 24])
+          for (const ecart of [0, 16]) {
+            cand.push({ x: s.x1 + 4 + ecart, y, w, h })
+            cand.push({ x: s.x1 - w - 4 - ecart, y, w, h })
+          }
+      }
+    }
+    }
+    flux.set(i, choisir(nom, cand, `${de}→${vers}`))
+  })
+  return { questions, flux, problemes }
+}
+
+/** Contrôle de la logique d'un schéma : un début, une fin, rien d'isolé, et un libellé sur chaque sortie d'une décision. */
+function verifierLogique(p) {
+  const problemes = []
+  const ids = new Set(p.noeuds.map((n) => n[0]))
+  const type = Object.fromEntries(p.noeuds.map((n) => [n[0], n[1]]))
+  for (const [de, vers] of p.flux) for (const id of [de, vers]) if (!ids.has(id)) problemes.push(`un flux cite « ${id} » qui n'existe pas`)
+  if (!p.noeuds.some((n) => n[1] === 'debut')) problemes.push('aucun début')
+  if (!p.noeuds.some((n) => n[1] === 'fin')) problemes.push('aucune fin')
+  for (const [id, t] of Object.entries(type)) {
+    const sorties = p.flux.filter((f) => f[0] === id)
+    const entrees = p.flux.filter((f) => f[1] === id)
+    if (t !== 'fin' && !sorties.length) problemes.push(`« ${id} » n'a aucune sortie`)
+    if (t === 'fin' && sorties.length) problemes.push(`la fin « ${id} » a une sortie`)
+    if (t !== 'debut' && !entrees.length) problemes.push(`« ${id} » n'a aucune entrée`)
+    if (t === 'debut' && entrees.length) problemes.push(`le début « ${id} » a une entrée`)
+    if (t === 'choix' && sorties.length > 1) for (const f of sorties) if (!f[2]) problemes.push(`la sortie ${f[0]}→${f[1]} d'une décision n'a pas de libellé (Oui, Non…)`)
+  }
+  // Tout doit être atteignable depuis un début
+  const vus = new Set(p.noeuds.filter((n) => n[1] === 'debut').map((n) => n[0]))
+  const pile = [...vus]
+  while (pile.length) {
+    const id = pile.pop()
+    for (const f of p.flux) {
+      if (f[0] !== id || vus.has(f[1])) continue
+      vus.add(f[1])
+      pile.push(f[1])
+    }
+  }
+  for (const id of ids) if (!vus.has(id)) problemes.push(`« ${id} » n'est atteignable depuis aucun début`)
+  return problemes
+}
+
 function bpmn(p, num) {
   const { topVoie, hautVoie, largeur, forme, bas } = dispose(p)
-  const { routes, problemes } = acheminer(p, forme)
-  for (const probleme of problemes) PROBLEMES.push(`${p.id} : ${probleme}`)
+  const { routes, problemes } = acheminer(p, forme, [...p.voies.map((v) => topVoie[v]), bas])
+  const { questions, flux: libelles, problemes: pbLibelles } = etiqueter(p, forme, routes, [...p.voies.map((v) => topVoie[v]), bas])
+  for (const probleme of [...verifierLogique(p), ...problemes, ...pbLibelles]) PROBLEMES.push(`${p.id} : ${probleme}`)
   const pid = `P${num}_${p.id.replace(/-/g, '_')}`
   const nid = (id) => `${pid}_${id}`
   const entrants = new Map()
@@ -240,14 +380,17 @@ function bpmn(p, num) {
       const couleur = couv && genre(type) === 'task' ? ` bioc:stroke="${COUVERTURE[couv].stroke}" bioc:fill="${COUVERTURE[couv].fill}"` : couv ? ` bioc:stroke="${COUVERTURE[couv].stroke}"` : ''
       const marque = type === 'choix' ? ' isMarkerVisible="true"' : ''
       // Le titre d'une décision se place au-dessus à gauche : les flèches partent à droite, en haut ou en bas
-      const etiquette = type === 'choix' ? `\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x="${f.cx - 105}" y="${f.y - 32}" width="110" height="30" />\n        </bpmndi:BPMNLabel>` : ''
+      const q = questions.get(id)
+      const etiquette = q ? `\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" />\n        </bpmndi:BPMNLabel>` : ''
       return `      <bpmndi:BPMNShape id="${nid(id)}_di" bpmnElement="${nid(id)}"${marque}${couleur}>\n        <dc:Bounds x="${f.x}" y="${f.y}" width="${f.w}" height="${f.h}" />${etiquette}\n      </bpmndi:BPMNShape>`
     })
     .join('\n')
   const aretes = p.flux
     .map((_flux, i) => {
       const pts = routes[i]
-      return `      <bpmndi:BPMNEdge id="${pid}_flux${i + 1}_di" bpmnElement="${pid}_flux${i + 1}">\n${pts.map((q) => `        <di:waypoint x="${q.x}" y="${q.y}" />`).join('\n')}\n      </bpmndi:BPMNEdge>`
+      const l = libelles.get(i)
+      const etiquette = l ? `\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x="${l.x}" y="${l.y}" width="${l.w}" height="${l.h}" />\n        </bpmndi:BPMNLabel>` : ''
+      return `      <bpmndi:BPMNEdge id="${pid}_flux${i + 1}_di" bpmnElement="${pid}_flux${i + 1}">\n${pts.map((q) => `        <di:waypoint x="${q.x}" y="${q.y}" />`).join('\n')}${etiquette}\n      </bpmndi:BPMNEdge>`
     })
     .join('\n')
   const voiesDi = p.voies

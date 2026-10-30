@@ -83,7 +83,7 @@
       <bpmndi:BPMNShape id="P9_refus_remboursement_g1_di" bpmnElement="P9_refus_remboursement_g1" isMarkerVisible="true">
         <dc:Bounds x="950" y="195" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="870" y="163" width="110" height="30" />
+          <dc:Bounds x="863" y="163" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P9_refus_remboursement_t4_di" bpmnElement="P9_refus_remboursement_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -103,9 +103,6 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P9_refus_remboursement_gj1_di" bpmnElement="P9_refus_remboursement_gj1" isMarkerVisible="true">
         <dc:Bounds x="1330" y="195" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1250" y="163" width="110" height="30" />
-        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P9_refus_remboursement_flux1_di" bpmnElement="P9_refus_remboursement_flux1">
         <di:waypoint x="233" y="100" />
@@ -134,10 +131,16 @@
         <di:waypoint x="1065" y="220" />
         <di:waypoint x="1065" y="340" />
         <di:waypoint x="1090" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1069" y="226" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P9_refus_remboursement_flux6_di" bpmnElement="P9_refus_remboursement_flux6">
         <di:waypoint x="1000" y="220" />
         <di:waypoint x="1330" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1006" y="201" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P9_refus_remboursement_flux7_di" bpmnElement="P9_refus_remboursement_flux7">
         <di:waypoint x="1240" y="340" />
