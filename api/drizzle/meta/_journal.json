@@ -232,6 +232,20 @@
       "when": 1793365190036,
       "tag": "0032_fermetures",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793369620428,
+      "tag": "0033_suivi_fabrication",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793371097579,
+      "tag": "0034_reglage_chute",
+      "breakpoints": true
     }
   ]
 }

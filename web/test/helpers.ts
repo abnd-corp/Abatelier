@@ -99,6 +99,7 @@ export function makeRouter() {
       },
       { path: '/fabrication', name: 'production', component: page('production'), meta: { section: 'Atelier', title: 'Fabrication' } },
       { path: '/fabrication/:id', name: 'production-order', component: page('production-order'), meta: { menu: 'production' } },
+      { path: '/fabrication/:id/suivi', name: 'production-suivi', component: page('production-suivi'), meta: { menu: 'production' } },
       { path: '/plan-atelier', name: 'plan-atelier', component: page('plan-atelier'), meta: { section: 'Atelier', title: 'Plan de l’atelier' } },
       { path: '/ecran-atelier', name: 'ecran-atelier', component: page('ecran-atelier'), meta: { title: 'Écran de l’atelier' } },
       { path: '/reception', name: 'reception', component: page('reception'), meta: { section: 'Atelier', title: 'Réception de marchandise' } },

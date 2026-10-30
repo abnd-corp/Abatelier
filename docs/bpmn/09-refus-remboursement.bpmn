@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P9_refus_remboursement_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P9_refus_remboursement_collab">
+    <bpmn:participant id="P9_refus_remboursement_pool" name="Refus d’une commande payée et remboursement" processRef="P9_refus_remboursement" />
+  </bpmn:collaboration>
+  <bpmn:process id="P9_refus_remboursement" name="Refus d’une commande payée et remboursement" isExecutable="false">
+    <bpmn:documentation>Cas exceptionnel : une commande déjà payée ne peut pas être réalisée. La direction la refuse, le client est remboursé en totalité et prévenu.</bpmn:documentation>
+    <bpmn:laneSet id="P9_refus_remboursement_voies">
+      <bpmn:lane id="P9_refus_remboursement_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P9_refus_remboursement_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P9_refus_remboursement_t1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P9_refus_remboursement_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P9_refus_remboursement_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P9_refus_remboursement_g1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P9_refus_remboursement_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P9_refus_remboursement_t5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P9_refus_remboursement_t6</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P9_refus_remboursement_voie_paiement" name="Prestataire de paiement">
+        <bpmn:flowNodeRef>P9_refus_remboursement_t3</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P9_refus_remboursement_voie_client" name="Visiteur / Client">
+        <bpmn:flowNodeRef>P9_refus_remboursement_t7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P9_refus_remboursement_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P9_refus_remboursement_d" name="Une commande payée ne peut pas être réalisée"><bpmn:outgoing>P9_refus_remboursement_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="P9_refus_remboursement_t1" name="Refuser la commande en notant le motif"><bpmn:documentation>Dans l’application : Commande › Refuser et rembourser</bpmn:documentation><bpmn:incoming>P9_refus_remboursement_flux1</bpmn:incoming><bpmn:outgoing>P9_refus_remboursement_flux2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P9_refus_remboursement_t2" name="Demander le remboursement intégral au prestataire"><bpmn:documentation>Dans l’application : Remboursement sur le moyen de paiement utilisé</bpmn:documentation><bpmn:incoming>P9_refus_remboursement_flux2</bpmn:incoming><bpmn:outgoing>P9_refus_remboursement_flux3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P9_refus_remboursement_t3" name="Rembourser la carte du client"><bpmn:documentation>En partie : Vérifié avec le mode test de Stripe</bpmn:documentation><bpmn:incoming>P9_refus_remboursement_flux3</bpmn:incoming><bpmn:outgoing>P9_refus_remboursement_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P9_refus_remboursement_g1" name="Une facture avait-elle été émise ?"><bpmn:incoming>P9_refus_remboursement_flux4</bpmn:incoming><bpmn:outgoing>P9_refus_remboursement_flux5</bpmn:outgoing><bpmn:outgoing>P9_refus_remboursement_flux6</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P9_refus_remboursement_t4" name="Émettre l’avoir correspondant"><bpmn:documentation>Dans l’application : Numérotation continue</bpmn:documentation><bpmn:incoming>P9_refus_remboursement_flux5</bpmn:incoming><bpmn:outgoing>P9_refus_remboursement_flux7</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P9_refus_remboursement_t5" name="Passer la commande à « annulée » et tenir le journal"><bpmn:documentation>Dans l’application : Qui, quand, pourquoi</bpmn:documentation><bpmn:incoming>P9_refus_remboursement_flux6</bpmn:incoming><bpmn:incoming>P9_refus_remboursement_flux7</bpmn:incoming><bpmn:outgoing>P9_refus_remboursement_flux8</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P9_refus_remboursement_t6" name="Prévenir le client avec le motif et le délai d’arrivée des fonds"><bpmn:documentation>Dans l’application : E-mail mis en page</bpmn:documentation><bpmn:incoming>P9_refus_remboursement_flux8</bpmn:incoming><bpmn:outgoing>P9_refus_remboursement_flux9</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:manualTask id="P9_refus_remboursement_t7" name="Recevoir le remboursement sur son compte"><bpmn:documentation>Hors application : Quelques jours selon sa banque</bpmn:documentation><bpmn:incoming>P9_refus_remboursement_flux9</bpmn:incoming><bpmn:outgoing>P9_refus_remboursement_flux10</bpmn:outgoing></bpmn:manualTask>
+    <bpmn:endEvent id="P9_refus_remboursement_f" name="Client remboursé"><bpmn:incoming>P9_refus_remboursement_flux10</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P9_refus_remboursement_flux1" sourceRef="P9_refus_remboursement_d" targetRef="P9_refus_remboursement_t1" />
+    <bpmn:sequenceFlow id="P9_refus_remboursement_flux2" sourceRef="P9_refus_remboursement_t1" targetRef="P9_refus_remboursement_t2" />
+    <bpmn:sequenceFlow id="P9_refus_remboursement_flux3" sourceRef="P9_refus_remboursement_t2" targetRef="P9_refus_remboursement_t3" />
+    <bpmn:sequenceFlow id="P9_refus_remboursement_flux4" sourceRef="P9_refus_remboursement_t3" targetRef="P9_refus_remboursement_g1" />
+    <bpmn:sequenceFlow id="P9_refus_remboursement_flux5" name="Oui" sourceRef="P9_refus_remboursement_g1" targetRef="P9_refus_remboursement_t4" />
+    <bpmn:sequenceFlow id="P9_refus_remboursement_flux6" name="Non" sourceRef="P9_refus_remboursement_g1" targetRef="P9_refus_remboursement_t5" />
+    <bpmn:sequenceFlow id="P9_refus_remboursement_flux7" sourceRef="P9_refus_remboursement_t4" targetRef="P9_refus_remboursement_t5" />
+    <bpmn:sequenceFlow id="P9_refus_remboursement_flux8" sourceRef="P9_refus_remboursement_t5" targetRef="P9_refus_remboursement_t6" />
+    <bpmn:sequenceFlow id="P9_refus_remboursement_flux9" sourceRef="P9_refus_remboursement_t6" targetRef="P9_refus_remboursement_t7" />
+    <bpmn:sequenceFlow id="P9_refus_remboursement_flux10" sourceRef="P9_refus_remboursement_t7" targetRef="P9_refus_remboursement_f" />
+    <bpmn:textAnnotation id="P9_refus_remboursement_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P9_refus_remboursement_diagram">
+    <bpmndi:BPMNPlane id="P9_refus_remboursement_plane" bpmnElement="P9_refus_remboursement_collab">
+      <bpmndi:BPMNShape id="P9_refus_remboursement_pool_di" bpmnElement="P9_refus_remboursement_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1820" height="600" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_voie_direction_di" bpmnElement="P9_refus_remboursement_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1790" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_voie_systeme_di" bpmnElement="P9_refus_remboursement_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1790" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_voie_paiement_di" bpmnElement="P9_refus_remboursement_voie_paiement" isHorizontal="true">
+        <dc:Bounds x="70" y="400" width="1790" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_voie_client_di" bpmnElement="P9_refus_remboursement_voie_client" isHorizontal="true">
+        <dc:Bounds x="70" y="520" width="1790" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_d_di" bpmnElement="P9_refus_remboursement_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_t1_di" bpmnElement="P9_refus_remboursement_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_t2_di" bpmnElement="P9_refus_remboursement_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="520" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_t3_di" bpmnElement="P9_refus_remboursement_t3" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
+        <dc:Bounds x="710" y="420" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_g1_di" bpmnElement="P9_refus_remboursement_g1" isMarkerVisible="true">
+        <dc:Bounds x="950" y="195" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="870" y="163" width="110" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_t4_di" bpmnElement="P9_refus_remboursement_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1090" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_t5_di" bpmnElement="P9_refus_remboursement_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1090" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_t6_di" bpmnElement="P9_refus_remboursement_t6" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1280" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_t7_di" bpmnElement="P9_refus_remboursement_t7" bioc:stroke="#616161" bioc:fill="#e8e8e8">
+        <dc:Bounds x="1470" y="540" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_f_di" bpmnElement="P9_refus_remboursement_f">
+        <dc:Bounds x="1717" y="562" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P9_refus_remboursement_flux1_di" bpmnElement="P9_refus_remboursement_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P9_refus_remboursement_flux2_di" bpmnElement="P9_refus_remboursement_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="495" y="100" />
+        <di:waypoint x="495" y="220" />
+        <di:waypoint x="520" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P9_refus_remboursement_flux3_di" bpmnElement="P9_refus_remboursement_flux3">
+        <di:waypoint x="670" y="220" />
+        <di:waypoint x="685" y="220" />
+        <di:waypoint x="685" y="460" />
+        <di:waypoint x="710" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P9_refus_remboursement_flux4_di" bpmnElement="P9_refus_remboursement_flux4">
+        <di:waypoint x="860" y="460" />
+        <di:waypoint x="925" y="460" />
+        <di:waypoint x="925" y="220" />
+        <di:waypoint x="950" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P9_refus_remboursement_flux5_di" bpmnElement="P9_refus_remboursement_flux5">
+        <di:waypoint x="1000" y="220" />
+        <di:waypoint x="1065" y="220" />
+        <di:waypoint x="1065" y="340" />
+        <di:waypoint x="1090" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P9_refus_remboursement_flux6_di" bpmnElement="P9_refus_remboursement_flux6">
+        <di:waypoint x="1000" y="220" />
+        <di:waypoint x="1090" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P9_refus_remboursement_flux7_di" bpmnElement="P9_refus_remboursement_flux7">
+        <di:waypoint x="1165" y="300" />
+        <di:waypoint x="1165" y="282" />
+        <di:waypoint x="1165" y="282" />
+        <di:waypoint x="1165" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P9_refus_remboursement_flux8_di" bpmnElement="P9_refus_remboursement_flux8">
+        <di:waypoint x="1240" y="220" />
+        <di:waypoint x="1280" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P9_refus_remboursement_flux9_di" bpmnElement="P9_refus_remboursement_flux9">
+        <di:waypoint x="1430" y="220" />
+        <di:waypoint x="1445" y="220" />
+        <di:waypoint x="1445" y="580" />
+        <di:waypoint x="1470" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P9_refus_remboursement_flux10_di" bpmnElement="P9_refus_remboursement_flux10">
+        <di:waypoint x="1620" y="580" />
+        <di:waypoint x="1717" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P9_refus_remboursement_legende_di" bpmnElement="P9_refus_remboursement_legende">
+        <dc:Bounds x="70" y="660" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

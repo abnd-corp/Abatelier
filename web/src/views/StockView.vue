@@ -29,7 +29,35 @@ async function load() {
     loading.value = false
   }
 }
+// Taille minimale d'une chute à garder : la fiche de fabrication dit « à garder » ou « à jeter » d'après elle
+const chuteMin = ref(200)
+const chuteMinSaisie = ref('200')
+const reglageOuvert = ref(false)
+async function chargerReglage() {
+  try {
+    chuteMin.value = (await api<{ chuteMin: number }>('/stock/reglages')).chuteMin
+    chuteMinSaisie.value = String(chuteMin.value)
+  } catch {
+    /* le réglage garde sa valeur de départ : la page reste utilisable */
+  }
+}
+async function enregistrerReglage() {
+  error.value = ''
+  info.value = ''
+  const valeur = Number(chuteMinSaisie.value)
+  try {
+    const r = await api<{ chuteMin: number }>('/stock/reglages', { method: 'PUT', body: { chuteMin: valeur } })
+    chuteMin.value = r.chuteMin
+    chuteMinSaisie.value = String(r.chuteMin)
+    info.value = `Taille minimale d’une chute à garder : ${r.chuteMin} mm.`
+    reglageOuvert.value = false
+  } catch (e) {
+    error.value = e instanceof ApiError ? e.message : 'Enregistrement impossible.'
+  }
+}
+
 onMounted(async () => {
+  void chargerReglage()
   await load()
   try {
     options.value = await api<StockOptions>('/stock/options')
@@ -251,6 +279,24 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
       <AppIcon :name="ajoutType === 'chute' ? 'x' : 'plus'" :size="16" /> {{ ajoutType === 'chute' ? 'Fermer le formulaire' : 'Ajouter des chutes' }}
     </button>
   </div>
+
+  <section class="card reglage" aria-labelledby="reglage-titre">
+    <div class="reglage-tete">
+      <h2 id="reglage-titre">Chutes à garder</h2>
+      <p class="muted">
+        La fiche de fabrication garde un morceau dont tous les côtés font au moins <b>{{ chuteMin.toLocaleString('fr-FR') }} mm</b> ; le reste part au rebut.
+      </p>
+      <button class="btn" type="button" :aria-expanded="reglageOuvert" aria-controls="reglage-form" @click="reglageOuvert = !reglageOuvert">{{ reglageOuvert ? 'Fermer' : 'Régler' }}</button>
+    </div>
+    <form v-if="reglageOuvert" id="reglage-form" class="reglage-form" @submit.prevent="enregistrerReglage">
+      <label>
+        Côté minimum d’une chute à garder (mm)
+        <input v-model="chuteMinSaisie" type="number" inputmode="numeric" min="10" max="1500" step="10" required />
+      </label>
+      <p class="muted hint">Commencez large, puis ajustez : notez les morceaux que l’atelier réutilise vraiment, et ceux qui finissent au rebut.</p>
+      <button class="btn primary" type="submit">Enregistrer</button>
+    </form>
+  </section>
 
   <section v-if="ajoutType" id="ajout" class="card new" aria-labelledby="ajout-titre">
     <h2 id="ajout-titre">{{ ajoutType === 'chute' ? 'Ajouter des chutes' : 'Ajouter des feuilles' }}</h2>
@@ -569,6 +615,42 @@ const fmt = (n: number) => n.toLocaleString('fr-FR')
 </template>
 
 <style scoped>
+.reglage {
+  padding: 14px 18px;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.reglage-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.reglage-tete h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.reglage-tete p {
+  margin: 0;
+  flex: 1 1 260px;
+}
+.reglage-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px 16px;
+}
+.reglage-form label {
+  display: grid;
+  gap: 4px;
+  font-weight: 600;
+}
+.reglage-form .hint {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.86rem;
+}
 .page-head {
   margin-bottom: 16px;
 }

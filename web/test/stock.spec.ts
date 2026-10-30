@@ -65,7 +65,13 @@ const LIST = { feuilles: [F1, F2], totaux: { references: 2, feuillesEntieres: 10
 beforeEach(() => localStorage.clear())
 
 async function mountStock(extra: Parameters<typeof mockApi>[0] = {}) {
-  const calls = mockApi({ 'GET /stock/feuilles': [200, LIST], 'GET /stock/mouvements': [200, { mouvements: [MV] }], 'GET /stock/options': [200, OPTIONS], ...extra })
+  const calls = mockApi({
+    'GET /stock/feuilles': [200, LIST],
+    'GET /stock/mouvements': [200, { mouvements: [MV] }],
+    'GET /stock/options': [200, OPTIONS],
+    'GET /stock/reglages': [200, { chuteMin: 200 }],
+    ...extra,
+  })
   const pinia = freshPinia()
   useAuthStore().user = ADMIN
   const router = makeRouter()
@@ -290,5 +296,42 @@ describe('Stock de feuilles', () => {
     expect(e('stock.sheet_deleted', { libelle: 'X' })).toBe('A supprimé du stock la référence X')
     expect(e('stock.sheet_archived', { libelle: 'X' })).toBe('A archivé la référence X')
     expect(e('stock.sheet_unarchived', { libelle: 'X' })).toBe('A désarchivé la référence X')
+  })
+})
+
+describe('Chutes à garder', () => {
+  it('dit la taille minimale actuelle et la règle', async () => {
+    const { wrapper } = await mountStock({ 'GET /stock/reglages': [200, { chuteMin: 250 }] })
+    const bloc = wrapper.get('[aria-labelledby="reglage-titre"]')
+    expect(norm(bloc.text())).toContain('au moins 250 mm')
+    expect(bloc.find('form').exists()).toBe(false)
+  })
+
+  it('enregistre une nouvelle taille et le dit', async () => {
+    const { wrapper, calls } = await mountStock({ 'PUT /stock/reglages': [200, { chuteMin: 300 }] })
+    await btn(wrapper, 'Régler').trigger('click')
+    await wrapper.get('#reglage-form input').setValue('300')
+    await wrapper.get('#reglage-form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'PUT')!.body).toEqual({ chuteMin: 300 })
+    expect(norm(wrapper.get('[role="status"]').text())).toContain('Taille minimale d’une chute à garder : 300 mm')
+    expect(norm(wrapper.get('[aria-labelledby="reglage-titre"]').text())).toContain('au moins 300 mm')
+    expect(wrapper.find('#reglage-form').exists()).toBe(false)
+  })
+
+  it('montre l’erreur du serveur sans fermer le formulaire', async () => {
+    const { wrapper } = await mountStock({ 'PUT /stock/reglages': [400, { error: 'Taille minimale : 10 mm minimum.' }] })
+    await btn(wrapper, 'Régler').trigger('click')
+    await wrapper.get('#reglage-form input').setValue('2')
+    await wrapper.get('#reglage-form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('10 mm minimum')
+    expect(wrapper.find('#reglage-form').exists()).toBe(true)
+  })
+
+  it('libelle le journal', () => {
+    const e = (action: string, details: object): string =>
+      describeEntry({ id: 1, at: '2026-10-22T08:00:00Z', action, actor: 'Chef', targetType: null, targetId: null, ip: null, details } as unknown as AuditEntry).text
+    expect(e('stock.settings_updated', { chuteMin: 300, avant: 200 })).toBe('A réglé la taille minimale d’une chute à garder : 300 mm (avant : 200 mm)')
   })
 })

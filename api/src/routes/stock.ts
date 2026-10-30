@@ -7,6 +7,7 @@ import { requireAnyPerm, requirePerm } from '../auth/plugin.js'
 import { audit } from '../audit.js'
 import { colorLabel, materialLabel } from '../quote.js'
 import { invalid, isUniqueViolation } from '../validation.js'
+import { getChuteMin, setChuteMin } from '../stock-settings.js'
 
 // Stock de feuilles de l'atelier : saisie des feuilles (matière, épaisseur, coloris, format) et de leurs mouvements.
 // Aucun prix ici : l'atelier peut tenir son stock sans voir les tarifs.
@@ -85,6 +86,14 @@ const receptionBody = z.object({
 })
 
 const isUuid = (id: string) => z.uuid().safeParse(id).success
+const reglagesBody = z.object({
+  chuteMin: z
+    .number({ error: 'Taille minimale : nombre attendu.' })
+    .int('Taille minimale : nombre entier de millimètres.')
+    .min(10, 'Taille minimale : 10 mm minimum.')
+    .max(1500, 'Taille minimale : 1 500 mm maximum.'),
+})
+
 const fmt = (n: number) => n.toLocaleString('fr-FR')
 
 // La définition des références (matière, coloris, format) et de leurs codes-barres est aussi accessible à la direction (page Matériaux) ;
@@ -144,6 +153,18 @@ export async function stockRoutes(app: FastifyInstance) {
 
   // Matières et coloris du catalogue, pour choisir ce que l'on stocke (la direction les gère dans « Tarifs et catalogue »)
   // ?tous=1 : aussi les matières et coloris inactifs (créés depuis le stock, pas encore tarifés), pour les suggestions de saisie libre
+  // Taille minimale d'une chute à garder : la fiche de fabrication dit « à garder » ou « à jeter » d'après elle
+  app.get('/reglages', async () => ({ chuteMin: await getChuteMin() }))
+
+  app.put('/reglages', async (req, reply) => {
+    const parsed = reglagesBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    const avant = await getChuteMin()
+    await setChuteMin(parsed.data.chuteMin)
+    if (avant !== parsed.data.chuteMin) await audit(req, 'stock.settings_updated', { details: { chuteMin: parsed.data.chuteMin, avant } })
+    return { chuteMin: parsed.data.chuteMin }
+  })
+
   app.get('/options', async (req) => {
     const tous = (req.query as { tous?: string }).tous === '1'
     const [ms, cs] = await Promise.all([

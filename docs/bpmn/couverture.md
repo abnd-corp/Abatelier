@@ -2,15 +2,15 @@
 
 > Généré par `node scripts/bpmn/generer.mjs` à partir de `scripts/bpmn/processus.mjs`. Ne pas modifier à la main.
 
-Les 36 processus de l’atelier sont décrits en BPMN (voir [README](README.md)). Chaque étape est classée selon ce que fait l’application aujourd’hui.
+Les 39 processus de l’atelier sont décrits en BPMN (voir [README](README.md)). Chaque étape est classée selon ce que fait l’application aujourd’hui.
 
 | Couverture | Étapes | Part |
 |---|---|---|
-| Dans l’application | 117 | 48 % |
-| En partie | 19 | 8 % |
-| Pas encore | 97 | 39 % |
-| Hors application | 13 | 5 % |
-| **Total** | **246** | |
+| Dans l’application | 123 | 47 % |
+| En partie | 20 | 8 % |
+| Pas encore | 104 | 40 % |
+| Hors application | 15 | 6 % |
+| **Total** | **262** | |
 
 ## Ce qu’il reste à faire pour couvrir tout le besoin
 
@@ -18,6 +18,10 @@ Les 36 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Demande de contact** : Enregistrer la demande et notifier la direction dans la plateforme (en partie) : Notification avec le plan, la pièce choisie dans le configurateur et un lien. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme
 - **Demande de contact** : Envoyer un accusé de réception au visiteur, avec les liens utiles (pas encore) : Aujourd’hui seule l’équipe est prévenue
 - **Espace client : création, activation, mot de passe, fermeture** : Vérifier le SIRET dans l’annuaire officiel des entreprises (en activité, nom concordant) (pas encore) : Annuaire public et gratuit (recherche-entreprises.api.gouv.fr) ; le n° de TVA se contrôle avec VIES. Aujourd’hui la direction vérifie à la main
+- **Retrouver une fiche client en scannant son code** : Attribuer un numéro unique de 13 chiffres (EAN-13) à la fiche (pas encore) : Préfixe réservé à l’usage interne (20 à 29), numéro de séquence, chiffre de contrôle : aucune inscription auprès de GS1. Jamais réattribué, même si la fiche est archivée
+- **Retrouver une fiche client en scannant son code** : Imprimer le code-barres sur la fiche et sur les documents du client (devis, facture, bon de livraison) (pas encore) : Un document en main suffit pour retrouver le client ; à valider : sur quels documents ?
+- **Retrouver une fiche client en scannant son code** : Scanner le code du document avec la caméra du téléphone, dans l’application (pas encore) : Même lecteur que la réception des feuilles ; saisie à la main possible si le code est abîmé
+- **Retrouver une fiche client en scannant son code** : Ouvrir directement la fiche client (pas encore) : Réservé aux comptes qui ont accès aux clients : l’atelier ne voit jamais le client, seulement son nom sur la commande. Un code inconnu est refusé avec un message clair
 - **Configurateur : faisabilité contrôlée, prix et date estimée** : Vérifier la quantité et la charge de l’atelier (pas encore) : Plafond de quantité et capacité par jour : en attente des données de l’atelier
 - **Configurateur : faisabilité contrôlée, prix et date estimée** : Calculer le prix, la livraison et la date estimée (en partie) : Date = jour + délai standard ; pas encore selon la quantité, le stock ni la charge
 - **Devis depuis l’espace client** : Notifier la direction dans la plateforme : devis demandé (en partie) : Aujourd’hui par e-mail ; passe dans les notifications de la plateforme
@@ -33,8 +37,6 @@ Les 36 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Commande saisie par la direction pour un client** : Annuler la commande toute seule (motif : devis refusé par le client) (pas encore) : Même règle que « Devis depuis l’espace client »
 - **Commande saisie par la direction pour un client** : Notifier la direction dans la plateforme : devis refusé (en partie) : Avec un lien vers la commande, pour information. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme
 - **Refus d’une commande payée et remboursement** : Rembourser la carte du client (en partie) : Vérifié avec le mode test de Stripe
-- **Fabrication à l’atelier** : Décompter les feuilles utilisées du stock (pas encore) : Aujourd’hui saisi à la main dans Stock de feuilles
-- **Fabrication à l’atelier** : Confirmer les chutes obtenues et les remettre au stock (pas encore) : Décidé : le nombre de chutes se confirme à la fin de la fabrication
 - **Fabrication à l’atelier** : Prévenir le client par e-mail que sa commande est prête (pas encore) : Aujourd’hui il le voit seulement dans son espace
 - **Écran d’affichage de l’atelier** : Servir la page seulement depuis le réseau interne, jamais depuis internet (pas encore) : Restriction au niveau du réseau (pas seulement dans l’application : l’adresse d’un visiteur peut être falsifiée derrière un relais)
 - **Écran d’affichage de l’atelier** : Afficher les commandes en colonnes : À lancer, En fabrication, Prêtes (pas encore) : Lecture seule, sans menu ni bouton, lisible de loin (grands caractères, thème sombre)
@@ -53,6 +55,11 @@ Les 36 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Livraison et retrait** : Scanner le code-barres du colis à la remise (caméra du téléphone) (pas encore) : Comme pour la réception des feuilles ; sans le scan, la remise n’est pas validée
 - **Livraison et retrait** : Signer la réception sur l’écran du salarié (pas encore) : Signature gardée avec la commande ; que faire d’un client absent est à définir
 - **Livraison et retrait** : Valider la remise : la commande passe à « Livrée » ou « Retirée » (en partie) : Aujourd’hui un bouton « Marquer livrée » ou « Marquer retirée » ; avec le scan et la signature, plus de bouton à presser
+- **Étiqueter chaque pièce avec le code de la commande** : Attribuer un code unique de 13 chiffres (EAN-13) à la commande (pas encore) : Même principe que le code client ; à cadrer : un code par commande (avec le numéro de pièce écrit en clair) ou un code par pièce
+- **Étiqueter chaque pièce avec le code de la commande** : Éditer les étiquettes : code-barres, repère, pièce n sur N, nom du client (pas encore) : Imprimées avec la fiche de fabrication ; le client n’apparaît que par son nom, jamais son adresse
+- **Étiqueter chaque pièce avec le code de la commande** : Scanner une pièce pour identifier sa commande (pas encore) : Caméra du téléphone ; utile aussi pour retrouver une pièce égarée dans l’atelier
+- **Étiqueter chaque pièce avec le code de la commande** : Afficher la commande et compter les pièces regroupées (3 sur 6) (pas encore) : Montre ce qu’il reste à réunir avant de passer la commande à « Prête »
+- **Étiqueter chaque pièce avec le code de la commande** : Marquer la commande prête quand toutes les pièces sont réunies (en partie) : Aujourd’hui un bouton « Marquer prête » sans contrôle ; avec le comptage, l’application peut vérifier que rien ne manque
 - **Faire vivre les références de feuilles (facultatif)** : Importer toutes les références d’un coup (fichier) (pas encore) : Décidé : plus tard
 - **Commande de feuilles au fournisseur** : Enregistrer la commande passée : fournisseur, références, nombre de feuilles de chaque lot, date de livraison prévue (pas encore) : À étudier : voir d’abord comment l’atelier commande, puis importer la commande (fichier ou e-mail du fournisseur) plutôt que la ressaisir
 - **Commande de feuilles au fournisseur** : Afficher « en commande » sur chaque référence et préparer les quantités attendues à la réception (pas encore) : Permet la comparaison entre commandé et reçu
@@ -64,6 +71,7 @@ Les 36 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Réception de marchandise au scan** : Suspendre la réception, la reprendre au camion suivant (pas encore) : Livraison en plusieurs camions : on sort de la réception sans perdre ce qui est scanné
 - **Suivi du stock de feuilles** : Décompter automatiquement ce qu’une commande consomme (pas encore) : Décidé : au lancement, avec confirmation des chutes à la fin
 - **Suivi du stock de feuilles** : Estimer la date d’une commande selon le stock disponible (pas encore) : Si les feuilles manquent : délai standard + délai du fournisseur (données à recueillir)
+- **Régler la taille minimale d’une chute à garder** : Suivre ce que deviennent les chutes : réutilisées, jetées, ou qui dorment au stock (pas encore) : Nombre de chutes créées et réutilisées, et leur ancienneté : c’est ce qui dit quelle taille vaut la peine
 - **Facturation et encaissement** : Détecter la remise et émettre la facture toute seule (en partie) : Aujourd’hui la direction clique sur « Facturer » ; numérotation F-AAAA-NNNN sans trou
 - **Facturation et encaissement** : Prévenir le client par e-mail : sa facture est dans son espace (sans pièce jointe) (en partie) : Le message existe ; il part aujourd’hui sur geste de la direction
 - **Facturation et encaissement** : Marquer la facture payée avec la confirmation du prestataire de paiement (pas encore) : Le paiement en ligne est déjà enregistré ; la facture n’est pas encore marquée payée toute seule
@@ -192,11 +200,25 @@ Schéma : [image](03-connexion-google.svg) · [fichier BPMN](03-connexion-google
 | Créer la fiche client et l’espace sans mot de passe, envoyer le message de bienvenue | Application (automatique) | Dans l’application | Nom, prénom et e-mail repris de Google ; mot de passe possible plus tard avec « Mot de passe oublié » |
 | Retrouver ses devis, commandes et factures | Visiteur / Client | Dans l’application | Espace client ; fermeture de l’espace confirmée par l’adresse e-mail faute de mot de passe |
 
-## 4. Configurateur : faisabilité contrôlée, prix et date estimée
+## 4. Retrouver une fiche client en scannant son code
+
+Idée à valider : chaque client reçoit un numéro unique de 13 chiffres (EAN-13), imprimé en code-barres sur ses documents. Avec le document en main et l’application sur le téléphone, on scanne le code et la fiche s’ouvre tout de suite, sans chercher le nom.
+
+Schéma : [image](04-code-client.svg) · [fichier BPMN](04-code-client.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Attribuer un numéro unique de 13 chiffres (EAN-13) à la fiche | Application (automatique) | Pas encore | Préfixe réservé à l’usage interne (20 à 29), numéro de séquence, chiffre de contrôle : aucune inscription auprès de GS1. Jamais réattribué, même si la fiche est archivée |
+| Imprimer le code-barres sur la fiche et sur les documents du client (devis, facture, bon de livraison) | Application (automatique) | Pas encore | Un document en main suffit pour retrouver le client ; à valider : sur quels documents ? |
+| Scanner le code du document avec la caméra du téléphone, dans l’application | Direction | Pas encore | Même lecteur que la réception des feuilles ; saisie à la main possible si le code est abîmé |
+| Ouvrir directement la fiche client | Application (automatique) | Pas encore | Réservé aux comptes qui ont accès aux clients : l’atelier ne voit jamais le client, seulement son nom sur la commande. Un code inconnu est refusé avec un message clair |
+| Consulter l’historique, appeler, créer une commande ou un devis | Direction | Dans l’application | Fiche client existante |
+
+## 5. Configurateur : faisabilité contrôlée, prix et date estimée
 
 Le client dessine sa pièce. L’application vérifie tout, l’aide à corriger, calcule le prix et une date estimée ; au-delà de ses limites, il passe par une demande de contact.
 
-Schéma : [image](04-configurateur.svg) · [fichier BPMN](04-configurateur.bpmn)
+Schéma : [image](05-configurateur.svg) · [fichier BPMN](05-configurateur.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -208,11 +230,11 @@ Schéma : [image](04-configurateur.svg) · [fichier BPMN](04-configurateur.bpmn)
 | Envoyer une demande de contact avec sa pièce | Visiteur / Client | Dans l’application | La pièce choisie est jointe à la demande (voir « Demande de contact ») |
 | Traiter la demande hors limites | Direction | Dans l’application | Site vitrine › Demandes reçues |
 
-## 5. Devis depuis l’espace client
+## 6. Devis depuis l’espace client
 
 Le client enregistre son devis numéroté, l’accepte ou le refuse en ligne. L’acceptation valide la commande toute seule ; la direction est seulement prévenue, dans les deux cas.
 
-Schéma : [image](05-devis-en-ligne.svg) · [fichier BPMN](05-devis-en-ligne.bpmn)
+Schéma : [image](06-devis-en-ligne.svg) · [fichier BPMN](06-devis-en-ligne.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -226,11 +248,11 @@ Schéma : [image](05-devis-en-ligne.svg) · [fichier BPMN](05-devis-en-ligne.bpm
 | Annuler la commande toute seule (motif : devis refusé par le client) | Application (automatique) | Pas encore | Aujourd’hui la commande reste ouverte et la direction doit l’annuler à la main |
 | Notifier la direction dans la plateforme : devis refusé | Application (automatique) | En partie | Avec un lien vers la commande, pour information. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme |
 
-## 6. Commande payée en ligne (sur mesure ou boutique)
+## 7. Commande payée en ligne (sur mesure ou boutique)
 
 Le client paie par carte avant que la commande n’existe : elle naît validée, avec une date estimée, sans intervention de l’atelier.
 
-Schéma : [image](06-commande-en-ligne.svg) · [fichier BPMN](06-commande-en-ligne.bpmn)
+Schéma : [image](07-commande-en-ligne.svg) · [fichier BPMN](07-commande-en-ligne.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -246,11 +268,11 @@ Schéma : [image](06-commande-en-ligne.svg) · [fichier BPMN](06-commande-en-lig
 | Ne rien créer, garder le panier | Application (automatique) | Dans l’application | Message au retour sur le site : paiement annulé, aucune somme débitée |
 | Suivre sa commande dans son espace | Visiteur / Client | Dans l’application | Étapes, date estimée, paiement |
 
-## 7. Commande saisie par la direction pour un client
+## 8. Commande saisie par la direction pour un client
 
 Exception à la commande en ligne : un client qui ne peut ou ne veut pas le faire seul (téléphone, visite). La direction saisit la commande dans l’application, mais le devis, son envoi, l’accès à l’espace et la validation se font tout seuls : le client décide dans son espace.
 
-Schéma : [image](07-commande-direction.svg) · [fichier BPMN](07-commande-direction.bpmn)
+Schéma : [image](08-commande-direction.svg) · [fichier BPMN](08-commande-direction.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -264,11 +286,11 @@ Schéma : [image](07-commande-direction.svg) · [fichier BPMN](07-commande-direc
 | Annuler la commande toute seule (motif : devis refusé par le client) | Application (automatique) | Pas encore | Même règle que « Devis depuis l’espace client » |
 | Notifier la direction dans la plateforme : devis refusé | Application (automatique) | En partie | Avec un lien vers la commande, pour information. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme |
 
-## 8. Refus d’une commande payée et remboursement
+## 9. Refus d’une commande payée et remboursement
 
 Cas exceptionnel : une commande déjà payée ne peut pas être réalisée. La direction la refuse, le client est remboursé en totalité et prévenu.
 
-Schéma : [image](08-refus-remboursement.svg) · [fichier BPMN](08-refus-remboursement.bpmn)
+Schéma : [image](09-refus-remboursement.svg) · [fichier BPMN](09-refus-remboursement.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -280,31 +302,31 @@ Schéma : [image](08-refus-remboursement.svg) · [fichier BPMN](08-refus-rembour
 | Prévenir le client avec le motif et le délai d’arrivée des fonds | Application (automatique) | Dans l’application | E-mail mis en page |
 | Recevoir le remboursement sur son compte | Visiteur / Client | Hors application | Quelques jours selon sa banque |
 
-## 9. Fabrication à l’atelier
+## 10. Fabrication à l’atelier
 
 L’atelier voit les commandes en quatre colonnes, en prend une en charge, fabrique, puis la marque prête. Chaque carte montre le client, les pièces et les retards.
 
-Schéma : [image](09-fabrication.svg) · [fichier BPMN](09-fabrication.bpmn)
+Schéma : [image](10-fabrication.svg) · [fichier BPMN](10-fabrication.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
 | Voir les commandes par étape : à lancer, en fabrication, prêtes à retirer, prêtes à livrer | Atelier | Dans l’application | Fabrication ; retards signalés par une pastille et un compteur |
 | Prendre la commande en charge, ou annuler / reprendre celle d’un collègue | Atelier | Dans l’application | Rien ne lie une commande à un salarié |
-| Imprimer la fiche de fabrication : rendu des pièces, puis feuille par feuille (récupérer, toutes les découpes, tous les pliages, mettre de côté) | Atelier | Dans l’application | Fabrication › Imprimer la fiche (PDF) : date de création de la commande, nom du client, jamais l’adresse ni les prix ; pas de QR code |
+| Imprimer la fiche de fabrication, ou la suivre et la cocher à l’écran (avancement partagé entre les postes) : rendu des pièces, puis feuille par feuille (récupérer, toutes les découpes, tous les pliages, mettre de côté) | Atelier | Dans l’application | Fabrication › Imprimer la fiche (PDF) : date de création de la commande, nom du client, jamais l’adresse ni les prix ; pas de QR code |
 | Conseiller la feuille à prendre : chutes d’abord, moins de perte, et dire ce qui reste en chute à garder ou à jeter | Application (automatique) | Dans l’application | Fabrication › Feuilles à prendre ; sur la fiche : un morceau dont tous les côtés font au moins 200 mm se garde |
 | Lancer la fabrication | Atelier | Dans l’application | Bouton « Lancer la fabrication » : prend aussi la commande en charge |
-| Décompter les feuilles utilisées du stock | Application (automatique) | Pas encore | Aujourd’hui saisi à la main dans Stock de feuilles |
+| Décompter les feuilles utilisées du stock | Application (automatique) | Dans l’application | Suivi pas à pas : en fin de feuille, un bouton sort les feuilles du stock ; sans feuille conseillée, le stock se corrige à la main |
 | Découper et plier les pièces | Atelier | Hors application | Travail sur machine |
-| Confirmer les chutes obtenues et les remettre au stock | Atelier | Pas encore | Décidé : le nombre de chutes se confirme à la fin de la fabrication |
+| Confirmer les chutes obtenues et les remettre au stock | Atelier | Dans l’application | Même bouton en fin de feuille : les chutes à garder (côtés d’au moins 200 mm) entrent au stock en chute |
 | Contrôler les pièces (cotes, angles) | Atelier | Hors application | Aucun contrôle qualité enregistré |
 | Marquer la commande prête | Atelier | Dans l’application | Le client voit « Prête » dans son espace |
 | Prévenir le client par e-mail que sa commande est prête | Application (automatique) | Pas encore | Aujourd’hui il le voit seulement dans son espace |
 
-## 10. Écran d’affichage de l’atelier
+## 11. Écran d’affichage de l’atelier
 
 Un écran fixé dans l’atelier montre en permanence les commandes en cours, en lecture seule : pas de menu, pas de bouton, rien à toucher. La page n’est servie que depuis le réseau interne de l’atelier ; tout le reste de l’application exige une connexion.
 
-Schéma : [image](10-ecran-atelier.svg) · [fichier BPMN](10-ecran-atelier.bpmn)
+Schéma : [image](11-ecran-atelier.svg) · [fichier BPMN](11-ecran-atelier.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -315,11 +337,11 @@ Schéma : [image](10-ecran-atelier.svg) · [fichier BPMN](10-ecran-atelier.bpmn)
 | Se rafraîchir toute seule et signaler une coupure | Application (automatique) | Pas encore | Un message clair si la connexion au serveur est perdue, pour ne pas lire une information périmée |
 | Regarder l’écran pour savoir quoi lancer et ce qui est en retard | Atelier | Pas encore | Rien à saisir : les gestes se font sur la page Fabrication, avec connexion |
 
-## 11. Plan visuel de l’atelier dans l’application
+## 12. Plan visuel de l’atelier dans l’application
 
 La direction ouvre un plan du bâtiment, dans l’application, où les commandes se déplacent de lieu en lieu et où le stock se lit sur les racks. Le plan lit les vraies données ; l’emplacement des machines et des racks se règle une fois.
 
-Schéma : [image](11-plan-atelier.svg) · [fichier BPMN](11-plan-atelier.bpmn)
+Schéma : [image](12-plan-atelier.svg) · [fichier BPMN](12-plan-atelier.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -330,11 +352,11 @@ Schéma : [image](11-plan-atelier.svg) · [fichier BPMN](11-plan-atelier.bpmn)
 | Cliquer une commande ou un rack pour ouvrir sa page | Direction | Pas encore | Mène à la commande, ou à la référence de feuille |
 | Placer les machines, les racks et les pièces sur le plan (une fois) | Direction | Pas encore | Dépend de la liste des machines et du plan fourni par le client |
 
-## 12. Livraison et retrait
+## 13. Livraison et retrait
 
 La commande prête est retirée à l’atelier, ou livrée sur chantier par un salarié avec le camion de l’entreprise. Chaque colis porte une étiquette code-barres : la remise se valide en la scannant et en faisant signer le client sur l’écran. La remise lance ensuite la facture.
 
-Schéma : [image](12-livraison.svg) · [fichier BPMN](12-livraison.bpmn)
+Schéma : [image](13-livraison.svg) · [fichier BPMN](13-livraison.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -347,11 +369,26 @@ Schéma : [image](12-livraison.svg) · [fichier BPMN](12-livraison.bpmn)
 | Signer la réception sur l’écran du salarié | Visiteur / Client | Pas encore | Signature gardée avec la commande ; que faire d’un client absent est à définir |
 | Valider la remise : la commande passe à « Livrée » ou « Retirée » | Application (automatique) | En partie | Aujourd’hui un bouton « Marquer livrée » ou « Marquer retirée » ; avec le scan et la signature, plus de bouton à presser |
 
-## 13. Créer une référence de feuille
+## 14. Étiqueter chaque pièce avec le code de la commande
+
+Idée à valider : chaque pièce pliée reçoit une étiquette avec le code-barres de sa commande, son repère et son numéro (3 sur 6). Un scan suffit pour identifier une pièce, retrouver sa commande et regrouper toutes les pièces avant la remise.
+
+Schéma : [image](14-etiquetage-pieces.svg) · [fichier BPMN](14-etiquetage-pieces.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Attribuer un code unique de 13 chiffres (EAN-13) à la commande | Application (automatique) | Pas encore | Même principe que le code client ; à cadrer : un code par commande (avec le numéro de pièce écrit en clair) ou un code par pièce |
+| Éditer les étiquettes : code-barres, repère, pièce n sur N, nom du client | Application (automatique) | Pas encore | Imprimées avec la fiche de fabrication ; le client n’apparaît que par son nom, jamais son adresse |
+| Coller une étiquette sur chaque pièce pliée en la mettant de côté | Atelier | Hors application | À valider avec l’atelier : imprimante d’étiquettes ou feuille adhésive A4 ? |
+| Scanner une pièce pour identifier sa commande | Atelier | Pas encore | Caméra du téléphone ; utile aussi pour retrouver une pièce égarée dans l’atelier |
+| Afficher la commande et compter les pièces regroupées (3 sur 6) | Application (automatique) | Pas encore | Montre ce qu’il reste à réunir avant de passer la commande à « Prête » |
+| Marquer la commande prête quand toutes les pièces sont réunies | Atelier | En partie | Aujourd’hui un bouton « Marquer prête » sans contrôle ; avec le comptage, l’application peut vérifier que rien ne manque |
+
+## 15. Créer une référence de feuille
 
 La direction décrit une feuille que l’atelier reçoit (matière, épaisseur, coloris, format) et son code-barres. Dès lors, la réception la reconnaît au scan. Rien d’autre n’est nécessaire.
 
-Schéma : [image](13-materiaux.svg) · [fichier BPMN](13-materiaux.bpmn)
+Schéma : [image](15-materiaux.svg) · [fichier BPMN](15-materiaux.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -359,11 +396,11 @@ Schéma : [image](13-materiaux.svg) · [fichier BPMN](13-materiaux.bpmn)
 | Les créer au catalogue, inactifs et à prix zéro | Application (automatique) | Dans l’application | Jamais vendables à zéro euro : la direction les complète dans Tarifs et catalogue |
 | Créer la référence à zéro en stock, avec son code | Application (automatique) | Dans l’application | Un code désigne une référence ; un code déjà pris est refusé |
 
-## 14. Faire vivre les références de feuilles (facultatif)
+## 16. Faire vivre les références de feuilles (facultatif)
 
 Ce qui n’est pas nécessaire pour qu’une référence soit prête : ajouter ou retirer des codes-barres, archiver une référence qui n’est plus utilisée, importer un fichier.
 
-Schéma : [image](14-materiaux-gestion.svg) · [fichier BPMN](14-materiaux-gestion.bpmn)
+Schéma : [image](16-materiaux-gestion.svg) · [fichier BPMN](16-materiaux-gestion.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -371,11 +408,11 @@ Schéma : [image](14-materiaux-gestion.svg) · [fichier BPMN](14-materiaux-gesti
 | Archiver une référence qui n’est plus utilisée | Direction | Dans l’application | Jamais supprimée : l’historique s’y rapporte ; possible seulement à zéro |
 | Importer toutes les références d’un coup (fichier) | Direction | Pas encore | Décidé : plus tard |
 
-## 15. Commande de feuilles au fournisseur
+## 17. Commande de feuilles au fournisseur
 
 La commande passée au fournisseur est enregistrée dans la plateforme avec ses feuilles : la réception sait ce qu’elle doit scanner et compare avec ce qui arrive.
 
-Schéma : [image](15-commande-fournisseur.svg) · [fichier BPMN](15-commande-fournisseur.bpmn)
+Schéma : [image](17-commande-fournisseur.svg) · [fichier BPMN](17-commande-fournisseur.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -385,11 +422,11 @@ Schéma : [image](15-commande-fournisseur.svg) · [fichier BPMN](15-commande-fou
 | Afficher « en commande » sur chaque référence et préparer les quantités attendues à la réception | Application (automatique) | Pas encore | Permet la comparaison entre commandé et reçu |
 | Notifier la direction si la livraison n’arrive pas à la date prévue | Application (automatique) | Pas encore | Notification dans la plateforme |
 
-## 16. Réception de marchandise au scan
+## 18. Réception de marchandise au scan
 
 L’atelier reçoit des feuilles : il scanne le code-barres d’une feuille et indique, sur la plateforme, le nombre reçu. Le stock monte et la réception est comparée à la commande passée au fournisseur. Elle peut être suspendue et reprise au camion suivant.
 
-Schéma : [image](16-reception.svg) · [fichier BPMN](16-reception.bpmn)
+Schéma : [image](18-reception.svg) · [fichier BPMN](18-reception.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -405,11 +442,11 @@ Schéma : [image](16-reception.svg) · [fichier BPMN](16-reception.bpmn)
 | Notifier la direction de l’écart (manque ou surplus) | Application (automatique) | Pas encore | Notification dans la plateforme |
 | Suspendre la réception, la reprendre au camion suivant | Atelier | Pas encore | Livraison en plusieurs camions : on sort de la réception sans perdre ce qui est scanné |
 
-## 17. Suivi du stock de feuilles
+## 19. Suivi du stock de feuilles
 
 Voir ce qu’il reste, être prévenu quand le stock baisse, compter, et tenir les chutes à part des feuilles entières.
 
-Schéma : [image](17-stock.svg) · [fichier BPMN](17-stock.bpmn)
+Schéma : [image](19-stock.svg) · [fichier BPMN](19-stock.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -421,11 +458,25 @@ Schéma : [image](17-stock.svg) · [fichier BPMN](17-stock.bpmn)
 | Consulter l’historique des mouvements | Direction | Dans l’application | Stock de feuilles › Historique |
 | Estimer la date d’une commande selon le stock disponible | Application (automatique) | Pas encore | Si les feuilles manquent : délai standard + délai du fournisseur (données à recueillir) |
 
-## 18. Facturation et encaissement
+## 20. Régler la taille minimale d’une chute à garder
+
+La taille minimale d’un morceau qui vaut la peine d’être gardé n’est pas connue : l’application part d’une valeur (200 mm), dit sur la fiche ce qui se garde et ce qui se jette, puis l’atelier l’ajuste d’après ce qu’il réutilise vraiment.
+
+Schéma : [image](20-chutes-minimum.svg) · [fichier BPMN](20-chutes-minimum.bpmn)
+
+| Étape | Qui | Couverture | Où dans l’application, ou précision |
+|---|---|---|---|
+| Dire sur la fiche ce qui se garde et ce qui se jette, d’après la taille minimale | Application (automatique) | Dans l’application | Fiche de fabrication, imprimée ou à l’écran ; 200 mm de côté au départ |
+| Confirmer les chutes gardées et les remettre au stock en fin de feuille | Atelier | Dans l’application | Suivi pas à pas : un bouton sort les feuilles et entre les chutes |
+| Suivre ce que deviennent les chutes : réutilisées, jetées, ou qui dorment au stock | Application (automatique) | Pas encore | Nombre de chutes créées et réutilisées, et leur ancienneté : c’est ce qui dit quelle taille vaut la peine |
+| Examiner les chutes inutilisées avec l’atelier | Direction | Hors application | Réunion ou discussion : quelles tailles ne servent jamais ? |
+| Ajuster la taille minimale dans Stock de feuilles | Atelier | Dans l’application | Stock de feuilles › Chutes à garder ; chaque changement est noté au journal |
+
+## 21. Facturation et encaissement
 
 La remise de la commande (retrait ou livraison) lance la facture toute seule, le client est prévenu et la consulte dans son espace. La direction n’enregistre pas les paiements : ils sont constatés par l’application. Avoir et export pour le comptable restent à sa main.
 
-Schéma : [image](18-facturation.svg) · [fichier BPMN](18-facturation.bpmn)
+Schéma : [image](21-facturation.svg) · [fichier BPMN](21-facturation.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -440,11 +491,11 @@ Schéma : [image](18-facturation.svg) · [fichier BPMN](18-facturation.bpmn)
 | Faire un avoir (total) | Direction | Dans l’application | Facture › Faire un avoir ; l’avoir partiel est à faire |
 | Exporter les ventes et encaissements pour le comptable | Direction | Dans l’application | Devis et factures › Exporter pour le comptable (CSV) |
 
-## 19. Statistiques : chiffres clés et ventes
+## 22. Statistiques : chiffres clés et ventes
 
 La direction lit ce qu’elle vend, de quoi et combien, sur la période de son choix. Les données de commandes existent déjà.
 
-Schéma : [image](19-stats-ventes.svg) · [fichier BPMN](19-stats-ventes.bpmn)
+Schéma : [image](22-stats-ventes.svg) · [fichier BPMN](22-stats-ventes.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -453,11 +504,11 @@ Schéma : [image](19-stats-ventes.svg) · [fichier BPMN](19-stats-ventes.bpmn)
 | Répartir les ventes par matière, coloris, modèle de pièce, sur mesure ou boutique | Application (automatique) | Pas encore | Les lignes de commande gardent déjà ces informations |
 | Lire les chiffres, les courbes et le classement des références | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
 
-## 20. Statistiques : audience du site et entonnoir
+## 23. Statistiques : audience du site et entonnoir
 
 La direction voit si le site attire et si les visiteurs deviennent clients. Rien n’est mesuré aujourd’hui : la collecte doit commencer dès la mise en production. Les robots sont écartés autant que possible ; seule l’action (devis, commande) prouve un vrai client.
 
-Schéma : [image](20-stats-audience.svg) · [fichier BPMN](20-stats-audience.bpmn)
+Schéma : [image](23-stats-audience.svg) · [fichier BPMN](23-stats-audience.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -468,11 +519,11 @@ Schéma : [image](20-stats-audience.svg) · [fichier BPMN](20-stats-audience.bpm
 | Calculer l’entonnoir : visite, configurateur, devis, commande | Application (automatique) | Pas encore | Aussi les demandes de contact |
 | Lire l’audience et l’entonnoir | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
 
-## 21. Statistiques : dépenses, entrées et marge
+## 24. Statistiques : dépenses, entrées et marge
 
 La direction suit l’argent qui entre et qui sort. Il manque les prix d’achat et les dépenses : ils se saisissent à la réception et par catégorie.
 
-Schéma : [image](21-stats-finances.svg) · [fichier BPMN](21-stats-finances.bpmn)
+Schéma : [image](24-stats-finances.svg) · [fichier BPMN](24-stats-finances.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -482,11 +533,11 @@ Schéma : [image](21-stats-finances.svg) · [fichier BPMN](21-stats-finances.bpm
 | Calculer la marge par matière | Application (automatique) | Pas encore | Dépend du prix d’achat |
 | Lire les entrées, les sorties et la marge | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
 
-## 22. Statistiques : délais tenus et charge de l’atelier
+## 25. Statistiques : délais tenus et charge de l’atelier
 
 La direction compare ce qu’elle annonce à ce qu’elle fait. Les dates estimée et réelle sont déjà enregistrées.
 
-Schéma : [image](22-stats-atelier.svg) · [fichier BPMN](22-stats-atelier.bpmn)
+Schéma : [image](25-stats-atelier.svg) · [fichier BPMN](25-stats-atelier.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -495,11 +546,11 @@ Schéma : [image](22-stats-atelier.svg) · [fichier BPMN](22-stats-atelier.bpmn)
 | Calculer le rendement matière : feuilles commandées contre consommées, chutes | Application (automatique) | Pas encore | Dépend du décompte automatique du stock |
 | Lire les délais, la charge et le rendement | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
 
-## 23. Statistiques : consommation et rotation du stock
+## 26. Statistiques : consommation et rotation du stock
 
 La direction voit ce que l’atelier consomme et ce qui dort sur les étagères.
 
-Schéma : [image](23-stats-stock.svg) · [fichier BPMN](23-stats-stock.bpmn)
+Schéma : [image](26-stats-stock.svg) · [fichier BPMN](26-stats-stock.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -508,11 +559,11 @@ Schéma : [image](23-stats-stock.svg) · [fichier BPMN](23-stats-stock.bpmn)
 | Repérer les ruptures | Application (automatique) | Pas encore | Complète l’alerte « stock bas » |
 | Lire la consommation et le stock dormant | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
 
-## 24. Statistiques : comparer des périodes
+## 27. Statistiques : comparer des périodes
 
 La direction superpose deux périodes ou plus, pour le même chiffre (mois contre mois, année contre année).
 
-Schéma : [image](24-stats-comparateur.svg) · [fichier BPMN](24-stats-comparateur.bpmn)
+Schéma : [image](27-stats-comparateur.svg) · [fichier BPMN](27-stats-comparateur.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -520,11 +571,11 @@ Schéma : [image](24-stats-comparateur.svg) · [fichier BPMN](24-stats-comparate
 | Superposer les courbes | Application (automatique) | Pas encore | Courbes lisibles sur téléphone, thème clair et sombre |
 | Lire l’écart | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
 
-## 25. Statistiques : alertes sur le catalogue
+## 28. Statistiques : alertes sur le catalogue
 
 L’application signale d’elle-même un produit qui ne se vend plus, avec une suggestion.
 
-Schéma : [image](25-stats-alertes.svg) · [fichier BPMN](25-stats-alertes.bpmn)
+Schéma : [image](28-stats-alertes.svg) · [fichier BPMN](28-stats-alertes.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -533,11 +584,11 @@ Schéma : [image](25-stats-alertes.svg) · [fichier BPMN](25-stats-alertes.bpmn)
 | Notifier la direction dans la plateforme, avec une suggestion : désactiver, solder, ne plus réapprovisionner | Application (automatique) | Pas encore | Dans le centre de notifications |
 | Désactiver au catalogue si elle le décide | Direction | Dans l’application | Tarifs et catalogue › désactiver |
 
-## 26. Statistiques : reprise de l’historique
+## 29. Statistiques : reprise de l’historique
 
 L’entreprise a déjà des données (logiciel de facturation, tableurs) : les reprendre donne des courbes dès le départ.
 
-Schéma : [image](26-stats-historique.svg) · [fichier BPMN](26-stats-historique.bpmn)
+Schéma : [image](29-stats-historique.svg) · [fichier BPMN](29-stats-historique.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -545,11 +596,11 @@ Schéma : [image](26-stats-historique.svg) · [fichier BPMN](26-stats-historique
 | Contrôler puis importer l’historique | Application (automatique) | Pas encore | Les données personnelles ne sont pas reprises dans les statistiques |
 | Vérifier les courbes dès le départ | Direction | Pas encore | Accès réservé à la direction (permission stats.read) ; lisible sur téléphone |
 
-## 27. Équipe : arrivée et départ d’un salarié
+## 30. Équipe : arrivée et départ d’un salarié
 
 Fiche du salarié, compte personnel, droits par sections, puis désactivation au départ.
 
-Schéma : [image](27-equipe.svg) · [fichier BPMN](27-equipe.bpmn)
+Schéma : [image](30-equipe.svg) · [fichier BPMN](30-equipe.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -561,11 +612,11 @@ Schéma : [image](27-equipe.svg) · [fichier BPMN](27-equipe.bpmn)
 | Enregistrer le départ : désactiver le compte | Direction | Dans l’application | Déconnexion immédiate de tous ses appareils |
 | Garder l’historique et noter chaque action au journal | Application (automatique) | Dans l’application | Journal d’activité (qui, quoi, quand) |
 
-## 28. Paramétrage par la direction
+## 31. Paramétrage par la direction
 
 Tarifs, catalogue, documents : ce que la direction règle sans développeur, en gardant simple ce qui change souvent.
 
-Schéma : [image](28-parametrage.svg) · [fichier BPMN](28-parametrage.bpmn)
+Schéma : [image](31-parametrage.svg) · [fichier BPMN](31-parametrage.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -576,11 +627,11 @@ Schéma : [image](28-parametrage.svg) · [fichier BPMN](28-parametrage.bpmn)
 | Déclarer les jours fériés et les fermetures | Direction | Dans l’application | Tarifs et catalogue > Fermetures : les délais sautent ces jours et le site les annonce dans un bandeau |
 | Appliquer tout de suite aux prochains devis, commandes et au site | Application (automatique) | Dans l’application | Les documents déjà émis ne changent pas |
 
-## 29. Paramétrer les machines de l’atelier
+## 32. Paramétrer les machines de l’atelier
 
 La direction décrit les machines (type, longueur et épaisseur maximales, cadence) : l’application s’en sert pour contrôler la faisabilité d’une pièce et estimer la charge. Les limites réelles sont à recueillir chez le client.
 
-Schéma : [image](29-parametrage-machines.svg) · [fichier BPMN](29-parametrage-machines.bpmn)
+Schéma : [image](32-parametrage-machines.svg) · [fichier BPMN](32-parametrage-machines.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -589,11 +640,11 @@ Schéma : [image](29-parametrage-machines.svg) · [fichier BPMN](29-parametrage-
 | Appliquer les limites des machines au contrôle du configurateur | Application (automatique) | Pas encore | Plafond de quantité, longueur et épaisseur maximales |
 | Calculer la capacité par jour pour la date estimée | Application (automatique) | Pas encore | Dépend du recensement des machines et de leurs cadences |
 
-## 30. Faire vivre le site vitrine et la boutique
+## 33. Faire vivre le site vitrine et la boutique
 
 Produits de la boutique, photos, textes du site et alertes de la messagerie. Les pages légales ne se modifient pas : elles suivent les versions de l’application.
 
-Schéma : [image](30-site-vitrine.svg) · [fichier BPMN](30-site-vitrine.bpmn)
+Schéma : [image](33-site-vitrine.svg) · [fichier BPMN](33-site-vitrine.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -604,11 +655,11 @@ Schéma : [image](30-site-vitrine.svg) · [fichier BPMN](30-site-vitrine.bpmn)
 | Voir les messages envoyés et leur aperçu, s’envoyer un exemple | Direction | Dans l’application | Site vitrine › E-mails |
 | Mettre à jour les pages légales avec les versions de l’application | Maintenance (nous) | Hors application | Mentions légales, confidentialité, cookies, conditions de vente ; hébergeur et médiateur réglés à l’installation |
 
-## 31. Messages envoyés aux clients
+## 34. Messages envoyés aux clients
 
 Les e-mails automatiques envoyés aux clients, qui ne se connectent pas souvent à leur espace : à quel moment, avec quelles règles. Jamais de publicité, jamais de document joint, jamais de mot de passe. La direction, elle, est notifiée dans la plateforme (voir « Notifications de la direction »).
 
-Schéma : [image](31-messages.svg) · [fichier BPMN](31-messages.bpmn)
+Schéma : [image](34-messages.svg) · [fichier BPMN](34-messages.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -618,11 +669,11 @@ Schéma : [image](31-messages.svg) · [fichier BPMN](31-messages.bpmn)
 | Commande prête, accusé de réception d’une demande de contact | Application (automatique) | Pas encore | Pas encore envoyés au client |
 | Lire le message (rappel de sécurité et lien vers son espace) | Visiteur / Client | Dans l’application | Version mise en page et version texte |
 
-## 32. Notifications de la direction
+## 35. Notifications de la direction
 
 Tout ce qui concerne la direction arrive dans la plateforme, en un seul endroit, pour chaque compte qui en a le droit. Un clic ouvre la page où traiter la demande. Si trop de notifications restent non lues, un e-mail d’alerte part.
 
-Schéma : [image](32-notifications.svg) · [fichier BPMN](32-notifications.bpmn)
+Schéma : [image](35-notifications.svg) · [fichier BPMN](35-notifications.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -633,11 +684,11 @@ Schéma : [image](32-notifications.svg) · [fichier BPMN](32-notifications.bpmn)
 | Traiter la demande dans l’application | Direction | Dans l’application | Les pages existent déjà (commandes, demandes reçues, stock) |
 | Marquer la notification comme lue, puis traitée | Application (automatique) | Pas encore | Lue pour tous les comptes ou pour chacun : à définir avec le client |
 
-## 33. Mise en service chez un client
+## 36. Mise en service chez un client
 
 Ce que nous installons et ce que le client renseigne avant de s’en servir : entreprise, numérotation, tarifs, équipe, références, stock de départ, site.
 
-Schéma : [image](33-mise-en-service.svg) · [fichier BPMN](33-mise-en-service.bpmn)
+Schéma : [image](36-mise-en-service.svg) · [fichier BPMN](36-mise-en-service.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -653,11 +704,11 @@ Schéma : [image](33-mise-en-service.svg) · [fichier BPMN](33-mise-en-service.b
 | Brancher le prestataire de paiement du client et faire un paiement de test | Maintenance (nous) | En partie | Stripe essayé en test ; le choix du prestataire se fait avec le client |
 | Former les utilisateurs | Maintenance (nous) | Hors application | Se fait sur place avec les écrans réels |
 
-## 34. Disponibilité et supervision du serveur
+## 37. Disponibilité et supervision du serveur
 
 Le serveur du client (un Raspberry Pi) doit rester disponible : il relance seul ses services, se reconnecte au réseau, et remonte son état. La maintenance s’y connecte à distance. Un seul Raspberry ne garantit pas 100 % (coupure de courant, d’internet) : la disponibilité visée est à fixer avec le client.
 
-Schéma : [image](34-exploitation.svg) · [fichier BPMN](34-exploitation.bpmn)
+Schéma : [image](37-exploitation.svg) · [fichier BPMN](37-exploitation.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -669,11 +720,11 @@ Schéma : [image](34-exploitation.svg) · [fichier BPMN](34-exploitation.bpmn)
 | Se connecter à distance et lire l’état (réseau privé, sans port ouvert) | Maintenance (nous) | En partie | Raspberry Pi et accès à distance prévus |
 | Réparer ou intervenir | Maintenance (nous) | Hors application | Depuis chez nous, ou sur place si besoin |
 
-## 35. Sauvegardes et test de restauration
+## 38. Sauvegardes et test de restauration
 
 La base est sauvegardée chaque nuit, copiée sur le NAS du client et chez nous, hors du site. Une sauvegarde qu’on n’a jamais restaurée ne vaut rien : la restauration est testée régulièrement.
 
-Schéma : [image](35-exploitation-sauvegardes.svg) · [fichier BPMN](35-exploitation-sauvegardes.bpmn)
+Schéma : [image](38-exploitation-sauvegardes.svg) · [fichier BPMN](38-exploitation-sauvegardes.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
@@ -686,11 +737,11 @@ Schéma : [image](35-exploitation-sauvegardes.svg) · [fichier BPMN](35-exploita
 | Alerter la maintenance si une copie ou un test échoue | Application (automatique) | Pas encore | Prévu avec le déploiement |
 | Restaurer la base en cas d’incident | Maintenance (nous) | Dans l’application | Commande de restauration documentée |
 
-## 36. Mises à jour du système et de l’application
+## 39. Mises à jour du système et de l’application
 
 Le système du Raspberry, les services et les dépendances du front et du back sont tenus à jour sans casser l’application : détection, tests, publication, retour arrière.
 
-Schéma : [image](36-exploitation-mises-a-jour.svg) · [fichier BPMN](36-exploitation-mises-a-jour.bpmn)
+Schéma : [image](39-exploitation-mises-a-jour.svg) · [fichier BPMN](39-exploitation-mises-a-jour.bpmn)
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|

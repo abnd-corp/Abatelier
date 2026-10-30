@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P4_code_client_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P4_code_client_collab">
+    <bpmn:participant id="P4_code_client_pool" name="Retrouver une fiche client en scannant son code" processRef="P4_code_client" />
+  </bpmn:collaboration>
+  <bpmn:process id="P4_code_client" name="Retrouver une fiche client en scannant son code" isExecutable="false">
+    <bpmn:documentation>Idée à valider : chaque client reçoit un numéro unique de 13 chiffres (EAN-13), imprimé en code-barres sur ses documents. Avec le document en main et l’application sur le téléphone, on scanne le code et la fiche s’ouvre tout de suite, sans chercher le nom.</bpmn:documentation>
+    <bpmn:laneSet id="P4_code_client_voies">
+      <bpmn:lane id="P4_code_client_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P4_code_client_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P4_code_client_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P4_code_client_t5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P4_code_client_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P4_code_client_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P4_code_client_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P4_code_client_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P4_code_client_t4</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P4_code_client_d" name="Un client existe : la fiche est créée"><bpmn:outgoing>P4_code_client_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="P4_code_client_t1" name="Attribuer un numéro unique de 13 chiffres (EAN-13) à la fiche"><bpmn:documentation>Pas encore : Préfixe réservé à l’usage interne (20 à 29), numéro de séquence, chiffre de contrôle : aucune inscription auprès de GS1. Jamais réattribué, même si la fiche est archivée</bpmn:documentation><bpmn:incoming>P4_code_client_flux1</bpmn:incoming><bpmn:outgoing>P4_code_client_flux2</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P4_code_client_t2" name="Imprimer le code-barres sur la fiche et sur les documents du client (devis, facture, bon de livraison)"><bpmn:documentation>Pas encore : Un document en main suffit pour retrouver le client ; à valider : sur quels documents ?</bpmn:documentation><bpmn:incoming>P4_code_client_flux2</bpmn:incoming><bpmn:outgoing>P4_code_client_flux3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P4_code_client_t3" name="Scanner le code du document avec la caméra du téléphone, dans l’application"><bpmn:documentation>Pas encore : Même lecteur que la réception des feuilles ; saisie à la main possible si le code est abîmé</bpmn:documentation><bpmn:incoming>P4_code_client_flux3</bpmn:incoming><bpmn:outgoing>P4_code_client_flux4</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P4_code_client_t4" name="Ouvrir directement la fiche client"><bpmn:documentation>Pas encore : Réservé aux comptes qui ont accès aux clients : l’atelier ne voit jamais le client, seulement son nom sur la commande. Un code inconnu est refusé avec un message clair</bpmn:documentation><bpmn:incoming>P4_code_client_flux4</bpmn:incoming><bpmn:outgoing>P4_code_client_flux5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P4_code_client_t5" name="Consulter l’historique, appeler, créer une commande ou un devis"><bpmn:documentation>Dans l’application : Fiche client existante</bpmn:documentation><bpmn:incoming>P4_code_client_flux5</bpmn:incoming><bpmn:outgoing>P4_code_client_flux6</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P4_code_client_f" name="Information trouvée en quelques secondes"><bpmn:incoming>P4_code_client_flux6</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P4_code_client_flux1" sourceRef="P4_code_client_d" targetRef="P4_code_client_t1" />
+    <bpmn:sequenceFlow id="P4_code_client_flux2" sourceRef="P4_code_client_t1" targetRef="P4_code_client_t2" />
+    <bpmn:sequenceFlow id="P4_code_client_flux3" sourceRef="P4_code_client_t2" targetRef="P4_code_client_t3" />
+    <bpmn:sequenceFlow id="P4_code_client_flux4" sourceRef="P4_code_client_t3" targetRef="P4_code_client_t4" />
+    <bpmn:sequenceFlow id="P4_code_client_flux5" sourceRef="P4_code_client_t4" targetRef="P4_code_client_t5" />
+    <bpmn:sequenceFlow id="P4_code_client_flux6" sourceRef="P4_code_client_t5" targetRef="P4_code_client_f" />
+    <bpmn:textAnnotation id="P4_code_client_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P4_code_client_diagram">
+    <bpmndi:BPMNPlane id="P4_code_client_plane" bpmnElement="P4_code_client_collab">
+      <bpmndi:BPMNShape id="P4_code_client_pool_di" bpmnElement="P4_code_client_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1440" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P4_code_client_voie_direction_di" bpmnElement="P4_code_client_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1410" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P4_code_client_voie_systeme_di" bpmnElement="P4_code_client_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1410" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P4_code_client_d_di" bpmnElement="P4_code_client_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P4_code_client_t1_di" bpmnElement="P4_code_client_t1" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="330" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P4_code_client_t2_di" bpmnElement="P4_code_client_t2" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="520" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P4_code_client_t3_di" bpmnElement="P4_code_client_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="710" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P4_code_client_t4_di" bpmnElement="P4_code_client_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="900" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P4_code_client_t5_di" bpmnElement="P4_code_client_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1090" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P4_code_client_f_di" bpmnElement="P4_code_client_f">
+        <dc:Bounds x="1337" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P4_code_client_flux1_di" bpmnElement="P4_code_client_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="305" y="100" />
+        <di:waypoint x="305" y="220" />
+        <di:waypoint x="330" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P4_code_client_flux2_di" bpmnElement="P4_code_client_flux2">
+        <di:waypoint x="480" y="220" />
+        <di:waypoint x="520" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P4_code_client_flux3_di" bpmnElement="P4_code_client_flux3">
+        <di:waypoint x="670" y="220" />
+        <di:waypoint x="685" y="220" />
+        <di:waypoint x="685" y="100" />
+        <di:waypoint x="710" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P4_code_client_flux4_di" bpmnElement="P4_code_client_flux4">
+        <di:waypoint x="860" y="100" />
+        <di:waypoint x="875" y="100" />
+        <di:waypoint x="875" y="220" />
+        <di:waypoint x="900" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P4_code_client_flux5_di" bpmnElement="P4_code_client_flux5">
+        <di:waypoint x="1050" y="220" />
+        <di:waypoint x="1065" y="220" />
+        <di:waypoint x="1065" y="100" />
+        <di:waypoint x="1090" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P4_code_client_flux6_di" bpmnElement="P4_code_client_flux6">
+        <di:waypoint x="1240" y="100" />
+        <di:waypoint x="1337" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P4_code_client_legende_di" bpmnElement="P4_code_client_legende">
+        <dc:Bounds x="70" y="300" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
