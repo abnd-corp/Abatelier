@@ -12,7 +12,6 @@ import { GROUPES, PROCESSUS as PROCESSUS_SOURCE, VOIES } from './processus.mjs'
 function normaliser(p) {
   const noeuds = p.noeuds.map((n) => [...n])
   let flux = p.flux.map((f) => [...f])
-  const type = (id) => noeuds.find((n) => n[0] === id)[1]
   const decaler = (colonne) => noeuds.forEach((n) => n[3] >= colonne && (n[3] += 1))
   let k = 0
   // Décisions : une étape (ni passerelle ni début) qui a plusieurs sorties
