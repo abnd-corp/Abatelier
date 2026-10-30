@@ -5,7 +5,7 @@ import { accessories, auditLog, colors, documentTemplate, materials, orderLines,
 import { yearOf } from '../src/documents.js'
 import { addWorkingDays, quantityDiscount } from '../src/quote.js'
 import { todayParis } from '../src/departures.js'
-import { accessoryTotals, CHUTE_MIN, chutesOf, groupChutes, renderProductionSheet, sheetGroups } from '../src/production-sheet.js'
+import { accessoryTotals, bendSteps, CHUTE_MIN, chutesOf, groupChutes, renderProductionSheet, sheetGroups } from '../src/production-sheet.js'
 import { buildApp, client, createUser, loginAs, M, pdfText, resetDb, seedModels, type App, type Client } from './helpers.js'
 
 let app: App
@@ -550,6 +550,8 @@ describe('Fiche de fabrication (PDF)', () => {
       'puis tous les pliages',
       '4 plis à la presse, dans l’ordre 1 à 4',
       'Traits de pli à partir du bord (mm) : 20 · 90 · 390 · 460',
+      'Pli 1 · 135°',
+      'Pli 4 · 135°',
       '4. Mettre de côté',
       'CHUTE DE CETTE FEUILLE',
       'À GARDER',
@@ -596,6 +598,14 @@ describe('Fiche de fabrication (PDF)', () => {
     })
     const groupes = sheetGroups([ligne('A', 'x'), ligne('B', 'y'), ligne('C', 'x'), ligne('D', null)])
     expect(groupes.map((g) => g.lignes.map((l) => l.l.repere))).toEqual([['A', 'C'], ['B'], ['D']])
+  })
+
+  it('montre la pièce après chaque pli : le reste de la bande reste à plat jusqu’au dernier pli', () => {
+    const steps = bendSteps({ cotes: [20, 70, 300], angles: [90, 90], cap: 0 })
+    expect(steps.map((s) => s.plat)).toEqual([true, false])
+    // Après le premier pli : 20 mm pliés, puis les 370 mm restants à plat
+    expect(steps[0]!.pts).toHaveLength(3)
+    expect(steps[1]!.pts).toHaveLength(4)
   })
 
   it('calcule la chute d’une feuille : ce qui se garde et ce qui se jette', () => {

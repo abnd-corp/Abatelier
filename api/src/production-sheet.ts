@@ -371,6 +371,8 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
   // ═════════ 2. Ordre de fabrication, feuille par feuille ═════════
   const groups = sheetGroups(data.lignes)
   const DG_W = 190
+  const TH_W = 84
+  const TH_H = 64
   const IND = PAGE.m + 8
   groups.forEach((g, gi) => {
     y += 6
@@ -442,14 +444,27 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
         const traits = l.cotes.slice(0, -1).map((c) => (cumul += c))
         const posTraits = `Traits de pli à partir du bord (mm) : ${traits.map((t) => num(t)).join(' · ')}`
         const hc = layoutChips(plis, w).height
-        const h = heightOf(titre, w, 9.5, true) + 2 + heightOf(consigne, w) + 3 + hc + 3 + heightOf(posTraits, w, 9) + 4 + tallyHeight(l.quantite, w) + 10
+        const perRow = Math.floor((w + 8) / (TH_W + 8))
+        const hThumbs = Math.ceil(l.angles.length / perRow) * (TH_H + 18)
+        const h = heightOf(titre, w, 9.5, true) + 2 + heightOf(consigne, w) + 3 + hc + 6 + hThumbs + heightOf(posTraits, w, 9) + 4 + tallyHeight(l.quantite, w) + 10
         need(h)
         const top = y
         para(titre, IND, top, w, { bold: true })
         let yy = top + heightOf(titre, w, 9.5, true) + 2
         para(consigne, IND, yy, w)
         yy += heightOf(consigne, w) + 3
-        yy += drawChips(plis, IND, yy, w) + 3
+        yy += drawChips(plis, IND, yy, w) + 6
+        // La pièce après chaque pli : en trait plein ce qui est plié, en pointillé ce qui reste à plat
+        const steps = bendSteps(l)
+        const sc = bendScale(steps, TH_W, TH_H)
+        steps.forEach((st, k) => {
+          const bx = IND + (k % perRow) * (TH_W + 8)
+          const by = yy + Math.floor(k / perRow) * (TH_H + 18)
+          drawBendStep(doc, st, sc, bx, by, TH_W, TH_H, accent)
+          doc.font('Helvetica-Bold').fontSize(7.5).fillColor(INK)
+          text(`Pli ${k + 1} · ${isPince(l.angles[k]!) ? 'pince' : `${Math.abs(l.angles[k]!)}°`}`, bx, by + TH_H + 4, { width: TH_W, align: 'center', lineBreak: false })
+        })
+        yy += hThumbs
         para(posTraits, IND, yy, w, { size: 9, color: MUTED })
         yy += heightOf(posTraits, w, 9) + 4
         tally('PIÈCES PLIÉES', l.quantite, IND, yy, w)
@@ -557,6 +572,51 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
 
   doc.end()
   return done
+}
+
+type BendStep = { pts: [number, number][]; plat: boolean }
+
+/** La pièce après chaque pli, dans l'ordre : ce qui est déjà plié, puis le reste de la bande encore à plat dans le prolongement. */
+export function bendSteps(l: Pick<SheetLine, 'cotes' | 'angles' | 'cap'>): BendStep[] {
+  return l.angles.map((_, j) => {
+    const reste = l.cotes.slice(j + 1).reduce((s, v) => s + v, 0)
+    const plies = l.cotes.slice(0, j + 1)
+    const { pts } = profilePoints([...plies, reste], l.angles.slice(0, j + 1), l.cap)
+    return { pts, plat: j < l.angles.length - 1 }
+  })
+}
+
+const bounds = (pts: [number, number][]) => {
+  const xs = pts.map((p) => p[0])
+  const ys = pts.map((p) => p[1])
+  return { minX: Math.min(...xs), minY: Math.min(...ys), spanX: Math.max(...xs) - Math.min(...xs), spanY: Math.max(...ys) - Math.min(...ys) }
+}
+/** Une même échelle pour toutes les vignettes d'une pièce : on voit la bande se replier. */
+const bendScale = (steps: BendStep[], bw: number, bh: number) => {
+  const pad = 8
+  const b = steps.map((s) => bounds(s.pts))
+  return Math.min((bw - 2 * pad) / Math.max(1, ...b.map((x) => x.spanX)), (bh - 2 * pad) / Math.max(1, ...b.map((x) => x.spanY)))
+}
+
+function drawBendStep(doc: PDFKit.PDFDocument, st: BendStep, s: number, bx: number, by: number, bw: number, bh: number, accent: string) {
+  doc.roundedRect(bx, by, bw, bh, 4).fill(ZEBRA)
+  const b = bounds(st.pts)
+  const ox = bx + (bw - b.spanX * s) / 2
+  const oy = by + (bh - b.spanY * s) / 2
+  const P = st.pts.map(([x, y]) => [ox + (x - b.minX) * s, oy + (y - b.minY) * s] as [number, number])
+  doc.save()
+  const pliee = st.plat ? P.slice(0, -1) : P
+  doc.moveTo(...pliee[0]!)
+  for (const p of pliee.slice(1)) doc.lineTo(...p)
+  doc.lineWidth(1.8).lineJoin('round').lineCap('round').strokeColor(STROKE).stroke()
+  if (st.plat) {
+    // Le reste de la bande, pas encore plié
+    doc.moveTo(...P[P.length - 2]!).lineTo(...P[P.length - 1]!)
+    doc.lineWidth(1.2).dash(3, { space: 2 }).strokeColor(MUTED).stroke().undash()
+  }
+  // Le pli qu'on vient de faire
+  doc.circle(...P[P.length - 2]!, 2.4).fill(accent)
+  doc.restore()
 }
 
 /** Profil vu en coupe, mis à l'échelle dans le cadre, avec les cotes (A, B…) et les angles. */
