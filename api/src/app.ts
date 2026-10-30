@@ -103,7 +103,7 @@ export async function buildApp() {
   await app.register(orderRoutes, { prefix: '/api/orders' })
   await app.register(productionRoutes, { prefix: '/api/production' })
   await app.register(planRoutes, { prefix: '/api/plan' })
-  await app.register(ecranRoutes, { prefix: '/api/ecran' })
+  await app.register(ecranRoutes, { prefix: '/api/public/ecran' })
   await app.register(billingRoutes, { prefix: '/api/billing' })
   await app.register(publicRoutes, { prefix: '/api/public' })
   await app.register(siteRoutes, { prefix: '/api/site' })

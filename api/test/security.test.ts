@@ -30,6 +30,8 @@ const PUBLIC = [
   'GET /api/public/boutique/images/:id',
   'POST /api/public/boutique/panier',
   'POST /api/paiement/stripe',
+  // Écran de l'atelier : sans connexion mais réservé au réseau interne (404 depuis une adresse publique, voir ecran.test.ts)
+  'GET /api/public/ecran',
   'GET /api/public/robots.txt',
   'GET /api/public/sitemap.xml',
   'POST /api/espace/inscription',

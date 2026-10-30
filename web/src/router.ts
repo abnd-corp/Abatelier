@@ -189,12 +189,13 @@ export const router = createRouter({
       component: () => import('@/views/PlanAtelierView.vue'),
       meta: { perm: 'plan.read', title: 'Plan de l’atelier' },
     },
-    // L'écran de l'atelier est une page à part, ouverte à tout compte connecté : le tableau des commandes, en grand et en lecture seule
+    // L'écran de l'atelier est une page à part, sans connexion (écran au mur) : le tableau des commandes, en grand et en lecture seule.
+    // L'API ne répond que depuis le réseau interne.
     {
       path: '/ecran-atelier',
       name: 'ecran-atelier',
       component: () => import('@/views/EcranAtelierView.vue'),
-      meta: { title: 'Écran de l’atelier' },
+      meta: { public: true, title: 'Écran de l’atelier' },
     },
     {
       path: '/',

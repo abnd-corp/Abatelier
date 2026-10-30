@@ -1,10 +1,10 @@
 import { ADMIN, apiLogin, createUser, expect, NEW_PASSWORD, test } from './fixtures'
 
-// L'écran de l'atelier est une page à part, ouverte à tout compte connecté : les commandes en cours en grand, sans client ni prix.
+// L'écran de l'atelier est une page à part, sans connexion (réseau interne seulement) : les commandes en cours en grand, avec le nom du client, sans coordonnées ni prix.
 const PASSWORD = 'Plieuse-numerique-2026'
 
 test.describe('Écran de l’atelier @responsive', () => {
-  test('une commande payée y apparaît pour tous les comptes, sans le client ; le lien est sous « Voir le site »', async ({ browser, baseURL, uid, page }) => {
+  test('une commande payée y apparaît avec le nom du client, sans connexion ; le lien est sous « Voir le site »', async ({ browser, baseURL, uid, page }) => {
     const h = { Origin: baseURL! }
     const admin = await (await browser.newContext()).newPage()
     await apiLogin(admin.request, baseURL!, ADMIN.identifiant, ADMIN.password)
@@ -42,8 +42,8 @@ test.describe('Écran de l’atelier @responsive', () => {
     await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toHaveCount(0)
     const aLancer = page.locator('[data-colonne="validee"]')
     await expect(aLancer).toContainText(numero)
-    // Ni le nom du client, ni son adresse, ni un prix
-    await expect(page.getByText(`Ecran ${uid.slice(-6)}`)).toHaveCount(0)
+    // Le nom du client est là, mais ni son e-mail ni un prix
+    await expect(aLancer).toContainText(`Ecran ${uid.slice(-6)}`)
     await expect(page.getByText(`${uid}@exemple.fr`)).toHaveCount(0)
     await expect(page.getByText(/€/)).toHaveCount(0)
 
@@ -55,9 +55,14 @@ test.describe('Écran de l’atelier @responsive', () => {
     await expect(page.locator('[data-colonne="validee"]')).not.toContainText(numero)
   })
 
-  test('refuse l’accès à l’écran sans connexion', async ({ page }) => {
+  test('s’ouvre avec le seul lien, sans connexion', async ({ page }) => {
     await page.goto('/ecran-atelier')
-    await expect(page).toHaveURL(/\/connexion/)
-    expect((await page.request.get('/api/ecran')).status()).toBe(401)
+    await expect(page).toHaveURL(/\/ecran-atelier$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Atelier' })).toBeVisible()
+    await expect(page.locator('.pretes-titre')).toBeAttached()
+    await expect(page.locator('[data-colonne="livrer"]')).toBeVisible()
+    await expect(page.locator('[data-colonne="retirer"]')).toBeVisible()
+    await expect(page.getByRole('alert')).toHaveCount(0)
+    expect((await page.request.get('/api/public/ecran')).status()).toBe(200)
   })
 })

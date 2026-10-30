@@ -10,6 +10,7 @@ import { todayParis } from '@/lib/employees'
 interface Ligne {
   id: string
   numero: string
+  client: string
   statut: 'validee' | 'fabrication' | 'prete'
   livraisonMode: 'retrait' | 'livraison'
   datePrevue: string | null
@@ -19,12 +20,11 @@ interface Ligne {
 const lignes = ref<Ligne[]>([])
 const majLe = ref<Date | null>(null)
 const coupure = ref(false)
-const entier = ref(false)
 const maintenant = ref(new Date())
 
 async function load() {
   try {
-    lignes.value = (await api<{ orders: Ligne[] }>('/ecran')).orders
+    lignes.value = (await api<{ orders: Ligne[] }>('/public/ecran')).orders
     majLe.value = new Date()
     coupure.value = false
   } catch {
@@ -36,38 +36,63 @@ async function load() {
 let timer: ReturnType<typeof setInterval> | undefined
 let horloge: ReturnType<typeof setInterval> | undefined
 const REFRESH_MS = 15_000
-const fullscreenOk = typeof document !== 'undefined' && !!document.documentElement.requestFullscreen
-async function basculerEntier() {
-  try {
-    if (document.fullscreenElement) await document.exitFullscreen()
-    else await document.documentElement.requestFullscreen()
-  } catch {
-    // refusé par le navigateur : l'écran reste simplement sur toute la page
+// Défilement automatique : un écran au mur n'a personne pour toucher la souris. Chaque colonne trop pleine descend doucement,
+// marque une pause en bas, puis remonte : rien ne reste caché.
+const PAUSE_MS = 3000
+const VITESSE = 30 // pixels par seconde
+const etats = new WeakMap<Element, { since: number; phase: 'haut' | 'descend' | 'bas'; pos: number; last: number }>()
+let raf = 0
+function defile(now: number) {
+  for (const el of document.querySelectorAll<HTMLElement>('.colonne ul')) {
+    const max = el.scrollHeight - el.clientHeight
+    const st = etats.get(el) ?? { since: now, phase: 'haut' as const, pos: 0, last: now }
+    etats.set(el, st)
+    if (max <= 1) {
+      st.pos = 0
+      el.scrollTop = 0
+      continue
+    }
+    if (st.phase === 'descend') {
+      st.pos = Math.min(max, st.pos + ((now - st.last) * VITESSE) / 1000)
+      el.scrollTop = st.pos
+      if (st.pos >= max) Object.assign(st, { phase: 'bas', since: now })
+    } else if (now - st.since >= PAUSE_MS) {
+      if (st.phase === 'haut') {
+        st.phase = 'descend'
+      } else {
+        Object.assign(st, { phase: 'haut', since: now, pos: 0 })
+        el.scrollTop = 0
+      }
+    }
+    st.last = now
   }
+  raf = requestAnimationFrame(defile)
 }
-const onFullscreen = () => (entier.value = !!document.fullscreenElement)
 onMounted(() => {
+  raf = requestAnimationFrame(defile)
   void load()
   timer = setInterval(() => void load(), REFRESH_MS)
   horloge = setInterval(() => (maintenant.value = new Date()), 1000)
-  document.addEventListener('fullscreenchange', onFullscreen)
 })
 onBeforeUnmount(() => {
+  cancelAnimationFrame(raf)
   clearInterval(timer)
   clearInterval(horloge)
-  document.removeEventListener('fullscreenchange', onFullscreen)
 })
 
 const today = todayParis()
 const enRetard = (l: Ligne) => !!l.datePrevue && l.datePrevue < today && l.statut !== 'prete'
+// « Prêtes » est éclaté selon le mode de remise : à livrer (par un salarié) ou à retirer (par le client à l'atelier)
 const COLONNES = [
-  { id: 'validee', titre: 'À lancer', tone: 'info' },
-  { id: 'fabrication', titre: 'En fabrication', tone: 'accent' },
-  { id: 'prete', titre: 'Prêtes', tone: 'ok' },
+  { id: 'validee', titre: 'À lancer', tone: 'info', garde: (l: Ligne) => l.statut === 'validee' },
+  { id: 'fabrication', titre: 'En fabrication', tone: 'accent', garde: (l: Ligne) => l.statut === 'fabrication' },
+  { id: 'livrer', titre: 'À livrer', tone: 'ok', garde: (l: Ligne) => l.statut === 'prete' && l.livraisonMode === 'livraison' },
+  { id: 'retirer', titre: 'À retirer', tone: 'ok', garde: (l: Ligne) => l.statut === 'prete' && l.livraisonMode === 'retrait' },
 ] as const
-const colonnes = computed(() => COLONNES.map((c) => ({ ...c, lignes: lignes.value.filter((l) => l.statut === c.id) })))
+const colonnes = computed(() => COLONNES.map((c) => ({ id: c.id, titre: c.titre, tone: c.tone, lignes: lignes.value.filter(c.garde) })))
+const pretes = computed(() => lignes.value.filter((l) => l.statut === 'prete').length)
 const retards = computed(() => lignes.value.filter(enRetard).length)
-const heure = computed(() => maintenant.value.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))
+const heure = computed(() => maintenant.value.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
 const jour = computed(() => maintenant.value.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }))
 const depuis = computed(() => (majLe.value ? majLe.value.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''))
 </script>
@@ -82,20 +107,22 @@ const depuis = computed(() => (majLe.value ? majLe.value.toLocaleTimeString('fr-
       <p v-if="retards" class="retards pill bad">{{ retards }} en retard</p>
       <span class="espace"></span>
       <p v-if="coupure" class="coupure" role="alert"><AppIcon name="x" :size="18" />Plus de nouvelles du serveur depuis {{ depuis || 'le début' }}</p>
-      <button v-if="fullscreenOk" class="btn small" type="button" :aria-pressed="entier" @click="basculerEntier">{{ entier ? 'Quitter l’écran entier' : 'Écran entier' }}</button>
-      <RouterLink :to="{ name: 'dashboard' }" class="btn small"><AppIcon name="arrow-left" :size="15" />Application</RouterLink>
     </header>
 
     <main class="colonnes">
-      <section v-for="c in colonnes" :key="c.id" class="colonne" :class="c.tone" :aria-labelledby="`c-${c.id}`" :data-colonne="c.id">
+      <h2 class="pretes-titre" aria-hidden="true">
+        Prêtes <span class="count">{{ pretes }}</span>
+      </h2>
+      <section v-for="c in colonnes" :key="c.id" class="colonne" :class="[c.tone, `c-${c.id}`]" :aria-labelledby="`c-${c.id}`" :data-colonne="c.id">
         <h2 :id="`c-${c.id}`">
           {{ c.titre }} <span class="count">{{ c.lignes.length }}</span>
         </h2>
         <p v-if="!c.lignes.length" class="vide">Aucune</p>
         <ul>
           <li v-for="l in c.lignes" :key="l.id" :class="{ retard: enRetard(l) }">
-            <span class="numero mono">{{ l.numero }}</span>
+            <span class="client">{{ l.client || 'Client' }}</span>
             <span class="modeles">{{ l.modeles || 'Commande' }}</span>
+            <span class="numero mono">{{ l.numero }}</span>
             <span class="meta">
               {{ l.pieces }} pièce{{ l.pieces > 1 ? 's' : '' }} · {{ l.livraisonMode === 'retrait' ? 'Retrait' : 'Livraison' }} · {{ shortDay(l.datePrevue) }}
               <b v-if="enRetard(l)" class="alerte">en retard</b>
@@ -170,8 +197,9 @@ const depuis = computed(() => (majLe.value ? majLe.value.toLocaleTimeString('fr-
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0 16px;
   padding: 16px max(20px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
 }
 .colonne {
@@ -185,6 +213,50 @@ const depuis = computed(() => (majLe.value ? majLe.value.toLocaleTimeString('fr-
   border-radius: var(--r);
   background: color-mix(in srgb, var(--tone-soft) 45%, var(--bg));
   overflow: hidden;
+}
+.c-validee,
+.c-fabrication {
+  grid-row: 1 / 3;
+}
+.c-validee {
+  grid-column: 1;
+}
+.c-fabrication {
+  grid-column: 2;
+}
+.c-livrer {
+  grid-column: 3;
+  grid-row: 2;
+}
+.c-retirer {
+  grid-column: 4;
+  grid-row: 2;
+}
+/* « Prêtes » coiffe les deux colonnes À livrer et À retirer, collées sous lui */
+.pretes-titre {
+  grid-column: 3 / 5;
+  grid-row: 1;
+  padding: 12px 16px;
+  font-size: 1.6rem;
+  background: var(--ok-soft);
+  color: var(--ok);
+  border: 1px solid color-mix(in srgb, var(--ok) 40%, var(--line));
+  border-bottom: 0;
+  border-radius: var(--r) var(--r) 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.c-livrer,
+.c-retirer {
+  border-radius: 0;
+}
+.c-livrer {
+  border-right-width: 0;
+  border-bottom-left-radius: var(--r);
+}
+.c-retirer {
+  border-bottom-right-radius: var(--r);
 }
 .colonne.accent {
   --tone: var(--accent);
@@ -218,7 +290,13 @@ ul {
   display: grid;
   gap: 10px;
   align-content: start;
-  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+ul::-webkit-scrollbar {
+  display: none;
 }
 li {
   display: grid;
@@ -233,13 +311,19 @@ li.retard {
   border-left-color: var(--bad);
   background: var(--bad-soft);
 }
+.client {
+  font-size: 1.7rem;
+  font-weight: 750;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
 .numero {
-  font-size: 1.15rem;
+  font-size: 1rem;
   color: var(--muted);
 }
 .modeles {
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 600;
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
@@ -256,8 +340,20 @@ li.retard {
     grid-template-columns: 1fr;
     overflow: auto;
   }
-  .colonne {
+  .colonne,
+  .c-validee,
+  .c-fabrication,
+  .c-livrer,
+  .c-retirer {
+    grid-column: auto;
+    grid-row: auto;
     min-height: auto;
+    border-radius: var(--r);
+    border-width: 1px;
+    margin-bottom: 16px;
+  }
+  .pretes-titre {
+    display: none;
   }
   .jour {
     display: none;
