@@ -236,6 +236,34 @@ test.describe('Tarifs et catalogue', () => {
     expect(res.status()).toBe(200)
   })
 
+  test('la direction déclare une fermeture : le site l’annonce, puis elle la supprime', async ({ adminPage, browser, uid }) => {
+    const motif = `Congés ${uid.slice(-6)}`
+    await adminPage.goto('/catalogue?onglet=fermetures')
+    const panneau = adminPage.getByRole('tabpanel', { name: 'Fermetures' })
+    await panneau.getByRole('button', { name: 'Ajouter une fermeture' }).click()
+    // Sans motif, l'erreur s'affiche sous le bon champ
+    await panneau.getByLabel('Premier jour').fill('2031-07-14')
+    await panneau.getByLabel('Dernier jour').fill('2031-07-16')
+    await panneau.getByRole('button', { name: 'Enregistrer' }).click()
+    await expect(panneau.getByLabel('Motif')).toHaveAttribute('aria-invalid', 'true')
+    await panneau.getByLabel('Motif').fill(motif)
+    await panneau.getByRole('button', { name: 'Enregistrer' }).click()
+    const row = panneau.getByRole('row', { name: new RegExp(motif) })
+    await expect(row).toBeVisible()
+
+    // Un visiteur voit le bandeau sur le site
+    const visiteur = await (await browser.newContext()).newPage()
+    await visiteur.goto('/')
+    await expect(visiteur.getByRole('status').filter({ hasText: motif })).toContainText('Atelier fermé du 14 juillet au 16 juillet')
+
+    // Suppression : le bandeau disparaît
+    await row.getByRole('button', { name: `Supprimer la fermeture ${motif}` }).click()
+    await expect(row).toHaveCount(0)
+    await visiteur.reload()
+    await expect(visiteur.getByText(motif)).toHaveCount(0)
+    await visiteur.context().close()
+  })
+
   test('la RH et l’atelier n’ont pas accès au catalogue', async ({ adminPage, browser, baseURL, uid }) => {
     for (const role of ['rh', 'atelier'] as const) {
       const id = `${uid}-${role}`

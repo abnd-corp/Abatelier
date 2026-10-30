@@ -17,6 +17,7 @@ import { line, livraison, orderCatalog, priceBody } from './orders.js'
 import { getPricingSettings } from '../pricing.js'
 import { LIGNES_MAX, priceCart, QUANTITE_MAX, ttcOf } from '../shop.js'
 import { paymentProvider } from '../payments.js'
+import { upcomingClosures } from '../closures.js'
 
 // Routes ouvertes à tous les visiteurs du site vitrine : aucune donnée privée, jamais de session.
 
@@ -92,13 +93,14 @@ const safeName = (n: string) => n.replace(/[^\p{L}\p{N}._ -]/gu, '_').slice(0, 1
 export async function publicRoutes(app: FastifyInstance) {
   // Textes, coordonnées et photos de toutes les pages
   app.get('/site', async (_req, reply) => {
-    const [company, content, photos] = await Promise.all([
+    const [company, content, photos, fermetures] = await Promise.all([
       getCompany(),
       getContent(),
       db
         .select({ id: sitePhotos.id, emplacement: sitePhotos.emplacement, alt: sitePhotos.alt, largeur: sitePhotos.largeur, hauteur: sitePhotos.hauteur })
         .from(sitePhotos)
         .orderBy(asc(sitePhotos.position), asc(sitePhotos.createdAt)),
+      upcomingClosures(),
     ])
     const contenu = await fillCompany(content)
     const placeId = env.GOOGLE_PLACE_ID
@@ -119,6 +121,8 @@ export async function publicRoutes(app: FastifyInstance) {
       },
       contenu,
       photos,
+      // Fermetures en cours ou à venir : le site les annonce dans un bandeau
+      fermetures: fermetures.map(({ debut, fin, motif }) => ({ debut, fin, motif })),
     }
   })
 

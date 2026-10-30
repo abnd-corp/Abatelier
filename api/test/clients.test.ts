@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { db } from '../src/db/index.js'
-import { auditLog, clients } from '../src/db/schema.js'
-import { buildApp, createUser, loginAs, resetDb, type App, type Client } from './helpers.js'
+import { auditLog, clients, contactRequests } from '../src/db/schema.js'
+import { buildApp, client, createUser, loginAs, resetDb, type App, type Client } from './helpers.js'
 
 let app: App
 let direction: Client
@@ -230,5 +230,52 @@ describe('Journal', () => {
     await create(DUPONT)
     const res = (await direction.get('/api/audit?type=clients')).json()
     expect(res.entries.map((e: { action: string }) => e.action)).toEqual(['client.created'])
+  })
+})
+
+describe('Fiche client depuis une demande de contact', () => {
+  const demande = async (over: object = {}) =>
+    (
+      await db
+        .insert(contactRequests)
+        .values({ nom: 'Marie Martin', email: 'Marie@Exemple.fr', telephone: '06 00 00 00 01', codePostal: '42490', ville: 'Fraisses', objet: 'Bavette', message: 'Bonjour', ...over })
+        .returning()
+    )[0]!
+
+  it('crée la fiche d’un particulier avec les coordonnées de la demande, et la note au journal', async () => {
+    const d = await demande()
+    const res = await direction.post(`/api/clients/depuis-contact/${d.id}`)
+    expect(res.statusCode).toBe(201)
+    expect(res.json().cree).toBe(true)
+    const [c] = await db.select().from(clients).where(eq(clients.id, res.json().id))
+    expect(c).toMatchObject({ type: 'particulier', nom: 'Marie Martin', email: 'Marie@Exemple.fr', telephone: '06 00 00 00 01', ville: 'Fraisses', origine: 'site', proVerifie: false })
+    const [e] = await entries('client.created')
+    expect(e!.details).toMatchObject({ origine: 'site', demande: d.id })
+  })
+
+  it('retrouve la fiche existante par l’adresse e-mail, sans doublon', async () => {
+    const id = await create({ ...DUPONT, email: 'marie@exemple.fr' })
+    const d = await demande()
+    const res = await direction.post(`/api/clients/depuis-contact/${d.id}`)
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({ id, cree: false })
+    expect(await db.select().from(clients)).toHaveLength(1)
+    // Une deuxième demande de la même personne ne crée pas non plus de fiche
+    const again = await direction.post(`/api/clients/depuis-contact/${(await demande({ objet: 'Autre' })).id}`)
+    expect(again.json()).toEqual({ id, cree: false })
+    expect(await db.select().from(clients)).toHaveLength(1)
+  })
+
+  it('refuse une demande inconnue ou mal formée', async () => {
+    expect((await direction.post(`/api/clients/depuis-contact/${UUID}`)).statusCode).toBe(404)
+    expect((await direction.post('/api/clients/depuis-contact/abc')).statusCode).toBe(404)
+  })
+
+  it('est réservée à la section Ventes : 401 sans connexion, 403 pour l’atelier', async () => {
+    const d = await demande()
+    expect((await client(app).post(`/api/clients/depuis-contact/${d.id}`)).statusCode).toBe(401)
+    await createUser({ identifiant: 'paul', role: 'atelier' })
+    expect((await (await loginAs(app, 'paul')).post(`/api/clients/depuis-contact/${d.id}`)).statusCode).toBe(403)
+    expect(await db.select().from(clients)).toHaveLength(0)
   })
 })

@@ -204,13 +204,13 @@ export function priceOrder(lines: PricedLine[], opts: { pro: boolean; delivery: 
 
 export const isError = (x: unknown): x is QuoteError => typeof x === 'object' && x !== null && 'error' in x
 
-/** Ajoute n jours ouvrés (du lundi au vendredi) à une date AAAA-MM-JJ. */
-export function addWorkingDays(day: string, n: number) {
+/** Ajoute n jours ouvrés (du lundi au vendredi) à une date AAAA-MM-JJ, en sautant les jours de fermeture exceptionnelle. */
+export function addWorkingDays(day: string, n: number, closed: ReadonlySet<string> = new Set()) {
   const d = new Date(`${day}T12:00:00Z`)
   while (n > 0) {
     d.setUTCDate(d.getUTCDate() + 1)
     const w = d.getUTCDay()
-    if (w !== 0 && w !== 6) n--
+    if (w !== 0 && w !== 6 && !closed.has(d.toISOString().slice(0, 10))) n--
   }
   return d.toISOString().slice(0, 10)
 }

@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { api, ApiError } from '@/api'
+import { useAuthStore } from '@/stores/auth'
 import { eur } from '@/lib/catalog'
 import AppIcon from '@/components/AppIcon.vue'
 import { dateTime } from '@/lib/format'
 import type { Demande } from '@/lib/site-admin'
 
+const router = useRouter()
+const auth = useAuthStore()
 const emit = defineEmits<{ count: [n: number] }>()
 
 type Filtre = 'a_traiter' | 'traitees' | 'toutes'
@@ -45,6 +49,19 @@ async function mark(d: Demande, traite: boolean) {
     await load()
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : 'Action impossible.'
+  } finally {
+    busy.value = null
+  }
+}
+// Ouvre la fiche du client qui a cette adresse e-mail, ou la crée : jamais de doublon
+async function openClient(d: Demande) {
+  busy.value = d.id
+  error.value = ''
+  try {
+    const { id } = await api<{ id: string }>(`/clients/depuis-contact/${d.id}`, { method: 'POST' })
+    await router.push({ name: 'client', params: { id } })
+  } catch (e) {
+    error.value = e instanceof ApiError ? e.message : 'Ouverture de la fiche impossible.'
   } finally {
     busy.value = null
   }
@@ -144,6 +161,7 @@ const FILTERS: { value: Filtre; label: string }[] = [
               <AppIcon name="check" :size="15" />Marquer comme traitée
             </button>
             <button v-else type="button" class="btn small" :disabled="busy === d.id" @click="mark(d, false)">Remettre à traiter</button>
+            <button v-if="auth.can('clients.manage')" type="button" class="btn small" :disabled="busy === d.id" @click="openClient(d)"><AppIcon name="user" :size="15" />Fiche client</button>
             <a class="btn small" :href="`mailto:${d.email}?subject=${encodeURIComponent('Re : ' + d.objet)}`"><AppIcon name="mail" :size="15" />Répondre</a>
             <button v-if="confirmDelete !== d.id" type="button" class="btn small danger" @click="confirmDelete = d.id"><AppIcon name="trash" :size="15" />Supprimer</button>
             <template v-else>

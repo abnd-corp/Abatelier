@@ -111,6 +111,18 @@ test.describe('Site vitrine : visiteurs', () => {
     expect(file.headers()['content-disposition']).toMatch(/^attachment/)
     expect(Buffer.from(await file.body()).equals(PDF)).toBe(true)
 
+    // La fiche client se crée depuis la demande ; en la rouvrant, on retombe sur la même (pas de doublon)
+    await admin.getByRole('button', { name: 'Fiche client' }).click()
+    await expect(admin).toHaveURL(/\/clients\/[0-9a-f-]{36}$/)
+    const fiche = admin.url()
+    await expect(admin.getByText(`${uid}@exemple.fr`).first()).toBeVisible()
+    await admin.goto('/site-vitrine')
+    await admin.getByRole('button', { name: new RegExp(`12 couvertines ${uid}`) }).click()
+    await admin.getByRole('button', { name: 'Fiche client' }).click()
+    await expect(admin).toHaveURL(fiche)
+    await admin.goto('/site-vitrine')
+    await admin.getByRole('button', { name: new RegExp(`12 couvertines ${uid}`) }).click()
+
     await admin.getByRole('button', { name: 'Marquer comme traitée' }).click()
     await expect(admin.getByText(`12 couvertines ${uid}`)).toHaveCount(0)
     await admin.getByRole('button', { name: /^Traitées/ }).click()

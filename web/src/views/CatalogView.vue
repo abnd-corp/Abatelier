@@ -6,28 +6,30 @@ import ColorsPanel from '@/components/catalog/ColorsPanel.vue'
 import ModelsPanel from '@/components/catalog/ModelsPanel.vue'
 import AccessoriesPanel from '@/components/catalog/AccessoriesPanel.vue'
 import DeliveryPanel from '@/components/catalog/DeliveryPanel.vue'
+import ClosuresPanel from '@/components/catalog/ClosuresPanel.vue'
 import SettingsPanel from '@/components/catalog/SettingsPanel.vue'
 import AppIcon from '@/components/AppIcon.vue'
 
-type Tab = 'matieres' | 'coloris' | 'modeles' | 'accessoires' | 'livraison' | 'faconnage'
+type Tab = 'matieres' | 'coloris' | 'modeles' | 'accessoires' | 'livraison' | 'faconnage' | 'fermetures'
 const route = useRoute()
 const router = useRouter()
 
 // L'onglet ouvert est gardé dans l'adresse (?onglet=coloris) pour pouvoir le partager ou y revenir
-const TAB_IDS: Tab[] = ['matieres', 'coloris', 'modeles', 'accessoires', 'livraison', 'faconnage']
+const TAB_IDS: Tab[] = ['matieres', 'coloris', 'modeles', 'accessoires', 'livraison', 'faconnage', 'fermetures']
 const tab = ref<Tab>(TAB_IDS.find((t) => t === route.query.onglet) ?? 'matieres')
 watch(tab, (t) => router.replace({ query: t === 'matieres' ? {} : { onglet: t } }))
 
-const counts = ref<Record<Tab, number | null>>({ matieres: null, coloris: null, modeles: null, accessoires: null, livraison: null, faconnage: null })
+const counts = ref<Record<Tab, number | null>>({ matieres: null, coloris: null, modeles: null, accessoires: null, livraison: null, faconnage: null, fermetures: null })
 
 // « more » : fin du libellé masquée sur téléphone pour que les onglets tiennent sur une ligne
-const TABS: { id: Tab; label: string; more?: string; icon: 'layers' | 'palette' | 'profile' | 'box' | 'truck' | 'sliders' }[] = [
+const TABS: { id: Tab; label: string; more?: string; icon: 'layers' | 'palette' | 'profile' | 'box' | 'truck' | 'sliders' | 'calendar' }[] = [
   { id: 'matieres', label: 'Matières', icon: 'layers' },
   { id: 'coloris', label: 'Coloris', icon: 'palette' },
   { id: 'modeles', label: 'Modèles', more: ' de pièces', icon: 'profile' },
   { id: 'accessoires', label: 'Accessoires', icon: 'box' },
   { id: 'livraison', label: 'Livraison', icon: 'truck' },
   { id: 'faconnage', label: 'Façonnage', more: ' et conditions', icon: 'sliders' },
+  { id: 'fermetures', label: 'Fermetures', icon: 'calendar' },
 ]
 
 // Navigation au clavier entre les onglets (flèches gauche et droite)
@@ -84,6 +86,9 @@ function onKey(e: KeyboardEvent) {
   </section>
   <section v-show="tab === 'faconnage'" id="panel-faconnage" role="tabpanel" aria-labelledby="tab-faconnage">
     <SettingsPanel />
+  </section>
+  <section v-show="tab === 'fermetures'" id="panel-fermetures" role="tabpanel" aria-labelledby="tab-fermetures">
+    <ClosuresPanel @count="counts.fermetures = $event" />
   </section>
 </template>
 

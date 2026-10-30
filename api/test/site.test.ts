@@ -5,6 +5,7 @@ import { auditLog, billingDocuments, colors, contactRequests, materials, orders,
 import { env } from '../src/env.js'
 import { resetReviewsCache } from '../src/google-reviews.js'
 import { buildApp, client, createUser, loginAs, M, makePng, resetDb, seedModels, type App, type Client } from './helpers.js'
+import { deleteOldContactRequests } from '../src/contact-retention.js'
 import { setTransport, type Transport } from '../src/mail.js'
 
 let app: App
@@ -489,5 +490,33 @@ describe('Configurateur public', () => {
     const res = await visitor.post('/api/public/devis', devis())
     expect(res.statusCode).toBe(404)
     expect(await db.select().from(contactRequests)).toHaveLength(0)
+  })
+})
+
+describe('Purge des demandes de contact', () => {
+  const ago = (months: number) => {
+    const d = new Date()
+    d.setMonth(d.getMonth() - months)
+    return d
+  }
+  const demande = (createdAt: Date, over: Record<string, unknown> = {}) =>
+    db
+      .insert(contactRequests)
+      .values({ nom: 'A', email: 'a@x.fr', objet: 'o', message: 'm', createdAt, ...over })
+      .returning()
+
+  it('supprime les demandes de plus de 12 mois restées sans suite, garde les récentes, et le note au journal', async () => {
+    await demande(ago(13), { objet: 'vieille' })
+    await demande(ago(13), { objet: 'vieille aussi', traiteAt: new Date() })
+    await demande(ago(11), { objet: 'récente' })
+    expect(await deleteOldContactRequests()).toBe(2)
+    expect((await db.select().from(contactRequests)).map((r) => r.objet)).toEqual(['récente'])
+    const [e] = await entries('contact.purged')
+    expect(e).toMatchObject({ userId: null, details: { nombre: 2, mois: 12 } })
+  })
+
+  it('n’écrit rien au journal quand il n’y a rien à purger', async () => {
+    expect(await deleteOldContactRequests()).toBe(0)
+    expect(await entries('contact.purged')).toHaveLength(0)
   })
 })

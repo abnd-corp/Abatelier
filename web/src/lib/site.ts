@@ -16,6 +16,8 @@ export interface SiteData {
   entreprise: { nom: string; adresse: string; telephone: string; email: string; siret: string; logo: boolean; itineraire: string }
   contenu: Record<string, string>
   photos: SitePhotoPublic[]
+  /** Fermetures en cours ou à venir (jours AAAA-MM-JJ) */
+  fermetures?: { debut: string; fin: string; motif: string }[]
 }
 export interface Avis {
   auteur: string

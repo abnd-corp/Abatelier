@@ -25,7 +25,7 @@
     <bpmn:userTask id="P28_parametrage_t2" name="Régler les limites de pliage et les modèles de pièces"><bpmn:documentation>Dans l’application : Catalogue › Modèles de pièces</bpmn:documentation><bpmn:incoming>P28_parametrage_flux2</bpmn:incoming><bpmn:outgoing>P28_parametrage_flux3</bpmn:outgoing></bpmn:userTask>
     <bpmn:userTask id="P28_parametrage_t3" name="Régler l’entreprise, le modèle des documents, la numérotation"><bpmn:documentation>Dans l’application : Modèles de documents (la numérotation se verrouille au premier document)</bpmn:documentation><bpmn:incoming>P28_parametrage_flux3</bpmn:incoming><bpmn:outgoing>P28_parametrage_flux4</bpmn:outgoing></bpmn:userTask>
     <bpmn:userTask id="P28_parametrage_t4" name="Régler les limites par matière, la quantité maximale et le délai selon la quantité"><bpmn:documentation>Pas encore : En attente des données des machines de l’atelier</bpmn:documentation><bpmn:incoming>P28_parametrage_flux4</bpmn:incoming><bpmn:outgoing>P28_parametrage_flux5</bpmn:outgoing></bpmn:userTask>
-    <bpmn:userTask id="P28_parametrage_t5" name="Déclarer les jours fériés et les fermetures"><bpmn:documentation>Pas encore : Le délai annoncé saute les week-ends, pas les jours fériés</bpmn:documentation><bpmn:incoming>P28_parametrage_flux5</bpmn:incoming><bpmn:outgoing>P28_parametrage_flux6</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P28_parametrage_t5" name="Déclarer les jours fériés et les fermetures"><bpmn:documentation>Dans l’application : Tarifs et catalogue &gt; Fermetures : les délais sautent ces jours et le site les annonce dans un bandeau</bpmn:documentation><bpmn:incoming>P28_parametrage_flux5</bpmn:incoming><bpmn:outgoing>P28_parametrage_flux6</bpmn:outgoing></bpmn:userTask>
     <bpmn:serviceTask id="P28_parametrage_t6" name="Appliquer tout de suite aux prochains devis, commandes et au site"><bpmn:documentation>Dans l’application : Les documents déjà émis ne changent pas</bpmn:documentation><bpmn:incoming>P28_parametrage_flux6</bpmn:incoming><bpmn:outgoing>P28_parametrage_flux7</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:endEvent id="P28_parametrage_f" name="Réglage en place"><bpmn:incoming>P28_parametrage_flux7</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="P28_parametrage_flux1" sourceRef="P28_parametrage_d" targetRef="P28_parametrage_t1" />
@@ -63,7 +63,7 @@
       <bpmndi:BPMNShape id="P28_parametrage_t4_di" bpmnElement="P28_parametrage_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
         <dc:Bounds x="900" y="60" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P28_parametrage_t5_di" bpmnElement="P28_parametrage_t5" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+      <bpmndi:BPMNShape id="P28_parametrage_t5_di" bpmnElement="P28_parametrage_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="1090" y="60" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P28_parametrage_t6_di" bpmnElement="P28_parametrage_t6" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
