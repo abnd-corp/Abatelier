@@ -165,6 +165,12 @@ export const router = createRouter({
           meta: { public: true, site: true, noindex: true, espace: 'invite', title: 'Créer mon espace client' },
         },
         {
+          path: 'espace/google-inscription',
+          name: 'espace-google-inscription',
+          component: () => import('@/views/site/EspaceGoogleInscriptionView.vue'),
+          meta: { public: true, site: true, noindex: true, espace: 'invite', title: 'Presque terminé' },
+        },
+        {
           path: 'espace/profil',
           name: 'espace-profil',
           component: () => import('@/views/site/EspaceProfilView.vue'),

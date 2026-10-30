@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
-import { and, eq, gt, isNull, lt } from 'drizzle-orm'
+import { and, eq, gt, isNull, lt, sql } from 'drizzle-orm'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import fp from 'fastify-plugin'
 import { db } from '../db/index.js'
@@ -25,6 +25,8 @@ export interface ClientAccount {
   telephone: string | null
   type: 'particulier' | 'professionnel'
   proVerifie: boolean
+  /** Faux pour un espace créé avec Google, tant que le client n'a pas choisi de mot de passe */
+  motDePasse: boolean
 }
 
 declare module 'fastify' {
@@ -69,6 +71,7 @@ async function validateClientSession(token: string) {
         telephone: clients.telephone,
         type: clients.type,
         proVerifie: clients.proVerifie,
+        motDePasse: sql<boolean>`${clientAccounts.passwordHash} is not null`,
       },
     })
     .from(clientSessions)

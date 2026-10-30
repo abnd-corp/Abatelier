@@ -35,7 +35,7 @@ export const GROUPES = {
     sources: [/^api\/src\/routes\/(employees|audit)\.ts/, /^web\/src\/views\/(Employee|Audit)/],
   },
   site: {
-    tests: ['site', 'espace', 'espace-mot-de-passe'],
+    tests: ['site', 'espace', 'espace-mot-de-passe', 'espace-google'],
     sources: [/^api\/src\/routes\/(public|site|espace|mail)\.ts/, /^api\/src\/(auth\/email-token|mail[^/]*)\.ts/, /^web\/src\/views\/(site|SiteAdmin)/, /^web\/src\/components\/Public/],
   },
   boutique: {

@@ -7,6 +7,8 @@ import type { Compte, Profil } from '@/lib/espace'
 export const useEspaceStore = defineStore('espace', () => {
   const compte = ref<Compte | null>(null)
   const loaded = ref(false)
+  // Connexion avec Google proposée (configurée côté serveur)
+  const google = ref(false)
   const isLoggedIn = computed(() => compte.value !== null)
 
   /** Vérifie une seule fois si le visiteur a déjà une session. À n'appeler que sur les pages qui en ont besoin. */
@@ -17,7 +19,9 @@ export const useEspaceStore = defineStore('espace', () => {
       return
     }
     try {
-      compte.value = (await api<{ compte: Compte | null }>('/espace/session')).compte
+      const r = await api<{ compte: Compte | null; google?: boolean }>('/espace/session')
+      compte.value = r.compte
+      google.value = r.google === true
     } catch {
       compte.value = null
     }
@@ -37,6 +41,12 @@ export const useEspaceStore = defineStore('espace', () => {
   /** Active l'espace d'une fiche existante avec le lien reçu par e-mail : le client choisit son mot de passe et se retrouve connecté. */
   async function activer(jeton: string, password: string) {
     compte.value = (await api<{ compte: Compte }>('/espace/activation', { method: 'POST', body: { jeton, password } })).compte
+    loaded.value = true
+  }
+
+  /** Dernière étape de l'inscription avec Google : particulier ou professionnel, puis l'espace est créé. */
+  async function inscrireGoogle(body: Record<string, unknown>) {
+    compte.value = (await api<{ compte: Compte }>('/espace/google/inscription', { method: 'POST', body })).compte
     loaded.value = true
   }
 
@@ -63,5 +73,5 @@ export const useEspaceStore = defineStore('espace', () => {
     compte.value = null
   }
 
-  return { compte, loaded, isLoggedIn, ensureLoaded, inscrire, connecter, activer, deconnecter, fermer, modifierProfil, forget }
+  return { compte, loaded, google, inscrireGoogle, isLoggedIn, ensureLoaded, inscrire, connecter, activer, deconnecter, fermer, modifierProfil, forget }
 })

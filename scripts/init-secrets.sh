@@ -21,7 +21,7 @@ for name in db_password admin_password; do
 done
 
 # Secrets fournis par un service extérieur : fichiers vides tant qu'on n'en a pas, à remplir à la main
-for name in google_places_api_key smtp_password stripe_secret_key stripe_webhook_secret; do
+for name in google_places_api_key smtp_password stripe_secret_key stripe_webhook_secret google_oauth_client_secret; do
   file="$dir/$name.txt"
   if [ ! -e "$file" ]; then
     : >"$file"

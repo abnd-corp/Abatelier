@@ -1,16 +1,22 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { ApiError } from '@/api'
+import { retourEspace } from '@/lib/espace'
 import PasswordInput from '@/components/PasswordInput.vue'
 import { checkPassword } from '@/lib/password'
+import GoogleMark from '@/components/site/GoogleMark.vue'
 import { useEspaceStore } from '@/stores/espace'
 
 // Création du compte ou connexion à l'espace client. Sert aux pages « Connexion » et « Créer mon compte »,
 // et au configurateur, qui enchaîne ensuite avec la demande de devis (fonction « after »). Une fonction plutôt qu'un événement :
 // dès que le compte est connecté, la page remplace ce formulaire, et un événement émis après coup serait perdu.
-const props = defineProps<{ mode: 'inscription' | 'connexion'; submitText: string; after?: () => unknown; busy?: boolean; disabled?: boolean; idPrefix?: string }>()
+const props = defineProps<{ mode: 'inscription' | 'connexion'; submitText: string; after?: () => unknown; busy?: boolean; disabled?: boolean; idPrefix?: string; avecGoogle?: boolean }>()
 
 const espace = useEspaceStore()
+// Google ne sert que sur les pages Connexion et Créer mon espace (avecGoogle) : dans le configurateur, la redirection ferait perdre la pièce en cours
+const route = useRoute()
+const googleUrl = computed(() => `/api/espace/google/debut?retour=${encodeURIComponent(retourEspace(route.query.redirect))}`)
 const p = computed(() => props.idPrefix ?? 'ea')
 const form = reactive({
   type: 'particulier' as 'particulier' | 'professionnel',
@@ -63,6 +69,10 @@ async function submit() {
 </script>
 
 <template>
+  <div v-if="espace.google && avecGoogle" class="google">
+    <a class="s-btn google-btn" :href="googleUrl" data-testid="google"><GoogleMark />Continuer avec Google</a>
+    <p class="ou"><span>ou avec une adresse e-mail</span></p>
+  </div>
   <form class="auth" novalidate @submit.prevent="submit">
     <p v-if="failure" class="alert bad" role="alert">{{ failure }}</p>
     <template v-if="mode === 'inscription'">
@@ -185,6 +195,32 @@ async function submit() {
 </template>
 
 <style scoped>
+.google {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.ou {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.ou::before,
+.ou::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--line);
+}
 .auth {
   display: grid;
   gap: 14px;

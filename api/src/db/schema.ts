@@ -486,7 +486,10 @@ export const clientAccounts = pgTable('client_accounts', {
     .notNull()
     .unique()
     .references(() => clients.id, { onDelete: 'cascade' }),
-  passwordHash: text('password_hash').notNull(),
+  // Vide pour un espace créé avec Google, tant que le client n'a pas choisi de mot de passe
+  passwordHash: text('password_hash'),
+  // Identifiant du client chez Google (champ « sub »), pour le reconnaître même s'il change d'adresse e-mail
+  googleSub: text('google_sub').unique(),
   createdAt: ts('created_at').notNull().defaultNow(),
   lastLoginAt: ts('last_login_at'),
   passwordChangedAt: ts('password_changed_at'),

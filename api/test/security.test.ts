@@ -43,6 +43,11 @@ const PUBLIC = [
   'POST /api/espace/nouveau-mot-de-passe',
   'POST /api/espace/activation',
   'GET /api/espace/session',
+  // Connexion avec Google : redirections et dernière étape de l'inscription, protégées par l'état signé d'un cookie de 10 minutes
+  'GET /api/espace/google/debut',
+  'GET /api/espace/google/retour',
+  'GET /api/espace/google/en-attente',
+  'POST /api/espace/google/inscription',
 ]
 const UUID = '00000000-0000-4000-8000-000000000000'
 // Notifications signées d'un prestataire extérieur : pas de navigateur, donc pas d'en-tête Origin (voir le test dédié plus bas)

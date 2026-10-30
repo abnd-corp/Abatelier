@@ -218,6 +218,13 @@
       "when": 1793202765213,
       "tag": "0030_minor_skin",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793351338130,
+      "tag": "0031_connexion_google",
+      "breakpoints": true
     }
   ]
 }

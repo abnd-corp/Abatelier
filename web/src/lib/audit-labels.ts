@@ -348,7 +348,13 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
     case 'order.refused':
       return { text: `A refusé la commande ${d.numero} et remboursé ${eur(d.montant)} au client : ${d.motif}${d.avoir ? ` (avoir ${d.avoir})` : ''}`, tone: 'bad' }
     case 'espace.registered':
-      return { text: `Espace client créé : ${d.nom}`, tone: 'accent' }
+      return { text: `Espace client créé${d.via === 'google' ? ' avec Google' : ''} : ${d.nom}`, tone: 'accent' }
+    case 'espace.google_linked':
+      return { text: 'Compte Google rattaché à l’espace d’un client (même adresse e-mail)', tone: 'accent' }
+    case 'espace.google_activated':
+      return { text: 'Espace client ouvert avec Google sur une fiche créée par l’atelier', tone: 'accent' }
+    case 'espace.google_failed':
+      return { text: 'Échec d’une connexion avec Google à l’espace client', tone: 'bad' }
     case 'espace.password_reset_requested':
       return { text: 'Lien de réinitialisation du mot de passe envoyé à un client', tone: 'neutral' }
     case 'espace.password_reset':
@@ -360,7 +366,7 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
     case 'espace.profile_updated':
       return { text: `Un client a modifié ses informations (${(d.champs ?? []).join(', ')})`, tone: 'neutral' }
     case 'espace.login':
-      return { text: 'Connexion d’un client à son espace', tone: 'neutral' }
+      return { text: `Connexion d’un client à son espace${d.via === 'google' ? ' avec Google' : ''}`, tone: 'neutral' }
     case 'espace.login_failed':
       return { text: 'Échec de connexion à un espace client', tone: 'bad' }
     case 'espace.logout':

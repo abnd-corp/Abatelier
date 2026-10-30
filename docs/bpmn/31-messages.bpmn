@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P31_messages_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P31_messages_collab">
+    <bpmn:participant id="P31_messages_pool" name="Messages envoyés aux clients" processRef="P31_messages" />
+  </bpmn:collaboration>
+  <bpmn:process id="P31_messages" name="Messages envoyés aux clients" isExecutable="false">
+    <bpmn:documentation>Les e-mails automatiques envoyés aux clients, qui ne se connectent pas souvent à leur espace : à quel moment, avec quelles règles. Jamais de publicité, jamais de document joint, jamais de mot de passe. La direction, elle, est notifiée dans la plateforme (voir « Notifications de la direction »).</bpmn:documentation>
+    <bpmn:laneSet id="P31_messages_voies">
+      <bpmn:lane id="P31_messages_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P31_messages_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P31_messages_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P31_messages_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P31_messages_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P31_messages_t4</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P31_messages_voie_client" name="Visiteur / Client">
+        <bpmn:flowNodeRef>P31_messages_t5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P31_messages_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P31_messages_d" name="Un événement concerne un client"><bpmn:outgoing>P31_messages_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="P31_messages_t1" name="Bienvenue, activation de l’espace, mot de passe oublié, mot de passe modifié"><bpmn:documentation>Dans l’application : Liens à usage unique ; message de sécurité à chaque changement de mot de passe</bpmn:documentation><bpmn:incoming>P31_messages_flux1</bpmn:incoming><bpmn:outgoing>P31_messages_flux2</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P31_messages_t2" name="Commande confirmée, commande refusée et remboursée"><bpmn:documentation>Dans l’application : Récapitulatif, date estimée, bouton vers l’espace client</bpmn:documentation><bpmn:incoming>P31_messages_flux2</bpmn:incoming><bpmn:outgoing>P31_messages_flux3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P31_messages_t3" name="Devis, facture ou avoir disponible dans l’espace client"><bpmn:documentation>Dans l’application : Aucune pièce jointe ; texte modifiable</bpmn:documentation><bpmn:incoming>P31_messages_flux3</bpmn:incoming><bpmn:outgoing>P31_messages_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P31_messages_t4" name="Commande prête, accusé de réception d’une demande de contact"><bpmn:documentation>Pas encore : Pas encore envoyés au client</bpmn:documentation><bpmn:incoming>P31_messages_flux4</bpmn:incoming><bpmn:outgoing>P31_messages_flux5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P31_messages_t5" name="Lire le message (rappel de sécurité et lien vers son espace)"><bpmn:documentation>Dans l’application : Version mise en page et version texte</bpmn:documentation><bpmn:incoming>P31_messages_flux5</bpmn:incoming><bpmn:outgoing>P31_messages_flux6</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P31_messages_f" name="Client informé, sans publicité"><bpmn:incoming>P31_messages_flux6</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P31_messages_flux1" sourceRef="P31_messages_d" targetRef="P31_messages_t1" />
+    <bpmn:sequenceFlow id="P31_messages_flux2" sourceRef="P31_messages_t1" targetRef="P31_messages_t2" />
+    <bpmn:sequenceFlow id="P31_messages_flux3" sourceRef="P31_messages_t2" targetRef="P31_messages_t3" />
+    <bpmn:sequenceFlow id="P31_messages_flux4" sourceRef="P31_messages_t3" targetRef="P31_messages_t4" />
+    <bpmn:sequenceFlow id="P31_messages_flux5" sourceRef="P31_messages_t4" targetRef="P31_messages_t5" />
+    <bpmn:sequenceFlow id="P31_messages_flux6" sourceRef="P31_messages_t5" targetRef="P31_messages_f" />
+    <bpmn:textAnnotation id="P31_messages_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P31_messages_diagram">
+    <bpmndi:BPMNPlane id="P31_messages_plane" bpmnElement="P31_messages_collab">
+      <bpmndi:BPMNShape id="P31_messages_pool_di" bpmnElement="P31_messages_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1440" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P31_messages_voie_systeme_di" bpmnElement="P31_messages_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1410" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P31_messages_voie_client_di" bpmnElement="P31_messages_voie_client" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1410" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P31_messages_d_di" bpmnElement="P31_messages_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P31_messages_t1_di" bpmnElement="P31_messages_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P31_messages_t2_di" bpmnElement="P31_messages_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="520" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P31_messages_t3_di" bpmnElement="P31_messages_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="710" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P31_messages_t4_di" bpmnElement="P31_messages_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="900" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P31_messages_t5_di" bpmnElement="P31_messages_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1090" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P31_messages_f_di" bpmnElement="P31_messages_f">
+        <dc:Bounds x="1337" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P31_messages_flux1_di" bpmnElement="P31_messages_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P31_messages_flux2_di" bpmnElement="P31_messages_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="520" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P31_messages_flux3_di" bpmnElement="P31_messages_flux3">
+        <di:waypoint x="670" y="100" />
+        <di:waypoint x="710" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P31_messages_flux4_di" bpmnElement="P31_messages_flux4">
+        <di:waypoint x="860" y="100" />
+        <di:waypoint x="900" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P31_messages_flux5_di" bpmnElement="P31_messages_flux5">
+        <di:waypoint x="1050" y="100" />
+        <di:waypoint x="1065" y="100" />
+        <di:waypoint x="1065" y="220" />
+        <di:waypoint x="1090" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P31_messages_flux6_di" bpmnElement="P31_messages_flux6">
+        <di:waypoint x="1240" y="220" />
+        <di:waypoint x="1337" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P31_messages_legende_di" bpmnElement="P31_messages_legende">
+        <dc:Bounds x="70" y="300" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

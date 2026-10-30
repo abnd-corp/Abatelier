@@ -30,6 +30,8 @@ services:
       MAIL_ALERT_TO: ${MAIL_ALERT_TO:-direction@aps.test}
       # Faux paiement en ligne pour essayer la boutique. Pour essayer Stripe en mode test : PAYMENT_PROVIDER=stripe dans .env (voir docs/stripe-test.md)
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-simulation}
+      # Faux Google pour essayer la connexion de l'espace client. Pour le vrai : GOOGLE_OAUTH_PROVIDER=google, GOOGLE_OAUTH_CLIENT_ID dans .env et le secret dans secrets/google_oauth_client_secret.txt (voir docs/connexion-google.md)
+      GOOGLE_OAUTH_PROVIDER: ${GOOGLE_OAUTH_PROVIDER:-simulation}
     volumes:
       - ./api/src:/app/src:ro
       - ./api/drizzle:/app/drizzle:ro
