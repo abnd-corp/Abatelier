@@ -13,41 +13,47 @@
         <bpmn:flowNodeRef>P12_plan_atelier_t5</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P12_plan_atelier_t6</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P12_plan_atelier_f</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_plan_atelier_gs1</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="P12_plan_atelier_voie_systeme" name="Application (automatique)">
         <bpmn:flowNodeRef>P12_plan_atelier_t2</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P12_plan_atelier_t3</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P12_plan_atelier_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P12_plan_atelier_gj2</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
     <bpmn:startEvent id="P12_plan_atelier_d" name="La direction veut voir l’atelier d’un coup d’œil"><bpmn:outgoing>P12_plan_atelier_flux1</bpmn:outgoing></bpmn:startEvent>
-    <bpmn:userTask id="P12_plan_atelier_t1" name="Ouvrir le plan dans le menu de l’atelier"><bpmn:documentation>Pas encore : Page réservée à la direction (nouvelle permission) ; lisible sur téléphone et tablette</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux1</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux2</bpmn:outgoing><bpmn:outgoing>P12_plan_atelier_flux7</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="P12_plan_atelier_t2" name="Placer chaque commande dans son lieu : à lancer, sur une machine, prête, à retirer"><bpmn:documentation>Pas encore : Lecture des commandes réelles ; le nom du client n’apparaît pas</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux2</bpmn:incoming><bpmn:incoming>P12_plan_atelier_flux8</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux3</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P12_plan_atelier_t3" name="Montrer le stock sur les racks et signaler les références sous leur seuil"><bpmn:documentation>Pas encore : Lecture du stock réel et des seuils déjà réglés</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux3</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux4</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P12_plan_atelier_t4" name="Montrer les arrivages : le camion de feuilles sur le parking pendant la réception"><bpmn:documentation>Pas encore : Lit les réceptions en cours</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux4</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux5</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:userTask id="P12_plan_atelier_t5" name="Cliquer une commande ou un rack pour ouvrir sa page"><bpmn:documentation>Pas encore : Mène à la commande, ou à la référence de feuille</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux5</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux6</bpmn:outgoing></bpmn:userTask>
-    <bpmn:userTask id="P12_plan_atelier_t6" name="Placer les machines, les racks et les pièces sur le plan (une fois)"><bpmn:documentation>Pas encore : Dépend de la liste des machines et du plan fourni par le client</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux7</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux8</bpmn:outgoing></bpmn:userTask>
-    <bpmn:endEvent id="P12_plan_atelier_f" name="Atelier compris en un coup d’œil"><bpmn:incoming>P12_plan_atelier_flux6</bpmn:incoming></bpmn:endEvent>
+    <bpmn:userTask id="P12_plan_atelier_t1" name="Ouvrir le plan dans le menu de l’atelier"><bpmn:documentation>Pas encore : Page réservée à la direction (nouvelle permission) ; lisible sur téléphone et tablette</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux1</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux7</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P12_plan_atelier_t2" name="Placer chaque commande dans son lieu : à lancer, sur une machine, prête, à retirer"><bpmn:documentation>Pas encore : Lecture des commandes réelles ; le nom du client n’apparaît pas</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux10</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux2</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P12_plan_atelier_t3" name="Montrer le stock sur les racks et signaler les références sous leur seuil"><bpmn:documentation>Pas encore : Lecture du stock réel et des seuils déjà réglés</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux2</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P12_plan_atelier_t4" name="Montrer les arrivages : le camion de feuilles sur le parking pendant la réception"><bpmn:documentation>Pas encore : Lit les réceptions en cours</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux3</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P12_plan_atelier_t5" name="Cliquer une commande ou un rack pour ouvrir sa page"><bpmn:documentation>Pas encore : Mène à la commande, ou à la référence de feuille</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux4</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux5</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P12_plan_atelier_t6" name="Placer les machines, les racks et les pièces sur le plan (une fois)"><bpmn:documentation>Pas encore : Dépend de la liste des machines et du plan fourni par le client</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux9</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux6</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P12_plan_atelier_f" name="Atelier compris en un coup d’œil"><bpmn:incoming>P12_plan_atelier_flux5</bpmn:incoming></bpmn:endEvent>
+    <bpmn:exclusiveGateway id="P12_plan_atelier_gs1" name=""><bpmn:incoming>P12_plan_atelier_flux7</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux8</bpmn:outgoing><bpmn:outgoing>P12_plan_atelier_flux9</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="P12_plan_atelier_gj2" name=""><bpmn:incoming>P12_plan_atelier_flux6</bpmn:incoming><bpmn:incoming>P12_plan_atelier_flux8</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux10</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="P12_plan_atelier_flux1" sourceRef="P12_plan_atelier_d" targetRef="P12_plan_atelier_t1" />
-    <bpmn:sequenceFlow id="P12_plan_atelier_flux2" sourceRef="P12_plan_atelier_t1" targetRef="P12_plan_atelier_t2" />
-    <bpmn:sequenceFlow id="P12_plan_atelier_flux3" sourceRef="P12_plan_atelier_t2" targetRef="P12_plan_atelier_t3" />
-    <bpmn:sequenceFlow id="P12_plan_atelier_flux4" sourceRef="P12_plan_atelier_t3" targetRef="P12_plan_atelier_t4" />
-    <bpmn:sequenceFlow id="P12_plan_atelier_flux5" sourceRef="P12_plan_atelier_t4" targetRef="P12_plan_atelier_t5" />
-    <bpmn:sequenceFlow id="P12_plan_atelier_flux6" sourceRef="P12_plan_atelier_t5" targetRef="P12_plan_atelier_f" />
-    <bpmn:sequenceFlow id="P12_plan_atelier_flux7" name="Première fois" sourceRef="P12_plan_atelier_t1" targetRef="P12_plan_atelier_t6" />
-    <bpmn:sequenceFlow id="P12_plan_atelier_flux8" sourceRef="P12_plan_atelier_t6" targetRef="P12_plan_atelier_t2" />
+    <bpmn:sequenceFlow id="P12_plan_atelier_flux2" sourceRef="P12_plan_atelier_t2" targetRef="P12_plan_atelier_t3" />
+    <bpmn:sequenceFlow id="P12_plan_atelier_flux3" sourceRef="P12_plan_atelier_t3" targetRef="P12_plan_atelier_t4" />
+    <bpmn:sequenceFlow id="P12_plan_atelier_flux4" sourceRef="P12_plan_atelier_t4" targetRef="P12_plan_atelier_t5" />
+    <bpmn:sequenceFlow id="P12_plan_atelier_flux5" sourceRef="P12_plan_atelier_t5" targetRef="P12_plan_atelier_f" />
+    <bpmn:sequenceFlow id="P12_plan_atelier_flux6" sourceRef="P12_plan_atelier_t6" targetRef="P12_plan_atelier_gj2" />
+    <bpmn:sequenceFlow id="P12_plan_atelier_flux7" sourceRef="P12_plan_atelier_t1" targetRef="P12_plan_atelier_gs1" />
+    <bpmn:sequenceFlow id="P12_plan_atelier_flux8" name="Sinon" sourceRef="P12_plan_atelier_gs1" targetRef="P12_plan_atelier_gj2" />
+    <bpmn:sequenceFlow id="P12_plan_atelier_flux9" name="Première fois" sourceRef="P12_plan_atelier_gs1" targetRef="P12_plan_atelier_t6" />
+    <bpmn:sequenceFlow id="P12_plan_atelier_flux10" sourceRef="P12_plan_atelier_gj2" targetRef="P12_plan_atelier_t2" />
     <bpmn:textAnnotation id="P12_plan_atelier_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="P12_plan_atelier_diagram">
     <bpmndi:BPMNPlane id="P12_plan_atelier_plane" bpmnElement="P12_plan_atelier_collab">
       <bpmndi:BPMNShape id="P12_plan_atelier_pool_di" bpmnElement="P12_plan_atelier_pool" isHorizontal="true">
-        <dc:Bounds x="40" y="40" width="1630" height="360" />
+        <dc:Bounds x="40" y="40" width="2010" height="360" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P12_plan_atelier_voie_direction_di" bpmnElement="P12_plan_atelier_voie_direction" isHorizontal="true">
-        <dc:Bounds x="70" y="40" width="1600" height="240" />
+        <dc:Bounds x="70" y="40" width="1980" height="240" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P12_plan_atelier_voie_systeme_di" bpmnElement="P12_plan_atelier_voie_systeme" isHorizontal="true">
-        <dc:Bounds x="70" y="280" width="1600" height="120" />
+        <dc:Bounds x="70" y="280" width="1980" height="120" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P12_plan_atelier_d_di" bpmnElement="P12_plan_atelier_d">
         <dc:Bounds x="197" y="82" width="36" height="36" />
@@ -56,62 +62,82 @@
         <dc:Bounds x="330" y="60" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P12_plan_atelier_t2_di" bpmnElement="P12_plan_atelier_t2" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
-        <dc:Bounds x="520" y="300" width="150" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P12_plan_atelier_t3_di" bpmnElement="P12_plan_atelier_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
-        <dc:Bounds x="710" y="300" width="150" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P12_plan_atelier_t4_di" bpmnElement="P12_plan_atelier_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
         <dc:Bounds x="900" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_plan_atelier_t3_di" bpmnElement="P12_plan_atelier_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1090" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_plan_atelier_t4_di" bpmnElement="P12_plan_atelier_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1280" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P12_plan_atelier_t5_di" bpmnElement="P12_plan_atelier_t5" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
-        <dc:Bounds x="1090" y="60" width="150" height="80" />
+        <dc:Bounds x="1470" y="60" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P12_plan_atelier_t6_di" bpmnElement="P12_plan_atelier_t6" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
-        <dc:Bounds x="1280" y="180" width="150" height="80" />
+        <dc:Bounds x="1660" y="180" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P12_plan_atelier_f_di" bpmnElement="P12_plan_atelier_f">
-        <dc:Bounds x="1527" y="82" width="36" height="36" />
+        <dc:Bounds x="1907" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_plan_atelier_gs1_di" bpmnElement="P12_plan_atelier_gs1" isMarkerVisible="true">
+        <dc:Bounds x="570" y="75" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="490" y="43" width="110" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P12_plan_atelier_gj2_di" bpmnElement="P12_plan_atelier_gj2" isMarkerVisible="true">
+        <dc:Bounds x="760" y="315" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="680" y="283" width="110" height="30" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P12_plan_atelier_flux1_di" bpmnElement="P12_plan_atelier_flux1">
         <di:waypoint x="233" y="100" />
         <di:waypoint x="330" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P12_plan_atelier_flux2_di" bpmnElement="P12_plan_atelier_flux2">
-        <di:waypoint x="480" y="100" />
-        <di:waypoint x="495" y="100" />
-        <di:waypoint x="495" y="340" />
-        <di:waypoint x="520" y="340" />
+        <di:waypoint x="1050" y="340" />
+        <di:waypoint x="1090" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P12_plan_atelier_flux3_di" bpmnElement="P12_plan_atelier_flux3">
-        <di:waypoint x="670" y="340" />
-        <di:waypoint x="710" y="340" />
+        <di:waypoint x="1240" y="340" />
+        <di:waypoint x="1280" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P12_plan_atelier_flux4_di" bpmnElement="P12_plan_atelier_flux4">
-        <di:waypoint x="860" y="340" />
-        <di:waypoint x="900" y="340" />
+        <di:waypoint x="1430" y="340" />
+        <di:waypoint x="1445" y="340" />
+        <di:waypoint x="1445" y="100" />
+        <di:waypoint x="1470" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P12_plan_atelier_flux5_di" bpmnElement="P12_plan_atelier_flux5">
-        <di:waypoint x="1050" y="340" />
-        <di:waypoint x="1065" y="340" />
-        <di:waypoint x="1065" y="100" />
-        <di:waypoint x="1090" y="100" />
+        <di:waypoint x="1620" y="100" />
+        <di:waypoint x="1907" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P12_plan_atelier_flux6_di" bpmnElement="P12_plan_atelier_flux6">
-        <di:waypoint x="1240" y="100" />
-        <di:waypoint x="1527" y="100" />
+        <di:waypoint x="1735" y="260" />
+        <di:waypoint x="1735" y="293" />
+        <di:waypoint x="785" y="293" />
+        <di:waypoint x="785" y="315" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P12_plan_atelier_flux7_di" bpmnElement="P12_plan_atelier_flux7">
         <di:waypoint x="480" y="100" />
-        <di:waypoint x="1255" y="100" />
-        <di:waypoint x="1255" y="220" />
-        <di:waypoint x="1280" y="220" />
+        <di:waypoint x="570" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P12_plan_atelier_flux8_di" bpmnElement="P12_plan_atelier_flux8">
-        <di:waypoint x="1355" y="260" />
-        <di:waypoint x="1355" y="278" />
-        <di:waypoint x="595" y="278" />
-        <di:waypoint x="595" y="300" />
+        <di:waypoint x="620" y="100" />
+        <di:waypoint x="735" y="100" />
+        <di:waypoint x="735" y="340" />
+        <di:waypoint x="760" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_plan_atelier_flux9_di" bpmnElement="P12_plan_atelier_flux9">
+        <di:waypoint x="620" y="100" />
+        <di:waypoint x="1635" y="100" />
+        <di:waypoint x="1635" y="220" />
+        <di:waypoint x="1660" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P12_plan_atelier_flux10_di" bpmnElement="P12_plan_atelier_flux10">
+        <di:waypoint x="810" y="340" />
+        <di:waypoint x="900" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="P12_plan_atelier_legende_di" bpmnElement="P12_plan_atelier_legende">
         <dc:Bounds x="70" y="420" width="760" height="30" />

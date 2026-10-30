@@ -19,6 +19,8 @@
         <bpmn:flowNodeRef>P18_reception_t8</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P18_reception_f</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P18_reception_f2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P18_reception_gj1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P18_reception_gj2</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="P18_reception_voie_systeme" name="Application (automatique)">
         <bpmn:flowNodeRef>P18_reception_g1</bpmn:flowNodeRef>
@@ -32,10 +34,10 @@
     <bpmn:startEvent id="P18_reception_d" name="Un camion de feuilles arrive"><bpmn:outgoing>P18_reception_flux1</bpmn:outgoing></bpmn:startEvent>
     <bpmn:userTask id="P18_reception_t0" name="Ouvrir la commande fournisseur attendue"><bpmn:documentation>Pas encore : Reprend aussi une réception laissée en attente</bpmn:documentation><bpmn:incoming>P18_reception_flux1</bpmn:incoming><bpmn:outgoing>P18_reception_flux2</bpmn:outgoing></bpmn:userTask>
     <bpmn:manualTask id="P18_reception_t1" name="Décharger et contrôler la livraison"><bpmn:documentation>Hors application : Contrôle sur place</bpmn:documentation><bpmn:incoming>P18_reception_flux2</bpmn:incoming><bpmn:outgoing>P18_reception_flux3</bpmn:outgoing></bpmn:manualTask>
-    <bpmn:userTask id="P18_reception_t2" name="Scanner le code-barres d’une feuille (caméra du téléphone) ou le saisir"><bpmn:documentation>Dans l’application : Atelier › Réception ; la caméra demande une connexion sécurisée (HTTPS)</bpmn:documentation><bpmn:incoming>P18_reception_flux3</bpmn:incoming><bpmn:incoming>P18_reception_flux12</bpmn:incoming><bpmn:outgoing>P18_reception_flux4</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P18_reception_t2" name="Scanner le code-barres d’une feuille (caméra du téléphone) ou le saisir"><bpmn:documentation>Dans l’application : Atelier › Réception ; la caméra demande une connexion sécurisée (HTTPS)</bpmn:documentation><bpmn:incoming>P18_reception_flux19</bpmn:incoming><bpmn:outgoing>P18_reception_flux4</bpmn:outgoing></bpmn:userTask>
     <bpmn:exclusiveGateway id="P18_reception_g1" name="Code reconnu ?"><bpmn:incoming>P18_reception_flux4</bpmn:incoming><bpmn:outgoing>P18_reception_flux5</bpmn:outgoing><bpmn:outgoing>P18_reception_flux6</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:userTask id="P18_reception_t3" name="Associer le code à une référence ou en créer une"><bpmn:documentation>Dans l’application : Le code est reconnu aux réceptions suivantes</bpmn:documentation><bpmn:incoming>P18_reception_flux6</bpmn:incoming><bpmn:outgoing>P18_reception_flux7</bpmn:outgoing></bpmn:userTask>
-    <bpmn:userTask id="P18_reception_t4" name="Indiquer le nombre de feuilles reçues et une note (bon de livraison)"><bpmn:documentation>Dans l’application : Un code = une feuille ; on scanne une fois et on indique la quantité</bpmn:documentation><bpmn:incoming>P18_reception_flux5</bpmn:incoming><bpmn:incoming>P18_reception_flux7</bpmn:incoming><bpmn:outgoing>P18_reception_flux8</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P18_reception_t4" name="Indiquer le nombre de feuilles reçues et une note (bon de livraison)"><bpmn:documentation>Dans l’application : Un code = une feuille ; on scanne une fois et on indique la quantité</bpmn:documentation><bpmn:incoming>P18_reception_flux20</bpmn:incoming><bpmn:outgoing>P18_reception_flux8</bpmn:outgoing></bpmn:userTask>
     <bpmn:serviceTask id="P18_reception_t5" name="Augmenter le stock et tracer l’entrée (qui, quand, quelle note)"><bpmn:documentation>Dans l’application : Dernières réceptions affichées à côté</bpmn:documentation><bpmn:incoming>P18_reception_flux8</bpmn:incoming><bpmn:outgoing>P18_reception_flux9</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="P18_reception_t5b" name="Comparer à la commande : ce qui reste à recevoir"><bpmn:documentation>Pas encore : Dépend de « Commande de feuilles au fournisseur »</bpmn:documentation><bpmn:incoming>P18_reception_flux9</bpmn:incoming><bpmn:outgoing>P18_reception_flux10</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:exclusiveGateway id="P18_reception_g2" name="Autre feuille à scanner ?"><bpmn:incoming>P18_reception_flux10</bpmn:incoming><bpmn:outgoing>P18_reception_flux11</bpmn:outgoing><bpmn:outgoing>P18_reception_flux13</bpmn:outgoing></bpmn:exclusiveGateway>
@@ -46,36 +48,40 @@
     <bpmn:userTask id="P18_reception_t8" name="Suspendre la réception, la reprendre au camion suivant"><bpmn:documentation>Pas encore : Livraison en plusieurs camions : on sort de la réception sans perdre ce qui est scanné</bpmn:documentation><bpmn:incoming>P18_reception_flux17</bpmn:incoming><bpmn:outgoing>P18_reception_flux18</bpmn:outgoing></bpmn:userTask>
     <bpmn:endEvent id="P18_reception_f" name="Livraison enregistrée"><bpmn:incoming>P18_reception_flux16</bpmn:incoming></bpmn:endEvent>
     <bpmn:endEvent id="P18_reception_f2" name="Réception en attente du prochain camion"><bpmn:incoming>P18_reception_flux18</bpmn:incoming></bpmn:endEvent>
+    <bpmn:exclusiveGateway id="P18_reception_gj1" name=""><bpmn:incoming>P18_reception_flux3</bpmn:incoming><bpmn:incoming>P18_reception_flux12</bpmn:incoming><bpmn:outgoing>P18_reception_flux19</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="P18_reception_gj2" name=""><bpmn:incoming>P18_reception_flux5</bpmn:incoming><bpmn:incoming>P18_reception_flux7</bpmn:incoming><bpmn:outgoing>P18_reception_flux20</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="P18_reception_flux1" sourceRef="P18_reception_d" targetRef="P18_reception_t0" />
     <bpmn:sequenceFlow id="P18_reception_flux2" sourceRef="P18_reception_t0" targetRef="P18_reception_t1" />
-    <bpmn:sequenceFlow id="P18_reception_flux3" sourceRef="P18_reception_t1" targetRef="P18_reception_t2" />
+    <bpmn:sequenceFlow id="P18_reception_flux3" sourceRef="P18_reception_t1" targetRef="P18_reception_gj1" />
     <bpmn:sequenceFlow id="P18_reception_flux4" sourceRef="P18_reception_t2" targetRef="P18_reception_g1" />
-    <bpmn:sequenceFlow id="P18_reception_flux5" name="Oui" sourceRef="P18_reception_g1" targetRef="P18_reception_t4" />
+    <bpmn:sequenceFlow id="P18_reception_flux5" name="Oui" sourceRef="P18_reception_g1" targetRef="P18_reception_gj2" />
     <bpmn:sequenceFlow id="P18_reception_flux6" name="Non" sourceRef="P18_reception_g1" targetRef="P18_reception_t3" />
-    <bpmn:sequenceFlow id="P18_reception_flux7" sourceRef="P18_reception_t3" targetRef="P18_reception_t4" />
+    <bpmn:sequenceFlow id="P18_reception_flux7" sourceRef="P18_reception_t3" targetRef="P18_reception_gj2" />
     <bpmn:sequenceFlow id="P18_reception_flux8" sourceRef="P18_reception_t4" targetRef="P18_reception_t5" />
     <bpmn:sequenceFlow id="P18_reception_flux9" sourceRef="P18_reception_t5" targetRef="P18_reception_t5b" />
     <bpmn:sequenceFlow id="P18_reception_flux10" sourceRef="P18_reception_t5b" targetRef="P18_reception_g2" />
     <bpmn:sequenceFlow id="P18_reception_flux11" name="Oui" sourceRef="P18_reception_g2" targetRef="P18_reception_t6" />
-    <bpmn:sequenceFlow id="P18_reception_flux12" sourceRef="P18_reception_t6" targetRef="P18_reception_t2" />
+    <bpmn:sequenceFlow id="P18_reception_flux12" sourceRef="P18_reception_t6" targetRef="P18_reception_gj1" />
     <bpmn:sequenceFlow id="P18_reception_flux13" name="Non" sourceRef="P18_reception_g2" targetRef="P18_reception_g3" />
     <bpmn:sequenceFlow id="P18_reception_flux14" name="Oui" sourceRef="P18_reception_g3" targetRef="P18_reception_t10" />
     <bpmn:sequenceFlow id="P18_reception_flux15" name="Non" sourceRef="P18_reception_g3" targetRef="P18_reception_t9" />
     <bpmn:sequenceFlow id="P18_reception_flux16" sourceRef="P18_reception_t10" targetRef="P18_reception_f" />
     <bpmn:sequenceFlow id="P18_reception_flux17" sourceRef="P18_reception_t9" targetRef="P18_reception_t8" />
     <bpmn:sequenceFlow id="P18_reception_flux18" sourceRef="P18_reception_t8" targetRef="P18_reception_f2" />
+    <bpmn:sequenceFlow id="P18_reception_flux19" sourceRef="P18_reception_gj1" targetRef="P18_reception_t2" />
+    <bpmn:sequenceFlow id="P18_reception_flux20" sourceRef="P18_reception_gj2" targetRef="P18_reception_t4" />
     <bpmn:textAnnotation id="P18_reception_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="P18_reception_diagram">
     <bpmndi:BPMNPlane id="P18_reception_plane" bpmnElement="P18_reception_collab">
       <bpmndi:BPMNShape id="P18_reception_pool_di" bpmnElement="P18_reception_pool" isHorizontal="true">
-        <dc:Bounds x="40" y="40" width="2580" height="480" />
+        <dc:Bounds x="40" y="40" width="2960" height="480" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_voie_atelier_di" bpmnElement="P18_reception_voie_atelier" isHorizontal="true">
-        <dc:Bounds x="70" y="40" width="2550" height="240" />
+        <dc:Bounds x="70" y="40" width="2930" height="240" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_voie_systeme_di" bpmnElement="P18_reception_voie_systeme" isHorizontal="true">
-        <dc:Bounds x="70" y="280" width="2550" height="240" />
+        <dc:Bounds x="70" y="280" width="2930" height="240" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_d_di" bpmnElement="P18_reception_d">
         <dc:Bounds x="197" y="82" width="36" height="36" />
@@ -87,55 +93,67 @@
         <dc:Bounds x="520" y="60" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t2_di" bpmnElement="P18_reception_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="710" y="60" width="150" height="80" />
+        <dc:Bounds x="900" y="60" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_g1_di" bpmnElement="P18_reception_g1" isMarkerVisible="true">
-        <dc:Bounds x="950" y="315" width="50" height="50" />
+        <dc:Bounds x="1140" y="315" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="870" y="283" width="110" height="30" />
+          <dc:Bounds x="1060" y="283" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t3_di" bpmnElement="P18_reception_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1090" y="180" width="150" height="80" />
+        <dc:Bounds x="1470" y="180" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t4_di" bpmnElement="P18_reception_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1090" y="60" width="150" height="80" />
+        <dc:Bounds x="1470" y="60" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t5_di" bpmnElement="P18_reception_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1280" y="300" width="150" height="80" />
+        <dc:Bounds x="1660" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t5b_di" bpmnElement="P18_reception_t5b" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
-        <dc:Bounds x="1470" y="300" width="150" height="80" />
+        <dc:Bounds x="1850" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_g2_di" bpmnElement="P18_reception_g2" isMarkerVisible="true">
-        <dc:Bounds x="1710" y="75" width="50" height="50" />
+        <dc:Bounds x="2090" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1630" y="43" width="110" height="30" />
+          <dc:Bounds x="2010" y="43" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t6_di" bpmnElement="P18_reception_t6" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1660" y="180" width="150" height="80" />
+        <dc:Bounds x="2040" y="180" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_g3_di" bpmnElement="P18_reception_g3" isMarkerVisible="true">
-        <dc:Bounds x="1900" y="315" width="50" height="50" />
+        <dc:Bounds x="2280" y="315" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1820" y="283" width="110" height="30" />
+          <dc:Bounds x="2200" y="283" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t10_di" bpmnElement="P18_reception_t10" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
-        <dc:Bounds x="2040" y="300" width="150" height="80" />
+        <dc:Bounds x="2420" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t9_di" bpmnElement="P18_reception_t9" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
-        <dc:Bounds x="2040" y="420" width="150" height="80" />
+        <dc:Bounds x="2420" y="420" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t8_di" bpmnElement="P18_reception_t8" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
-        <dc:Bounds x="2230" y="180" width="150" height="80" />
+        <dc:Bounds x="2610" y="180" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_f_di" bpmnElement="P18_reception_f">
-        <dc:Bounds x="2287" y="82" width="36" height="36" />
+        <dc:Bounds x="2667" y="82" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_f2_di" bpmnElement="P18_reception_f2">
-        <dc:Bounds x="2477" y="202" width="36" height="36" />
+        <dc:Bounds x="2857" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P18_reception_gj1_di" bpmnElement="P18_reception_gj1" isMarkerVisible="true">
+        <dc:Bounds x="760" y="75" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="680" y="43" width="110" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P18_reception_gj2_di" bpmnElement="P18_reception_gj2" isMarkerVisible="true">
+        <dc:Bounds x="1330" y="75" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1250" y="43" width="110" height="30" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P18_reception_flux1_di" bpmnElement="P18_reception_flux1">
         <di:waypoint x="233" y="100" />
@@ -147,91 +165,99 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux3_di" bpmnElement="P18_reception_flux3">
         <di:waypoint x="670" y="100" />
-        <di:waypoint x="710" y="100" />
+        <di:waypoint x="760" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux4_di" bpmnElement="P18_reception_flux4">
-        <di:waypoint x="860" y="100" />
-        <di:waypoint x="925" y="100" />
-        <di:waypoint x="925" y="340" />
-        <di:waypoint x="950" y="340" />
+        <di:waypoint x="1050" y="100" />
+        <di:waypoint x="1115" y="100" />
+        <di:waypoint x="1115" y="340" />
+        <di:waypoint x="1140" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux5_di" bpmnElement="P18_reception_flux5">
-        <di:waypoint x="1000" y="340" />
-        <di:waypoint x="1065" y="340" />
-        <di:waypoint x="1065" y="100" />
-        <di:waypoint x="1090" y="100" />
+        <di:waypoint x="1190" y="340" />
+        <di:waypoint x="1305" y="340" />
+        <di:waypoint x="1305" y="100" />
+        <di:waypoint x="1330" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux6_di" bpmnElement="P18_reception_flux6">
-        <di:waypoint x="1000" y="340" />
-        <di:waypoint x="1065" y="340" />
-        <di:waypoint x="1065" y="220" />
-        <di:waypoint x="1090" y="220" />
+        <di:waypoint x="1190" y="340" />
+        <di:waypoint x="1445" y="340" />
+        <di:waypoint x="1445" y="220" />
+        <di:waypoint x="1470" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux7_di" bpmnElement="P18_reception_flux7">
-        <di:waypoint x="1165" y="180" />
-        <di:waypoint x="1165" y="162" />
-        <di:waypoint x="1165" y="162" />
-        <di:waypoint x="1165" y="140" />
+        <di:waypoint x="1545" y="180" />
+        <di:waypoint x="1545" y="147" />
+        <di:waypoint x="1355" y="147" />
+        <di:waypoint x="1355" y="125" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux8_di" bpmnElement="P18_reception_flux8">
-        <di:waypoint x="1240" y="100" />
-        <di:waypoint x="1255" y="100" />
-        <di:waypoint x="1255" y="340" />
-        <di:waypoint x="1280" y="340" />
+        <di:waypoint x="1620" y="100" />
+        <di:waypoint x="1635" y="100" />
+        <di:waypoint x="1635" y="340" />
+        <di:waypoint x="1660" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux9_di" bpmnElement="P18_reception_flux9">
-        <di:waypoint x="1430" y="340" />
-        <di:waypoint x="1470" y="340" />
+        <di:waypoint x="1810" y="340" />
+        <di:waypoint x="1850" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux10_di" bpmnElement="P18_reception_flux10">
-        <di:waypoint x="1620" y="340" />
-        <di:waypoint x="1685" y="340" />
-        <di:waypoint x="1685" y="100" />
-        <di:waypoint x="1710" y="100" />
+        <di:waypoint x="2000" y="340" />
+        <di:waypoint x="2065" y="340" />
+        <di:waypoint x="2065" y="100" />
+        <di:waypoint x="2090" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux11_di" bpmnElement="P18_reception_flux11">
-        <di:waypoint x="1735" y="125" />
-        <di:waypoint x="1735" y="158" />
-        <di:waypoint x="1735" y="158" />
-        <di:waypoint x="1735" y="180" />
+        <di:waypoint x="2115" y="125" />
+        <di:waypoint x="2115" y="158" />
+        <di:waypoint x="2115" y="158" />
+        <di:waypoint x="2115" y="180" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux12_di" bpmnElement="P18_reception_flux12">
-        <di:waypoint x="1735" y="180" />
-        <di:waypoint x="1735" y="162" />
-        <di:waypoint x="785" y="162" />
-        <di:waypoint x="785" y="140" />
+        <di:waypoint x="2115" y="180" />
+        <di:waypoint x="2115" y="147" />
+        <di:waypoint x="785" y="147" />
+        <di:waypoint x="785" y="125" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux13_di" bpmnElement="P18_reception_flux13">
-        <di:waypoint x="1760" y="100" />
-        <di:waypoint x="1875" y="100" />
-        <di:waypoint x="1875" y="340" />
-        <di:waypoint x="1900" y="340" />
+        <di:waypoint x="2140" y="100" />
+        <di:waypoint x="2255" y="100" />
+        <di:waypoint x="2255" y="340" />
+        <di:waypoint x="2280" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux14_di" bpmnElement="P18_reception_flux14">
-        <di:waypoint x="1950" y="340" />
-        <di:waypoint x="2040" y="340" />
+        <di:waypoint x="2330" y="340" />
+        <di:waypoint x="2420" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux15_di" bpmnElement="P18_reception_flux15">
-        <di:waypoint x="1950" y="340" />
-        <di:waypoint x="2015" y="340" />
-        <di:waypoint x="2015" y="460" />
-        <di:waypoint x="2040" y="460" />
+        <di:waypoint x="2330" y="340" />
+        <di:waypoint x="2395" y="340" />
+        <di:waypoint x="2395" y="460" />
+        <di:waypoint x="2420" y="460" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux16_di" bpmnElement="P18_reception_flux16">
-        <di:waypoint x="2190" y="340" />
-        <di:waypoint x="2262" y="340" />
-        <di:waypoint x="2262" y="100" />
-        <di:waypoint x="2287" y="100" />
+        <di:waypoint x="2570" y="340" />
+        <di:waypoint x="2642" y="340" />
+        <di:waypoint x="2642" y="100" />
+        <di:waypoint x="2667" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux17_di" bpmnElement="P18_reception_flux17">
-        <di:waypoint x="2190" y="460" />
-        <di:waypoint x="2205" y="460" />
-        <di:waypoint x="2205" y="220" />
-        <di:waypoint x="2230" y="220" />
+        <di:waypoint x="2570" y="460" />
+        <di:waypoint x="2585" y="460" />
+        <di:waypoint x="2585" y="220" />
+        <di:waypoint x="2610" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux18_di" bpmnElement="P18_reception_flux18">
-        <di:waypoint x="2380" y="220" />
-        <di:waypoint x="2477" y="220" />
+        <di:waypoint x="2760" y="220" />
+        <di:waypoint x="2857" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P18_reception_flux19_di" bpmnElement="P18_reception_flux19">
+        <di:waypoint x="810" y="100" />
+        <di:waypoint x="900" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P18_reception_flux20_di" bpmnElement="P18_reception_flux20">
+        <di:waypoint x="1380" y="100" />
+        <di:waypoint x="1470" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="P18_reception_legende_di" bpmnElement="P18_reception_legende">
         <dc:Bounds x="70" y="540" width="760" height="30" />

@@ -1,8 +1,64 @@
 // Génère docs/bpmn/*.bpmn et docs/bpmn/couverture.md à partir de processus.mjs.
 //   node scripts/bpmn/generer.mjs
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { GROUPES, PROCESSUS, VOIES } from './processus.mjs'
+import { GROUPES, PROCESSUS as PROCESSUS_SOURCE, VOIES } from './processus.mjs'
 
+/**
+ * Mise en conformité BPMN : les schémas sont écrits avec des flux simples, et les passerelles que la norme demande sont ajoutées ici.
+ *  - une étape qui reçoit plusieurs flux est précédée d'une passerelle de fusion (exclusive) ;
+ *  - une étape qui en envoie plusieurs est suivie d'une passerelle de décision (exclusive si un flux porte un libellé, sinon parallèle).
+ * Les colonnes suivantes sont décalées d'un cran pour faire de la place.
+ */
+function normaliser(p) {
+  const noeuds = p.noeuds.map((n) => [...n])
+  let flux = p.flux.map((f) => [...f])
+  const type = (id) => noeuds.find((n) => n[0] === id)[1]
+  const decaler = (colonne) => noeuds.forEach((n) => n[3] >= colonne && (n[3] += 1))
+  let k = 0
+  // Décisions : une étape (ni passerelle ni début) qui a plusieurs sorties
+  for (const n of [...noeuds]) {
+    const sorties = flux.filter((f) => f[0] === n[0])
+    if (sorties.length < 2 || genre(n[1]) === 'gateway') continue
+    const id = `gs${++k}`
+    const exclusive = sorties.some((f) => f[2])
+    decaler(n[3] + 1)
+    noeuds.push([id, exclusive ? 'choix' : 'parallele', n[2], n[3] + 1, n[4], ''])
+    flux = flux.filter((f) => f[0] !== n[0])
+    flux.push([n[0], id])
+    for (const f of sorties) flux.push([id, f[1], exclusive ? f[2] || 'Sinon' : f[2]].filter((x) => x !== undefined))
+  }
+  // Fusions : une étape (ni passerelle ni début) qui reçoit plusieurs flux
+  const typeDe = (id) => noeuds.find((x) => x[0] === id)[1]
+  // La première passerelle rencontrée en remontant : si tous les flux entrants en viennent, c'est elle qui décide du type de fusion
+  const origine = (id) => {
+    let courant = id
+    for (let i = 0; i < noeuds.length; i++) {
+      if (genre(typeDe(courant)) === 'gateway') return courant
+      const prev = flux.find((f) => f[1] === courant)
+      if (!prev) return null
+      courant = prev[0]
+    }
+    return null
+  }
+  for (const n of [...noeuds]) {
+    const entrees = flux.filter((f) => f[1] === n[0])
+    if (entrees.length < 2 || genre(n[1]) === 'gateway') continue
+    const id = `gj${++k}`
+    const origines = new Set(entrees.map((f) => origine(f[0])))
+    const parallele = origines.size === 1 && [...origines][0] !== null && typeDe([...origines][0]) === 'parallele'
+    const colonne = n[3]
+    decaler(colonne)
+    noeuds.push([id, parallele ? 'parallele' : 'choix', n[2], colonne, n[4], ''])
+    flux = flux.map((f) => (f[1] === n[0] ? [f[0], id, ...f.slice(2)] : f))
+    flux.push([id, n[0]])
+  }
+  // Garde-fou : après la mise en conformité, seule une passerelle a plusieurs entrées ou plusieurs sorties
+  for (const n of noeuds) {
+    if (genre(n[1]) === 'gateway') continue
+    if (flux.filter((f) => f[1] === n[0]).length > 1 || flux.filter((f) => f[0] === n[0]).length > 1) throw new Error(`${p.id} : « ${n[0]} » a plusieurs flux sans passerelle`)
+  }
+  return { ...p, noeuds, flux }
+}
 const SORTIE = new URL('../../docs/bpmn/', import.meta.url)
 mkdirSync(SORTIE, { recursive: true })
 // Les fichiers sont renumérotés à chaque génération : on retire les anciens pour qu'aucun schéma périmé ne reste
@@ -14,14 +70,16 @@ const COUVERTURE = {
   manque: { libelle: 'Pas encore', fill: '#f9d3cf', stroke: '#c62828' },
   hors: { libelle: 'Hors application', fill: '#e8e8e8', stroke: '#616161' },
 }
-const TYPES = { saisie: 'userTask', auto: 'serviceTask', manuel: 'manualTask', debut: 'startEvent', fin: 'endEvent', choix: 'exclusiveGateway' }
+const TYPES = { saisie: 'userTask', auto: 'serviceTask', manuel: 'manualTask', debut: 'startEvent', fin: 'endEvent', choix: 'exclusiveGateway', parallele: 'parallelGateway' }
 const TAILLE = { task: [150, 80], event: [36, 36], gateway: [50, 50] }
 const LARGEUR_COL = 190
 const HAUTEUR_LIGNE = 120
 const X0 = 70 // bord gauche des voies
 const ENTETE = 30 // largeur du titre vertical d'une voie
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-const genre = (type) => (type === 'debut' || type === 'fin' ? 'event' : type === 'choix' ? 'gateway' : 'task')
+const genre = (type) => (type === 'debut' || type === 'fin' ? 'event' : type === 'choix' || type === 'parallele' ? 'gateway' : 'task')
+
+const PROCESSUS = PROCESSUS_SOURCE.map(normaliser)
 
 function dispose(p) {
   const lignesParVoie = Object.fromEntries(p.voies.map((v) => [v, 1 + Math.max(0, ...p.noeuds.filter((n) => n[2] === v).map((n) => n[4]))]))

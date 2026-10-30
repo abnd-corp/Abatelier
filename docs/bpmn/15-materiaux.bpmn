@@ -15,6 +15,7 @@
         <bpmn:flowNodeRef>P15_materiaux_g1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P15_materiaux_t2</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P15_materiaux_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P15_materiaux_gj1</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="P15_materiaux_voie_atelier" name="Atelier">
         <bpmn:flowNodeRef>P15_materiaux_f</bpmn:flowNodeRef>
@@ -24,29 +25,31 @@
     <bpmn:userTask id="P15_materiaux_t1" name="Saisir la matière, l’épaisseur, le coloris, le format et le code-barres"><bpmn:documentation>Dans l’application : Direction › Matériaux (champs libres, suggestions du catalogue)</bpmn:documentation><bpmn:incoming>P15_materiaux_flux1</bpmn:incoming><bpmn:outgoing>P15_materiaux_flux2</bpmn:outgoing></bpmn:userTask>
     <bpmn:exclusiveGateway id="P15_materiaux_g1" name="Matière ou coloris absent du catalogue ?"><bpmn:incoming>P15_materiaux_flux2</bpmn:incoming><bpmn:outgoing>P15_materiaux_flux3</bpmn:outgoing><bpmn:outgoing>P15_materiaux_flux4</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:serviceTask id="P15_materiaux_t2" name="Les créer au catalogue, inactifs et à prix zéro"><bpmn:documentation>Dans l’application : Jamais vendables à zéro euro : la direction les complète dans Tarifs et catalogue</bpmn:documentation><bpmn:incoming>P15_materiaux_flux3</bpmn:incoming><bpmn:outgoing>P15_materiaux_flux5</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P15_materiaux_t3" name="Créer la référence à zéro en stock, avec son code"><bpmn:documentation>Dans l’application : Un code désigne une référence ; un code déjà pris est refusé</bpmn:documentation><bpmn:incoming>P15_materiaux_flux4</bpmn:incoming><bpmn:incoming>P15_materiaux_flux5</bpmn:incoming><bpmn:outgoing>P15_materiaux_flux6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P15_materiaux_t3" name="Créer la référence à zéro en stock, avec son code"><bpmn:documentation>Dans l’application : Un code désigne une référence ; un code déjà pris est refusé</bpmn:documentation><bpmn:incoming>P15_materiaux_flux7</bpmn:incoming><bpmn:outgoing>P15_materiaux_flux6</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:endEvent id="P15_materiaux_f" name="Référence prête pour la réception"><bpmn:incoming>P15_materiaux_flux6</bpmn:incoming></bpmn:endEvent>
+    <bpmn:exclusiveGateway id="P15_materiaux_gj1" name=""><bpmn:incoming>P15_materiaux_flux4</bpmn:incoming><bpmn:incoming>P15_materiaux_flux5</bpmn:incoming><bpmn:outgoing>P15_materiaux_flux7</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="P15_materiaux_flux1" sourceRef="P15_materiaux_d" targetRef="P15_materiaux_t1" />
     <bpmn:sequenceFlow id="P15_materiaux_flux2" sourceRef="P15_materiaux_t1" targetRef="P15_materiaux_g1" />
     <bpmn:sequenceFlow id="P15_materiaux_flux3" name="Oui" sourceRef="P15_materiaux_g1" targetRef="P15_materiaux_t2" />
-    <bpmn:sequenceFlow id="P15_materiaux_flux4" name="Non" sourceRef="P15_materiaux_g1" targetRef="P15_materiaux_t3" />
-    <bpmn:sequenceFlow id="P15_materiaux_flux5" sourceRef="P15_materiaux_t2" targetRef="P15_materiaux_t3" />
+    <bpmn:sequenceFlow id="P15_materiaux_flux4" name="Non" sourceRef="P15_materiaux_g1" targetRef="P15_materiaux_gj1" />
+    <bpmn:sequenceFlow id="P15_materiaux_flux5" sourceRef="P15_materiaux_t2" targetRef="P15_materiaux_gj1" />
     <bpmn:sequenceFlow id="P15_materiaux_flux6" sourceRef="P15_materiaux_t3" targetRef="P15_materiaux_f" />
+    <bpmn:sequenceFlow id="P15_materiaux_flux7" sourceRef="P15_materiaux_gj1" targetRef="P15_materiaux_t3" />
     <bpmn:textAnnotation id="P15_materiaux_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="P15_materiaux_diagram">
     <bpmndi:BPMNPlane id="P15_materiaux_plane" bpmnElement="P15_materiaux_collab">
       <bpmndi:BPMNShape id="P15_materiaux_pool_di" bpmnElement="P15_materiaux_pool" isHorizontal="true">
-        <dc:Bounds x="40" y="40" width="1250" height="480" />
+        <dc:Bounds x="40" y="40" width="1440" height="480" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P15_materiaux_voie_direction_di" bpmnElement="P15_materiaux_voie_direction" isHorizontal="true">
-        <dc:Bounds x="70" y="40" width="1220" height="120" />
+        <dc:Bounds x="70" y="40" width="1410" height="120" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P15_materiaux_voie_systeme_di" bpmnElement="P15_materiaux_voie_systeme" isHorizontal="true">
-        <dc:Bounds x="70" y="160" width="1220" height="240" />
+        <dc:Bounds x="70" y="160" width="1410" height="240" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P15_materiaux_voie_atelier_di" bpmnElement="P15_materiaux_voie_atelier" isHorizontal="true">
-        <dc:Bounds x="70" y="400" width="1220" height="120" />
+        <dc:Bounds x="70" y="400" width="1410" height="120" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P15_materiaux_d_di" bpmnElement="P15_materiaux_d">
         <dc:Bounds x="197" y="82" width="36" height="36" />
@@ -64,10 +67,16 @@
         <dc:Bounds x="710" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P15_materiaux_t3_di" bpmnElement="P15_materiaux_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="900" y="180" width="150" height="80" />
+        <dc:Bounds x="1090" y="180" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P15_materiaux_f_di" bpmnElement="P15_materiaux_f">
-        <dc:Bounds x="1147" y="442" width="36" height="36" />
+        <dc:Bounds x="1337" y="442" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P15_materiaux_gj1_di" bpmnElement="P15_materiaux_gj1" isMarkerVisible="true">
+        <dc:Bounds x="950" y="195" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="870" y="163" width="110" height="30" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P15_materiaux_flux1_di" bpmnElement="P15_materiaux_flux1">
         <di:waypoint x="233" y="100" />
@@ -87,19 +96,23 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P15_materiaux_flux4_di" bpmnElement="P15_materiaux_flux4">
         <di:waypoint x="620" y="220" />
-        <di:waypoint x="900" y="220" />
+        <di:waypoint x="950" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P15_materiaux_flux5_di" bpmnElement="P15_materiaux_flux5">
         <di:waypoint x="860" y="340" />
-        <di:waypoint x="875" y="340" />
-        <di:waypoint x="875" y="220" />
-        <di:waypoint x="900" y="220" />
+        <di:waypoint x="925" y="340" />
+        <di:waypoint x="925" y="220" />
+        <di:waypoint x="950" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P15_materiaux_flux6_di" bpmnElement="P15_materiaux_flux6">
-        <di:waypoint x="1050" y="220" />
-        <di:waypoint x="1122" y="220" />
-        <di:waypoint x="1122" y="460" />
-        <di:waypoint x="1147" y="460" />
+        <di:waypoint x="1240" y="220" />
+        <di:waypoint x="1312" y="220" />
+        <di:waypoint x="1312" y="460" />
+        <di:waypoint x="1337" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P15_materiaux_flux7_di" bpmnElement="P15_materiaux_flux7">
+        <di:waypoint x="1000" y="220" />
+        <di:waypoint x="1090" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="P15_materiaux_legende_di" bpmnElement="P15_materiaux_legende">
         <dc:Bounds x="70" y="540" width="760" height="30" />
