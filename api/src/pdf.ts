@@ -171,7 +171,7 @@ export async function renderDocument(company: Company, template: Template, logo:
     margin: PAGE.m,
     bufferPages: true,
     info: {
-      Title: clean(data.estimation ? 'Estimation' : `${TITRES[data.type]} ${data.numero}`),
+      Title: clean(data.estimation ? TITRES[data.type] : `${TITRES[data.type]} ${data.numero}`),
       Author: clean(company.raisonSociale),
       ...(facturx ? { Creator: 'Abatelier', Producer: 'Abatelier', CreationDate: data.date } : {}),
     },
@@ -220,7 +220,7 @@ export async function renderDocument(company: Company, template: Template, logo:
   const colX = 330
   const colW = RIGHT - colX
   doc.font(F.b).fontSize(24).fillColor(accent)
-  text((data.estimation ? 'Estimation' : TITRES[data.type]).toUpperCase(), colX, 44, { width: colW, align: 'right', characterSpacing: 1 })
+  text(TITRES[data.type].toUpperCase(), colX, 44, { width: colW, align: 'right', characterSpacing: 1 })
   doc.font(F.b).fontSize(11).fillColor(INK)
   if (!data.estimation) text(`N° ${data.numero}`, colX, doc.y + 2, { width: colW, align: 'right' })
   doc.font(F.r).fontSize(9.5)
