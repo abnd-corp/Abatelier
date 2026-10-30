@@ -187,7 +187,7 @@ export async function publicRoutes(app: FastifyInstance) {
     return { lignes: p.lines, totals: p.totals, distanceKm: p.distanceKm }
   })
 
-  // Estimation à télécharger sans compte : mêmes lignes qu'un devis, mais ni numéro ni valeur de devis, et rien n'est enregistré.
+  // Devis à télécharger sans compte : mêmes lignes qu'un devis numéroté, mais ni numéro ni valeur de devis, et rien n'est enregistré.
   // Le devis numéroté, qui fait foi, est dans l'espace client.
   app.post('/configurateur/estimation.pdf', { config: { rateLimit: { max: env.QUOTE_RATE_LIMIT, timeWindow: '1 minute' } } }, async (req, reply) => {
     const parsed = configBody.safeParse(req.body)
@@ -213,12 +213,12 @@ export async function publicRoutes(app: FastifyInstance) {
       numero: '',
       estimation: true,
       date: new Date(),
-      client: { nom: 'Estimation sans compte', adresse: 'Pour obtenir un devis numéroté, créez votre espace client sur notre site.' },
+      client: { nom: 'Visiteur sans compte', adresse: 'Pour obtenir un devis numéroté, créez votre espace client sur notre site.' },
       lignes,
       tva: p.totals.tauxTva,
       totaux: { ht: p.totals.ht, tva: p.totals.tva, ttc: p.totals.ttc },
     })
-    return reply.header('Content-Type', 'application/pdf').header('Content-Disposition', 'attachment; filename="estimation.pdf"').header('X-Content-Type-Options', 'nosniff').send(pdf)
+    return reply.header('Content-Type', 'application/pdf').header('Content-Disposition', 'attachment; filename="devis.pdf"').header('X-Content-Type-Options', 'nosniff').send(pdf)
   })
 
   // --- Boutique : produits en ligne, et chiffrage du panier, sans compte ---

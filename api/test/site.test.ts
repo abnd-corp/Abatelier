@@ -4,7 +4,7 @@ import { db } from '../src/db/index.js'
 import { auditLog, billingDocuments, colors, contactRequests, materials, orders, siteContent } from '../src/db/schema.js'
 import { env } from '../src/env.js'
 import { resetReviewsCache } from '../src/google-reviews.js'
-import { buildApp, client, createUser, loginAs, M, makePng, resetDb, seedModels, type App, type Client } from './helpers.js'
+import { buildApp, client, createUser, loginAs, M, makePng, pdfText, resetDb, seedModels, type App, type Client } from './helpers.js'
 import { deleteOldContactRequests } from '../src/contact-retention.js'
 import { setTransport, type Transport } from '../src/mail.js'
 
@@ -454,6 +454,11 @@ describe('Configurateur public', () => {
     expect(res.headers['content-type']).toBe('application/pdf')
     expect(res.headers['set-cookie']).toBeUndefined()
     expect(res.rawPayload.subarray(0, 5).toString()).toBe('%PDF-')
+    expect(res.headers['content-disposition']).toContain('devis.pdf')
+    // Le document s'intitule « Devis », pas « Estimation »
+    const texte = pdfText(res.rawPayload)
+    expect(texte).toMatch(/DEVIS/)
+    expect(texte).not.toMatch(/ESTIMATION|Estimation/)
     expect(await db.select().from(orders)).toHaveLength(0)
     expect(await db.select().from(billingDocuments)).toHaveLength(0)
     // Les erreurs de saisie sont les mêmes que pour le chiffrage
