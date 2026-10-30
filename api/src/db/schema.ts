@@ -899,3 +899,19 @@ export const closures = pgTable(
   },
   (t) => [check('closures_dates_check', sql`${t.fin} >= ${t.debut}`)],
 )
+
+// Suivi de la fabrication, case par case : une ligne par étape cochée d'une commande (clé = étape + ligne ou feuille).
+// « count » : pièces faites (bandes découpées, pièces pliées) ou 1 quand l'étape est faite. On garde qui et quand.
+export const productionChecks = pgTable(
+  'production_checks',
+  {
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    cle: text('cle').notNull(),
+    count: integer('count').notNull().default(0),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.orderId, t.cle] }), check('production_checks_count', sql`${t.count} >= 0`)],
+)

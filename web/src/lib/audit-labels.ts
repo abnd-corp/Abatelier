@@ -238,6 +238,8 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A annulé la prise en charge de la commande ${d.numero}${d.avant ? ` par ${d.avant}` : ''}`, tone: 'neutral' }
     case 'order.sheet_printed':
       return { text: `A imprimé la fiche de fabrication de la commande ${d.numero}`, tone: 'neutral' }
+    case 'order.sheet_stock_confirmed':
+      return { text: `A mis à jour le stock de feuilles à la fabrication de la commande ${d.numero}`, tone: 'neutral' }
     case 'billing.devis_created':
       return {
         text: `${d.origine === 'espace' ? 'Devis' : 'A émis le devis'} ${d.numero} pour ${d.client} (commande ${d.commande}, ${eur(d.ttc)} TTC)${d.origine === 'espace' ? ', remis dans l’espace client' : ''}`,

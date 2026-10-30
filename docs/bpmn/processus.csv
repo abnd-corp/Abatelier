@@ -7,7 +7,7 @@
 "6";"Vente et clients";"Commande payée en ligne (sur mesure ou boutique)";"11";"8";"2";"1";"0";"";"";"";"";"=K7*L7/60";"";"=M7*N7*52";"82";"=O7*P7/100";"";""
 "7";"Vente et clients";"Commande saisie par la direction pour un client";"9";"5";"2";"2";"0";"";"";"";"";"=K8*L8/60";"";"=M8*N8*52";"67";"=O8*P8/100";"";""
 "8";"Vente et clients";"Refus d’une commande payée et remboursement";"7";"5";"1";"0";"1";"";"";"";"";"=K9*L9/60";"";"=M9*N9*52";"92";"=O9*P9/100";"";""
-"9";"Production";"Fabrication à l’atelier";"11";"6";"0";"3";"2";"";"";"";"";"=K10*L10/60";"";"=M10*N10*52";"67";"=O10*P10/100";"";""
+"9";"Production";"Fabrication à l’atelier";"11";"8";"0";"1";"2";"";"";"";"";"=K10*L10/60";"";"=M10*N10*52";"89";"=O10*P10/100";"";""
 "10";"Production";"Écran d’affichage de l’atelier";"6";"0";"0";"5";"1";"";"";"";"";"=K11*L11/60";"";"=M11*N11*52";"0";"=O11*P11/100";"";""
 "11";"Production";"Plan visuel de l’atelier dans l’application";"6";"0";"0";"6";"0";"";"";"";"";"=K12*L12/60";"";"=M12*N12*52";"0";"=O12*P12/100";"";""
 "12";"Production";"Livraison et retrait";"8";"1";"1";"5";"1";"";"";"";"";"=K13*L13/60";"";"=M13*N13*52";"21";"=O13*P13/100";"";""

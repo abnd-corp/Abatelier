@@ -163,6 +163,10 @@ test.describe('Responsive @responsive', () => {
     await adminPage.goto(`/fabrication/${id}`)
     await expect(adminPage.getByRole('heading', { level: 1 })).toBeInViewport()
     expect(await noHorizontalScroll(adminPage)).toBe(true)
+    // La fiche à cocher, avec ses vignettes de pliage et ses compteurs, tient aussi sur téléphone
+    await adminPage.goto(`/fabrication/${id}/suivi`)
+    await expect(adminPage.getByRole('heading', { level: 2, name: 'Feuille 1 sur 1' })).toBeVisible()
+    expect(await noHorizontalScroll(adminPage)).toBe(true)
   })
 
   test('devis et facture : fiche lisible, pas de défilement horizontal', async ({ adminPage, baseURL, uid }) => {

@@ -8,6 +8,7 @@ import type { SheetAdvice } from './cutting.js'
 // Jamais de client ni de prix : les données reçues n'en contiennent pas.
 
 export interface SheetLine {
+  id?: string
   repere: string | null
   modeleLabel: string
   // Orientation du dessin (direction du premier segment, en degrés)

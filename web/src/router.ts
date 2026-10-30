@@ -313,6 +313,12 @@ export const router = createRouter({
           meta: { perm: 'orders.production', section: 'Atelier', parent: productionParent, title: 'Fiche de fabrication', menu: 'production' },
         },
         {
+          path: 'fabrication/:id/suivi',
+          name: 'production-suivi',
+          component: () => import('@/views/ProductionSuiviView.vue'),
+          meta: { perm: 'orders.production', section: 'Atelier', parent: productionParent, title: 'Suivi pas à pas', menu: 'production' },
+        },
+        {
           path: 'catalogue',
           name: 'catalog',
           component: () => import('@/views/CatalogView.vue'),

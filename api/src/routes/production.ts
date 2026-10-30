@@ -3,12 +3,15 @@ import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { clients, colors, materials, ORDER_STATUTS, orderEvents, orderLines, orders, sheetStock, users } from '../db/schema.js'
+import { clients, colors, materials, ORDER_STATUTS, orderEvents, orderLines, orders, productionChecks, sheetMovements, sheetStock, users } from '../db/schema.js'
 import { clientName } from './clients.js'
 import { requirePerm } from '../auth/plugin.js'
 import { changeStatus, eventsOf, NEXT, PRODUCTION_STATUTS, PRODUCTION_STEPS, STATUT_LABELS } from '../orders.js'
 import { getCompany, getTemplate } from '../documents.js'
 import { renderProductionSheet } from '../production-sheet.js'
+import { buildPlan, checkable } from '../production-plan.js'
+import { libelle as sheetLabel } from './stock.js'
+import { invalid } from '../validation.js'
 import { audit } from '../audit.js'
 import { adviseSheets, type SheetOption } from '../cutting.js'
 import { colorLabel, materialLabel } from '../quote.js'
@@ -16,6 +19,12 @@ import { colorLabel, materialLabel } from '../quote.js'
 // Vue de l'atelier : les commandes à fabriquer. Le client n'y figure que par son nom (c'est plus parlant qu'un numéro entre collègues) :
 // jamais son adresse, son téléphone ni son e-mail, et aucun prix.
 const nomClient = (c: Parameters<typeof clientName>[0]) => clientName(c) || 'Client'
+
+const checkBody = z.object({
+  cle: z.string({ error: 'Étape inconnue.' }).min(1, 'Étape inconnue.').max(300, 'Étape inconnue.'),
+  count: z.number({ error: 'Nombre attendu.' }).int('Nombre entier attendu.').min(0, 'Ne peut pas être négatif.').max(100000, 'Nombre trop grand.'),
+})
+const stockBody = z.object({ groupe: z.uuid('Feuille inconnue.') })
 
 const statusBody = z.object({ statut: z.enum(ORDER_STATUTS, { error: 'Étape inconnue.' }) })
 
@@ -203,6 +212,133 @@ export async function productionRoutes(app: FastifyInstance) {
     const o = await findOrder((req.params as { id: string }).id, reply)
     if (!o) return
     return { lignes: await sheetAdvice(o.id) }
+  })
+
+  // Le travail rangé feuille par feuille, avec ce qui est déjà coché : la version de la fiche que l'on suit à l'écran
+  const planOf = async (orderId: string) => {
+    const [lignes, conseils] = await Promise.all([linesOf(orderId), sheetAdvice(orderId)])
+    return buildPlan(lignes.map((l, i) => ({ ...l, decoupe: conseils[i]?.conseils[0] ?? null })))
+  }
+
+  app.get('/:id/suivi', async (req, reply) => {
+    const o = await findOrder((req.params as { id: string }).id, reply)
+    if (!o) return
+    const [plan, rows] = await Promise.all([
+      planOf(o.id),
+      db
+        .select({ cle: productionChecks.cle, count: productionChecks.count, par: users.nom, le: productionChecks.updatedAt })
+        .from(productionChecks)
+        .leftJoin(users, eq(users.id, productionChecks.userId))
+        .where(eq(productionChecks.orderId, o.id)),
+    ])
+    return { plan, checks: Object.fromEntries(rows.map((r) => [r.cle, { count: r.count, par: r.par, le: r.le }])), modifiable: o.statut !== 'prete' }
+  })
+
+  // Cocher (ou décocher) une étape : la clé doit exister dans le plan de la commande, et le nombre ne dépasse pas ce qu'il y a à faire
+  app.put('/:id/suivi', async (req, reply) => {
+    const o = await findOrder((req.params as { id: string }).id, reply)
+    if (!o) return
+    const parsed = checkBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    if (o.statut === 'prete') return reply.code(409).send({ error: 'Cette commande est déjà prête : le suivi ne se modifie plus.' })
+    const max = checkable(await planOf(o.id)).get(parsed.data.cle)
+    if (max === undefined) return reply.code(400).send({ error: 'Cette étape n’existe pas sur cette commande.', field: 'cle' })
+    if (parsed.data.count > max) return reply.code(400).send({ error: `Pas plus de ${max} ici.`, field: 'count' })
+    const now = new Date()
+    await db
+      .insert(productionChecks)
+      .values({ orderId: o.id, cle: parsed.data.cle, count: parsed.data.count, userId: req.user!.id, updatedAt: now })
+      .onConflictDoUpdate({ target: [productionChecks.orderId, productionChecks.cle], set: { count: parsed.data.count, userId: req.user!.id, updatedAt: now } })
+    return { cle: parsed.data.cle, count: parsed.data.count, par: req.user!.nom, le: now }
+  })
+
+  // Fin d'une feuille : sortir du stock les feuilles utilisées et y entrer les chutes à garder. Une seule fois, et seulement quand toutes les découpes sont faites.
+  app.post('/:id/suivi/stock', { preHandler: requirePerm('stock.manage') }, async (req, reply) => {
+    const o = await findOrder((req.params as { id: string }).id, reply)
+    if (!o) return
+    const parsed = stockBody.safeParse(req.body)
+    if (!parsed.success) return invalid(reply, parsed.error)
+    if (o.statut === 'prete') return reply.code(409).send({ error: 'Cette commande est déjà prête : le suivi ne se modifie plus.' })
+    const plan = await planOf(o.id)
+    const g = plan.groupes.find((x) => x.id === parsed.data.groupe)
+    if (!g) return reply.code(404).send({ error: 'Feuille introuvable sur cette commande.' })
+    if (!g.feuilles.length) return reply.code(409).send({ error: 'Aucune feuille du stock n’est conseillée ici : corrigez le stock à la main dans « Stock de feuilles ».' })
+    const checks = await db.select().from(productionChecks).where(eq(productionChecks.orderId, o.id))
+    const fait = (cle: string) => checks.find((c) => c.cle === cle)?.count ?? 0
+    if (fait(g.stockCle)) return reply.code(409).send({ error: 'Le stock de cette feuille est déjà à jour.' })
+    const incomplet = g.decoupes.find((d) => fait(d.cle) < d.quantite)
+    if (incomplet) return reply.code(409).send({ error: `Terminez d’abord les découpes (${incomplet.titre}).` })
+
+    const note = `Commande ${o.numero}`
+    const sorties: string[] = []
+    const entrees: string[] = []
+    // Une erreur au milieu annule tout : jamais une feuille sortie sans que la suivante le soit
+    class StockError extends Error {}
+    const erreur = await db
+      .transaction(async (tx) => {
+        for (const f of g.feuilles) {
+          const [src] = await tx
+            .select({ s: sheetStock, matiere: materials.nom, epaisseur: materials.epaisseur, coloris: colors.nom, reference: colors.reference })
+            .from(sheetStock)
+            .innerJoin(materials, eq(materials.id, sheetStock.materialId))
+            .leftJoin(colors, eq(colors.id, sheetStock.colorId))
+            .where(eq(sheetStock.id, f.sheetId))
+          if (!src) throw new StockError('Une feuille conseillée n’existe plus dans le stock : actualisez la page.')
+          const [u] = await tx
+            .update(sheetStock)
+            .set({ quantite: sql`${sheetStock.quantite} - ${f.nombre}`, updatedAt: new Date() })
+            .where(and(eq(sheetStock.id, src.s.id), sql`${sheetStock.quantite} - ${f.nombre} >= 0`))
+            .returning({ quantite: sheetStock.quantite })
+          const nom = sheetLabel({ ...src, ...src.s, matiere: src.matiere })
+          if (!u) throw new StockError(`Il n’y a plus assez de feuilles en stock (${nom}) : corrigez le stock dans « Stock de feuilles ».`)
+          await tx.insert(sheetMovements).values({ sheetId: src.s.id, libelle: nom, delta: -f.nombre, apres: u.quantite, motif: 'fabrication', note, userId: req.user!.id })
+          sorties.push(`${f.nombre} × ${nom}`)
+          // Les chutes gardées de cette feuille entrent au stock, à la même matière et au même coloris
+          if (f.sheetId !== g.feuilles[0]!.sheetId) continue
+          for (const c of g.chutes?.garder ?? []) {
+            const largeur = Math.min(c.largeur, c.longueur)
+            const longueur = Math.max(c.largeur, c.longueur)
+            const [ex] = await tx
+              .select({ id: sheetStock.id })
+              .from(sheetStock)
+              .where(
+                and(
+                  eq(sheetStock.materialId, src.s.materialId),
+                  src.s.colorId ? eq(sheetStock.colorId, src.s.colorId) : isNull(sheetStock.colorId),
+                  eq(sheetStock.largeur, largeur),
+                  eq(sheetStock.longueur, longueur),
+                  eq(sheetStock.chute, true),
+                ),
+              )
+            let id = ex?.id
+            if (!id)
+              [{ id }] = (await tx
+                .insert(sheetStock)
+                .values({ materialId: src.s.materialId, colorId: src.s.colorId, largeur, longueur, chute: true, quantite: 0 })
+                .returning({ id: sheetStock.id })) as [{ id: string }]
+            const [e] = await tx
+              .update(sheetStock)
+              .set({ quantite: sql`${sheetStock.quantite} + ${c.nombre}`, archivedAt: null, updatedAt: new Date() })
+              .where(eq(sheetStock.id, id!))
+              .returning({ quantite: sheetStock.quantite })
+            const nomChute = sheetLabel({ ...src, matiere: src.matiere, largeur, longueur, chute: true })
+            await tx.insert(sheetMovements).values({ sheetId: id!, libelle: nomChute, delta: c.nombre, apres: e!.quantite, motif: 'chute', note, userId: req.user!.id })
+            entrees.push(`${c.nombre} × ${nomChute}`)
+          }
+        }
+        await tx
+          .insert(productionChecks)
+          .values({ orderId: o.id, cle: g.stockCle, count: 1, userId: req.user!.id })
+          .onConflictDoUpdate({ target: [productionChecks.orderId, productionChecks.cle], set: { count: 1, userId: req.user!.id, updatedAt: new Date() } })
+        return null
+      })
+      .catch((e) => {
+        if (e instanceof StockError) return e.message
+        throw e
+      })
+    if (erreur) return reply.code(409).send({ error: erreur })
+    await audit(req, 'order.sheet_stock_confirmed', { targetType: 'order', targetId: o.id, details: { numero: o.numero, sorties, chutes: entrees } })
+    return { sorties, chutes: entrees }
   })
 
   // Fiche imprimable : ouverte dans un nouvel onglet, le navigateur l'imprime

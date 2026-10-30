@@ -9,13 +9,13 @@ export const GROUPES = {
     sources: [/^api\/src\/(auth\/|routes\/(auth|users)\.ts)/, /^web\/src\/views\/(Login|Account|Users)View/, /^web\/src\/stores\//],
   },
   commandes: {
-    tests: ['orders', 'pliage', 'suivi-fabrication', 'plan-atelier', 'ecran-atelier', 'clients', 'modeles'],
+    tests: ['orders', 'pliage', 'suivi-fabrication', 'fiche-interactive', 'plan-atelier', 'ecran-atelier', 'clients', 'modeles'],
     sources: [
-      /^api\/src\/(quote|profile|geo|production-sheet)\.ts/,
+      /^api\/src\/(quote|profile|geo|production-sheet|production-plan)\.ts/,
       /^api\/src\/routes\/(orders|production|plan|ecran|clients|delivery)\.ts/,
       /^web\/src\/views\/(Order|Production|PlanAtelier|EcranAtelier|Client)/,
-      /^web\/src\/components\/PlanAtelier/,
-      /^web\/src\/lib\/(orders|piece3d|plan-atelier)/,
+      /^web\/src\/components\/(PlanAtelier|orders)/,
+      /^web\/src\/lib\/(orders|production|piece3d|plan-atelier)/,
     ],
   },
   catalogue: {

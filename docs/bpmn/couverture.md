@@ -6,9 +6,9 @@ Les 36 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 
 | Couverture | Étapes | Part |
 |---|---|---|
-| Dans l’application | 117 | 48 % |
+| Dans l’application | 119 | 48 % |
 | En partie | 19 | 8 % |
-| Pas encore | 97 | 39 % |
+| Pas encore | 95 | 39 % |
 | Hors application | 13 | 5 % |
 | **Total** | **246** | |
 
@@ -33,8 +33,6 @@ Les 36 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Commande saisie par la direction pour un client** : Annuler la commande toute seule (motif : devis refusé par le client) (pas encore) : Même règle que « Devis depuis l’espace client »
 - **Commande saisie par la direction pour un client** : Notifier la direction dans la plateforme : devis refusé (en partie) : Avec un lien vers la commande, pour information. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme
 - **Refus d’une commande payée et remboursement** : Rembourser la carte du client (en partie) : Vérifié avec le mode test de Stripe
-- **Fabrication à l’atelier** : Décompter les feuilles utilisées du stock (pas encore) : Aujourd’hui saisi à la main dans Stock de feuilles
-- **Fabrication à l’atelier** : Confirmer les chutes obtenues et les remettre au stock (pas encore) : Décidé : le nombre de chutes se confirme à la fin de la fabrication
 - **Fabrication à l’atelier** : Prévenir le client par e-mail que sa commande est prête (pas encore) : Aujourd’hui il le voit seulement dans son espace
 - **Écran d’affichage de l’atelier** : Servir la page seulement depuis le réseau interne, jamais depuis internet (pas encore) : Restriction au niveau du réseau (pas seulement dans l’application : l’adresse d’un visiteur peut être falsifiée derrière un relais)
 - **Écran d’affichage de l’atelier** : Afficher les commandes en colonnes : À lancer, En fabrication, Prêtes (pas encore) : Lecture seule, sans menu ni bouton, lisible de loin (grands caractères, thème sombre)
@@ -290,12 +288,12 @@ Schéma : [image](09-fabrication.svg) · [fichier BPMN](09-fabrication.bpmn)
 |---|---|---|---|
 | Voir les commandes par étape : à lancer, en fabrication, prêtes à retirer, prêtes à livrer | Atelier | Dans l’application | Fabrication ; retards signalés par une pastille et un compteur |
 | Prendre la commande en charge, ou annuler / reprendre celle d’un collègue | Atelier | Dans l’application | Rien ne lie une commande à un salarié |
-| Imprimer la fiche de fabrication : rendu des pièces, puis feuille par feuille (récupérer, toutes les découpes, tous les pliages, mettre de côté) | Atelier | Dans l’application | Fabrication › Imprimer la fiche (PDF) : date de création de la commande, nom du client, jamais l’adresse ni les prix ; pas de QR code |
+| Imprimer la fiche de fabrication, ou la suivre et la cocher à l’écran (avancement partagé entre les postes) : rendu des pièces, puis feuille par feuille (récupérer, toutes les découpes, tous les pliages, mettre de côté) | Atelier | Dans l’application | Fabrication › Imprimer la fiche (PDF) : date de création de la commande, nom du client, jamais l’adresse ni les prix ; pas de QR code |
 | Conseiller la feuille à prendre : chutes d’abord, moins de perte, et dire ce qui reste en chute à garder ou à jeter | Application (automatique) | Dans l’application | Fabrication › Feuilles à prendre ; sur la fiche : un morceau dont tous les côtés font au moins 200 mm se garde |
 | Lancer la fabrication | Atelier | Dans l’application | Bouton « Lancer la fabrication » : prend aussi la commande en charge |
-| Décompter les feuilles utilisées du stock | Application (automatique) | Pas encore | Aujourd’hui saisi à la main dans Stock de feuilles |
+| Décompter les feuilles utilisées du stock | Application (automatique) | Dans l’application | Suivi pas à pas : en fin de feuille, un bouton sort les feuilles du stock ; sans feuille conseillée, le stock se corrige à la main |
 | Découper et plier les pièces | Atelier | Hors application | Travail sur machine |
-| Confirmer les chutes obtenues et les remettre au stock | Atelier | Pas encore | Décidé : le nombre de chutes se confirme à la fin de la fabrication |
+| Confirmer les chutes obtenues et les remettre au stock | Atelier | Dans l’application | Même bouton en fin de feuille : les chutes à garder (côtés d’au moins 200 mm) entrent au stock en chute |
 | Contrôler les pièces (cotes, angles) | Atelier | Hors application | Aucun contrôle qualité enregistré |
 | Marquer la commande prête | Atelier | Dans l’application | Le client voit « Prête » dans son espace |
 | Prévenir le client par e-mail que sa commande est prête | Application (automatique) | Pas encore | Aujourd’hui il le voit seulement dans son espace |

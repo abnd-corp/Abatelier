@@ -111,6 +111,7 @@ const total = computed(() => detail.value?.lignes.reduce((s, l) => s + l.quantit
     </p>
     <div class="actions">
       <button v-if="detail.order.next" class="btn primary" type="button" :disabled="busy" @click="advance">{{ stepAction(detail.order.next, detail.order.livraisonMode) }}</button>
+      <RouterLink class="btn" :to="{ name: 'production-suivi', params: { id: detail.order.id } }"><AppIcon name="check" :size="16" />Suivre pas à pas</RouterLink>
       <a class="btn" :href="sheetUrl(detail.order.id)" target="_blank" rel="noopener"><AppIcon name="printer" :size="16" />Imprimer la fiche</a>
     </div>
 
