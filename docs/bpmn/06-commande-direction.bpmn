@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P6_commande_direction_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P6_commande_direction_collab">
+    <bpmn:participant id="P6_commande_direction_pool" name="Commande saisie par la direction pour un client" processRef="P6_commande_direction" />
+  </bpmn:collaboration>
+  <bpmn:process id="P6_commande_direction" name="Commande saisie par la direction pour un client" isExecutable="false">
+    <bpmn:documentation>Exception à la commande en ligne : un client qui ne peut ou ne veut pas le faire seul (téléphone, visite). La direction saisit la commande dans l’application, mais le devis, son envoi, l’accès à l’espace et la validation se font tout seuls : le client décide dans son espace.</bpmn:documentation>
+    <bpmn:laneSet id="P6_commande_direction_voies">
+      <bpmn:lane id="P6_commande_direction_voie_client" name="Visiteur / Client">
+        <bpmn:flowNodeRef>P6_commande_direction_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P6_commande_direction_g1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P6_commande_direction_t5</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P6_commande_direction_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P6_commande_direction_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P6_commande_direction_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P6_commande_direction_t5b</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P6_commande_direction_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P6_commande_direction_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P6_commande_direction_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P6_commande_direction_t6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P6_commande_direction_t7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P6_commande_direction_t8</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P6_commande_direction_f1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P6_commande_direction_f2</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P6_commande_direction_d" name="Le client ne peut ou ne veut pas commander seul (téléphone, visite)"><bpmn:outgoing>P6_commande_direction_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="P6_commande_direction_t1" name="Retrouver ou créer la fiche client"><bpmn:documentation>Dans l’application : Clients (particulier ou professionnel, chantiers)</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux1</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P6_commande_direction_t2" name="Saisir ou modifier les pièces dans l’application (cotes, angles, matière, coloris, accessoires)"><bpmn:documentation>Dans l’application : Commandes › Nouvelle commande</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux2</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux3</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P6_commande_direction_t3" name="Chiffrer, calculer le délai et les frais de livraison (distance par la route)"><bpmn:documentation>Dans l’application : Remise quantité et remise pro automatiques</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux3</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P6_commande_direction_t4" name="Éditer le devis numéroté et envoyer au client le lien d’accès à son espace"><bpmn:documentation>En partie : Devis et lien d’activation existent ; l’envoi des deux ensemble, en un seul geste, est à faire</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux4</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P6_commande_direction_g1" name="Le client accepte ?"><bpmn:incoming>P6_commande_direction_flux5</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux6</bpmn:outgoing><bpmn:outgoing>P6_commande_direction_flux7</bpmn:outgoing><bpmn:outgoing>P6_commande_direction_flux8</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:userTask id="P6_commande_direction_t5" name="Accepter le devis dans son espace"><bpmn:documentation>Dans l’application : Espace client › commande › Accepter le devis</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux6</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux9</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P6_commande_direction_t5b" name="Noter l’acceptation donnée par téléphone (exception)"><bpmn:documentation>Dans l’application : Devis › Accepté par le client</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux7</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux10</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P6_commande_direction_t6" name="Valider la commande tout de suite, sans passer par la direction"><bpmn:documentation>Pas encore : Même règle que « Devis depuis l’espace client »</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux9</bpmn:incoming><bpmn:incoming>P6_commande_direction_flux10</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux11</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P6_commande_direction_t7" name="Annuler la commande toute seule (motif : devis refusé par le client)"><bpmn:documentation>Pas encore : Même règle que « Devis depuis l’espace client »</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux8</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux12</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P6_commande_direction_t8" name="Notifier la direction dans la plateforme : devis refusé"><bpmn:documentation>En partie : Avec un lien vers la commande, pour information. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme</bpmn:documentation><bpmn:incoming>P6_commande_direction_flux12</bpmn:incoming><bpmn:outgoing>P6_commande_direction_flux13</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="P6_commande_direction_f1" name="Commande validée : voir « Fabrication »"><bpmn:incoming>P6_commande_direction_flux11</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="P6_commande_direction_f2" name="Commande annulée, direction prévenue"><bpmn:incoming>P6_commande_direction_flux13</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P6_commande_direction_flux1" sourceRef="P6_commande_direction_d" targetRef="P6_commande_direction_t1" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux2" sourceRef="P6_commande_direction_t1" targetRef="P6_commande_direction_t2" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux3" sourceRef="P6_commande_direction_t2" targetRef="P6_commande_direction_t3" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux4" sourceRef="P6_commande_direction_t3" targetRef="P6_commande_direction_t4" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux5" sourceRef="P6_commande_direction_t4" targetRef="P6_commande_direction_g1" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux6" name="Oui, dans son espace" sourceRef="P6_commande_direction_g1" targetRef="P6_commande_direction_t5" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux7" name="Oui, par téléphone" sourceRef="P6_commande_direction_g1" targetRef="P6_commande_direction_t5b" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux8" name="Non" sourceRef="P6_commande_direction_g1" targetRef="P6_commande_direction_t7" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux9" sourceRef="P6_commande_direction_t5" targetRef="P6_commande_direction_t6" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux10" sourceRef="P6_commande_direction_t5b" targetRef="P6_commande_direction_t6" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux11" sourceRef="P6_commande_direction_t6" targetRef="P6_commande_direction_f1" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux12" sourceRef="P6_commande_direction_t7" targetRef="P6_commande_direction_t8" />
+    <bpmn:sequenceFlow id="P6_commande_direction_flux13" sourceRef="P6_commande_direction_t8" targetRef="P6_commande_direction_f2" />
+    <bpmn:textAnnotation id="P6_commande_direction_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P6_commande_direction_diagram">
+    <bpmndi:BPMNPlane id="P6_commande_direction_plane" bpmnElement="P6_commande_direction_collab">
+      <bpmndi:BPMNShape id="P6_commande_direction_pool_di" bpmnElement="P6_commande_direction_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1820" height="480" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_voie_client_di" bpmnElement="P6_commande_direction_voie_client" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1790" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_voie_direction_di" bpmnElement="P6_commande_direction_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1790" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_voie_systeme_di" bpmnElement="P6_commande_direction_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="1790" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_d_di" bpmnElement="P6_commande_direction_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_t1_di" bpmnElement="P6_commande_direction_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="330" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_t2_di" bpmnElement="P6_commande_direction_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="520" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_t3_di" bpmnElement="P6_commande_direction_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="710" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_t4_di" bpmnElement="P6_commande_direction_t4" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
+        <dc:Bounds x="900" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_g1_di" bpmnElement="P6_commande_direction_g1" isMarkerVisible="true">
+        <dc:Bounds x="1140" y="75" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1060" y="43" width="110" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_t5_di" bpmnElement="P6_commande_direction_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1280" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_t5b_di" bpmnElement="P6_commande_direction_t5b" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1280" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_t6_di" bpmnElement="P6_commande_direction_t6" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1470" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_t7_di" bpmnElement="P6_commande_direction_t7" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1280" y="420" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_t8_di" bpmnElement="P6_commande_direction_t8" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
+        <dc:Bounds x="1470" y="420" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_f1_di" bpmnElement="P6_commande_direction_f1">
+        <dc:Bounds x="1717" y="322" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P6_commande_direction_f2_di" bpmnElement="P6_commande_direction_f2">
+        <dc:Bounds x="1717" y="442" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux1_di" bpmnElement="P6_commande_direction_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="305" y="100" />
+        <di:waypoint x="305" y="220" />
+        <di:waypoint x="330" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux2_di" bpmnElement="P6_commande_direction_flux2">
+        <di:waypoint x="480" y="220" />
+        <di:waypoint x="520" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux3_di" bpmnElement="P6_commande_direction_flux3">
+        <di:waypoint x="670" y="220" />
+        <di:waypoint x="685" y="220" />
+        <di:waypoint x="685" y="340" />
+        <di:waypoint x="710" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux4_di" bpmnElement="P6_commande_direction_flux4">
+        <di:waypoint x="860" y="340" />
+        <di:waypoint x="900" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux5_di" bpmnElement="P6_commande_direction_flux5">
+        <di:waypoint x="1050" y="340" />
+        <di:waypoint x="1115" y="340" />
+        <di:waypoint x="1115" y="100" />
+        <di:waypoint x="1140" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux6_di" bpmnElement="P6_commande_direction_flux6">
+        <di:waypoint x="1190" y="100" />
+        <di:waypoint x="1280" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux7_di" bpmnElement="P6_commande_direction_flux7">
+        <di:waypoint x="1190" y="100" />
+        <di:waypoint x="1255" y="100" />
+        <di:waypoint x="1255" y="220" />
+        <di:waypoint x="1280" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux8_di" bpmnElement="P6_commande_direction_flux8">
+        <di:waypoint x="1190" y="100" />
+        <di:waypoint x="1255" y="100" />
+        <di:waypoint x="1255" y="460" />
+        <di:waypoint x="1280" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux9_di" bpmnElement="P6_commande_direction_flux9">
+        <di:waypoint x="1430" y="100" />
+        <di:waypoint x="1445" y="100" />
+        <di:waypoint x="1445" y="340" />
+        <di:waypoint x="1470" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux10_di" bpmnElement="P6_commande_direction_flux10">
+        <di:waypoint x="1430" y="220" />
+        <di:waypoint x="1445" y="220" />
+        <di:waypoint x="1445" y="340" />
+        <di:waypoint x="1470" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux11_di" bpmnElement="P6_commande_direction_flux11">
+        <di:waypoint x="1620" y="340" />
+        <di:waypoint x="1717" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux12_di" bpmnElement="P6_commande_direction_flux12">
+        <di:waypoint x="1430" y="460" />
+        <di:waypoint x="1470" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P6_commande_direction_flux13_di" bpmnElement="P6_commande_direction_flux13">
+        <di:waypoint x="1620" y="460" />
+        <di:waypoint x="1717" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P6_commande_direction_legende_di" bpmnElement="P6_commande_direction_legende">
+        <dc:Bounds x="70" y="540" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

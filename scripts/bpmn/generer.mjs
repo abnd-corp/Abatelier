@@ -1,10 +1,12 @@
 // Génère docs/bpmn/*.bpmn et docs/bpmn/couverture.md à partir de processus.mjs.
 //   node scripts/bpmn/generer.mjs
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { PROCESSUS, VOIES } from './processus.mjs'
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { GROUPES, PROCESSUS, VOIES } from './processus.mjs'
 
 const SORTIE = new URL('../../docs/bpmn/', import.meta.url)
 mkdirSync(SORTIE, { recursive: true })
+// Les fichiers sont renumérotés à chaque génération : on retire les anciens pour qu'aucun schéma périmé ne reste
+for (const f of readdirSync(SORTIE)) if (/^\d+-.*\.(bpmn|svg|png)$/.test(f)) rmSync(new URL(f, SORTIE))
 
 const COUVERTURE = {
   ok: { libelle: 'Dans l’application', fill: '#d8f0dc', stroke: '#2e7d32' },
@@ -83,7 +85,13 @@ function bpmn(p, num) {
     .join('\n')
   const fluxXml = p.flux.map(([de, vers, nom], i) => `    <bpmn:sequenceFlow id="${pid}_flux${i + 1}" ${nom ? `name="${esc(nom)}" ` : ''}sourceRef="${nid(de)}" targetRef="${nid(vers)}" />`).join('\n')
   const voiesXml = p.voies
-    .map((v) => `      <bpmn:lane id="${pid}_voie_${v}" name="${esc(VOIES[v])}">\n${p.noeuds.filter((n) => n[2] === v).map((n) => `        <bpmn:flowNodeRef>${nid(n[0])}</bpmn:flowNodeRef>`).join('\n')}\n      </bpmn:lane>`)
+    .map(
+      (v) =>
+        `      <bpmn:lane id="${pid}_voie_${v}" name="${esc(VOIES[v])}">\n${p.noeuds
+          .filter((n) => n[2] === v)
+          .map((n) => `        <bpmn:flowNodeRef>${nid(n[0])}</bpmn:flowNodeRef>`)
+          .join('\n')}\n      </bpmn:lane>`,
+    )
     .join('\n')
   const legende = `Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)`
   const formes = p.noeuds
@@ -103,7 +111,10 @@ function bpmn(p, num) {
     })
     .join('\n')
   const voiesDi = p.voies
-    .map((v) => `      <bpmndi:BPMNShape id="${pid}_voie_${v}_di" bpmnElement="${pid}_voie_${v}" isHorizontal="true">\n        <dc:Bounds x="${X0}" y="${topVoie[v]}" width="${largeur}" height="${hautVoie[v]}" />\n      </bpmndi:BPMNShape>`)
+    .map(
+      (v) =>
+        `      <bpmndi:BPMNShape id="${pid}_voie_${v}_di" bpmnElement="${pid}_voie_${v}" isHorizontal="true">\n        <dc:Bounds x="${X0}" y="${topVoie[v]}" width="${largeur}" height="${hautVoie[v]}" />\n      </bpmndi:BPMNShape>`,
+    )
     .join('\n')
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
@@ -148,10 +159,20 @@ const aFaire = []
 for (const [i, p] of PROCESSUS.entries()) {
   const etapes = p.noeuds.filter((n) => n[6])
   for (const n of etapes) compte[n[6]]++
-  lignes.push(`## ${i + 1}. ${p.titre}`, '', p.resume, '', `Schéma : [image](${nomFichier(p, i).replace('.bpmn', '.svg')}) · [fichier BPMN](${nomFichier(p, i)})`, '', '| Étape | Qui | Couverture | Où dans l’application, ou précision |', '|---|---|---|---|')
+  lignes.push(
+    `## ${i + 1}. ${p.titre}`,
+    '',
+    p.resume,
+    '',
+    `Schéma : [image](${nomFichier(p, i).replace('.bpmn', '.svg')}) · [fichier BPMN](${nomFichier(p, i)})`,
+    '',
+    '| Étape | Qui | Couverture | Où dans l’application, ou précision |',
+    '|---|---|---|---|',
+  )
   for (const [, , voie, , , nom, couv, ou] of etapes) lignes.push(`| ${nom} | ${VOIES[voie]} | ${COUVERTURE[couv].libelle} | ${ou || ''} |`)
   lignes.push('')
-  for (const [, , , , , nom, couv, ou] of etapes) if (couv === 'manque' || couv === 'partiel') aFaire.push(`- **${p.titre}** : ${nom} (${COUVERTURE[couv].libelle.toLowerCase()}) ${ou ? `: ${ou}` : ''}`)
+  for (const [, , , , , nom, couv, ou] of etapes)
+    if (couv === 'manque' || couv === 'partiel') aFaire.push(`- **${p.titre}** : ${nom} (${COUVERTURE[couv].libelle.toLowerCase()}) ${ou ? `: ${ou}` : ''}`)
 }
 const total = Object.values(compte).reduce((a, b) => a + b, 0)
 const pct = (n) => `${Math.round((n / total) * 100)} %`
@@ -172,5 +193,67 @@ const entete = [
   ...aFaire,
   '',
 ]
+// --- Tableur à remplir avec le client : une ligne par processus, ce que l'application couvre, et les colonnes du gain à chiffrer ---
+// Séparateur « ; » et virgule décimale : s'ouvre directement dans un tableur en français. Les colonnes calculées sont des formules.
+const csv = (l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')
+const entetes = [
+  'N°',
+  'Groupe',
+  'Processus',
+  'Étapes',
+  'Dans l’application',
+  'En partie',
+  'Pas encore',
+  'Hors application',
+  'Qui le fait aujourd’hui',
+  'Outil ou papier utilisé',
+  'Minutes par fois',
+  'Fois par semaine',
+  'Heures par semaine',
+  'Coût horaire (€)',
+  'Coût par an (€)',
+  'Part prise en charge par l’application (%, à ajuster avec le client)',
+  'Gain par an (€)',
+  'Problèmes constatés (erreurs, retards, oublis)',
+  'Commentaire',
+]
+const lignesCsv = [csv(entetes)]
+PROCESSUS.forEach((p, i) => {
+  const n = { ok: 0, partiel: 0, manque: 0, hors: 0 }
+  for (const x of p.noeuds.filter((x) => x[6])) n[x[6]]++
+  const r = i + 2 // ligne du tableur (l'entête est la ligne 1)
+  const etapes = n.ok + n.partiel + n.manque + n.hors
+  lignesCsv.push(
+    [
+      String(i + 1),
+      GROUPES[p.id] ?? '',
+      p.titre,
+      etapes,
+      n.ok,
+      n.partiel,
+      n.manque,
+      n.hors,
+      '',
+      '',
+      '',
+      '',
+      `=K${r}*L${r}/60`,
+      '',
+      `=M${r}*N${r}*52`,
+      Math.round(((n.ok + n.partiel / 2) / Math.max(1, etapes - n.hors)) * 100),
+      `=O${r}*P${r}/100`,
+      '',
+      '',
+    ]
+      .map((c) => (typeof c === 'string' && c.startsWith('=') ? `"${c}"` : csv([c])))
+      .join(';'),
+  )
+})
+writeFileSync(new URL('processus.csv', SORTIE), `\uFEFF${lignesCsv.join('\r\n')}\r\n`)
+
 writeFileSync(new URL('couverture.md', SORTIE), [...entete, ...lignes].join('\n'))
-console.log(`${PROCESSUS.length} processus, ${total} étapes : ${Object.entries(compte).map(([k, n]) => `${k} ${n}`).join(', ')}`)
+console.log(
+  `${PROCESSUS.length} processus, ${total} étapes : ${Object.entries(compte)
+    .map(([k, n]) => `${k} ${n}`)
+    .join(', ')}`,
+)

@@ -2,76 +2,96 @@
 <!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P2_espace_client_defs" targetNamespace="http://abatelier.local/bpmn">
   <bpmn:collaboration id="P2_espace_client_collab">
-    <bpmn:participant id="P2_espace_client_pool" name="Espace client : inscription, accès, fermeture" processRef="P2_espace_client" />
+    <bpmn:participant id="P2_espace_client_pool" name="Espace client : création, activation, mot de passe, fermeture" processRef="P2_espace_client" />
   </bpmn:collaboration>
-  <bpmn:process id="P2_espace_client" name="Espace client : inscription, accès, fermeture" isExecutable="false">
-    <bpmn:documentation>Création du compte d’un particulier ou d’un professionnel, validation du statut pro, fermeture du compte.</bpmn:documentation>
+  <bpmn:process id="P2_espace_client" name="Espace client : création, activation, mot de passe, fermeture" isExecutable="false">
+    <bpmn:documentation>Création de l’espace d’un particulier ou d’un professionnel, activation sur une fiche existante, mot de passe oublié, vérification automatique du statut pro auprès de l’annuaire officiel, fermeture.</bpmn:documentation>
     <bpmn:laneSet id="P2_espace_client_voies">
       <bpmn:lane id="P2_espace_client_voie_client" name="Visiteur / Client">
         <bpmn:flowNodeRef>P2_espace_client_d</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P2_espace_client_t1</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>P2_espace_client_g1</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>P2_espace_client_t4</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>P2_espace_client_t7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P2_espace_client_t5</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P2_espace_client_g2</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>P2_espace_client_t9</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P2_espace_client_t7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P2_espace_client_t10</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P2_espace_client_g3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P2_espace_client_t12</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P2_espace_client_t13</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P2_espace_client_f</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="P2_espace_client_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P2_espace_client_g1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P2_espace_client_t2</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P2_espace_client_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P2_espace_client_t4</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P2_espace_client_t6</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P2_espace_client_t8</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>P2_espace_client_t10</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P2_espace_client_t9</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P2_espace_client_t11</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P2_espace_client_t14</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="P2_espace_client_voie_direction" name="Direction">
-        <bpmn:flowNodeRef>P2_espace_client_t5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P2_espace_client_t8b</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
     <bpmn:startEvent id="P2_espace_client_d" name="Le visiteur veut commander ou suivre une commande"><bpmn:outgoing>P2_espace_client_flux1</bpmn:outgoing></bpmn:startEvent>
     <bpmn:userTask id="P2_espace_client_t1" name="Créer son espace (particulier ou professionnel, consentement)"><bpmn:documentation>Dans l’application : Site public › Créer mon espace client</bpmn:documentation><bpmn:incoming>P2_espace_client_flux1</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux2</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="P2_espace_client_t2" name="Créer le compte et la fiche client, ouvrir la session"><bpmn:documentation>Dans l’application : Mot de passe contrôlé (12 caractères, pas de mot de passe courant)</bpmn:documentation><bpmn:incoming>P2_espace_client_flux2</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux3</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P2_espace_client_t3" name="Confirmer l’adresse e-mail"><bpmn:documentation>Pas encore : Prévu (M6) : lien de confirmation envoyé par e-mail</bpmn:documentation><bpmn:incoming>P2_espace_client_flux3</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux4</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:exclusiveGateway id="P2_espace_client_g1" name="Professionnel ?"><bpmn:incoming>P2_espace_client_flux4</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux5</bpmn:outgoing><bpmn:outgoing>P2_espace_client_flux6</bpmn:outgoing></bpmn:exclusiveGateway>
-    <bpmn:userTask id="P2_espace_client_t4" name="Compléter « Mes informations » (SIRET, TVA, adresse de facturation)"><bpmn:documentation>Dans l’application : Espace client › Mes informations</bpmn:documentation><bpmn:incoming>P2_espace_client_flux5</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux7</bpmn:outgoing></bpmn:userTask>
-    <bpmn:userTask id="P2_espace_client_t5" name="Vérifier puis valider le statut professionnel"><bpmn:documentation>Dans l’application : Clients › fiche › Valider le statut professionnel</bpmn:documentation><bpmn:incoming>P2_espace_client_flux7</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux8</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="P2_espace_client_t6" name="Appliquer la remise professionnelle aux devis suivants"><bpmn:documentation>Dans l’application : Seulement après validation</bpmn:documentation><bpmn:incoming>P2_espace_client_flux8</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux9</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:userTask id="P2_espace_client_t7" name="Retrouver ses devis, commandes et factures"><bpmn:documentation>Dans l’application : Espace client</bpmn:documentation><bpmn:incoming>P2_espace_client_flux6</bpmn:incoming><bpmn:incoming>P2_espace_client_flux9</bpmn:incoming><bpmn:incoming>P2_espace_client_flux12</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux10</bpmn:outgoing></bpmn:userTask>
-    <bpmn:exclusiveGateway id="P2_espace_client_g2" name="Mot de passe oublié ?"><bpmn:incoming>P2_espace_client_flux10</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux11</bpmn:outgoing><bpmn:outgoing>P2_espace_client_flux13</bpmn:outgoing></bpmn:exclusiveGateway>
-    <bpmn:serviceTask id="P2_espace_client_t8" name="Envoyer un lien pour choisir un nouveau mot de passe"><bpmn:documentation>Pas encore : Prévu (M6)</bpmn:documentation><bpmn:incoming>P2_espace_client_flux11</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux12</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:userTask id="P2_espace_client_t9" name="Fermer son espace (mot de passe demandé)"><bpmn:documentation>Dans l’application : Espace client › Fermer mon espace</bpmn:documentation><bpmn:incoming>P2_espace_client_flux13</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux14</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="P2_espace_client_t10" name="Anonymiser la fiche, garder les factures, libérer l’adresse"><bpmn:documentation>Dans l’application : Les factures sont conservées 10 ans (obligation légale)</bpmn:documentation><bpmn:incoming>P2_espace_client_flux14</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux15</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:endEvent id="P2_espace_client_f" name="Espace fermé"><bpmn:incoming>P2_espace_client_flux15</bpmn:incoming></bpmn:endEvent>
+    <bpmn:exclusiveGateway id="P2_espace_client_g1" name="Adresse déjà connue de l’atelier ?"><bpmn:incoming>P2_espace_client_flux2</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux3</bpmn:outgoing><bpmn:outgoing>P2_espace_client_flux4</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P2_espace_client_t2" name="Créer l’espace et la fiche, ouvrir la session"><bpmn:documentation>Dans l’application : Mot de passe contrôlé (12 caractères, pas de mot de passe courant)</bpmn:documentation><bpmn:incoming>P2_espace_client_flux3</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P2_espace_client_t3" name="Envoyer le message de bienvenue"><bpmn:documentation>Dans l’application : Sans publicité : seulement les messages utiles au compte</bpmn:documentation><bpmn:incoming>P2_espace_client_flux5</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P2_espace_client_t4" name="Envoyer un lien d’activation à l’adresse de la fiche existante"><bpmn:documentation>Dans l’application : Valable 7 jours, usage unique ; une adresse déjà active ne peut pas être réclamée</bpmn:documentation><bpmn:incoming>P2_espace_client_flux4</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux7</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P2_espace_client_t5" name="Choisir son mot de passe avec le lien reçu"><bpmn:documentation>Dans l’application : Seul le propriétaire de l’adresse peut le faire</bpmn:documentation><bpmn:incoming>P2_espace_client_flux7</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux8</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P2_espace_client_t6" name="Rattacher l’espace à la fiche existante, ouvrir la session"><bpmn:documentation>Dans l’application : Aucun doublon : ses devis et factures y sont déjà</bpmn:documentation><bpmn:incoming>P2_espace_client_flux8</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux9</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P2_espace_client_g2" name="Professionnel ?"><bpmn:incoming>P2_espace_client_flux6</bpmn:incoming><bpmn:incoming>P2_espace_client_flux9</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux10</bpmn:outgoing><bpmn:outgoing>P2_espace_client_flux11</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:userTask id="P2_espace_client_t7" name="Compléter « Mes informations » (SIRET, TVA, adresse de facturation)"><bpmn:documentation>Dans l’application : Espace client › Mes informations</bpmn:documentation><bpmn:incoming>P2_espace_client_flux10</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux12</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P2_espace_client_t8" name="Vérifier le SIRET dans l’annuaire officiel des entreprises (en activité, nom concordant)"><bpmn:documentation>Pas encore : Annuaire public et gratuit (recherche-entreprises.api.gouv.fr) ; le n° de TVA se contrôle avec VIES. Aujourd’hui la direction vérifie à la main</bpmn:documentation><bpmn:incoming>P2_espace_client_flux12</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux13</bpmn:outgoing><bpmn:outgoing>P2_espace_client_flux14</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P2_espace_client_t8b" name="Examiner à la main seulement si la vérification échoue"><bpmn:documentation>Dans l’application : Clients › fiche › Valider le statut professionnel (exception)</bpmn:documentation><bpmn:incoming>P2_espace_client_flux14</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux15</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P2_espace_client_t9" name="Appliquer la remise professionnelle aux devis suivants"><bpmn:documentation>Dans l’application : Seulement après validation</bpmn:documentation><bpmn:incoming>P2_espace_client_flux13</bpmn:incoming><bpmn:incoming>P2_espace_client_flux15</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux16</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P2_espace_client_t10" name="Retrouver ses devis, commandes et factures"><bpmn:documentation>Dans l’application : Espace client</bpmn:documentation><bpmn:incoming>P2_espace_client_flux11</bpmn:incoming><bpmn:incoming>P2_espace_client_flux16</bpmn:incoming><bpmn:incoming>P2_espace_client_flux20</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux17</bpmn:outgoing></bpmn:userTask>
+    <bpmn:exclusiveGateway id="P2_espace_client_g3" name="Mot de passe oublié ?"><bpmn:incoming>P2_espace_client_flux17</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux18</bpmn:outgoing><bpmn:outgoing>P2_espace_client_flux21</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P2_espace_client_t11" name="Envoyer un lien valable 1 heure pour choisir un nouveau mot de passe"><bpmn:documentation>Dans l’application : Réponse identique que l’adresse existe ou non</bpmn:documentation><bpmn:incoming>P2_espace_client_flux18</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux19</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P2_espace_client_t12" name="Choisir un nouveau mot de passe"><bpmn:documentation>Dans l’application : Déconnecte les autres appareils et prévient le client par e-mail</bpmn:documentation><bpmn:incoming>P2_espace_client_flux19</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux20</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P2_espace_client_t13" name="Fermer son espace (mot de passe demandé)"><bpmn:documentation>Dans l’application : Espace client › Fermer mon espace</bpmn:documentation><bpmn:incoming>P2_espace_client_flux21</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux22</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P2_espace_client_t14" name="Anonymiser la fiche, garder les factures, libérer l’adresse"><bpmn:documentation>Dans l’application : Les factures sont conservées 10 ans (obligation légale)</bpmn:documentation><bpmn:incoming>P2_espace_client_flux22</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux23</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="P2_espace_client_f" name="Espace fermé"><bpmn:incoming>P2_espace_client_flux23</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="P2_espace_client_flux1" sourceRef="P2_espace_client_d" targetRef="P2_espace_client_t1" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux2" sourceRef="P2_espace_client_t1" targetRef="P2_espace_client_t2" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux3" sourceRef="P2_espace_client_t2" targetRef="P2_espace_client_t3" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux4" sourceRef="P2_espace_client_t3" targetRef="P2_espace_client_g1" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux5" name="Oui" sourceRef="P2_espace_client_g1" targetRef="P2_espace_client_t4" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux6" name="Non" sourceRef="P2_espace_client_g1" targetRef="P2_espace_client_t7" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux2" sourceRef="P2_espace_client_t1" targetRef="P2_espace_client_g1" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux3" name="Non" sourceRef="P2_espace_client_g1" targetRef="P2_espace_client_t2" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux4" name="Oui, sans espace" sourceRef="P2_espace_client_g1" targetRef="P2_espace_client_t4" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux5" sourceRef="P2_espace_client_t2" targetRef="P2_espace_client_t3" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux6" sourceRef="P2_espace_client_t3" targetRef="P2_espace_client_g2" />
     <bpmn:sequenceFlow id="P2_espace_client_flux7" sourceRef="P2_espace_client_t4" targetRef="P2_espace_client_t5" />
     <bpmn:sequenceFlow id="P2_espace_client_flux8" sourceRef="P2_espace_client_t5" targetRef="P2_espace_client_t6" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux9" sourceRef="P2_espace_client_t6" targetRef="P2_espace_client_t7" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux10" sourceRef="P2_espace_client_t7" targetRef="P2_espace_client_g2" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux11" name="Oui" sourceRef="P2_espace_client_g2" targetRef="P2_espace_client_t8" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux12" sourceRef="P2_espace_client_t8" targetRef="P2_espace_client_t7" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux13" name="Non" sourceRef="P2_espace_client_g2" targetRef="P2_espace_client_t9" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux14" sourceRef="P2_espace_client_t9" targetRef="P2_espace_client_t10" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux15" sourceRef="P2_espace_client_t10" targetRef="P2_espace_client_f" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux9" sourceRef="P2_espace_client_t6" targetRef="P2_espace_client_g2" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux10" name="Oui" sourceRef="P2_espace_client_g2" targetRef="P2_espace_client_t7" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux11" name="Non" sourceRef="P2_espace_client_g2" targetRef="P2_espace_client_t10" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux12" sourceRef="P2_espace_client_t7" targetRef="P2_espace_client_t8" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux13" name="Concordant" sourceRef="P2_espace_client_t8" targetRef="P2_espace_client_t9" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux14" name="Non concordant" sourceRef="P2_espace_client_t8" targetRef="P2_espace_client_t8b" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux15" sourceRef="P2_espace_client_t8b" targetRef="P2_espace_client_t9" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux16" sourceRef="P2_espace_client_t9" targetRef="P2_espace_client_t10" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux17" sourceRef="P2_espace_client_t10" targetRef="P2_espace_client_g3" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux18" name="Oui" sourceRef="P2_espace_client_g3" targetRef="P2_espace_client_t11" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux19" sourceRef="P2_espace_client_t11" targetRef="P2_espace_client_t12" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux20" sourceRef="P2_espace_client_t12" targetRef="P2_espace_client_t10" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux21" name="Non" sourceRef="P2_espace_client_g3" targetRef="P2_espace_client_t13" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux22" sourceRef="P2_espace_client_t13" targetRef="P2_espace_client_t14" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux23" sourceRef="P2_espace_client_t14" targetRef="P2_espace_client_f" />
     <bpmn:textAnnotation id="P2_espace_client_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="P2_espace_client_diagram">
     <bpmndi:BPMNPlane id="P2_espace_client_plane" bpmnElement="P2_espace_client_collab">
       <bpmndi:BPMNShape id="P2_espace_client_pool_di" bpmnElement="P2_espace_client_pool" isHorizontal="true">
-        <dc:Bounds x="40" y="40" width="2770" height="720" />
+        <dc:Bounds x="40" y="40" width="2960" height="600" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_voie_client_di" bpmnElement="P2_espace_client_voie_client" isHorizontal="true">
-        <dc:Bounds x="70" y="40" width="2740" height="240" />
+        <dc:Bounds x="70" y="40" width="2930" height="240" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_voie_systeme_di" bpmnElement="P2_espace_client_voie_systeme" isHorizontal="true">
-        <dc:Bounds x="70" y="280" width="2740" height="240" />
+        <dc:Bounds x="70" y="280" width="2930" height="240" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_voie_direction_di" bpmnElement="P2_espace_client_voie_direction" isHorizontal="true">
-        <dc:Bounds x="70" y="520" width="2740" height="240" />
+        <dc:Bounds x="70" y="520" width="2930" height="120" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_d_di" bpmnElement="P2_espace_client_d">
         <dc:Bounds x="197" y="82" width="36" height="36" />
@@ -79,47 +99,68 @@
       <bpmndi:BPMNShape id="P2_espace_client_t1_di" bpmnElement="P2_espace_client_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="330" y="60" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P2_espace_client_t2_di" bpmnElement="P2_espace_client_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="520" y="300" width="150" height="80" />
+      <bpmndi:BPMNShape id="P2_espace_client_g1_di" bpmnElement="P2_espace_client_g1" isMarkerVisible="true">
+        <dc:Bounds x="570" y="315" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="490" y="283" width="110" height="30" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P2_espace_client_t3_di" bpmnElement="P2_espace_client_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+      <bpmndi:BPMNShape id="P2_espace_client_t2_di" bpmnElement="P2_espace_client_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="710" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P2_espace_client_g1_di" bpmnElement="P2_espace_client_g1" isMarkerVisible="true">
-        <dc:Bounds x="950" y="75" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="870" y="43" width="110" height="30" />
-        </bpmndi:BPMNLabel>
+      <bpmndi:BPMNShape id="P2_espace_client_t3_di" bpmnElement="P2_espace_client_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="900" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t4_di" bpmnElement="P2_espace_client_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1090" y="180" width="150" height="80" />
+        <dc:Bounds x="710" y="420" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t5_di" bpmnElement="P2_espace_client_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1280" y="660" width="150" height="80" />
+        <dc:Bounds x="900" y="180" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t6_di" bpmnElement="P2_espace_client_t6" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1470" y="300" width="150" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P2_espace_client_t7_di" bpmnElement="P2_espace_client_t7" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1660" y="60" width="150" height="80" />
+        <dc:Bounds x="1090" y="420" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_g2_di" bpmnElement="P2_espace_client_g2" isMarkerVisible="true">
-        <dc:Bounds x="1900" y="75" width="50" height="50" />
+        <dc:Bounds x="1330" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1820" y="43" width="110" height="30" />
+          <dc:Bounds x="1250" y="43" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P2_espace_client_t7_di" bpmnElement="P2_espace_client_t7" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1470" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t8_di" bpmnElement="P2_espace_client_t8" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
-        <dc:Bounds x="2040" y="420" width="150" height="80" />
+        <dc:Bounds x="1660" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P2_espace_client_t8b_di" bpmnElement="P2_espace_client_t8b" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1850" y="540" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t9_di" bpmnElement="P2_espace_client_t9" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="2230" y="60" width="150" height="80" />
+        <dc:Bounds x="1850" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t10_di" bpmnElement="P2_espace_client_t10" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="2420" y="300" width="150" height="80" />
+        <dc:Bounds x="2040" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P2_espace_client_g3_di" bpmnElement="P2_espace_client_g3" isMarkerVisible="true">
+        <dc:Bounds x="2280" y="75" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2200" y="43" width="110" height="30" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P2_espace_client_t11_di" bpmnElement="P2_espace_client_t11" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="2420" y="420" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P2_espace_client_t12_di" bpmnElement="P2_espace_client_t12" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="2610" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P2_espace_client_t13_di" bpmnElement="P2_espace_client_t13" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="2420" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P2_espace_client_t14_di" bpmnElement="P2_espace_client_t14" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="2610" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_f_di" bpmnElement="P2_espace_client_f">
-        <dc:Bounds x="2667" y="82" width="36" height="36" />
+        <dc:Bounds x="2857" y="82" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P2_espace_client_flux1_di" bpmnElement="P2_espace_client_flux1">
         <di:waypoint x="233" y="100" />
@@ -127,82 +168,126 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux2_di" bpmnElement="P2_espace_client_flux2">
         <di:waypoint x="480" y="100" />
-        <di:waypoint x="495" y="100" />
-        <di:waypoint x="495" y="340" />
-        <di:waypoint x="520" y="340" />
+        <di:waypoint x="545" y="100" />
+        <di:waypoint x="545" y="340" />
+        <di:waypoint x="570" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux3_di" bpmnElement="P2_espace_client_flux3">
-        <di:waypoint x="670" y="340" />
+        <di:waypoint x="620" y="340" />
         <di:waypoint x="710" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux4_di" bpmnElement="P2_espace_client_flux4">
-        <di:waypoint x="860" y="340" />
-        <di:waypoint x="925" y="340" />
-        <di:waypoint x="925" y="100" />
-        <di:waypoint x="950" y="100" />
+        <di:waypoint x="620" y="340" />
+        <di:waypoint x="685" y="340" />
+        <di:waypoint x="685" y="460" />
+        <di:waypoint x="710" y="460" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux5_di" bpmnElement="P2_espace_client_flux5">
-        <di:waypoint x="1000" y="100" />
-        <di:waypoint x="1065" y="100" />
-        <di:waypoint x="1065" y="220" />
-        <di:waypoint x="1090" y="220" />
+        <di:waypoint x="860" y="340" />
+        <di:waypoint x="900" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux6_di" bpmnElement="P2_espace_client_flux6">
-        <di:waypoint x="1000" y="100" />
-        <di:waypoint x="1660" y="100" />
+        <di:waypoint x="1050" y="340" />
+        <di:waypoint x="1305" y="340" />
+        <di:waypoint x="1305" y="100" />
+        <di:waypoint x="1330" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux7_di" bpmnElement="P2_espace_client_flux7">
-        <di:waypoint x="1240" y="220" />
-        <di:waypoint x="1255" y="220" />
-        <di:waypoint x="1255" y="700" />
-        <di:waypoint x="1280" y="700" />
+        <di:waypoint x="860" y="460" />
+        <di:waypoint x="875" y="460" />
+        <di:waypoint x="875" y="220" />
+        <di:waypoint x="900" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux8_di" bpmnElement="P2_espace_client_flux8">
-        <di:waypoint x="1430" y="700" />
-        <di:waypoint x="1445" y="700" />
-        <di:waypoint x="1445" y="340" />
-        <di:waypoint x="1470" y="340" />
+        <di:waypoint x="1050" y="220" />
+        <di:waypoint x="1065" y="220" />
+        <di:waypoint x="1065" y="460" />
+        <di:waypoint x="1090" y="460" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux9_di" bpmnElement="P2_espace_client_flux9">
-        <di:waypoint x="1620" y="340" />
-        <di:waypoint x="1635" y="340" />
-        <di:waypoint x="1635" y="100" />
-        <di:waypoint x="1660" y="100" />
+        <di:waypoint x="1240" y="460" />
+        <di:waypoint x="1305" y="460" />
+        <di:waypoint x="1305" y="100" />
+        <di:waypoint x="1330" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux10_di" bpmnElement="P2_espace_client_flux10">
-        <di:waypoint x="1810" y="100" />
-        <di:waypoint x="1900" y="100" />
+        <di:waypoint x="1380" y="100" />
+        <di:waypoint x="1445" y="100" />
+        <di:waypoint x="1445" y="220" />
+        <di:waypoint x="1470" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux11_di" bpmnElement="P2_espace_client_flux11">
-        <di:waypoint x="1950" y="100" />
-        <di:waypoint x="2015" y="100" />
-        <di:waypoint x="2015" y="460" />
-        <di:waypoint x="2040" y="460" />
+        <di:waypoint x="1380" y="100" />
+        <di:waypoint x="2040" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux12_di" bpmnElement="P2_espace_client_flux12">
-        <di:waypoint x="2115" y="420" />
-        <di:waypoint x="2115" y="162" />
-        <di:waypoint x="1735" y="162" />
-        <di:waypoint x="1735" y="140" />
+        <di:waypoint x="1620" y="220" />
+        <di:waypoint x="1635" y="220" />
+        <di:waypoint x="1635" y="340" />
+        <di:waypoint x="1660" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux13_di" bpmnElement="P2_espace_client_flux13">
-        <di:waypoint x="1950" y="100" />
-        <di:waypoint x="2230" y="100" />
+        <di:waypoint x="1810" y="340" />
+        <di:waypoint x="1850" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux14_di" bpmnElement="P2_espace_client_flux14">
-        <di:waypoint x="2380" y="100" />
-        <di:waypoint x="2395" y="100" />
-        <di:waypoint x="2395" y="340" />
-        <di:waypoint x="2420" y="340" />
+        <di:waypoint x="1810" y="340" />
+        <di:waypoint x="1825" y="340" />
+        <di:waypoint x="1825" y="580" />
+        <di:waypoint x="1850" y="580" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux15_di" bpmnElement="P2_espace_client_flux15">
-        <di:waypoint x="2570" y="340" />
-        <di:waypoint x="2642" y="340" />
-        <di:waypoint x="2642" y="100" />
-        <di:waypoint x="2667" y="100" />
+        <di:waypoint x="1925" y="540" />
+        <di:waypoint x="1925" y="402" />
+        <di:waypoint x="1925" y="402" />
+        <di:waypoint x="1925" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P2_espace_client_flux16_di" bpmnElement="P2_espace_client_flux16">
+        <di:waypoint x="2000" y="340" />
+        <di:waypoint x="2015" y="340" />
+        <di:waypoint x="2015" y="100" />
+        <di:waypoint x="2040" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P2_espace_client_flux17_di" bpmnElement="P2_espace_client_flux17">
+        <di:waypoint x="2190" y="100" />
+        <di:waypoint x="2280" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P2_espace_client_flux18_di" bpmnElement="P2_espace_client_flux18">
+        <di:waypoint x="2330" y="100" />
+        <di:waypoint x="2395" y="100" />
+        <di:waypoint x="2395" y="460" />
+        <di:waypoint x="2420" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P2_espace_client_flux19_di" bpmnElement="P2_espace_client_flux19">
+        <di:waypoint x="2570" y="460" />
+        <di:waypoint x="2585" y="460" />
+        <di:waypoint x="2585" y="220" />
+        <di:waypoint x="2610" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P2_espace_client_flux20_di" bpmnElement="P2_espace_client_flux20">
+        <di:waypoint x="2685" y="180" />
+        <di:waypoint x="2685" y="162" />
+        <di:waypoint x="2115" y="162" />
+        <di:waypoint x="2115" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P2_espace_client_flux21_di" bpmnElement="P2_espace_client_flux21">
+        <di:waypoint x="2330" y="100" />
+        <di:waypoint x="2420" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P2_espace_client_flux22_di" bpmnElement="P2_espace_client_flux22">
+        <di:waypoint x="2570" y="100" />
+        <di:waypoint x="2585" y="100" />
+        <di:waypoint x="2585" y="340" />
+        <di:waypoint x="2610" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P2_espace_client_flux23_di" bpmnElement="P2_espace_client_flux23">
+        <di:waypoint x="2760" y="340" />
+        <di:waypoint x="2832" y="340" />
+        <di:waypoint x="2832" y="100" />
+        <di:waypoint x="2857" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="P2_espace_client_legende_di" bpmnElement="P2_espace_client_legende">
-        <dc:Bounds x="70" y="780" width="760" height="30" />
+        <dc:Bounds x="70" y="660" width="760" height="30" />
       </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

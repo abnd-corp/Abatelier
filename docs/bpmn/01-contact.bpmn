@@ -5,148 +5,185 @@
     <bpmn:participant id="P1_contact_pool" name="Demande de contact" processRef="P1_contact" />
   </bpmn:collaboration>
   <bpmn:process id="P1_contact" name="Demande de contact" isExecutable="false">
-    <bpmn:documentation>Un visiteur écrit à l’atelier depuis le site, avec ou sans plan.</bpmn:documentation>
+    <bpmn:documentation>Dernier recours : le visiteur ne passe par la direction que si le configurateur, le devis et la commande en ligne ne suffisent pas (pièce hors limites, question, cas particulier). Le reste se fait seul.</bpmn:documentation>
     <bpmn:laneSet id="P1_contact_voies">
       <bpmn:lane id="P1_contact_voie_client" name="Visiteur / Client">
         <bpmn:flowNodeRef>P1_contact_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P1_contact_g0</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P1_contact_t0</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P1_contact_f0</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P1_contact_t1</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="P1_contact_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P1_contact_t0b</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P1_contact_t2</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>P1_contact_t7</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P1_contact_t3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P1_contact_t5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P1_contact_t8</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="P1_contact_voie_direction" name="Direction">
-        <bpmn:flowNodeRef>P1_contact_t3</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>P1_contact_g1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P1_contact_t4</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>P1_contact_t5</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P1_contact_t6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P1_contact_t7</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P1_contact_f</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
     <bpmn:startEvent id="P1_contact_d" name="Besoin d’un renseignement ou d’un devis"><bpmn:outgoing>P1_contact_flux1</bpmn:outgoing></bpmn:startEvent>
-    <bpmn:userTask id="P1_contact_t1" name="Remplir le formulaire de contact (plan joint possible)"><bpmn:documentation>Dans l’application : Site public › Contact (consentement RGPD demandé)</bpmn:documentation><bpmn:incoming>P1_contact_flux1</bpmn:incoming><bpmn:outgoing>P1_contact_flux2</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="P1_contact_t2" name="Enregistrer la demande et prévenir la direction par e-mail"><bpmn:documentation>Dans l’application : Alerte e-mail, historique des envois</bpmn:documentation><bpmn:incoming>P1_contact_flux2</bpmn:incoming><bpmn:outgoing>P1_contact_flux3</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:userTask id="P1_contact_t3" name="Lire la demande et télécharger le plan"><bpmn:documentation>Dans l’application : Site vitrine › Demandes reçues</bpmn:documentation><bpmn:incoming>P1_contact_flux3</bpmn:incoming><bpmn:outgoing>P1_contact_flux4</bpmn:outgoing></bpmn:userTask>
-    <bpmn:exclusiveGateway id="P1_contact_g1" name="Créer une fiche client ?"><bpmn:incoming>P1_contact_flux4</bpmn:incoming><bpmn:outgoing>P1_contact_flux5</bpmn:outgoing><bpmn:outgoing>P1_contact_flux6</bpmn:outgoing></bpmn:exclusiveGateway>
-    <bpmn:userTask id="P1_contact_t4" name="Créer la fiche client depuis la demande"><bpmn:documentation>Pas encore : Aujourd’hui la fiche se crée à la main dans Clients</bpmn:documentation><bpmn:incoming>P1_contact_flux5</bpmn:incoming><bpmn:outgoing>P1_contact_flux7</bpmn:outgoing></bpmn:userTask>
-    <bpmn:manualTask id="P1_contact_t5" name="Répondre au client (téléphone ou e-mail)"><bpmn:documentation>Hors application : La réponse part de la messagerie habituelle</bpmn:documentation><bpmn:incoming>P1_contact_flux6</bpmn:incoming><bpmn:incoming>P1_contact_flux7</bpmn:incoming><bpmn:outgoing>P1_contact_flux8</bpmn:outgoing></bpmn:manualTask>
-    <bpmn:userTask id="P1_contact_t6" name="Marquer la demande comme traitée"><bpmn:documentation>Dans l’application : Site vitrine › Demandes reçues</bpmn:documentation><bpmn:incoming>P1_contact_flux8</bpmn:incoming><bpmn:outgoing>P1_contact_flux9</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="P1_contact_t7" name="Supprimer la demande au bout de 12 mois"><bpmn:documentation>Pas encore : Suppression à la demande de la personne : faite ; purge automatique : à faire</bpmn:documentation><bpmn:incoming>P1_contact_flux9</bpmn:incoming><bpmn:outgoing>P1_contact_flux10</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:endEvent id="P1_contact_f" name="Demande clôturée"><bpmn:incoming>P1_contact_flux10</bpmn:incoming></bpmn:endEvent>
-    <bpmn:sequenceFlow id="P1_contact_flux1" sourceRef="P1_contact_d" targetRef="P1_contact_t1" />
-    <bpmn:sequenceFlow id="P1_contact_flux2" sourceRef="P1_contact_t1" targetRef="P1_contact_t2" />
-    <bpmn:sequenceFlow id="P1_contact_flux3" sourceRef="P1_contact_t2" targetRef="P1_contact_t3" />
-    <bpmn:sequenceFlow id="P1_contact_flux4" sourceRef="P1_contact_t3" targetRef="P1_contact_g1" />
-    <bpmn:sequenceFlow id="P1_contact_flux5" name="Oui" sourceRef="P1_contact_g1" targetRef="P1_contact_t4" />
-    <bpmn:sequenceFlow id="P1_contact_flux6" name="Non" sourceRef="P1_contact_g1" targetRef="P1_contact_t5" />
-    <bpmn:sequenceFlow id="P1_contact_flux7" sourceRef="P1_contact_t4" targetRef="P1_contact_t5" />
-    <bpmn:sequenceFlow id="P1_contact_flux8" sourceRef="P1_contact_t5" targetRef="P1_contact_t6" />
-    <bpmn:sequenceFlow id="P1_contact_flux9" sourceRef="P1_contact_t6" targetRef="P1_contact_t7" />
-    <bpmn:sequenceFlow id="P1_contact_flux10" sourceRef="P1_contact_t7" targetRef="P1_contact_f" />
+    <bpmn:serviceTask id="P1_contact_t0b" name="Proposer d’abord les services en ligne et les réponses aux questions fréquentes"><bpmn:documentation>Pas encore : En tête de la page Contact : liens vers configurateur, devis, commande ; délais, matières, livraison</bpmn:documentation><bpmn:incoming>P1_contact_flux1</bpmn:incoming><bpmn:outgoing>P1_contact_flux2</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P1_contact_g0" name="Peut-il se débrouiller seul ? (sinon : hors limites, question, cas particulier)"><bpmn:incoming>P1_contact_flux2</bpmn:incoming><bpmn:outgoing>P1_contact_flux3</bpmn:outgoing><bpmn:outgoing>P1_contact_flux4</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:userTask id="P1_contact_t0" name="Utiliser le configurateur, le devis ou la commande en ligne"><bpmn:documentation>Dans l’application : Voir « Configurateur », « Devis » et « Commande payée en ligne »</bpmn:documentation><bpmn:incoming>P1_contact_flux3</bpmn:incoming><bpmn:outgoing>P1_contact_flux5</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P1_contact_f0" name="Aucune demande : la direction n’intervient pas"><bpmn:incoming>P1_contact_flux5</bpmn:incoming></bpmn:endEvent>
+    <bpmn:userTask id="P1_contact_t1" name="Remplir le formulaire de contact (plan joint possible)"><bpmn:documentation>Dans l’application : Site public › Contact (consentement RGPD demandé)</bpmn:documentation><bpmn:incoming>P1_contact_flux4</bpmn:incoming><bpmn:outgoing>P1_contact_flux6</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P1_contact_t2" name="Enregistrer la demande et notifier la direction dans la plateforme"><bpmn:documentation>En partie : Notification avec le plan, la pièce choisie dans le configurateur et un lien. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme</bpmn:documentation><bpmn:incoming>P1_contact_flux6</bpmn:incoming><bpmn:outgoing>P1_contact_flux7</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P1_contact_t3" name="Envoyer un accusé de réception au visiteur, avec les liens utiles"><bpmn:documentation>Pas encore : Aujourd’hui seule l’équipe est prévenue</bpmn:documentation><bpmn:incoming>P1_contact_flux7</bpmn:incoming><bpmn:outgoing>P1_contact_flux8</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P1_contact_t5" name="Retrouver ou créer la fiche client depuis la demande"><bpmn:documentation>Pas encore : Par l’adresse e-mail, sans doublon ; aujourd’hui la fiche se crée à la main dans Clients</bpmn:documentation><bpmn:incoming>P1_contact_flux8</bpmn:incoming><bpmn:outgoing>P1_contact_flux9</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P1_contact_t4" name="Lire la demande et télécharger le plan"><bpmn:documentation>Dans l’application : Site vitrine › Demandes reçues</bpmn:documentation><bpmn:incoming>P1_contact_flux9</bpmn:incoming><bpmn:outgoing>P1_contact_flux10</bpmn:outgoing></bpmn:userTask>
+    <bpmn:manualTask id="P1_contact_t6" name="Répondre au client (téléphone ou e-mail)"><bpmn:documentation>Hors application : La réponse part de la messagerie habituelle</bpmn:documentation><bpmn:incoming>P1_contact_flux10</bpmn:incoming><bpmn:outgoing>P1_contact_flux11</bpmn:outgoing></bpmn:manualTask>
+    <bpmn:userTask id="P1_contact_t7" name="Marquer la demande comme traitée"><bpmn:documentation>Dans l’application : Site vitrine › Demandes reçues</bpmn:documentation><bpmn:incoming>P1_contact_flux11</bpmn:incoming><bpmn:outgoing>P1_contact_flux12</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P1_contact_t8" name="Supprimer la demande au bout de 12 mois"><bpmn:documentation>Pas encore : Suppression à la demande de la personne : faite ; purge automatique : à faire</bpmn:documentation><bpmn:incoming>P1_contact_flux12</bpmn:incoming><bpmn:outgoing>P1_contact_flux13</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="P1_contact_f" name="Demande clôturée"><bpmn:incoming>P1_contact_flux13</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P1_contact_flux1" sourceRef="P1_contact_d" targetRef="P1_contact_t0b" />
+    <bpmn:sequenceFlow id="P1_contact_flux2" sourceRef="P1_contact_t0b" targetRef="P1_contact_g0" />
+    <bpmn:sequenceFlow id="P1_contact_flux3" name="Oui" sourceRef="P1_contact_g0" targetRef="P1_contact_t0" />
+    <bpmn:sequenceFlow id="P1_contact_flux4" name="Non" sourceRef="P1_contact_g0" targetRef="P1_contact_t1" />
+    <bpmn:sequenceFlow id="P1_contact_flux5" sourceRef="P1_contact_t0" targetRef="P1_contact_f0" />
+    <bpmn:sequenceFlow id="P1_contact_flux6" sourceRef="P1_contact_t1" targetRef="P1_contact_t2" />
+    <bpmn:sequenceFlow id="P1_contact_flux7" sourceRef="P1_contact_t2" targetRef="P1_contact_t3" />
+    <bpmn:sequenceFlow id="P1_contact_flux8" sourceRef="P1_contact_t3" targetRef="P1_contact_t5" />
+    <bpmn:sequenceFlow id="P1_contact_flux9" sourceRef="P1_contact_t5" targetRef="P1_contact_t4" />
+    <bpmn:sequenceFlow id="P1_contact_flux10" sourceRef="P1_contact_t4" targetRef="P1_contact_t6" />
+    <bpmn:sequenceFlow id="P1_contact_flux11" sourceRef="P1_contact_t6" targetRef="P1_contact_t7" />
+    <bpmn:sequenceFlow id="P1_contact_flux12" sourceRef="P1_contact_t7" targetRef="P1_contact_t8" />
+    <bpmn:sequenceFlow id="P1_contact_flux13" sourceRef="P1_contact_t8" targetRef="P1_contact_f" />
     <bpmn:textAnnotation id="P1_contact_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="P1_contact_diagram">
     <bpmndi:BPMNPlane id="P1_contact_plane" bpmnElement="P1_contact_collab">
       <bpmndi:BPMNShape id="P1_contact_pool_di" bpmnElement="P1_contact_pool" isHorizontal="true">
-        <dc:Bounds x="40" y="40" width="2010" height="480" />
+        <dc:Bounds x="40" y="40" width="2390" height="600" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P1_contact_voie_client_di" bpmnElement="P1_contact_voie_client" isHorizontal="true">
-        <dc:Bounds x="70" y="40" width="1980" height="120" />
+        <dc:Bounds x="70" y="40" width="2360" height="240" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P1_contact_voie_systeme_di" bpmnElement="P1_contact_voie_systeme" isHorizontal="true">
-        <dc:Bounds x="70" y="160" width="1980" height="120" />
+        <dc:Bounds x="70" y="280" width="2360" height="240" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P1_contact_voie_direction_di" bpmnElement="P1_contact_voie_direction" isHorizontal="true">
-        <dc:Bounds x="70" y="280" width="1980" height="240" />
+        <dc:Bounds x="70" y="520" width="2360" height="120" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P1_contact_d_di" bpmnElement="P1_contact_d">
         <dc:Bounds x="197" y="82" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P1_contact_t1_di" bpmnElement="P1_contact_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="330" y="60" width="150" height="80" />
+      <bpmndi:BPMNShape id="P1_contact_t0b_di" bpmnElement="P1_contact_t0b" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="330" y="420" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P1_contact_t2_di" bpmnElement="P1_contact_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="520" y="180" width="150" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P1_contact_t3_di" bpmnElement="P1_contact_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="710" y="300" width="150" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P1_contact_g1_di" bpmnElement="P1_contact_g1" isMarkerVisible="true">
-        <dc:Bounds x="950" y="315" width="50" height="50" />
+      <bpmndi:BPMNShape id="P1_contact_g0_di" bpmnElement="P1_contact_g0" isMarkerVisible="true">
+        <dc:Bounds x="570" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="870" y="283" width="110" height="30" />
+          <dc:Bounds x="490" y="43" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P1_contact_t4_di" bpmnElement="P1_contact_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
-        <dc:Bounds x="1090" y="420" width="150" height="80" />
+      <bpmndi:BPMNShape id="P1_contact_t0_di" bpmnElement="P1_contact_t0" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="710" y="180" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P1_contact_t5_di" bpmnElement="P1_contact_t5" bioc:stroke="#616161" bioc:fill="#e8e8e8">
+      <bpmndi:BPMNShape id="P1_contact_f0_di" bpmnElement="P1_contact_f0">
+        <dc:Bounds x="957" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P1_contact_t1_di" bpmnElement="P1_contact_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="710" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P1_contact_t2_di" bpmnElement="P1_contact_t2" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
+        <dc:Bounds x="900" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P1_contact_t3_di" bpmnElement="P1_contact_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1090" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P1_contact_t5_di" bpmnElement="P1_contact_t5" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
         <dc:Bounds x="1280" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P1_contact_t6_di" bpmnElement="P1_contact_t6" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1470" y="300" width="150" height="80" />
+      <bpmndi:BPMNShape id="P1_contact_t4_di" bpmnElement="P1_contact_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1470" y="540" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P1_contact_t7_di" bpmnElement="P1_contact_t7" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
-        <dc:Bounds x="1660" y="180" width="150" height="80" />
+      <bpmndi:BPMNShape id="P1_contact_t6_di" bpmnElement="P1_contact_t6" bioc:stroke="#616161" bioc:fill="#e8e8e8">
+        <dc:Bounds x="1660" y="540" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P1_contact_t7_di" bpmnElement="P1_contact_t7" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1850" y="540" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P1_contact_t8_di" bpmnElement="P1_contact_t8" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="2040" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P1_contact_f_di" bpmnElement="P1_contact_f">
-        <dc:Bounds x="1907" y="322" width="36" height="36" />
+        <dc:Bounds x="2287" y="562" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P1_contact_flux1_di" bpmnElement="P1_contact_flux1">
         <di:waypoint x="233" y="100" />
-        <di:waypoint x="330" y="100" />
+        <di:waypoint x="305" y="100" />
+        <di:waypoint x="305" y="460" />
+        <di:waypoint x="330" y="460" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P1_contact_flux2_di" bpmnElement="P1_contact_flux2">
-        <di:waypoint x="480" y="100" />
-        <di:waypoint x="495" y="100" />
-        <di:waypoint x="495" y="220" />
-        <di:waypoint x="520" y="220" />
+        <di:waypoint x="480" y="460" />
+        <di:waypoint x="545" y="460" />
+        <di:waypoint x="545" y="100" />
+        <di:waypoint x="570" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P1_contact_flux3_di" bpmnElement="P1_contact_flux3">
-        <di:waypoint x="670" y="220" />
+        <di:waypoint x="620" y="100" />
+        <di:waypoint x="685" y="100" />
         <di:waypoint x="685" y="220" />
-        <di:waypoint x="685" y="340" />
-        <di:waypoint x="710" y="340" />
+        <di:waypoint x="710" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P1_contact_flux4_di" bpmnElement="P1_contact_flux4">
-        <di:waypoint x="860" y="340" />
-        <di:waypoint x="950" y="340" />
+        <di:waypoint x="620" y="100" />
+        <di:waypoint x="710" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P1_contact_flux5_di" bpmnElement="P1_contact_flux5">
-        <di:waypoint x="1000" y="340" />
-        <di:waypoint x="1065" y="340" />
-        <di:waypoint x="1065" y="460" />
-        <di:waypoint x="1090" y="460" />
+        <di:waypoint x="860" y="220" />
+        <di:waypoint x="957" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P1_contact_flux6_di" bpmnElement="P1_contact_flux6">
-        <di:waypoint x="1000" y="340" />
-        <di:waypoint x="1280" y="340" />
+        <di:waypoint x="860" y="100" />
+        <di:waypoint x="875" y="100" />
+        <di:waypoint x="875" y="340" />
+        <di:waypoint x="900" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P1_contact_flux7_di" bpmnElement="P1_contact_flux7">
-        <di:waypoint x="1240" y="460" />
-        <di:waypoint x="1255" y="460" />
-        <di:waypoint x="1255" y="340" />
-        <di:waypoint x="1280" y="340" />
+        <di:waypoint x="1050" y="340" />
+        <di:waypoint x="1090" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P1_contact_flux8_di" bpmnElement="P1_contact_flux8">
-        <di:waypoint x="1430" y="340" />
-        <di:waypoint x="1470" y="340" />
+        <di:waypoint x="1240" y="340" />
+        <di:waypoint x="1280" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P1_contact_flux9_di" bpmnElement="P1_contact_flux9">
-        <di:waypoint x="1620" y="340" />
-        <di:waypoint x="1635" y="340" />
-        <di:waypoint x="1635" y="220" />
-        <di:waypoint x="1660" y="220" />
+        <di:waypoint x="1430" y="340" />
+        <di:waypoint x="1445" y="340" />
+        <di:waypoint x="1445" y="580" />
+        <di:waypoint x="1470" y="580" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P1_contact_flux10_di" bpmnElement="P1_contact_flux10">
-        <di:waypoint x="1810" y="220" />
-        <di:waypoint x="1882" y="220" />
-        <di:waypoint x="1882" y="340" />
-        <di:waypoint x="1907" y="340" />
+        <di:waypoint x="1620" y="580" />
+        <di:waypoint x="1660" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P1_contact_flux11_di" bpmnElement="P1_contact_flux11">
+        <di:waypoint x="1810" y="580" />
+        <di:waypoint x="1850" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P1_contact_flux12_di" bpmnElement="P1_contact_flux12">
+        <di:waypoint x="2000" y="580" />
+        <di:waypoint x="2015" y="580" />
+        <di:waypoint x="2015" y="340" />
+        <di:waypoint x="2040" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P1_contact_flux13_di" bpmnElement="P1_contact_flux13">
+        <di:waypoint x="2190" y="340" />
+        <di:waypoint x="2262" y="340" />
+        <di:waypoint x="2262" y="580" />
+        <di:waypoint x="2287" y="580" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="P1_contact_legende_di" bpmnElement="P1_contact_legende">
-        <dc:Bounds x="70" y="540" width="760" height="30" />
+        <dc:Bounds x="70" y="660" width="760" height="30" />
       </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

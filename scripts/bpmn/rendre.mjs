@@ -1,5 +1,5 @@
 /* global document, window -- le code de page.evaluate tourne dans le navigateur */
-// Dessine chaque docs/bpmn/*.bpmn en image SVG (à montrer sans logiciel), avec bpmn-js chargé depuis un CDN.
+// Dessine chaque docs/bpmn/*.bpmn en image SVG et en PNG (à montrer sans logiciel), avec bpmn-js chargé depuis un CDN.
 //   node scripts/bpmn/rendre.mjs     (Playwright vient du dossier e2e : « make setup »)
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { chromium } from '../../e2e/node_modules/@playwright/test/index.mjs'
@@ -24,6 +24,12 @@ for (const f of readdirSync(DOSSIER).filter((n) => n.endsWith('.bpmn'))) {
     return (await viewer.saveSVG()).svg
   }, xml)
   writeFileSync(new URL(f.replace('.bpmn', '.svg'), DOSSIER), svg)
+  // PNG : le SVG est transparent, on le pose sur fond blanc, en double résolution
+  const [w, h] = ['width', 'height'].map((a) => Math.ceil(Number(svg.match(new RegExp(`<svg[^>]*\\s${a}="([\\d.]+)"`))?.[1])))
+  const png = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2 })
+  await png.setContent(`<html><body style="margin:0;background:#fff">${svg}</body></html>`)
+  writeFileSync(new URL(f.replace('.bpmn', '.png'), DOSSIER), await png.screenshot({ type: 'png' }))
+  await png.close()
   console.log(f)
 }
 await browser.close()
