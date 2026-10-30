@@ -964,7 +964,7 @@ export const PROCESSUS = [
       ['d', 'debut', APP, 0, 0, 'Un événement concerne un client'],
       ['t1', 'auto', APP, 1, 0, 'Bienvenue, activation de l’espace, mot de passe oublié, mot de passe modifié', 'ok', 'Liens à usage unique ; message de sécurité à chaque changement de mot de passe'],
       ['t2', 'auto', APP, 2, 0, 'Commande confirmée, commande refusée et remboursée', 'ok', 'Récapitulatif, date estimée, bouton vers l’espace client'],
-      ['t3', 'auto', APP, 3, 0, 'Devis, facture ou avoir disponible dans l’espace client', 'ok', 'Aucune pièce jointe ; texte modifiable'],
+      ['t3', 'auto', APP, 3, 0, 'Devis, facture ou avoir disponible dans l’espace client', 'ok', 'Aucune pièce jointe ; texte et mise en page fixés par la maintenance, la direction ajuste seulement le message avant l’envoi'],
       ['t4', 'auto', APP, 4, 0, 'Commande prête, accusé de réception d’une demande de contact', 'manque', 'Pas encore envoyés au client'],
       ['t5', 'saisie', CLIENT, 5, 0, 'Lire le message (rappel de sécurité et lien vers son espace)', 'ok', 'Version mise en page et version texte'],
       ['f', 'fin', CLIENT, 6, 0, 'Client informé, sans publicité'],

@@ -614,7 +614,7 @@ Schéma : [image](31-messages.svg) · [fichier BPMN](31-messages.bpmn)
 |---|---|---|---|
 | Bienvenue, activation de l’espace, mot de passe oublié, mot de passe modifié | Application (automatique) | Dans l’application | Liens à usage unique ; message de sécurité à chaque changement de mot de passe |
 | Commande confirmée, commande refusée et remboursée | Application (automatique) | Dans l’application | Récapitulatif, date estimée, bouton vers l’espace client |
-| Devis, facture ou avoir disponible dans l’espace client | Application (automatique) | Dans l’application | Aucune pièce jointe ; texte modifiable |
+| Devis, facture ou avoir disponible dans l’espace client | Application (automatique) | Dans l’application | Aucune pièce jointe ; texte et mise en page fixés par la maintenance, la direction ajuste seulement le message avant l’envoi |
 | Commande prête, accusé de réception d’une demande de contact | Application (automatique) | Pas encore | Pas encore envoyés au client |
 | Lire le message (rappel de sécurité et lien vers son espace) | Visiteur / Client | Dans l’application | Version mise en page et version texte |
 
