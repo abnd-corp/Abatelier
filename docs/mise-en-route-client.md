@@ -6,6 +6,7 @@ Ce que nous faisons au déploiement, puis ce que le client doit renseigner avant
 
 - Installer l'application et créer le compte `admin`, qui sert uniquement à l'administration.
 - Configurer les secrets : envoi d'e-mails, paiement en ligne, avis Google.
+- Configurer la **connexion avec Google** de l'espace client, comme l'envoi d'e-mails : un « ID client OAuth » créé dans un projet Google Cloud **au nom de l'entreprise** (pas d'un compte personnel), avec l'adresse de retour du vrai domaine (`https://<domaine>/api/espace/google/retour`), l'écran de consentement passé de « Test » à « En production » (sinon seuls les testeurs listés peuvent entrer), puis `GOOGLE_OAUTH_PROVIDER=google` et `GOOGLE_OAUTH_CLIENT_ID` dans `.env`, et le secret dans `secrets/google_oauth_client_secret.txt`. Pas de Google : laisser `none`, le bouton disparaît et le mot de passe suffit. Détail dans `docs/connexion-google.md`.
 - Renseigner l'hébergeur du site et le médiateur de la consommation (`LEGAL_HEBERGEUR`, `LEGAL_MEDIATEUR`) : ils apparaissent dans les mentions légales et les conditions de vente. Ces pages légales ne sont pas modifiables par le client : elles suivent les versions de l'application, et nous les mettons à jour.
 - Le nom de domaine en HTTPS.
 - Les sauvegardes nocturnes et leur vérification.
