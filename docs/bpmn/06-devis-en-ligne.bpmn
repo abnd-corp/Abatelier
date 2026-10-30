@@ -156,8 +156,8 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P6_devis_en_ligne_flux10_di" bpmnElement="P6_devis_en_ligne_flux10">
         <di:waypoint x="1240" y="220" />
-        <di:waypoint x="1255" y="220" />
-        <di:waypoint x="1255" y="460" />
+        <di:waypoint x="1247" y="220" />
+        <di:waypoint x="1247" y="460" />
         <di:waypoint x="1280" y="460" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P6_devis_en_ligne_flux11_di" bpmnElement="P6_devis_en_ligne_flux11">

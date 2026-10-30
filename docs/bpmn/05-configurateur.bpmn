@@ -142,9 +142,9 @@
         <di:waypoint x="1090" y="460" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P5_configurateur_flux6_di" bpmnElement="P5_configurateur_flux6">
-        <di:waypoint x="1165" y="420" />
-        <di:waypoint x="1165" y="147" />
-        <di:waypoint x="405" y="147" />
+        <di:waypoint x="1165" y="500" />
+        <di:waypoint x="1165" y="512" />
+        <di:waypoint x="405" y="512" />
         <di:waypoint x="405" y="125" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P5_configurateur_flux7_di" bpmnElement="P5_configurateur_flux7">

@@ -131,8 +131,8 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P12_plan_atelier_flux9_di" bpmnElement="P12_plan_atelier_flux9">
         <di:waypoint x="620" y="100" />
-        <di:waypoint x="1635" y="100" />
-        <di:waypoint x="1635" y="220" />
+        <di:waypoint x="645" y="100" />
+        <di:waypoint x="645" y="220" />
         <di:waypoint x="1660" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P12_plan_atelier_flux10_di" bpmnElement="P12_plan_atelier_flux10">

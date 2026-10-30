@@ -1,6 +1,8 @@
 // Génère docs/bpmn/*.bpmn et docs/bpmn/couverture.md à partir de processus.mjs.
 //   node scripts/bpmn/generer.mjs
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { GROUPES, PROCESSUS as PROCESSUS_SOURCE, VOIES } from './processus.mjs'
 
 /**
@@ -72,7 +74,8 @@ function normaliser(p) {
   }
   return { ...p, noeuds, flux }
 }
-const SORTIE = new URL('../../docs/bpmn/', import.meta.url)
+// BPMN_SORTIE : dossier de sortie à la place de docs/bpmn/ (la CI y génère les schémas pour les contrôler sans toucher au dépôt)
+const SORTIE = process.env.BPMN_SORTIE ? pathToFileURL(`${resolve(process.env.BPMN_SORTIE)}/`) : new URL('../../docs/bpmn/', import.meta.url)
 mkdirSync(SORTIE, { recursive: true })
 // Les fichiers sont renumérotés à chaque génération : on retire les anciens pour qu'aucun schéma périmé ne reste
 for (const f of readdirSync(SORTIE)) if (/^\d+-.*\.(bpmn|svg|png)$/.test(f)) rmSync(new URL(f, SORTIE))
@@ -93,6 +96,7 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const genre = (type) => (type === 'debut' || type === 'fin' ? 'event' : type === 'choix' || type === 'parallele' ? 'gateway' : 'task')
 
 const PROCESSUS = PROCESSUS_SOURCE.map(normaliser)
+const PROBLEMES = []
 
 function dispose(p) {
   const lignesParVoie = Object.fromEntries(p.voies.map((v) => [v, 1 + Math.max(0, ...p.noeuds.filter((n) => n[2] === v).map((n) => n[4]))]))
@@ -116,27 +120,92 @@ function dispose(p) {
   return { topVoie, hautVoie, largeur, forme, bas: y }
 }
 
-function chemin(a, b) {
+/**
+ * Trace toutes les flèches d'un processus et contrôle la disposition : une flèche ne doit ni se superposer à une autre ni traverser une étape
+ * qui n'est pas la sienne. Pour chaque flèche on garde le premier tracé possible qui respecte cela ; s'il n'y en a aucun, le problème est signalé.
+ * Deux flèches qui partent du même élément (ou arrivent au même) peuvent partager leur départ (ou leur arrivée) : c'est le dessin normal d'une décision.
+ */
+const segmentsDe = (pts) => pts.slice(1).map((q, k) => ({ x1: pts[k].x, y1: pts[k].y, x2: q.x, y2: q.y }))
+function recouvre(s, t) {
+  if (s.y1 === s.y2 && t.y1 === t.y2 && s.y1 === t.y1) return Math.min(Math.max(s.x1, s.x2), Math.max(t.x1, t.x2)) - Math.max(Math.min(s.x1, s.x2), Math.min(t.x1, t.x2)) > 2
+  if (s.x1 === s.x2 && t.x1 === t.x2 && s.x1 === t.x1) return Math.min(Math.max(s.y1, s.y2), Math.max(t.y1, t.y2)) - Math.max(Math.min(s.y1, s.y2), Math.min(t.y1, t.y2)) > 2
+  return false
+}
+function traverse(pts, f) {
+  return segmentsDe(pts).some((s) => {
+    const x1 = Math.min(s.x1, s.x2)
+    const x2 = Math.max(s.x1, s.x2)
+    const y1 = Math.min(s.y1, s.y2)
+    const y2 = Math.max(s.y1, s.y2)
+    return x1 < f.x + f.w && x2 > f.x && y1 < f.y + f.h && y2 > f.y
+  })
+}
+function acheminer(p, forme) {
+  const problemes = []
+  const choisies = []
+  p.flux.forEach(([de, vers]) => {
+    const liste = candidats(forme.get(de), forme.get(vers))
+    const gene = (pts) => {
+      const croise = [...forme].find(([id, f]) => id !== de && id !== vers && traverse(pts, f))
+      if (croise) return `traverse « ${croise[0]} »`
+      const autre = choisies.find((c) => c.de !== de && c.vers !== vers && segmentsDe(c.pts).some((s) => segmentsDe(pts).some((t) => recouvre(s, t))))
+      return autre ? `se superpose à ${autre.de}→${autre.vers}` : null
+    }
+    const ok = liste.find((pts) => !gene(pts))
+    const pts = ok ?? liste[0]
+    if (!ok) problemes.push(`la flèche ${de}→${vers} ${gene(pts)}`)
+    choisies.push({ de, vers, pts })
+  })
+  return { routes: choisies.map((c) => c.pts), problemes }
+}
+
+/** Les tracés possibles d'une flèche, du plus simple au plus détourné ; `acheminer` garde le premier qui ne gêne rien. */
+function candidats(a, b) {
   const sortie = { x: a.x + a.w, y: a.cy }
   const entree = { x: b.x, y: b.cy }
+  const out = []
   if (b.col > a.col) {
-    if (a.cy === b.cy) return [sortie, entree]
-    const vx = b.x - 25
-    return [sortie, { x: vx, y: sortie.y }, { x: vx, y: entree.y }, entree]
+    if (a.cy === b.cy) out.push([sortie, entree])
+    for (const d of [25, 33, 41, 17, 49]) {
+      const vx = b.x - d
+      out.push([sortie, { x: vx, y: sortie.y }, { x: vx, y: entree.y }, entree])
+    }
+    // Virage près de la source, puis ligne droite le long de la rangée de la cible
+    for (const d of [25, 33, 41]) {
+      const vx = sortie.x + d
+      out.push([sortie, { x: vx, y: sortie.y }, { x: vx, y: entree.y }, entree])
+    }
+    // Virage dans l'une des colonnes intermédiaires
+    for (let c = a.col; c < b.col; c++) {
+      const vx = X0 + ENTETE + 20 + (c + 1) * LARGEUR_COL
+      for (const d of [0, 10, -10]) out.push([sortie, { x: vx + d, y: sortie.y }, { x: vx + d, y: entree.y }, entree])
+    }
+    return out
   }
-  // Retour en arrière : on contourne par le dessus ou le dessous de la cible
+  // Retour en arrière : on contourne par le dessus ou le dessous de la cible, ou par la gauche de la source
   if (b.cy < a.cy) {
-    const haut = { x: a.cx, y: a.y }
-    const ym = b.y + b.h + 22
-    return [haut, { x: a.cx, y: ym }, { x: b.cx, y: ym }, { x: b.cx, y: b.y + b.h }]
+    for (const d of [22, 30, 38]) {
+      const ym = b.y + b.h + d
+      out.push([{ x: a.cx, y: a.y }, { x: a.cx, y: ym }, { x: b.cx, y: ym }, { x: b.cx, y: b.y + b.h }])
+    }
+    out.push([{ x: a.x, y: a.cy }, { x: b.cx, y: a.cy }, { x: b.cx, y: b.y + b.h }])
+    // Par le dessous de la source, puis vers la gauche : la sortie ne gêne ni ce qui est au-dessus ni l'arrivée par la gauche
+    for (const d of [12, 20, 28]) out.push([{ x: a.cx, y: a.y + a.h }, { x: a.cx, y: a.y + a.h + d }, { x: b.cx, y: a.y + a.h + d }, { x: b.cx, y: b.y + b.h }])
+    return out
   }
-  const bas = { x: a.cx, y: a.y + a.h }
-  const ym = b.y - 22
-  return [bas, { x: a.cx, y: ym }, { x: b.cx, y: ym }, { x: b.cx, y: b.y }]
+  for (const d of [22, 30, 38]) {
+    const ym = b.y - d
+    out.push([{ x: a.cx, y: a.y + a.h }, { x: a.cx, y: ym }, { x: b.cx, y: ym }, { x: b.cx, y: b.y }])
+  }
+  out.push([{ x: a.x, y: a.cy }, { x: b.cx, y: a.cy }, { x: b.cx, y: b.y }])
+  for (const d of [12, 20, 28]) out.push([{ x: a.cx, y: a.y }, { x: a.cx, y: a.y - d }, { x: b.cx, y: a.y - d }, { x: b.cx, y: b.y }])
+  return out
 }
 
 function bpmn(p, num) {
   const { topVoie, hautVoie, largeur, forme, bas } = dispose(p)
+  const { routes, problemes } = acheminer(p, forme)
+  for (const probleme of problemes) PROBLEMES.push(`${p.id} : ${probleme}`)
   const pid = `P${num}_${p.id.replace(/-/g, '_')}`
   const nid = (id) => `${pid}_${id}`
   const entrants = new Map()
@@ -176,8 +245,8 @@ function bpmn(p, num) {
     })
     .join('\n')
   const aretes = p.flux
-    .map(([de, vers], i) => {
-      const pts = chemin(forme.get(de), forme.get(vers))
+    .map((_flux, i) => {
+      const pts = routes[i]
       return `      <bpmndi:BPMNEdge id="${pid}_flux${i + 1}_di" bpmnElement="${pid}_flux${i + 1}">\n${pts.map((q) => `        <di:waypoint x="${q.x}" y="${q.y}" />`).join('\n')}\n      </bpmndi:BPMNEdge>`
     })
     .join('\n')
@@ -328,3 +397,9 @@ console.log(
     .map(([k, n]) => `${k} ${n}`)
     .join(', ')}`,
 )
+
+// Les schémas sont générés quand même (pour les voir), mais la génération échoue si une flèche en recouvre une autre ou traverse une étape
+if (PROBLEMES.length) {
+  console.error(`\n${PROBLEMES.length} problème(s) de disposition :\n${PROBLEMES.map((x) => `  - ${x}`).join('\n')}`)
+  process.exitCode = 1
+}

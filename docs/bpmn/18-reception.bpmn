@@ -203,8 +203,8 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux10_di" bpmnElement="P18_reception_flux10">
         <di:waypoint x="2190" y="340" />
-        <di:waypoint x="2255" y="340" />
-        <di:waypoint x="2255" y="100" />
+        <di:waypoint x="2215" y="340" />
+        <di:waypoint x="2215" y="100" />
         <di:waypoint x="2280" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux11_di" bpmnElement="P18_reception_flux11">
@@ -214,9 +214,9 @@
         <di:waypoint x="2305" y="180" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux12_di" bpmnElement="P18_reception_flux12">
-        <di:waypoint x="2305" y="180" />
-        <di:waypoint x="2305" y="147" />
-        <di:waypoint x="785" y="147" />
+        <di:waypoint x="2305" y="260" />
+        <di:waypoint x="2305" y="272" />
+        <di:waypoint x="785" y="272" />
         <di:waypoint x="785" y="125" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux13_di" bpmnElement="P18_reception_flux13">
@@ -237,8 +237,8 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux16_di" bpmnElement="P18_reception_flux16">
         <di:waypoint x="2760" y="340" />
-        <di:waypoint x="2832" y="340" />
-        <di:waypoint x="2832" y="100" />
+        <di:waypoint x="2785" y="340" />
+        <di:waypoint x="2785" y="100" />
         <di:waypoint x="2857" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux17_di" bpmnElement="P18_reception_flux17">

@@ -23,6 +23,8 @@ jobs:
       - run: npm ci
       - name: ESLint et Prettier
         run: npm run lint
+      - name: Schémas BPMN (passerelles, flèches qui ne se superposent pas ni ne traversent une étape)
+        run: BPMN_SORTIE="$RUNNER_TEMP/bpmn" node scripts/bpmn/generer.mjs
 
   api:
     name: API

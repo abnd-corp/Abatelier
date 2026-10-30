@@ -293,8 +293,8 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux20_di" bpmnElement="P2_espace_client_flux20">
         <di:waypoint x="3330" y="100" />
-        <di:waypoint x="3345" y="100" />
-        <di:waypoint x="3345" y="340" />
+        <di:waypoint x="3337" y="100" />
+        <di:waypoint x="3337" y="340" />
         <di:waypoint x="3370" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux21_di" bpmnElement="P2_espace_client_flux21">
