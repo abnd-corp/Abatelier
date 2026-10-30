@@ -6,6 +6,7 @@ import { getPricingSettings } from './pricing.js'
 import { getDeliverySettings } from './delivery.js'
 import { addWorkingDays, type Catalog } from './quote.js'
 import { todayParis } from './departures.js'
+import { loadClosedDays } from './closures.js'
 import { audit } from './audit.js'
 
 export const STATUT_LABELS: Record<OrderStatut, string> = {
@@ -47,7 +48,7 @@ export async function loadCatalog(): Promise<Catalog> {
 export async function changeStatus(req: FastifyRequest, order: Order, statut: OrderStatut, note: string | null) {
   const set: Partial<Order> = { statut, updatedAt: new Date() }
   // Le délai court à partir de la validation
-  if (statut === 'validee') set.datePrevue = addWorkingDays(todayParis(), order.delaiJours)
+  if (statut === 'validee') set.datePrevue = addWorkingDays(todayParis(), order.delaiJours, await loadClosedDays())
   await db.transaction(async (tx) => {
     await tx.update(orders).set(set).where(eq(orders.id, order.id))
     await tx.insert(orderEvents).values({ orderId: order.id, statut, userId: req.user!.id, note })

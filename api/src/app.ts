@@ -9,6 +9,7 @@ import { userRoutes } from './routes/users.js'
 import { auditRoutes } from './routes/audit.js'
 import { employeeRoutes } from './routes/employees.js'
 import { catalogRoutes } from './routes/catalog.js'
+import { closureRoutes } from './routes/closures.js'
 import { deliveryRoutes } from './routes/delivery.js'
 import { documentRoutes } from './routes/documents.js'
 import { clientRoutes } from './routes/clients.js'
@@ -98,6 +99,7 @@ export async function buildApp() {
   await app.register(employeeRoutes, { prefix: '/api/employees' })
   await app.register(catalogRoutes, { prefix: '/api/catalog' })
   await app.register(deliveryRoutes, { prefix: '/api/catalog' })
+  await app.register(closureRoutes, { prefix: '/api/catalog' })
   await app.register(documentRoutes, { prefix: '/api/documents' })
   await app.register(clientRoutes, { prefix: '/api/clients' })
   await app.register(orderRoutes, { prefix: '/api/orders' })

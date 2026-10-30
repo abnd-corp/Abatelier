@@ -11,6 +11,7 @@ import { orderConfirmed, orderPaidAlert } from './mail-texts.js'
 import { getCompany } from './documents.js'
 import { addWorkingDays, cents, lineValues } from './quote.js'
 import { todayParis } from './departures.js'
+import { loadClosedDays } from './closures.js'
 import { clientName } from './routes/clients.js'
 
 // Boutique : prix, panier et création de la commande une fois le paiement confirmé.
@@ -127,6 +128,7 @@ export async function priceCart(items: CartItem[], livraison: CartDelivery): Pro
  * Peut être appelée plusieurs fois pour le même paiement (les notifications sont renvoyées) : seule la première crée la commande.
  */
 export async function confirmPayment(paymentId: string, providerPayment: string | null): Promise<{ created: boolean; payment: Payment; order: { id: string; numero: string } | null }> {
+  const closed = await loadClosedDays()
   const done = await db.transaction(async (tx) => {
     const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update')
     if (!p) return null
@@ -156,7 +158,7 @@ export async function confirmPayment(paymentId: string, providerPayment: string 
         tva: c.totals.tva,
         ttc: c.totals.ttc,
         delaiJours: c.totals.delaiJours,
-        datePrevue: addWorkingDays(todayParis(), c.totals.delaiJours),
+        datePrevue: addWorkingDays(todayParis(), c.totals.delaiJours, closed),
         createdBy: null,
       })
       .returning()

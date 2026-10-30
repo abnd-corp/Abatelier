@@ -113,6 +113,7 @@ async function setup(path = '/catalogue', extra: Parameters<typeof mockApi>[0] =
     'GET /catalog/accessories': [200, { accessories: ACCS }],
     'GET /catalog/models': [200, { models: PIECES }],
     'GET /catalog/delivery': [200, { delivery: DELIVERY }],
+    'GET /catalog/closures': [200, { closures: [], today: '2026-10-30' }],
     ...extra,
   })
   const pinia = freshPinia()
@@ -642,5 +643,68 @@ describe('Livraison', () => {
     expect(n(describeEntry(e).text)).toBe(
       'A modifié la livraison : zones de livraison 30 km : 39,00 € → 30 km : 39,00 € (offerte dès 500,00 €), seuil des pièces longues aucun → 2500 mm, retrait à l’atelier proposé → désactivé',
     )
+  })
+})
+
+describe('Fermetures de l’atelier', () => {
+  const CL = [
+    { id: 'f1', debut: '2026-12-24', fin: '2027-01-03', motif: 'Congés de fin d’année' },
+    { id: 'f0', debut: '2026-05-01', fin: '2026-05-01', motif: 'Jour férié' },
+  ]
+
+  it('liste les fermetures à venir, les passées sur demande', async () => {
+    const { panel, wrapper } = await setup('/catalogue?onglet=fermetures', { 'GET /catalog/closures': [200, { closures: CL, today: '2026-10-30' }] })
+    const p = panel('fermetures')
+    expect(p.findAll('tbody tr')).toHaveLength(1)
+    expect(p.text()).toContain('Congés de fin d’année')
+    expect(wrapper.get('#tab-fermetures').text()).toContain('1')
+    await p.get('#closures-past').setValue(true)
+    expect(p.findAll('tbody tr')).toHaveLength(2)
+    expect(p.text()).toContain('passée')
+  })
+
+  it('ajoute une fermeture d’un seul jour : le dernier jour reprend le premier', async () => {
+    const { panel, calls } = await setup('/catalogue?onglet=fermetures', { 'POST /catalog/closures': [201, { closure: CL[0] }] })
+    const p = panel('fermetures')
+    await p
+      .findAll('button')
+      .find((b) => b.text().includes('Ajouter une fermeture'))!
+      .trigger('click')
+    await p.get('#f-debut').setValue('2026-11-11')
+    await p.get('#f-motif').setValue('Jour férié')
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ debut: '2026-11-11', fin: '2026-11-11', motif: 'Jour férié' })
+    expect(p.text()).toContain('Fermeture ajoutée')
+  })
+
+  it('affiche l’erreur de l’API à côté du champ', async () => {
+    const { panel } = await setup('/catalogue?onglet=fermetures', { 'POST /catalog/closures': [400, { error: 'Indiquez le motif (congés, jour férié, panne…).', field: 'motif' }] })
+    const p = panel('fermetures')
+    await p
+      .findAll('button')
+      .find((b) => b.text().includes('Ajouter une fermeture'))!
+      .trigger('click')
+    await p.get('#f-debut').setValue('2026-11-11')
+    await p.get('form').trigger('submit')
+    await flushPromises()
+    expect(p.get('.field-error').text()).toContain('Indiquez le motif')
+  })
+
+  it('supprime une fermeture', async () => {
+    const { panel, calls } = await setup('/catalogue?onglet=fermetures', {
+      'GET /catalog/closures': [200, { closures: CL, today: '2026-10-30' }],
+      'DELETE /catalog/closures/f1': [200, { ok: true }],
+    })
+    await panel('fermetures').get('button[aria-label^="Supprimer la fermeture"]').trigger('click')
+    await flushPromises()
+    expect(calls.some((c) => c.method === 'DELETE' && c.path === '/catalog/closures/f1')).toBe(true)
+  })
+
+  it('décrit les fermetures dans le journal', () => {
+    const e = { action: 'closure.created', details: { debut: '2026-12-24', fin: '2027-01-03', motif: 'Congés' } } as unknown as AuditEntry
+    expect(describeEntry(e).text).toBe('A déclaré une fermeture de l’atelier du 24 décembre 2026 au 3 janvier 2027 (Congés)')
+    const j = { action: 'closure.deleted', details: { debut: '2026-11-11', fin: '2026-11-11', motif: 'Férié' } } as unknown as AuditEntry
+    expect(describeEntry(j).text).toBe('A supprimé la fermeture de l’atelier le 11 novembre 2026 (Férié)')
   })
 })

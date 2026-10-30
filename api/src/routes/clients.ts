@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify'
 import { and, asc, count, desc, eq, ilike, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
-import { auditLog, clients, clientSites, CLIENT_TYPES, orders, users, type Client } from '../db/schema.js'
+import { auditLog, clients, contactRequests, clientSites, CLIENT_TYPES, orders, users, type Client } from '../db/schema.js'
 import { requirePerm } from '../auth/plugin.js'
 import { can } from '../auth/permissions.js'
 import { audit, describeDevice } from '../audit.js'
@@ -184,6 +184,36 @@ export async function clientRoutes(app: FastifyInstance) {
     return {
       clients: rows,
       totals: { particulier: Number(totals?.particulier ?? 0), professionnel: Number(totals?.professionnel ?? 0), archives: Number(totals?.archives ?? 0) },
+    }
+  })
+
+  // Fiche client d'une demande de contact : celle qui a la même adresse e-mail si elle existe (jamais de doublon), sinon une nouvelle fiche de particulier
+  app.post('/depuis-contact/:contactId', manage, async (req, reply) => {
+    const contactId = (req.params as { contactId: string }).contactId
+    const [demande] = z.uuid().safeParse(contactId).success ? await db.select().from(contactRequests).where(eq(contactRequests.id, contactId)) : []
+    if (!demande) return reply.code(404).send({ error: 'Demande introuvable.' })
+    const existing = await emailOwner(demande.email)
+    if (existing) return { id: existing, cree: false }
+    try {
+      const [c] = await db
+        .insert(clients)
+        .values({
+          type: 'particulier',
+          nom: demande.nom,
+          email: demande.email,
+          telephone: demande.telephone,
+          adresse: demande.adresse,
+          codePostal: demande.codePostal,
+          ville: demande.ville,
+          origine: 'site',
+        })
+        .returning()
+      await audit(req, 'client.created', { targetType: 'client', targetId: c!.id, details: { nom: clientName(c!), type: c!.type, origine: c!.origine, demande: demande.id } })
+      return reply.code(201).send({ id: c!.id, cree: true })
+    } catch (e) {
+      // Une fiche créée au même instant par quelqu'un d'autre : on l'utilise
+      if (isUniqueViolation(e)) return { id: await emailOwner(demande.email), cree: false }
+      throw e
     }
   })
 

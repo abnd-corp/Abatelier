@@ -120,6 +120,8 @@ const CATALOG_FIELDS: Record<string, { label: string; fmt: (v: unknown) => strin
     fmt: (v) => (Array.isArray(v) && v.length ? v.map((p: { seuil: number; remise: number }) => `−${String(p.remise).replace('.', ',')} % dès ${p.seuil}`).join(', ') : 'aucune'),
   },
 }
+const jourFr = (j: unknown) => new Date(`${String(j)}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+const periode = (debut: unknown, fin: unknown) => (debut === fin ? `le ${jourFr(debut)}` : `du ${jourFr(debut)} au ${jourFr(fin)}`)
 function changes(c: Record<string, { avant: unknown; apres: unknown }> | undefined) {
   return Object.entries(c ?? {})
     .map(([k, { avant, apres }]) => {
@@ -168,6 +170,12 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A ajouté ${d.nom} à l’équipe${d.compte ? ' avec un compte de connexion' : ''}`, tone: 'accent' }
     case 'employee.updated':
       return { text: `A modifié la fiche de ${d.nom ?? cible} (${(d.champs ?? []).join(', ')})`, tone: 'neutral' }
+    case 'closure.created':
+      return { text: `A déclaré une fermeture de l’atelier ${periode(d.debut, d.fin)} (${d.motif})`, tone: 'accent' }
+    case 'closure.updated':
+      return { text: `A modifié une fermeture de l’atelier : ${periode(d.apres?.debut, d.apres?.fin)} (${d.apres?.motif})`, tone: 'accent' }
+    case 'closure.deleted':
+      return { text: `A supprimé la fermeture de l’atelier ${periode(d.debut, d.fin)} (${d.motif})`, tone: 'neutral' }
     case 'catalog.material_created':
       return { text: `A ajouté la matière ${d.nom} (${eur(d.prixM2)}/m²)`, tone: 'accent' }
     case 'catalog.material_updated':
@@ -279,6 +287,8 @@ export function describe(e: AuditEntry): { text: string; tone: Tone } {
       return { text: `A marqué la demande « ${d.objet} » comme traitée`, tone: 'neutral' }
     case 'contact.reopened':
       return { text: `A remis la demande « ${d.objet} » à traiter`, tone: 'neutral' }
+    case 'contact.purged':
+      return { text: `Suppression automatique de ${d.nombre} demande${d.nombre > 1 ? 's' : ''} de contact de plus de ${d.mois} mois`, tone: 'neutral' }
     case 'contact.deleted':
       return { text: `A supprimé la demande de contact « ${d.objet} »`, tone: 'bad' }
     case 'product.created':

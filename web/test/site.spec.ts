@@ -211,6 +211,27 @@ describe('Mise en page publique', () => {
     expect(ld).toMatchObject({ '@type': 'LocalBusiness', address: { postalCode: '42490', addressLocality: 'Fraisses' } })
   })
 
+  it('annonce les fermetures de l’atelier dans un bandeau, seulement s’il y en a', async () => {
+    const sans = await mountAt(PublicLayout, '/')
+    expect(sans.wrapper.find('.s-closures').exists()).toBe(false)
+    const { wrapper } = await mountAt(PublicLayout, '/', {
+      'GET /public/site': [
+        200,
+        {
+          ...SITE,
+          fermetures: [
+            { debut: '2026-12-24', fin: '2027-01-03', motif: 'Congés de fin d’année' },
+            { debut: '2026-11-11', fin: '2026-11-11', motif: 'Jour férié' },
+          ],
+        },
+      ],
+      'GET /public/avis': [200, AVIS],
+    })
+    const items = wrapper.findAll('.s-closures li').map((l) => l.text())
+    expect(items).toEqual(['Atelier fermé du 24 décembre au 3 janvier : Congés de fin d’année', 'Atelier fermé le 11 novembre : Jour férié'])
+    expect(wrapper.get('.s-closures').attributes('role')).toBe('status')
+  })
+
   it('ouvre et ferme le menu sur téléphone', async () => {
     const { wrapper } = await mountAt(PublicLayout, '/')
     const burger = wrapper.get('.s-burger')
@@ -333,6 +354,18 @@ describe('Administration du site', () => {
     await btn(wrapper, 'Marquer comme traitée')!.trigger('click')
     await flushPromises()
     expect(sent(calls)).toEqual([{ method: 'POST', path: '/site/contacts/d1/traite', body: { traite: true } }])
+  })
+
+  it('ouvre la fiche client de la demande (créée ou retrouvée par l’API)', async () => {
+    const { wrapper, router, calls } = await mountAdmin('/site-vitrine', {
+      'GET /site/contacts?filtre=a_traiter': [200, { demandes: [DEMANDE], aTraiter: 1 }],
+      'POST /clients/depuis-contact/d1': [201, { id: 'c42', cree: true }],
+    })
+    await wrapper.get('.summary').trigger('click')
+    await btn(wrapper, 'Fiche client')!.trigger('click')
+    await flushPromises()
+    expect(sent(calls)).toEqual([{ method: 'POST', path: '/clients/depuis-contact/d1', body: undefined }])
+    expect(router.currentRoute.value.fullPath).toBe('/clients/c42')
   })
 
   it('demande confirmation avant de supprimer une demande', async () => {

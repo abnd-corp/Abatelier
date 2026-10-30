@@ -15,7 +15,7 @@ export { buildApp }
 
 export async function resetDb() {
   await db.execute(
-    sql`truncate audit_log, login_attempts, sessions, client_sessions, client_accounts, email_tokens, employees, users, materials, colors, pricing_settings, piece_models, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events, billing_documents, payments, product_variants, products, site_content, site_photos, contact_requests, email_log restart identity cascade`,
+    sql`truncate audit_log, login_attempts, sessions, client_sessions, client_accounts, email_tokens, employees, users, materials, colors, pricing_settings, piece_models, accessories, delivery_settings, company_settings, document_template, document_counters, clients, client_sites, orders, order_lines, order_events, billing_documents, payments, product_variants, products, site_content, site_photos, contact_requests, email_log, closures restart identity cascade`,
   )
 }
 

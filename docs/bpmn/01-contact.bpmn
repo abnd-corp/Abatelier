@@ -36,11 +36,11 @@
     <bpmn:userTask id="P1_contact_t1" name="Remplir le formulaire de contact (plan joint possible)"><bpmn:documentation>Dans l’application : Site public › Contact (consentement RGPD demandé)</bpmn:documentation><bpmn:incoming>P1_contact_flux4</bpmn:incoming><bpmn:outgoing>P1_contact_flux6</bpmn:outgoing></bpmn:userTask>
     <bpmn:serviceTask id="P1_contact_t2" name="Enregistrer la demande et notifier la direction dans la plateforme"><bpmn:documentation>En partie : Notification avec le plan, la pièce choisie dans le configurateur et un lien. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme</bpmn:documentation><bpmn:incoming>P1_contact_flux6</bpmn:incoming><bpmn:outgoing>P1_contact_flux7</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="P1_contact_t3" name="Envoyer un accusé de réception au visiteur, avec les liens utiles"><bpmn:documentation>Pas encore : Aujourd’hui seule l’équipe est prévenue</bpmn:documentation><bpmn:incoming>P1_contact_flux7</bpmn:incoming><bpmn:outgoing>P1_contact_flux8</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P1_contact_t5" name="Retrouver ou créer la fiche client depuis la demande"><bpmn:documentation>Pas encore : Par l’adresse e-mail, sans doublon ; aujourd’hui la fiche se crée à la main dans Clients</bpmn:documentation><bpmn:incoming>P1_contact_flux8</bpmn:incoming><bpmn:outgoing>P1_contact_flux9</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P1_contact_t5" name="Retrouver ou créer la fiche client depuis la demande"><bpmn:documentation>Dans l’application : Bouton « Fiche client » sur la demande : retrouvée par l’adresse e-mail, sinon créée, sans doublon</bpmn:documentation><bpmn:incoming>P1_contact_flux8</bpmn:incoming><bpmn:outgoing>P1_contact_flux9</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:userTask id="P1_contact_t4" name="Lire la demande et télécharger le plan"><bpmn:documentation>Dans l’application : Site vitrine › Demandes reçues</bpmn:documentation><bpmn:incoming>P1_contact_flux9</bpmn:incoming><bpmn:outgoing>P1_contact_flux10</bpmn:outgoing></bpmn:userTask>
     <bpmn:manualTask id="P1_contact_t6" name="Répondre au client (téléphone ou e-mail)"><bpmn:documentation>Hors application : La réponse part de la messagerie habituelle</bpmn:documentation><bpmn:incoming>P1_contact_flux10</bpmn:incoming><bpmn:outgoing>P1_contact_flux11</bpmn:outgoing></bpmn:manualTask>
     <bpmn:userTask id="P1_contact_t7" name="Marquer la demande comme traitée"><bpmn:documentation>Dans l’application : Site vitrine › Demandes reçues</bpmn:documentation><bpmn:incoming>P1_contact_flux11</bpmn:incoming><bpmn:outgoing>P1_contact_flux12</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="P1_contact_t8" name="Supprimer la demande au bout de 12 mois"><bpmn:documentation>Pas encore : Suppression à la demande de la personne : faite ; purge automatique : à faire</bpmn:documentation><bpmn:incoming>P1_contact_flux12</bpmn:incoming><bpmn:outgoing>P1_contact_flux13</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P1_contact_t8" name="Supprimer la demande au bout de 12 mois"><bpmn:documentation>Dans l’application : Purge automatique chaque heure des demandes de plus de 12 mois sans commande, notée au journal ; suppression à la demande de la personne aussi</bpmn:documentation><bpmn:incoming>P1_contact_flux12</bpmn:incoming><bpmn:outgoing>P1_contact_flux13</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:endEvent id="P1_contact_f" name="Demande clôturée"><bpmn:incoming>P1_contact_flux13</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="P1_contact_flux1" sourceRef="P1_contact_d" targetRef="P1_contact_t0b" />
     <bpmn:sequenceFlow id="P1_contact_flux2" sourceRef="P1_contact_t0b" targetRef="P1_contact_g0" />
@@ -98,7 +98,7 @@
       <bpmndi:BPMNShape id="P1_contact_t3_di" bpmnElement="P1_contact_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
         <dc:Bounds x="1090" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P1_contact_t5_di" bpmnElement="P1_contact_t5" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+      <bpmndi:BPMNShape id="P1_contact_t5_di" bpmnElement="P1_contact_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="1280" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P1_contact_t4_di" bpmnElement="P1_contact_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -110,7 +110,7 @@
       <bpmndi:BPMNShape id="P1_contact_t7_di" bpmnElement="P1_contact_t7" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="1850" y="540" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="P1_contact_t8_di" bpmnElement="P1_contact_t8" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+      <bpmndi:BPMNShape id="P1_contact_t8_di" bpmnElement="P1_contact_t8" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="2040" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P1_contact_f_di" bpmnElement="P1_contact_f">

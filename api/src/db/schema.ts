@@ -886,3 +886,16 @@ export type ProductVariant = typeof productVariants.$inferSelect
 export type Payment = typeof payments.$inferSelect
 export type OrderLine = typeof orderLines.$inferSelect
 export type BillingDocument = typeof billingDocuments.$inferSelect
+
+// Fermetures exceptionnelles de l'atelier (congés, jour férié, panne) : ces jours ne comptent pas dans les délais annoncés
+export const closures = pgTable(
+  'closures',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    debut: date('debut', { mode: 'string' }).notNull(),
+    fin: date('fin', { mode: 'string' }).notNull(),
+    motif: text('motif').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [check('closures_dates_check', sql`${t.fin} >= ${t.debut}`)],
+)

@@ -13,6 +13,9 @@ const panier = usePanierStore()
 const open = ref(false)
 const e = computed(() => site.value?.entreprise)
 const horaires = computed(() => lines(site.value?.contenu['site.horaires']))
+const jour = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+// Fermetures : dates en toutes lettres, « du 4 au 18 août » ou le jour seul
+const fermetures = computed(() => (site.value?.fermetures ?? []).map((f) => ({ ...f, texte: f.debut === f.fin ? `le ${jour(f.debut)}` : `du ${jour(f.debut)} au ${jour(f.fin)}` })))
 const address = computed(() => (e.value ? e.value.adresse.split('\n').filter(Boolean) : []))
 
 const NAV = [
@@ -68,6 +71,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     </header>
 
     <main id="contenu" tabindex="-1">
+      <div v-if="fermetures.length" class="s-wrap s-closures" role="status">
+        <AppIcon name="calendar" :size="18" />
+        <ul>
+          <li v-for="f in fermetures" :key="f.debut + f.fin">Atelier fermé {{ f.texte }} : {{ f.motif }}</li>
+        </ul>
+      </div>
       <p v-if="siteError" class="s-wrap s-error" role="alert">{{ siteError }}</p>
       <RouterView />
     </main>
@@ -300,6 +309,22 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   border-radius: 8px;
   background: var(--bad-soft);
   color: var(--bad);
+}
+
+.site .s-closures {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.site .s-closures ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* Pied de page */

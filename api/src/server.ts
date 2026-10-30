@@ -5,6 +5,7 @@ import { deleteExpiredSessions } from './auth/session.js'
 import { deleteExpiredClientSessions } from './auth/client-session.js'
 import { deleteOldAttempts } from './auth/throttle.js'
 import { deleteOldAuditEntries } from './audit.js'
+import { deleteOldContactRequests } from './contact-retention.js'
 import { seedAdmin } from './seed.js'
 import { applyDepartures } from './departures.js'
 
@@ -19,6 +20,7 @@ async function cleanup() {
   await deleteExpiredClientSessions()
   await deleteOldAttempts()
   await deleteOldAuditEntries()
+  await deleteOldContactRequests()
 }
 await cleanup()
 // Toutes les heures : les départs du jour sont appliqués peu après minuit

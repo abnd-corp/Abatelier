@@ -6,9 +6,9 @@ Les 36 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 
 | Couverture | Étapes | Part |
 |---|---|---|
-| Dans l’application | 114 | 46 % |
+| Dans l’application | 117 | 48 % |
 | En partie | 19 | 8 % |
-| Pas encore | 100 | 41 % |
+| Pas encore | 97 | 39 % |
 | Hors application | 13 | 5 % |
 | **Total** | **246** | |
 
@@ -17,8 +17,6 @@ Les 36 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Demande de contact** : Proposer d’abord les services en ligne et les réponses aux questions fréquentes (pas encore) : En tête de la page Contact : liens vers configurateur, devis, commande ; délais, matières, livraison
 - **Demande de contact** : Enregistrer la demande et notifier la direction dans la plateforme (en partie) : Notification avec le plan, la pièce choisie dans le configurateur et un lien. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme
 - **Demande de contact** : Envoyer un accusé de réception au visiteur, avec les liens utiles (pas encore) : Aujourd’hui seule l’équipe est prévenue
-- **Demande de contact** : Retrouver ou créer la fiche client depuis la demande (pas encore) : Par l’adresse e-mail, sans doublon ; aujourd’hui la fiche se crée à la main dans Clients
-- **Demande de contact** : Supprimer la demande au bout de 12 mois (pas encore) : Suppression à la demande de la personne : faite ; purge automatique : à faire
 - **Espace client : création, activation, mot de passe, fermeture** : Vérifier le SIRET dans l’annuaire officiel des entreprises (en activité, nom concordant) (pas encore) : Annuaire public et gratuit (recherche-entreprises.api.gouv.fr) ; le n° de TVA se contrôle avec VIES. Aujourd’hui la direction vérifie à la main
 - **Configurateur : faisabilité contrôlée, prix et date estimée** : Vérifier la quantité et la charge de l’atelier (pas encore) : Plafond de quantité et capacité par jour : en attente des données de l’atelier
 - **Configurateur : faisabilité contrôlée, prix et date estimée** : Calculer le prix, la livraison et la date estimée (en partie) : Date = jour + délai standard ; pas encore selon la quantité, le stock ni la charge
@@ -104,7 +102,6 @@ Les 36 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Statistiques : reprise de l’historique** : Contrôler puis importer l’historique (pas encore) : Les données personnelles ne sont pas reprises dans les statistiques
 - **Statistiques : reprise de l’historique** : Vérifier les courbes dès le départ (pas encore) : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone
 - **Paramétrage par la direction** : Régler les limites par matière, la quantité maximale et le délai selon la quantité (pas encore) : En attente des données des machines de l’atelier
-- **Paramétrage par la direction** : Déclarer les jours fériés et les fermetures (pas encore) : Le délai annoncé saute les week-ends, pas les jours fériés
 - **Paramétrer les machines de l’atelier** : Ajouter ou modifier une machine : type, longueur maximale, épaisseur par matière, cadence (pas encore) : Données à recueillir chez le client (limites des machines)
 - **Paramétrer les machines de l’atelier** : Mettre une machine hors service (panne, maintenance) ou la retirer (pas encore) : La capacité baisse tant qu’elle est arrêtée
 - **Paramétrer les machines de l’atelier** : Appliquer les limites des machines au contrôle du configurateur (pas encore) : Plafond de quantité, longueur et épaisseur maximales
@@ -147,11 +144,11 @@ Schéma : [image](01-contact.svg) · [fichier BPMN](01-contact.bpmn)
 | Remplir le formulaire de contact (plan joint possible) | Visiteur / Client | Dans l’application | Site public › Contact (consentement RGPD demandé) |
 | Enregistrer la demande et notifier la direction dans la plateforme | Application (automatique) | En partie | Notification avec le plan, la pièce choisie dans le configurateur et un lien. Aujourd’hui par e-mail ; passe dans les notifications de la plateforme |
 | Envoyer un accusé de réception au visiteur, avec les liens utiles | Application (automatique) | Pas encore | Aujourd’hui seule l’équipe est prévenue |
-| Retrouver ou créer la fiche client depuis la demande | Application (automatique) | Pas encore | Par l’adresse e-mail, sans doublon ; aujourd’hui la fiche se crée à la main dans Clients |
+| Retrouver ou créer la fiche client depuis la demande | Application (automatique) | Dans l’application | Bouton « Fiche client » sur la demande : retrouvée par l’adresse e-mail, sinon créée, sans doublon |
 | Lire la demande et télécharger le plan | Direction | Dans l’application | Site vitrine › Demandes reçues |
 | Répondre au client (téléphone ou e-mail) | Direction | Hors application | La réponse part de la messagerie habituelle |
 | Marquer la demande comme traitée | Direction | Dans l’application | Site vitrine › Demandes reçues |
-| Supprimer la demande au bout de 12 mois | Application (automatique) | Pas encore | Suppression à la demande de la personne : faite ; purge automatique : à faire |
+| Supprimer la demande au bout de 12 mois | Application (automatique) | Dans l’application | Purge automatique chaque heure des demandes de plus de 12 mois sans commande, notée au journal ; suppression à la demande de la personne aussi |
 
 ## 2. Espace client : création, activation, mot de passe, fermeture
 
@@ -576,7 +573,7 @@ Schéma : [image](28-parametrage.svg) · [fichier BPMN](28-parametrage.bpmn)
 | Régler les limites de pliage et les modèles de pièces | Direction | Dans l’application | Catalogue › Modèles de pièces |
 | Régler l’entreprise, le modèle des documents, la numérotation | Direction | Dans l’application | Modèles de documents (la numérotation se verrouille au premier document) |
 | Régler les limites par matière, la quantité maximale et le délai selon la quantité | Direction | Pas encore | En attente des données des machines de l’atelier |
-| Déclarer les jours fériés et les fermetures | Direction | Pas encore | Le délai annoncé saute les week-ends, pas les jours fériés |
+| Déclarer les jours fériés et les fermetures | Direction | Dans l’application | Tarifs et catalogue > Fermetures : les délais sautent ces jours et le site les annonce dans un bandeau |
 | Appliquer tout de suite aux prochains devis, commandes et au site | Application (automatique) | Dans l’application | Les documents déjà émis ne changent pas |
 
 ## 29. Paramétrer les machines de l’atelier
