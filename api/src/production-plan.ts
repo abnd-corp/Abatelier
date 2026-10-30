@@ -57,18 +57,18 @@ const traitsDe = (cotes: number[]) => {
 }
 const titreDe = (l: SheetLine, i: number) => `Pièce ${i + 1} · ${l.modeleLabel}${l.repere ? ` · ${l.repere}` : ''}`
 
-export function buildPlan(lignes: PlanLigne[]): Plan {
+export function buildPlan(lignes: PlanLigne[], chuteMin = CHUTE_MIN): Plan {
   const groupes = sheetGroups(lignes).map((g, gi): PlanGroupe => {
     const premiere = (g.lignes[0]!.l as PlanLigne).id
     const lignesPlan = g.lignes as { l: PlanLigne; i: number }[]
     const avecPlan = lignesPlan.filter(({ l }) => l.decoupe)
     let chutes: PlanGroupe['chutes'] = null
     if (avecPlan.length) {
-      const toutes = avecPlan.flatMap(({ l }) => chutesOf(l, l.decoupe!))
+      const toutes = avecPlan.flatMap(({ l }) => chutesOf(l, l.decoupe!, chuteMin))
       const surface = toutes.reduce((s, c) => s + c.largeur * c.longueur, 0)
       const feuilles = avecPlan.reduce((s, { l }) => s + l.decoupe!.feuilles * l.decoupe!.feuilleLargeur * l.decoupe!.feuilleLongueur, 0)
       const vue = (garder: boolean) => groupChutes(toutes.filter((c) => c.garder === garder)).map(({ nombre, largeur, longueur }) => ({ nombre, largeur, longueur }))
-      chutes = { garder: vue(true), jeter: vue(false), pourcent: Math.round((surface / feuilles) * 1000) / 10, m2: Math.round(surface / 1e4) / 100, minimum: CHUTE_MIN }
+      chutes = { garder: vue(true), jeter: vue(false), pourcent: Math.round((surface / feuilles) * 1000) / 10, m2: Math.round(surface / 1e4) / 100, minimum: chuteMin }
     }
     // Une feuille conseillée par référence, tous les besoins de la ligne additionnés
     const parFeuille = new Map<string, number>()

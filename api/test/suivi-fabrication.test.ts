@@ -50,7 +50,7 @@ const suivi = async (c: Client = direction) =>
         recuperer: { cle: string; texte: string }[]
         decoupes: { cle: string; quantite: number; consigne: string }[]
         pliages: { cle: string }[]
-        chutes: { garder: { nombre: number; largeur: number; longueur: number }[]; pourcent: number } | null
+        chutes: { garder: { nombre: number; largeur: number; longueur: number }[]; jeter: { nombre: number; largeur: number; longueur: number }[]; minimum: number; pourcent: number } | null
       }[]
     }
     checks: Record<string, { count: number; par: string }>
@@ -214,5 +214,50 @@ describe('Suivi de la fabrication : fin de feuille et stock', () => {
     expect((await direction.post(`/api/production/${orderId}/suivi/stock`, { groupe: g!.id })).json().error).toContain('Aucune feuille du stock')
     expect((await direction.post(`/api/production/${orderId}/suivi/stock`, { groupe: '00000000-0000-0000-0000-000000000000' })).statusCode).toBe(404)
     expect((await direction.post(`/api/production/${orderId}/suivi/stock`, { groupe: 'oups' })).statusCode).toBe(400)
+  })
+})
+
+describe('Taille minimale d’une chute à garder', () => {
+  const reglage = (c: Client, chuteMin: unknown) => c.put('/api/stock/reglages', { chuteMin })
+
+  it('démarre à 200 mm, se règle, et le dit au journal', async () => {
+    expect((await direction.get('/api/stock/reglages')).json()).toEqual({ chuteMin: 200 })
+    const res = await reglage(direction, 350)
+    expect(res.statusCode, res.body).toBe(200)
+    expect((await direction.get('/api/stock/reglages')).json()).toEqual({ chuteMin: 350 })
+    const [entree] = await db.select().from(auditLog).where(eq(auditLog.action, 'stock.settings_updated'))
+    expect(entree).toMatchObject({ details: { chuteMin: 350, avant: 200 } })
+    // Rien de changé : rien au journal
+    await reglage(direction, 350)
+    expect(await db.select().from(auditLog).where(eq(auditLog.action, 'stock.settings_updated'))).toHaveLength(1)
+  })
+
+  it('refuse une valeur absurde', async () => {
+    for (const v of [5, 2000, 12.5, 'grand', null]) expect((await reglage(direction, v)).statusCode, String(v)).toBe(400)
+    expect((await direction.get('/api/stock/reglages')).json()).toEqual({ chuteMin: 200 })
+  })
+
+  it('est réservé à ceux qui gèrent le stock', async () => {
+    await createUser({ identifiant: 'rh', role: 'rh' })
+    const rh = await loginAs(app, 'rh')
+    expect((await rh.get('/api/stock/reglages')).statusCode).toBe(403)
+    expect((await reglage(rh, 300)).statusCode).toBe(403)
+    expect((await app.inject({ method: 'GET', url: '/api/stock/reglages', headers: { host: 'atelier.test' } })).statusCode).toBe(401)
+    expect((await reglage(await atelier(), 300)).statusCode).toBe(200)
+  })
+
+  it('change ce qui est à garder sur la fiche : à 400 mm, les 290 mm partent au rebut', async () => {
+    await stockFeuille()
+    expect((await suivi()).plan.groupes[0]!.chutes!.garder).toEqual([{ nombre: 2, largeur: 290, longueur: 3000 }])
+    await reglage(direction, 400)
+    const { plan } = await suivi()
+    expect(plan.groupes[0]!.chutes!.garder).toEqual([])
+    expect(plan.groupes[0]!.chutes).toMatchObject({ minimum: 400, jeter: [{ nombre: 2, largeur: 290, longueur: 3000 }] })
+    // Et le stock n'accueille alors aucune chute
+    const g = plan.groupes[0]!
+    await direction.put(`/api/production/${orderId}/suivi`, { cle: g.decoupes[0]!.cle, count: 4 })
+    const fin = await direction.post(`/api/production/${orderId}/suivi/stock`, { groupe: g.id })
+    expect(fin.json().chutes).toEqual([])
+    expect(await db.select().from(sheetStock).where(eq(sheetStock.chute, true))).toHaveLength(0)
   })
 })

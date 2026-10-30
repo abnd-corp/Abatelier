@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P20_chutes_minimum_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P20_chutes_minimum_collab">
+    <bpmn:participant id="P20_chutes_minimum_pool" name="Régler la taille minimale d’une chute à garder" processRef="P20_chutes_minimum" />
+  </bpmn:collaboration>
+  <bpmn:process id="P20_chutes_minimum" name="Régler la taille minimale d’une chute à garder" isExecutable="false">
+    <bpmn:documentation>La taille minimale d’un morceau qui vaut la peine d’être gardé n’est pas connue : l’application part d’une valeur (200 mm), dit sur la fiche ce qui se garde et ce qui se jette, puis l’atelier l’ajuste d’après ce qu’il réutilise vraiment.</bpmn:documentation>
+    <bpmn:laneSet id="P20_chutes_minimum_voies">
+      <bpmn:lane id="P20_chutes_minimum_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P20_chutes_minimum_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P20_chutes_minimum_t3</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P20_chutes_minimum_voie_atelier" name="Atelier">
+        <bpmn:flowNodeRef>P20_chutes_minimum_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P20_chutes_minimum_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P20_chutes_minimum_t5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P20_chutes_minimum_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P20_chutes_minimum_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P20_chutes_minimum_t4</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P20_chutes_minimum_d" name="Une fabrication produit des chutes"><bpmn:outgoing>P20_chutes_minimum_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="P20_chutes_minimum_t1" name="Dire sur la fiche ce qui se garde et ce qui se jette, d’après la taille minimale"><bpmn:documentation>Dans l’application : Fiche de fabrication, imprimée ou à l’écran ; 200 mm de côté au départ</bpmn:documentation><bpmn:incoming>P20_chutes_minimum_flux1</bpmn:incoming><bpmn:outgoing>P20_chutes_minimum_flux2</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P20_chutes_minimum_t2" name="Confirmer les chutes gardées et les remettre au stock en fin de feuille"><bpmn:documentation>Dans l’application : Suivi pas à pas : un bouton sort les feuilles et entre les chutes</bpmn:documentation><bpmn:incoming>P20_chutes_minimum_flux2</bpmn:incoming><bpmn:outgoing>P20_chutes_minimum_flux3</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P20_chutes_minimum_t3" name="Suivre ce que deviennent les chutes : réutilisées, jetées, ou qui dorment au stock"><bpmn:documentation>Pas encore : Nombre de chutes créées et réutilisées, et leur ancienneté : c’est ce qui dit quelle taille vaut la peine</bpmn:documentation><bpmn:incoming>P20_chutes_minimum_flux3</bpmn:incoming><bpmn:outgoing>P20_chutes_minimum_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P20_chutes_minimum_t4" name="Examiner les chutes inutilisées avec l’atelier"><bpmn:documentation>Hors application : Réunion ou discussion : quelles tailles ne servent jamais ?</bpmn:documentation><bpmn:incoming>P20_chutes_minimum_flux4</bpmn:incoming><bpmn:outgoing>P20_chutes_minimum_flux5</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="P20_chutes_minimum_t5" name="Ajuster la taille minimale dans Stock de feuilles"><bpmn:documentation>Dans l’application : Stock de feuilles › Chutes à garder ; chaque changement est noté au journal</bpmn:documentation><bpmn:incoming>P20_chutes_minimum_flux5</bpmn:incoming><bpmn:outgoing>P20_chutes_minimum_flux6</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P20_chutes_minimum_f" name="Seules les chutes utiles sont gardées"><bpmn:incoming>P20_chutes_minimum_flux6</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P20_chutes_minimum_flux1" sourceRef="P20_chutes_minimum_d" targetRef="P20_chutes_minimum_t1" />
+    <bpmn:sequenceFlow id="P20_chutes_minimum_flux2" sourceRef="P20_chutes_minimum_t1" targetRef="P20_chutes_minimum_t2" />
+    <bpmn:sequenceFlow id="P20_chutes_minimum_flux3" sourceRef="P20_chutes_minimum_t2" targetRef="P20_chutes_minimum_t3" />
+    <bpmn:sequenceFlow id="P20_chutes_minimum_flux4" sourceRef="P20_chutes_minimum_t3" targetRef="P20_chutes_minimum_t4" />
+    <bpmn:sequenceFlow id="P20_chutes_minimum_flux5" sourceRef="P20_chutes_minimum_t4" targetRef="P20_chutes_minimum_t5" />
+    <bpmn:sequenceFlow id="P20_chutes_minimum_flux6" sourceRef="P20_chutes_minimum_t5" targetRef="P20_chutes_minimum_f" />
+    <bpmn:textAnnotation id="P20_chutes_minimum_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P20_chutes_minimum_diagram">
+    <bpmndi:BPMNPlane id="P20_chutes_minimum_plane" bpmnElement="P20_chutes_minimum_collab">
+      <bpmndi:BPMNShape id="P20_chutes_minimum_pool_di" bpmnElement="P20_chutes_minimum_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1440" height="360" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P20_chutes_minimum_voie_systeme_di" bpmnElement="P20_chutes_minimum_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1410" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P20_chutes_minimum_voie_atelier_di" bpmnElement="P20_chutes_minimum_voie_atelier" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1410" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P20_chutes_minimum_voie_direction_di" bpmnElement="P20_chutes_minimum_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="1410" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P20_chutes_minimum_d_di" bpmnElement="P20_chutes_minimum_d">
+        <dc:Bounds x="197" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P20_chutes_minimum_t1_di" bpmnElement="P20_chutes_minimum_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P20_chutes_minimum_t2_di" bpmnElement="P20_chutes_minimum_t2" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="520" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P20_chutes_minimum_t3_di" bpmnElement="P20_chutes_minimum_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="710" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P20_chutes_minimum_t4_di" bpmnElement="P20_chutes_minimum_t4" bioc:stroke="#616161" bioc:fill="#e8e8e8">
+        <dc:Bounds x="900" y="300" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P20_chutes_minimum_t5_di" bpmnElement="P20_chutes_minimum_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="1090" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P20_chutes_minimum_f_di" bpmnElement="P20_chutes_minimum_f">
+        <dc:Bounds x="1337" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P20_chutes_minimum_flux1_di" bpmnElement="P20_chutes_minimum_flux1">
+        <di:waypoint x="233" y="220" />
+        <di:waypoint x="305" y="220" />
+        <di:waypoint x="305" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P20_chutes_minimum_flux2_di" bpmnElement="P20_chutes_minimum_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="495" y="100" />
+        <di:waypoint x="495" y="220" />
+        <di:waypoint x="520" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P20_chutes_minimum_flux3_di" bpmnElement="P20_chutes_minimum_flux3">
+        <di:waypoint x="670" y="220" />
+        <di:waypoint x="685" y="220" />
+        <di:waypoint x="685" y="100" />
+        <di:waypoint x="710" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P20_chutes_minimum_flux4_di" bpmnElement="P20_chutes_minimum_flux4">
+        <di:waypoint x="860" y="100" />
+        <di:waypoint x="875" y="100" />
+        <di:waypoint x="875" y="340" />
+        <di:waypoint x="900" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P20_chutes_minimum_flux5_di" bpmnElement="P20_chutes_minimum_flux5">
+        <di:waypoint x="1050" y="340" />
+        <di:waypoint x="1065" y="340" />
+        <di:waypoint x="1065" y="220" />
+        <di:waypoint x="1090" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P20_chutes_minimum_flux6_di" bpmnElement="P20_chutes_minimum_flux6">
+        <di:waypoint x="1240" y="220" />
+        <di:waypoint x="1337" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P20_chutes_minimum_legende_di" bpmnElement="P20_chutes_minimum_legende">
+        <dc:Bounds x="70" y="420" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

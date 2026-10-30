@@ -915,3 +915,15 @@ export const productionChecks = pgTable(
   },
   (t) => [primaryKey({ columns: [t.orderId, t.cle] }), check('production_checks_count', sql`${t.count} >= 0`)],
 )
+
+// Réglages du stock de feuilles : une seule ligne (id = 1). La taille minimale d'une chute à garder se règle avec l'atelier, au fil de l'usage.
+export const stockSettings = pgTable(
+  'stock_settings',
+  {
+    id: integer('id').primaryKey().default(1),
+    // Plus petit côté (mm) d'un morceau qui vaut la peine d'être gardé en chute ; en dessous, il part au rebut
+    chuteMin: integer('chute_min').notNull().default(200),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [check('stock_settings_single_row', sql`${t.id} = 1`), check('stock_settings_chute_min', sql`${t.chuteMin} between 10 and 1500`)],
+)

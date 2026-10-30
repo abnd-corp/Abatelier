@@ -8,8 +8,9 @@ test.describe('Fiche de fabrication à cocher', () => {
     const admin = await (await browser.newContext()).newPage()
     await apiLogin(admin.request, baseURL!, ADMIN.identifiant, ADMIN.password)
     const options = await (await admin.request.get('/api/stock/options')).json()
-    const matiere = options.materials[0]
-    const coloris = options.colors[0]
+    // Autre matière et autre coloris que les tests du stock : leurs feuilles ne doivent pas changer le conseil de découpe
+    const matiere = options.materials.at(-1)
+    const coloris = options.colors.at(-1)
     const cfg = await (await admin.request.get('/api/public/configurateur')).json()
     const modele = cfg.models.find((x: { nom: string }) => x.nom === 'Couvertine') ?? cfg.models[0]
 
@@ -110,5 +111,31 @@ test.describe('Fiche de fabrication à cocher', () => {
     expect((await rh.request.get(`/api/production/${inconnu}/suivi`)).status()).toBe(403)
     await rh.goto(`/fabrication/${inconnu}/suivi`)
     await expect(rh).toHaveURL('/tableau-de-bord')
+  })
+
+  test('l’atelier règle la taille minimale d’une chute à garder, et le journal le raconte', async ({ browser, baseURL, uid }) => {
+    const admin = await (await browser.newContext()).newPage()
+    await apiLogin(admin.request, baseURL!, ADMIN.identifiant, ADMIN.password)
+    const identifiant = `${uid}-at`
+    const temp = await createUser(admin.request, baseURL!, { identifiant, nom: 'Plieur Chutes', role: 'atelier' })
+    const atelier = await (await browser.newContext()).newPage()
+    await apiLogin(atelier.request, baseURL!, identifiant, temp)
+    await atelier.request.post('/api/auth/password', { data: { current: temp, next: NEW_PASSWORD }, headers: { Origin: baseURL! } })
+    await atelier.goto('/stock')
+    const bloc = atelier.getByRole('region', { name: 'Chutes à garder' })
+    await expect(bloc).toContainText('au moins')
+    await bloc.getByRole('button', { name: 'Régler' }).click()
+    // Le navigateur refuse déjà une valeur absurde ; le serveur la refuse aussi (tests d'API)
+    await bloc.getByLabel(/Côté minimum/).fill('350')
+    await bloc.getByRole('button', { name: 'Enregistrer' }).click()
+    await expect(atelier.getByRole('status')).toContainText('350 mm')
+    await expect(bloc).toContainText('au moins 350 mm')
+    await atelier.reload()
+    await expect(atelier.getByRole('region', { name: 'Chutes à garder' })).toContainText('au moins 350 mm')
+    // On remet la valeur de départ pour les autres tests
+    await atelier.request.put('/api/stock/reglages', { data: { chuteMin: 200 }, headers: { Origin: baseURL! } })
+    await admin.goto('/journal')
+    await expect(admin.getByRole('cell', { name: /A réglé la taille minimale d’une chute à garder : 350 mm/ }).first()).toBeVisible()
+    await atelier.context().close()
   })
 })

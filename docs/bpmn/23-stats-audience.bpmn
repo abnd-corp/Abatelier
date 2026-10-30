@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P23_stats_audience_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P23_stats_audience_collab">
+    <bpmn:participant id="P23_stats_audience_pool" name="Statistiques : audience du site et entonnoir" processRef="P23_stats_audience" />
+  </bpmn:collaboration>
+  <bpmn:process id="P23_stats_audience" name="Statistiques : audience du site et entonnoir" isExecutable="false">
+    <bpmn:documentation>La direction voit si le site attire et si les visiteurs deviennent clients. Rien n’est mesuré aujourd’hui : la collecte doit commencer dès la mise en production. Les robots sont écartés autant que possible ; seule l’action (devis, commande) prouve un vrai client.</bpmn:documentation>
+    <bpmn:laneSet id="P23_stats_audience_voies">
+      <bpmn:lane id="P23_stats_audience_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P23_stats_audience_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P23_stats_audience_t1b</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P23_stats_audience_t1c</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P23_stats_audience_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P23_stats_audience_t3</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P23_stats_audience_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P23_stats_audience_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P23_stats_audience_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P23_stats_audience_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P23_stats_audience_d" name="La direction veut savoir si le site attire et convertit"><bpmn:outgoing>P23_stats_audience_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="P23_stats_audience_t1" name="Compter les visites et les pages vues, sans cookie ni adresse IP conservée"><bpmn:documentation>Pas encore : Compteur anonyme agrégé par jour et par page, à valider côté RGPD / CNIL</bpmn:documentation><bpmn:incoming>P23_stats_audience_flux1</bpmn:incoming><bpmn:outgoing>P23_stats_audience_flux2</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P23_stats_audience_t1b" name="Écarter les robots : agents connus, requêtes sans navigateur réel, volume anormal"><bpmn:documentation>Pas encore : Aucun filtre n’est parfait : on obtient un bon ordre de grandeur, pas un chiffre exact</bpmn:documentation><bpmn:incoming>P23_stats_audience_flux2</bpmn:incoming><bpmn:outgoing>P23_stats_audience_flux3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P23_stats_audience_t1c" name="Distinguer le visiteur anonyme du client connecté à son espace"><bpmn:documentation>Pas encore : Seule la session de l’espace client le permet ; un visiteur anonyme le reste, sans cookie ni suivi</bpmn:documentation><bpmn:incoming>P23_stats_audience_flux3</bpmn:incoming><bpmn:outgoing>P23_stats_audience_flux4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P23_stats_audience_t2" name="Enregistrer les abandons du configurateur et du panier, les devis refusés ou expirés et leur motif"><bpmn:documentation>Pas encore : Sert au taux de conversion ; un robot ne demande ni devis ni paiement</bpmn:documentation><bpmn:incoming>P23_stats_audience_flux4</bpmn:incoming><bpmn:outgoing>P23_stats_audience_flux5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P23_stats_audience_t3" name="Calculer l’entonnoir : visite, configurateur, devis, commande"><bpmn:documentation>Pas encore : Aussi les demandes de contact</bpmn:documentation><bpmn:incoming>P23_stats_audience_flux5</bpmn:incoming><bpmn:outgoing>P23_stats_audience_flux6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P23_stats_audience_t4" name="Lire l’audience et l’entonnoir"><bpmn:documentation>Pas encore : Accès réservé à la direction (permission stats.read) ; lisible sur téléphone</bpmn:documentation><bpmn:incoming>P23_stats_audience_flux6</bpmn:incoming><bpmn:outgoing>P23_stats_audience_flux7</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P23_stats_audience_f" name="Décision : améliorer le site, le configurateur ou les tarifs"><bpmn:incoming>P23_stats_audience_flux7</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P23_stats_audience_flux1" sourceRef="P23_stats_audience_d" targetRef="P23_stats_audience_t1" />
+    <bpmn:sequenceFlow id="P23_stats_audience_flux2" sourceRef="P23_stats_audience_t1" targetRef="P23_stats_audience_t1b" />
+    <bpmn:sequenceFlow id="P23_stats_audience_flux3" sourceRef="P23_stats_audience_t1b" targetRef="P23_stats_audience_t1c" />
+    <bpmn:sequenceFlow id="P23_stats_audience_flux4" sourceRef="P23_stats_audience_t1c" targetRef="P23_stats_audience_t2" />
+    <bpmn:sequenceFlow id="P23_stats_audience_flux5" sourceRef="P23_stats_audience_t2" targetRef="P23_stats_audience_t3" />
+    <bpmn:sequenceFlow id="P23_stats_audience_flux6" sourceRef="P23_stats_audience_t3" targetRef="P23_stats_audience_t4" />
+    <bpmn:sequenceFlow id="P23_stats_audience_flux7" sourceRef="P23_stats_audience_t4" targetRef="P23_stats_audience_f" />
+    <bpmn:textAnnotation id="P23_stats_audience_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P23_stats_audience_diagram">
+    <bpmndi:BPMNPlane id="P23_stats_audience_plane" bpmnElement="P23_stats_audience_collab">
+      <bpmndi:BPMNShape id="P23_stats_audience_pool_di" bpmnElement="P23_stats_audience_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1630" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P23_stats_audience_voie_systeme_di" bpmnElement="P23_stats_audience_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1600" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P23_stats_audience_voie_direction_di" bpmnElement="P23_stats_audience_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1600" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P23_stats_audience_d_di" bpmnElement="P23_stats_audience_d">
+        <dc:Bounds x="197" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P23_stats_audience_t1_di" bpmnElement="P23_stats_audience_t1" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P23_stats_audience_t1b_di" bpmnElement="P23_stats_audience_t1b" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="520" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P23_stats_audience_t1c_di" bpmnElement="P23_stats_audience_t1c" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="710" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P23_stats_audience_t2_di" bpmnElement="P23_stats_audience_t2" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="900" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P23_stats_audience_t3_di" bpmnElement="P23_stats_audience_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1090" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P23_stats_audience_t4_di" bpmnElement="P23_stats_audience_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1280" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P23_stats_audience_f_di" bpmnElement="P23_stats_audience_f">
+        <dc:Bounds x="1527" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P23_stats_audience_flux1_di" bpmnElement="P23_stats_audience_flux1">
+        <di:waypoint x="233" y="220" />
+        <di:waypoint x="305" y="220" />
+        <di:waypoint x="305" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P23_stats_audience_flux2_di" bpmnElement="P23_stats_audience_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="520" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P23_stats_audience_flux3_di" bpmnElement="P23_stats_audience_flux3">
+        <di:waypoint x="670" y="100" />
+        <di:waypoint x="710" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P23_stats_audience_flux4_di" bpmnElement="P23_stats_audience_flux4">
+        <di:waypoint x="860" y="100" />
+        <di:waypoint x="900" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P23_stats_audience_flux5_di" bpmnElement="P23_stats_audience_flux5">
+        <di:waypoint x="1050" y="100" />
+        <di:waypoint x="1090" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P23_stats_audience_flux6_di" bpmnElement="P23_stats_audience_flux6">
+        <di:waypoint x="1240" y="100" />
+        <di:waypoint x="1255" y="100" />
+        <di:waypoint x="1255" y="220" />
+        <di:waypoint x="1280" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P23_stats_audience_flux7_di" bpmnElement="P23_stats_audience_flux7">
+        <di:waypoint x="1430" y="220" />
+        <di:waypoint x="1527" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P23_stats_audience_legende_di" bpmnElement="P23_stats_audience_legende">
+        <dc:Bounds x="70" y="300" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

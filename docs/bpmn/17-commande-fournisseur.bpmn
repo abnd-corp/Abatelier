@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Généré par scripts/bpmn/generer.mjs : modifier scripts/bpmn/processus.mjs, pas ce fichier. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" id="P17_commande_fournisseur_defs" targetNamespace="http://abatelier.local/bpmn">
+  <bpmn:collaboration id="P17_commande_fournisseur_collab">
+    <bpmn:participant id="P17_commande_fournisseur_pool" name="Commande de feuilles au fournisseur" processRef="P17_commande_fournisseur" />
+  </bpmn:collaboration>
+  <bpmn:process id="P17_commande_fournisseur" name="Commande de feuilles au fournisseur" isExecutable="false">
+    <bpmn:documentation>La commande passée au fournisseur est enregistrée dans la plateforme avec ses feuilles : la réception sait ce qu’elle doit scanner et compare avec ce qui arrive.</bpmn:documentation>
+    <bpmn:laneSet id="P17_commande_fournisseur_voies">
+      <bpmn:lane id="P17_commande_fournisseur_voie_systeme" name="Application (automatique)">
+        <bpmn:flowNodeRef>P17_commande_fournisseur_d</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P17_commande_fournisseur_t1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P17_commande_fournisseur_t4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P17_commande_fournisseur_t5</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P17_commande_fournisseur_voie_direction" name="Direction">
+        <bpmn:flowNodeRef>P17_commande_fournisseur_t2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P17_commande_fournisseur_t3</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P17_commande_fournisseur_voie_atelier" name="Atelier">
+        <bpmn:flowNodeRef>P17_commande_fournisseur_f</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P17_commande_fournisseur_d" name="Le stock d’une référence est bas"><bpmn:outgoing>P17_commande_fournisseur_flux1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="P17_commande_fournisseur_t1" name="Notifier la direction dans la plateforme : stock bas"><bpmn:documentation>Dans l’application : Seuil réglable sur chaque référence</bpmn:documentation><bpmn:incoming>P17_commande_fournisseur_flux1</bpmn:incoming><bpmn:outgoing>P17_commande_fournisseur_flux2</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:manualTask id="P17_commande_fournisseur_t2" name="Passer la commande au fournisseur (téléphone, e-mail, site du fournisseur)"><bpmn:documentation>Hors application : Le fournisseur n’est pas relié à l’application ; à recueillir : qui commande, à qui, comment</bpmn:documentation><bpmn:incoming>P17_commande_fournisseur_flux2</bpmn:incoming><bpmn:outgoing>P17_commande_fournisseur_flux3</bpmn:outgoing></bpmn:manualTask>
+    <bpmn:userTask id="P17_commande_fournisseur_t3" name="Enregistrer la commande passée : fournisseur, références, nombre de feuilles de chaque lot, date de livraison prévue"><bpmn:documentation>Pas encore : À étudier : voir d’abord comment l’atelier commande, puis importer la commande (fichier ou e-mail du fournisseur) plutôt que la ressaisir</bpmn:documentation><bpmn:incoming>P17_commande_fournisseur_flux3</bpmn:incoming><bpmn:outgoing>P17_commande_fournisseur_flux4</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P17_commande_fournisseur_t4" name="Afficher « en commande » sur chaque référence et préparer les quantités attendues à la réception"><bpmn:documentation>Pas encore : Permet la comparaison entre commandé et reçu</bpmn:documentation><bpmn:incoming>P17_commande_fournisseur_flux4</bpmn:incoming><bpmn:outgoing>P17_commande_fournisseur_flux5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P17_commande_fournisseur_t5" name="Notifier la direction si la livraison n’arrive pas à la date prévue"><bpmn:documentation>Pas encore : Notification dans la plateforme</bpmn:documentation><bpmn:incoming>P17_commande_fournisseur_flux5</bpmn:incoming><bpmn:outgoing>P17_commande_fournisseur_flux6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="P17_commande_fournisseur_f" name="Livraison attendue : voir « Réception »"><bpmn:incoming>P17_commande_fournisseur_flux6</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="P17_commande_fournisseur_flux1" sourceRef="P17_commande_fournisseur_d" targetRef="P17_commande_fournisseur_t1" />
+    <bpmn:sequenceFlow id="P17_commande_fournisseur_flux2" sourceRef="P17_commande_fournisseur_t1" targetRef="P17_commande_fournisseur_t2" />
+    <bpmn:sequenceFlow id="P17_commande_fournisseur_flux3" sourceRef="P17_commande_fournisseur_t2" targetRef="P17_commande_fournisseur_t3" />
+    <bpmn:sequenceFlow id="P17_commande_fournisseur_flux4" sourceRef="P17_commande_fournisseur_t3" targetRef="P17_commande_fournisseur_t4" />
+    <bpmn:sequenceFlow id="P17_commande_fournisseur_flux5" sourceRef="P17_commande_fournisseur_t4" targetRef="P17_commande_fournisseur_t5" />
+    <bpmn:sequenceFlow id="P17_commande_fournisseur_flux6" sourceRef="P17_commande_fournisseur_t5" targetRef="P17_commande_fournisseur_f" />
+    <bpmn:textAnnotation id="P17_commande_fournisseur_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P17_commande_fournisseur_diagram">
+    <bpmndi:BPMNPlane id="P17_commande_fournisseur_plane" bpmnElement="P17_commande_fournisseur_collab">
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_pool_di" bpmnElement="P17_commande_fournisseur_pool" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="1440" height="360" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_voie_systeme_di" bpmnElement="P17_commande_fournisseur_voie_systeme" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="1410" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_voie_direction_di" bpmnElement="P17_commande_fournisseur_voie_direction" isHorizontal="true">
+        <dc:Bounds x="70" y="160" width="1410" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_voie_atelier_di" bpmnElement="P17_commande_fournisseur_voie_atelier" isHorizontal="true">
+        <dc:Bounds x="70" y="280" width="1410" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_d_di" bpmnElement="P17_commande_fournisseur_d">
+        <dc:Bounds x="197" y="82" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_t1_di" bpmnElement="P17_commande_fournisseur_t1" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
+        <dc:Bounds x="330" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_t2_di" bpmnElement="P17_commande_fournisseur_t2" bioc:stroke="#616161" bioc:fill="#e8e8e8">
+        <dc:Bounds x="520" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_t3_di" bpmnElement="P17_commande_fournisseur_t3" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="710" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_t4_di" bpmnElement="P17_commande_fournisseur_t4" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="900" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_t5_di" bpmnElement="P17_commande_fournisseur_t5" bioc:stroke="#c62828" bioc:fill="#f9d3cf">
+        <dc:Bounds x="1090" y="60" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_f_di" bpmnElement="P17_commande_fournisseur_f">
+        <dc:Bounds x="1337" y="322" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P17_commande_fournisseur_flux1_di" bpmnElement="P17_commande_fournisseur_flux1">
+        <di:waypoint x="233" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P17_commande_fournisseur_flux2_di" bpmnElement="P17_commande_fournisseur_flux2">
+        <di:waypoint x="480" y="100" />
+        <di:waypoint x="495" y="100" />
+        <di:waypoint x="495" y="220" />
+        <di:waypoint x="520" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P17_commande_fournisseur_flux3_di" bpmnElement="P17_commande_fournisseur_flux3">
+        <di:waypoint x="670" y="220" />
+        <di:waypoint x="710" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P17_commande_fournisseur_flux4_di" bpmnElement="P17_commande_fournisseur_flux4">
+        <di:waypoint x="860" y="220" />
+        <di:waypoint x="875" y="220" />
+        <di:waypoint x="875" y="100" />
+        <di:waypoint x="900" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P17_commande_fournisseur_flux5_di" bpmnElement="P17_commande_fournisseur_flux5">
+        <di:waypoint x="1050" y="100" />
+        <di:waypoint x="1090" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P17_commande_fournisseur_flux6_di" bpmnElement="P17_commande_fournisseur_flux6">
+        <di:waypoint x="1240" y="100" />
+        <di:waypoint x="1312" y="100" />
+        <di:waypoint x="1312" y="340" />
+        <di:waypoint x="1337" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P17_commande_fournisseur_legende_di" bpmnElement="P17_commande_fournisseur_legende">
+        <dc:Bounds x="70" y="420" width="760" height="30" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -83,7 +83,7 @@ export interface Chute {
  * Morceaux qui restent des feuilles d'une ligne une fois les bandes découpées. Les bandes sont posées rangée par rangée (comme sur le plan de découpe),
  * la dernière feuille pouvant en porter moins que les autres ; ce qui reste se coupe en rectangles à la guillotine.
  */
-export function chutesOf(l: Pick<SheetLine, 'cotes' | 'longueur' | 'quantite'>, d: SheetAdvice): Chute[] {
+export function chutesOf(l: Pick<SheetLine, 'cotes' | 'longueur' | 'quantite'>, d: SheetAdvice, min = CHUTE_MIN): Chute[] {
   const dev = l.cotes.reduce((s, v) => s + v, 0)
   const sensLongueur = d.disposition.sensLongueur
   // Taille d'une bande dans le repère de la feuille : le long de sa longueur, puis le long de sa largeur
@@ -94,7 +94,7 @@ export function chutesOf(l: Pick<SheetLine, 'cotes' | 'longueur' | 'quantite'>, 
   const out: Chute[] = []
   const push = (longueur: number, largeur: number) => {
     if (longueur < 1 || largeur < 1) return
-    out.push({ largeur: Math.round(largeur), longueur: Math.round(longueur), garder: Math.min(longueur, largeur) >= CHUTE_MIN })
+    out.push({ largeur: Math.round(largeur), longueur: Math.round(longueur), garder: Math.min(longueur, largeur) >= min })
   }
   for (let s = 0; s < d.feuilles; s++) {
     const k = s < d.feuilles - 1 ? d.parFeuille : l.quantite - (d.feuilles - 1) * d.parFeuille
@@ -138,7 +138,8 @@ export function sheetGroups(lignes: SheetLine[]) {
 const DEVELOPPE = (l: Pick<SheetLine, 'cotes'>) => l.cotes.reduce((s, v) => s + v, 0)
 const m2 = (mm2: number) => clean((mm2 / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 2 }))
 
-export function renderProductionSheet(data: SheetData, opts: { accent: string; logo: Buffer | null }): Promise<Buffer> {
+export function renderProductionSheet(data: SheetData, opts: { accent: string; logo: Buffer | null; chuteMin?: number }): Promise<Buffer> {
+  const chuteMin = opts.chuteMin ?? CHUTE_MIN
   const doc = new PDFDocument({ size: 'A4', margin: PAGE.m, bufferPages: true, info: { Title: clean(`Fiche de fabrication ${data.numero}`) } })
   const chunks: Buffer[] = []
   doc.on('data', (c: Buffer) => chunks.push(c))
@@ -494,7 +495,7 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     // La chute de cette feuille
     const avecPlan = g.lignes.filter(({ l }) => l.decoupe)
     if (avecPlan.length) {
-      const chutes = avecPlan.flatMap(({ l }) => chutesOf(l, l.decoupe!))
+      const chutes = avecPlan.flatMap(({ l }) => chutesOf(l, l.decoupe!, chuteMin))
       const garder = groupChutes(chutes.filter((c) => c.garder))
       const jeter = groupChutes(chutes.filter((c) => !c.garder))
       const surfaceChutes = chutes.reduce((s, c) => s + c.largeur * c.longueur, 0)
@@ -505,7 +506,7 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
         ['À JETER', jeter.length ? jeter.map(dim).join(' · ') + ' : au rebut' : 'Rien', INK],
         [
           'TOTAL',
-          `${chutes.length ? `${(Math.round((surfaceChutes / surfaceFeuilles) * 1000) / 10).toLocaleString('fr-FR')} % de la matière, soit ${m2(surfaceChutes)} m²` : 'Aucune chute'} (on garde un morceau dont tous les côtés font au moins ${CHUTE_MIN} mm)`,
+          `${chutes.length ? `${(Math.round((surfaceChutes / surfaceFeuilles) * 1000) / 10).toLocaleString('fr-FR')} % de la matière, soit ${m2(surfaceChutes)} m²` : 'Aucune chute'} (on garde un morceau dont tous les côtés font au moins ${chuteMin} mm)`,
           MUTED,
         ],
       ]
@@ -525,7 +526,7 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
       y += hh + 8
     } else {
       need(30)
-      para('Chute : à noter après la découpe (aucune feuille conseillée en stock). Garder les morceaux dont tous les côtés font au moins ' + `${CHUTE_MIN} mm.`, PAGE.m, y, WIDTH, {
+      para('Chute : à noter après la découpe (aucune feuille conseillée en stock). Garder les morceaux dont tous les côtés font au moins ' + `${chuteMin} mm.`, PAGE.m, y, WIDTH, {
         size: 9,
         color: MUTED,
       })

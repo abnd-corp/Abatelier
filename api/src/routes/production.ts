@@ -11,6 +11,7 @@ import { getCompany, getTemplate } from '../documents.js'
 import { renderProductionSheet } from '../production-sheet.js'
 import { buildPlan, checkable } from '../production-plan.js'
 import { libelle as sheetLabel } from './stock.js'
+import { getChuteMin } from '../stock-settings.js'
 import { invalid } from '../validation.js'
 import { audit } from '../audit.js'
 import { adviseSheets, type SheetOption } from '../cutting.js'
@@ -216,8 +217,11 @@ export async function productionRoutes(app: FastifyInstance) {
 
   // Le travail rangé feuille par feuille, avec ce qui est déjà coché : la version de la fiche que l'on suit à l'écran
   const planOf = async (orderId: string) => {
-    const [lignes, conseils] = await Promise.all([linesOf(orderId), sheetAdvice(orderId)])
-    return buildPlan(lignes.map((l, i) => ({ ...l, decoupe: conseils[i]?.conseils[0] ?? null })))
+    const [lignes, conseils, chuteMin] = await Promise.all([linesOf(orderId), sheetAdvice(orderId), getChuteMin()])
+    return buildPlan(
+      lignes.map((l, i) => ({ ...l, decoupe: conseils[i]?.conseils[0] ?? null })),
+      chuteMin,
+    )
   }
 
   app.get('/:id/suivi', async (req, reply) => {
@@ -345,7 +349,7 @@ export async function productionRoutes(app: FastifyInstance) {
   app.get('/:id/fiche.pdf', async (req, reply) => {
     const o = await findOrder((req.params as { id: string }).id, reply)
     if (!o) return
-    const [lignes, company, template, conseils] = await Promise.all([linesOf(o.id), getCompany(), getTemplate(), sheetAdvice(o.id)])
+    const [lignes, company, template, conseils, chuteMin] = await Promise.all([linesOf(o.id), getCompany(), getTemplate(), sheetAdvice(o.id), getChuteMin()])
     const pdf = await renderProductionSheet(
       {
         numero: o.numero,
@@ -356,7 +360,7 @@ export async function productionRoutes(app: FastifyInstance) {
         imprimeLe: new Date(),
         lignes: lignes.map((l, i) => ({ ...l, decoupe: conseils[i]?.conseils[0] ?? null })),
       },
-      { accent: template.couleur, logo: company.logo },
+      { accent: template.couleur, logo: company.logo, chuteMin },
     )
     await audit(req, 'order.sheet_printed', { targetType: 'order', targetId: o.id, details: { numero: o.numero, statut: o.statut } })
     return reply.header('Content-Type', 'application/pdf').header('Content-Disposition', `inline; filename="fiche-${o.numero}.pdf"`).header('Cache-Control', 'no-store').send(pdf)
