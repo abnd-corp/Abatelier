@@ -38,6 +38,7 @@ describe('POST /api/auth/login', () => {
         'site.manage',
         'products.manage',
         'stock.manage',
+        'plan.read',
       ].sort(),
     )
     expect(body.user.role).toBeUndefined()

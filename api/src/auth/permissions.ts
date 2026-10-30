@@ -7,8 +7,8 @@ const SECTION_PERMISSIONS = {
   ventes: ['clients.manage', 'clients.read', 'orders.manage', 'billing.manage'],
   // Commandes à fabriquer, sans les clients ni les prix, et stock de feuilles
   atelier: ['orders.production', 'stock.manage'],
-  // Tarifs et catalogue, modèles de documents, boutique, site vitrine, fiches salariés
-  direction: ['catalog.manage', 'documents.manage', 'products.manage', 'site.manage', 'employees.manage'],
+  // Tarifs et catalogue, modèles de documents, boutique, site vitrine, fiches salariés, plan graphique de l'atelier (lecture)
+  direction: ['catalog.manage', 'documents.manage', 'products.manage', 'site.manage', 'employees.manage', 'plan.read'],
 } as const satisfies Record<Section, readonly string[]>
 
 // Comptes de connexion, journal d'activité (les fiches salariés viennent aussi de la section Direction)

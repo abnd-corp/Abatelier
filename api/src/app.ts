@@ -13,6 +13,8 @@ import { deliveryRoutes } from './routes/delivery.js'
 import { documentRoutes } from './routes/documents.js'
 import { clientRoutes } from './routes/clients.js'
 import { orderRoutes } from './routes/orders.js'
+import { ecranRoutes } from './routes/ecran.js'
+import { planRoutes } from './routes/plan.js'
 import { productionRoutes } from './routes/production.js'
 import { billingRoutes } from './routes/billing.js'
 import { publicRoutes } from './routes/public.js'
@@ -100,6 +102,8 @@ export async function buildApp() {
   await app.register(clientRoutes, { prefix: '/api/clients' })
   await app.register(orderRoutes, { prefix: '/api/orders' })
   await app.register(productionRoutes, { prefix: '/api/production' })
+  await app.register(planRoutes, { prefix: '/api/plan' })
+  await app.register(ecranRoutes, { prefix: '/api/public/ecran' })
   await app.register(billingRoutes, { prefix: '/api/billing' })
   await app.register(publicRoutes, { prefix: '/api/public' })
   await app.register(siteRoutes, { prefix: '/api/site' })
