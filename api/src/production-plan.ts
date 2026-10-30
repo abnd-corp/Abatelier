@@ -22,6 +22,8 @@ export interface PlanGroupe {
     pose: string | null
     quantite: number
     // De quoi dessiner le plan de découpe (vue de dessus de la feuille)
+    // La bande à plat : sa largeur (développé), sa longueur et la place des traits de pli depuis le bord
+    bande: { developpe: number; longueur: number; traits: number[] }
     plan: { feuilleLargeur: number; feuilleLongueur: number; parFeuille: number; sensLongueur: boolean; colonnes: number; rangees: number; developpe: number; longueur: number } | null
   }[]
   pliages: {
@@ -48,6 +50,11 @@ export interface Plan {
 }
 
 const num = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })
+/** Distance de chaque trait de pli depuis le bord de la bande à plat. */
+const traitsDe = (cotes: number[]) => {
+  let cumul = 0
+  return cotes.slice(0, -1).map((c) => (cumul += c))
+}
 const titreDe = (l: SheetLine, i: number) => `Pièce ${i + 1} · ${l.modeleLabel}${l.repere ? ` · ${l.repere}` : ''}`
 
 export function buildPlan(lignes: PlanLigne[]): Plan {
@@ -94,6 +101,7 @@ export function buildPlan(lignes: PlanLigne[]): Plan {
             ? `${d.parFeuille} bande${d.parFeuille > 1 ? 's' : ''} par feuille, ${d.disposition.sensLongueur ? 'dans le sens de la longueur de la feuille' : 'feuille tournée d’un quart de tour'}`
             : null,
           quantite: l.quantite,
+          bande: { developpe: dev, longueur: l.longueur, traits: traitsDe(l.cotes) },
           plan: d
             ? {
                 feuilleLargeur: d.feuilleLargeur,
@@ -111,7 +119,6 @@ export function buildPlan(lignes: PlanLigne[]): Plan {
       pliages: lignesPlan
         .filter(({ l }) => l.angles.length)
         .map(({ l, i }) => {
-          let cumul = 0
           return {
             cle: `pliage:${l.id}`,
             ligneId: l.id,
@@ -119,7 +126,7 @@ export function buildPlan(lignes: PlanLigne[]): Plan {
             titre: titreDe(l, i),
             consigne: `${l.angles.length} pli${l.angles.length > 1 ? 's' : ''} à la presse, dans l’ordre 1 à ${l.angles.length}`,
             plis: l.angles.map((a) => ({ angle: a, pince: isPince(a) })),
-            traits: l.cotes.slice(0, -1).map((c) => (cumul += c)),
+            traits: traitsDe(l.cotes),
             etapes: bendSteps(l),
             quantite: l.quantite,
           }
@@ -131,7 +138,10 @@ export function buildPlan(lignes: PlanLigne[]): Plan {
     }
   })
   const apreparer = [
-    ...accessoryTotals(lignes).map((a) => ({ cle: `prep:acc:${a.nom}|${a.unite}`, texte: `${num(a.quantite)} × ${a.nom}${a.unite === 'paire' ? ' (paires)' : ''}` })),
+    ...accessoryTotals(lignes).map((a) => ({
+      cle: `prep:acc:${a.nom}|${a.unite}|${a.couleur}`,
+      texte: `${num(a.quantite)} × ${a.nom}${a.couleur ? ` · ${a.couleur}` : ''}${a.unite === 'paire' ? ' (paires)' : ''}`,
+    })),
     ...lignes.filter((l) => !l.cotes.length).map((l) => ({ cle: `prep:art:${l.id}`, texte: `${num(l.quantite)} × ${l.modeleLabel}${l.repere ? ` · ${l.repere}` : ''} (article de la boutique)` })),
   ]
   return { groupes, apreparer }

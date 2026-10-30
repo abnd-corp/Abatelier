@@ -56,14 +56,15 @@ const stamp = (d: Date) => `${d.toLocaleDateString('fr-FR', { timeZone: 'Europe/
 
 /** Accessoires de toute la commande, regroupés, pour les préparer d'un coup. */
 export function accessoryTotals(lignes: SheetLine[]) {
-  const map = new Map<string, { nom: string; unite: 'piece' | 'paire'; quantite: number }>()
+  const map = new Map<string, { nom: string; unite: 'piece' | 'paire'; quantite: number; couleur: string }>()
   for (const l of lignes)
     for (const a of l.accessoires) {
       if (!a.quantite) continue
-      const key = `${a.nom}|${a.unite}`
+      // Un accessoire se vend par coloris (bouchon, éclisse…) : il suit celui de la pièce
+      const key = `${a.nom}|${a.unite}|${l.colorLabel}`
       const cur = map.get(key)
       if (cur) cur.quantite += a.quantite
-      else map.set(key, { ...a })
+      else map.set(key, { ...a, couleur: l.colorLabel })
     }
   return [...map.values()]
 }
@@ -279,7 +280,7 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
   const accessoryText = (l: SheetLine) =>
     l.accessoires
       .filter((a) => a.quantite > 0)
-      .map((a) => `${a.quantite} × ${a.nom}${a.unite === 'paire' ? ' (paire)' : ''}`)
+      .map((a) => `${a.quantite} × ${a.nom}${l.colorLabel ? ` · ${l.colorLabel}` : ''}${a.unite === 'paire' ? ' (paire)' : ''}`)
       .join('\n')
 
   // Une boîte de texte : sa hauteur d'abord (pour savoir si elle tient), puis son dessin
@@ -372,6 +373,7 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
   // ═════════ 2. Ordre de fabrication, feuille par feuille ═════════
   const groups = sheetGroups(data.lignes)
   const DG_W = 190
+  const BAND_H = 46
   const TH_W = 84
   const TH_H = 64
   const IND = PAGE.m + 8
@@ -407,14 +409,16 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     for (const { l, i } of g.lignes) {
       const d = l.decoupe
       const dev = DEVELOPPE(l)
-      const leftW = d ? WIDTH - DG_W - 24 : WIDTH - 20
+      const leftW = WIDTH - DG_W - 24
       const titre = `Pièce ${i + 1} · ${l.modeleLabel}${l.repere ? ` · ${l.repere}` : ''}`
       const consigne = `${num(l.quantite)} bande${l.quantite > 1 ? 's' : ''} de ${num(dev)} mm de large × ${num(l.longueur)} mm de long`
       const pose = d
         ? `${d.parFeuille} bande${d.parFeuille > 1 ? 's' : ''} par feuille, ${d.disposition.sensLongueur ? 'dans le sens de la longueur de la feuille' : 'feuille tournée d’un quart de tour'}`
         : ''
       const hText = heightOf(titre, leftW, 9.5, true) + 2 + heightOf(consigne, leftW) + (pose ? 2 + heightOf(pose, leftW, 9) : 0)
-      const h = Math.max(hText + 6 + tallyHeight(l.quantite, leftW), d ? DG_H : 0) + 8
+      const leftOnly = WIDTH - DG_W - 24
+      const rightH = (d ? DG_H + 6 : 0) + BAND_H
+      const h = Math.max(hText + 6 + tallyHeight(l.quantite, leftOnly), rightH) + 8
       need(h)
       const top = y
       para(titre, IND, top, leftW, { bold: true })
@@ -427,6 +431,8 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
       }
       tally('BANDES DÉCOUPÉES', l.quantite, IND, yy + 4, leftW)
       if (d) drawCutting(doc, l, d, RIGHT - DG_W, top, DG_W, DG_H, accent)
+      // La bande à plat, toujours : même sans feuille conseillée, on voit ce qu'on découpe et où seront les plis
+      drawBand(doc, l, RIGHT - DG_W, top + (d ? DG_H + 6 : 0), DG_W, BAND_H)
       y = top + h
     }
 
@@ -534,7 +540,7 @@ export function renderProductionSheet(data: SheetData, opts: { accent: string; l
     y += 6
     section('À préparer à part')
     const items = [
-      ...accAll.map((a) => `${num(a.quantite)} × ${a.nom}${a.unite === 'paire' ? ' (paires)' : ''}`),
+      ...accAll.map((a) => `${num(a.quantite)} × ${a.nom}${a.couleur ? ` · ${a.couleur}` : ''}${a.unite === 'paire' ? ' (paires)' : ''}`),
       ...boutique.map(({ l, i }) => `${num(l.quantite)} × ${l.modeleLabel}${l.repere ? ` · ${l.repere}` : ''} (ligne ${i + 1}, article de la boutique)`),
     ]
     for (const t of items) {
@@ -715,6 +721,30 @@ function drawProfile(doc: PDFKit.PDFDocument, l: SheetLine, cap: number, bx: num
   })
 
   doc.restore()
+}
+
+/** La bande à découper, à plat (longueur à l'horizontale), avec les traits de pli en pointillés. Trop mince pour l'échelle, elle est épaissie pour rester lisible. */
+function drawBand(doc: PDFKit.PDFDocument, l: SheetLine, bx: number, by: number, bw: number, bh: number) {
+  const dev = l.cotes.reduce((t, v) => t + v, 0)
+  doc.roundedRect(bx, by, bw, bh, 5).fill(ZEBRA)
+  const sw = bw - 16
+  const sh = Math.min(Math.max((dev / l.longueur) * sw, 12), bh - 20)
+  const ox = bx + 8
+  const oy = by + 5
+  doc.rect(ox, oy, sw, sh).fillAndStroke('#ffffff', STROKE)
+  let cumul = 0
+  doc.lineWidth(0.7).dash(3, { space: 2 }).strokeColor(MUTED)
+  for (const c of l.cotes.slice(0, -1)) {
+    cumul += c
+    const y = oy + (cumul / dev) * sh
+    doc
+      .moveTo(ox, y)
+      .lineTo(ox + sw, y)
+      .stroke()
+  }
+  doc.undash()
+  doc.font('Helvetica').fontSize(6.5).fillColor(MUTED)
+  doc.text(clean(`Bande à plat ${dev.toLocaleString('fr-FR')} × ${l.longueur.toLocaleString('fr-FR')} mm · plis en pointillés`), bx, oy + sh + 3, { width: bw, align: 'center', lineBreak: false })
 }
 
 /** Plan de découpe : la feuille conseillée (longueur à l'horizontale) avec les bandes de la pièce posées dedans, à l'échelle. */

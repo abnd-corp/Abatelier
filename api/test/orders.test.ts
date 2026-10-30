@@ -558,7 +558,8 @@ describe('Fiche de fabrication (PDF)', () => {
       '2 × 290 × 3 000 mm',
       'À JETER',
       'À PRÉPARER À PART',
-      '2 × Bouchon de couvertine',
+      '2 × Bouchon de couvertine · Gris anthracite (RAL 7016)',
+      'Bande à plat 480 × 3 000 mm',
     ])
       expect(txt, attendu).toContain(attendu)
     // Les pièces d'abord, l'ordre de fabrication ensuite
@@ -680,8 +681,8 @@ describe('Fiche de fabrication (PDF)', () => {
       ],
     }))
     expect(accessoryTotals(lignes)).toEqual([
-      { nom: 'Éclisse', unite: 'piece', quantite: 18 },
-      { nom: 'Angle', unite: 'paire', quantite: 4 },
+      { nom: 'Éclisse', unite: 'piece', quantite: 18, couleur: 'Blanc' },
+      { nom: 'Angle', unite: 'paire', quantite: 4, couleur: 'Blanc' },
     ])
     const pdf = await renderProductionSheet(
       { numero: 'C-2026-0042', client: 'Client Test', statutLabel: 'En fabrication', creeLe: new Date('2026-10-28T13:47:00Z'), livraisonMode: 'retrait', imprimeLe: new Date(), lignes },
@@ -689,7 +690,17 @@ describe('Fiche de fabrication (PDF)', () => {
     )
     expect((pdf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length).toBeGreaterThan(1)
     const txt = pdfText(pdf)
-    for (const attendu of ['Repère 9', '______ / 50', 'C-2026-0042 · suite', 'CRÉÉE LE', '28 octobre 2026', 'Retrait à l’atelier', '18 × Éclisse', '4 × Angle (paires)', 'Autre profil'])
+    for (const attendu of [
+      'Repère 9',
+      '______ / 50',
+      'C-2026-0042 · suite',
+      'CRÉÉE LE',
+      '28 octobre 2026',
+      'Retrait à l’atelier',
+      '18 × Éclisse · Blanc',
+      '4 × Angle · Blanc (paires)',
+      'Autre profil',
+    ])
       expect(txt, attendu).toContain(attendu)
   })
 })

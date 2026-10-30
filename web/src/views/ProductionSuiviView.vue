@@ -7,6 +7,7 @@ import { avancement, dimChute, mm, type PlanGroupe, type PlanPliage, type Suivi 
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import AppIcon from '@/components/AppIcon.vue'
+import BandSketch from '@/components/orders/BandSketch.vue'
 import BendSketch from '@/components/orders/BendSketch.vue'
 import CuttingSketch from '@/components/orders/CuttingSketch.vue'
 import OrderLineCard from '@/components/orders/OrderLineCard.vue'
@@ -182,7 +183,10 @@ async function mettreAJourLeStock(g: PlanGroupe) {
             <small v-if="par(d.cle)" class="muted par">{{ par(d.cle) }}</small>
           </div>
         </div>
-        <CuttingSketch v-if="d.plan" :plan="d.plan" class="schema" />
+        <div class="schemas">
+          <CuttingSketch v-if="d.plan" :plan="d.plan" />
+          <BandSketch :bande="d.bande" />
+        </div>
       </div>
 
       <template v-if="g.pliages.length">
@@ -387,6 +391,10 @@ h3 .muted {
 }
 .travail.pliage {
   grid-template-columns: minmax(0, 1fr);
+}
+.schemas {
+  display: grid;
+  gap: 8px;
 }
 .texte {
   display: grid;

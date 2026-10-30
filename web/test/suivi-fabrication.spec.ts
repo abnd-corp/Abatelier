@@ -50,6 +50,7 @@ const SUIVI = (over: Partial<Suivi> = {}): Suivi => ({
             consigne: '4 bandes de 480 mm de large × 3 000 mm de long',
             pose: '2 bandes par feuille, dans le sens de la longueur de la feuille',
             quantite: 4,
+            bande: { developpe: 480, longueur: 3000, traits: [20, 90, 390, 460] },
             plan: { feuilleLargeur: 1250, feuilleLongueur: 3000, parFeuille: 2, sensLongueur: true, colonnes: 2, rangees: 1, developpe: 480, longueur: 3000 },
           },
         ],
@@ -231,6 +232,10 @@ describe('Suivi de la fabrication', () => {
     const { wrapper } = await setup(suivi)
     expect(norm(wrapper.text())).toContain('aucune feuille conseillée en stock')
     expect(wrapper.find('.chute').exists()).toBe(false)
+    // Sans feuille, la bande à plat s'affiche quand même : on voit ce qu'on découpe
+    expect(wrapper.find('.band svg').exists()).toBe(true)
+    expect(norm(wrapper.get('.band').text())).toContain('Bande à plat 480 × 3 000 mm')
+    expect(wrapper.find('.cut').exists()).toBe(false)
   })
 
   it('est proposé depuis la fiche de la commande', async () => {

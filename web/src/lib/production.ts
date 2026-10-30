@@ -14,6 +14,8 @@ export interface PlanDecoupe {
   consigne: string
   pose: string | null
   quantite: number
+  // La bande à plat : largeur (développé), longueur et traits de pli depuis le bord
+  bande: { developpe: number; longueur: number; traits: number[] }
   plan: { feuilleLargeur: number; feuilleLongueur: number; parFeuille: number; sensLongueur: boolean; colonnes: number; rangees: number; developpe: number; longueur: number } | null
 }
 
