@@ -48,6 +48,7 @@ check: ## Vérifie les types et compile l'API, le front et les tests e2e
 	cd web && npm run build
 	cd e2e && npm run typecheck && node select.mjs --verifier
 	for f in scripts/*.sh scripts/backup/*.sh; do bash -n $$f || exit 1; done
+	BPMN_SORTIE=$$(mktemp -d) node scripts/bpmn/generer.mjs > /dev/null
 
 lint: ## Linter (ESLint) et vérification de la mise en forme (Prettier) : les mêmes contrôles que la CI
 	npm run lint

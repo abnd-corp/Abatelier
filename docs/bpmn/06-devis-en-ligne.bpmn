@@ -83,7 +83,7 @@
       <bpmndi:BPMNShape id="P6_devis_en_ligne_g1_di" bpmnElement="P6_devis_en_ligne_g1" isMarkerVisible="true">
         <dc:Bounds x="950" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="870" y="43" width="110" height="30" />
+          <dc:Bounds x="863" y="43" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P6_devis_en_ligne_t4_di" bpmnElement="P6_devis_en_ligne_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -133,12 +133,18 @@
       <bpmndi:BPMNEdge id="P6_devis_en_ligne_flux5_di" bpmnElement="P6_devis_en_ligne_flux5">
         <di:waypoint x="1000" y="100" />
         <di:waypoint x="1090" y="100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1006" y="81" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P6_devis_en_ligne_flux6_di" bpmnElement="P6_devis_en_ligne_flux6">
         <di:waypoint x="1000" y="100" />
         <di:waypoint x="1065" y="100" />
         <di:waypoint x="1065" y="220" />
         <di:waypoint x="1090" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1036" y="106" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P6_devis_en_ligne_flux7_di" bpmnElement="P6_devis_en_ligne_flux7">
         <di:waypoint x="1240" y="100" />
@@ -156,8 +162,8 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P6_devis_en_ligne_flux10_di" bpmnElement="P6_devis_en_ligne_flux10">
         <di:waypoint x="1240" y="220" />
-        <di:waypoint x="1255" y="220" />
-        <di:waypoint x="1255" y="460" />
+        <di:waypoint x="1247" y="220" />
+        <di:waypoint x="1247" y="460" />
         <di:waypoint x="1280" y="460" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P6_devis_en_ligne_flux11_di" bpmnElement="P6_devis_en_ligne_flux11">

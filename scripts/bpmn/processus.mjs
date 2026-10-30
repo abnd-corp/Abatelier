@@ -109,6 +109,8 @@ export const PROCESSUS = [
     id: 'espace-client',
     titre: 'Espace client : création, activation, mot de passe, fermeture',
     resume: 'Création de l’espace d’un particulier ou d’un professionnel, activation sur une fiche existante, mot de passe oublié, vérification automatique du statut pro auprès de l’annuaire officiel, fermeture.',
+    // Question des losanges que le générateur ajoute après une étape qui a plusieurs sorties
+    questions: { t8: 'SIRET concordant ?' },
     voies: [CLIENT, APP, DIR],
     noeuds: [
       ['d', 'debut', CLIENT, 0, 0, 'Le visiteur veut commander ou suivre une commande'],
@@ -145,8 +147,8 @@ export const PROCESSUS = [
       ['g2', 't7', 'Oui'],
       ['g2', 't10', 'Non'],
       ['t7', 't8'],
-      ['t8', 't9', 'Concordant'],
-      ['t8', 't8b', 'Non concordant'],
+      ['t8', 't9', 'Oui'],
+      ['t8', 't8b', 'Non'],
       ['t8b', 't9'],
       ['t9', 't10'],
       ['t10', 'g3'],
@@ -459,6 +461,8 @@ export const PROCESSUS = [
     id: 'plan-atelier',
     titre: 'Plan visuel de l’atelier dans l’application',
     resume: 'La direction ouvre un plan du bâtiment, dans l’application, où les commandes se déplacent de lieu en lieu et où le stock se lit sur les racks. Le plan lit les vraies données ; l’emplacement des machines et des racks se règle une fois.',
+    // Question des losanges que le générateur ajoute après une étape qui a plusieurs sorties
+    questions: { t1: 'Première utilisation ?' },
     voies: [DIR, APP],
     noeuds: [
       ['d', 'debut', DIR, 0, 0, 'La direction veut voir l’atelier d’un coup d’œil'],
@@ -472,12 +476,12 @@ export const PROCESSUS = [
     ],
     flux: [
       ['d', 't1'],
-      ['t1', 't2'],
+      ['t1', 't2', 'Non'],
       ['t2', 't3'],
       ['t3', 't4'],
       ['t4', 't5'],
       ['t5', 'f'],
-      ['t1', 't6', 'Première fois'],
+      ['t1', 't6', 'Oui'],
       ['t6', 't2'],
     ],
   },
@@ -1056,6 +1060,8 @@ export const PROCESSUS = [
     id: 'notifications',
     titre: 'Notifications de la direction',
     resume: 'Tout ce qui concerne la direction arrive dans la plateforme, en un seul endroit, pour chaque compte qui en a le droit. Un clic ouvre la page où traiter la demande. Si trop de notifications restent non lues, un e-mail d’alerte part.',
+    // Question des losanges que le générateur ajoute après une étape qui a plusieurs sorties
+    questions: { t1: 'Trop de notifications non lues ?' },
     voies: [APP, DIR],
     noeuds: [
       ['d', 'debut', APP, 0, 0, 'Un événement concerne la direction (commande, contact, devis, stock…)'],
@@ -1069,8 +1075,8 @@ export const PROCESSUS = [
     ],
     flux: [
       ['d', 't1'],
-      ['t1', 't2'],
-      ['t1', 't6', 'Trop de non lues'],
+      ['t1', 't2', 'Non'],
+      ['t1', 't6', 'Oui'],
       ['t6', 't2'],
       ['t2', 't3'],
       ['t3', 't4'],

@@ -22,6 +22,7 @@
         <bpmn:flowNodeRef>P7_commande_en_ligne_t7</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P7_commande_en_ligne_t9</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P7_commande_en_ligne_f2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P7_commande_en_ligne_gs1</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="P7_commande_en_ligne_voie_paiement" name="Prestataire de paiement">
         <bpmn:flowNodeRef>P7_commande_en_ligne_t4</bpmn:flowNodeRef>
@@ -40,14 +41,15 @@
     <bpmn:serviceTask id="P7_commande_en_ligne_t4" name="Contrôler et débiter la carte"><bpmn:documentation>En partie : Essayé avec le mode test de Stripe ; le compte du client se branche à la mise en service</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux5</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux6</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:exclusiveGateway id="P7_commande_en_ligne_g1" name="Paiement accepté ?"><bpmn:incoming>P7_commande_en_ligne_flux6</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux7</bpmn:outgoing><bpmn:outgoing>P7_commande_en_ligne_flux8</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:serviceTask id="P7_commande_en_ligne_t5" name="Recevoir la confirmation signée du prestataire"><bpmn:documentation>Dans l’application : Seule preuve du paiement ; une notification falsifiée ou rejouée est ignorée</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux7</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux9</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P7_commande_en_ligne_t6" name="Créer la commande déjà validée avec sa date estimée"><bpmn:documentation>Dans l’application : Elle n’existe qu’après le paiement</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux9</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux10</bpmn:outgoing><bpmn:outgoing>P7_commande_en_ligne_flux13</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:serviceTask id="P7_commande_en_ligne_t7" name="Confirmer au client par e-mail et notifier la direction dans la plateforme"><bpmn:documentation>En partie : E-mail client mis en page, sans publicité. Notification direction : aujourd’hui par e-mail</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux10</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux11</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:userTask id="P7_commande_en_ligne_t8" name="Fabriquer (voir « Fabrication »)"><bpmn:documentation>Dans l’application : Arrive dans « À lancer »</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux11</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux12</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="P7_commande_en_ligne_t9" name="Ne rien créer, garder le panier"><bpmn:documentation>Dans l’application : Message au retour sur le site : paiement annulé, aucune somme débitée</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux8</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux15</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:userTask id="P7_commande_en_ligne_t10" name="Suivre sa commande dans son espace"><bpmn:documentation>Dans l’application : Étapes, date estimée, paiement</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux13</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux14</bpmn:outgoing></bpmn:userTask>
-    <bpmn:endEvent id="P7_commande_en_ligne_f1" name="Commande en fabrication"><bpmn:incoming>P7_commande_en_ligne_flux12</bpmn:incoming></bpmn:endEvent>
-    <bpmn:endEvent id="P7_commande_en_ligne_f2" name="Aucune commande créée"><bpmn:incoming>P7_commande_en_ligne_flux15</bpmn:incoming></bpmn:endEvent>
-    <bpmn:endEvent id="P7_commande_en_ligne_f3" name="Client informé de chaque étape"><bpmn:incoming>P7_commande_en_ligne_flux14</bpmn:incoming></bpmn:endEvent>
+    <bpmn:serviceTask id="P7_commande_en_ligne_t6" name="Créer la commande déjà validée avec sa date estimée"><bpmn:documentation>Dans l’application : Elle n’existe qu’après le paiement</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux9</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux14</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="P7_commande_en_ligne_t7" name="Confirmer au client par e-mail et notifier la direction dans la plateforme"><bpmn:documentation>En partie : E-mail client mis en page, sans publicité. Notification direction : aujourd’hui par e-mail</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux15</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux10</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P7_commande_en_ligne_t8" name="Fabriquer (voir « Fabrication »)"><bpmn:documentation>Dans l’application : Arrive dans « À lancer »</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux10</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux11</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="P7_commande_en_ligne_t9" name="Ne rien créer, garder le panier"><bpmn:documentation>Dans l’application : Message au retour sur le site : paiement annulé, aucune somme débitée</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux8</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux13</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="P7_commande_en_ligne_t10" name="Suivre sa commande dans son espace"><bpmn:documentation>Dans l’application : Étapes, date estimée, paiement</bpmn:documentation><bpmn:incoming>P7_commande_en_ligne_flux16</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux12</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="P7_commande_en_ligne_f1" name="Commande en fabrication"><bpmn:incoming>P7_commande_en_ligne_flux11</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="P7_commande_en_ligne_f2" name="Aucune commande créée"><bpmn:incoming>P7_commande_en_ligne_flux13</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="P7_commande_en_ligne_f3" name="Client informé de chaque étape"><bpmn:incoming>P7_commande_en_ligne_flux12</bpmn:incoming></bpmn:endEvent>
+    <bpmn:parallelGateway id="P7_commande_en_ligne_gs1" name=""><bpmn:incoming>P7_commande_en_ligne_flux14</bpmn:incoming><bpmn:outgoing>P7_commande_en_ligne_flux15</bpmn:outgoing><bpmn:outgoing>P7_commande_en_ligne_flux16</bpmn:outgoing></bpmn:parallelGateway>
     <bpmn:sequenceFlow id="P7_commande_en_ligne_flux1" sourceRef="P7_commande_en_ligne_d" targetRef="P7_commande_en_ligne_t1" />
     <bpmn:sequenceFlow id="P7_commande_en_ligne_flux2" sourceRef="P7_commande_en_ligne_t1" targetRef="P7_commande_en_ligne_p" />
     <bpmn:sequenceFlow id="P7_commande_en_ligne_flux3" sourceRef="P7_commande_en_ligne_p" targetRef="P7_commande_en_ligne_t2" />
@@ -57,30 +59,31 @@
     <bpmn:sequenceFlow id="P7_commande_en_ligne_flux7" name="Oui" sourceRef="P7_commande_en_ligne_g1" targetRef="P7_commande_en_ligne_t5" />
     <bpmn:sequenceFlow id="P7_commande_en_ligne_flux8" name="Non" sourceRef="P7_commande_en_ligne_g1" targetRef="P7_commande_en_ligne_t9" />
     <bpmn:sequenceFlow id="P7_commande_en_ligne_flux9" sourceRef="P7_commande_en_ligne_t5" targetRef="P7_commande_en_ligne_t6" />
-    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux10" sourceRef="P7_commande_en_ligne_t6" targetRef="P7_commande_en_ligne_t7" />
-    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux11" sourceRef="P7_commande_en_ligne_t7" targetRef="P7_commande_en_ligne_t8" />
-    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux12" sourceRef="P7_commande_en_ligne_t8" targetRef="P7_commande_en_ligne_f1" />
-    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux13" sourceRef="P7_commande_en_ligne_t6" targetRef="P7_commande_en_ligne_t10" />
-    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux14" sourceRef="P7_commande_en_ligne_t10" targetRef="P7_commande_en_ligne_f3" />
-    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux15" sourceRef="P7_commande_en_ligne_t9" targetRef="P7_commande_en_ligne_f2" />
+    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux10" sourceRef="P7_commande_en_ligne_t7" targetRef="P7_commande_en_ligne_t8" />
+    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux11" sourceRef="P7_commande_en_ligne_t8" targetRef="P7_commande_en_ligne_f1" />
+    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux12" sourceRef="P7_commande_en_ligne_t10" targetRef="P7_commande_en_ligne_f3" />
+    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux13" sourceRef="P7_commande_en_ligne_t9" targetRef="P7_commande_en_ligne_f2" />
+    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux14" sourceRef="P7_commande_en_ligne_t6" targetRef="P7_commande_en_ligne_gs1" />
+    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux15" sourceRef="P7_commande_en_ligne_gs1" targetRef="P7_commande_en_ligne_t7" />
+    <bpmn:sequenceFlow id="P7_commande_en_ligne_flux16" sourceRef="P7_commande_en_ligne_gs1" targetRef="P7_commande_en_ligne_t10" />
     <bpmn:textAnnotation id="P7_commande_en_ligne_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="P7_commande_en_ligne_diagram">
     <bpmndi:BPMNPlane id="P7_commande_en_ligne_plane" bpmnElement="P7_commande_en_ligne_collab">
       <bpmndi:BPMNShape id="P7_commande_en_ligne_pool_di" bpmnElement="P7_commande_en_ligne_pool" isHorizontal="true">
-        <dc:Bounds x="40" y="40" width="2200" height="840" />
+        <dc:Bounds x="40" y="40" width="2390" height="840" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_voie_client_di" bpmnElement="P7_commande_en_ligne_voie_client" isHorizontal="true">
-        <dc:Bounds x="70" y="40" width="2170" height="240" />
+        <dc:Bounds x="70" y="40" width="2360" height="240" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_voie_systeme_di" bpmnElement="P7_commande_en_ligne_voie_systeme" isHorizontal="true">
-        <dc:Bounds x="70" y="280" width="2170" height="360" />
+        <dc:Bounds x="70" y="280" width="2360" height="360" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_voie_paiement_di" bpmnElement="P7_commande_en_ligne_voie_paiement" isHorizontal="true">
-        <dc:Bounds x="70" y="640" width="2170" height="120" />
+        <dc:Bounds x="70" y="640" width="2360" height="120" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_voie_atelier_di" bpmnElement="P7_commande_en_ligne_voie_atelier" isHorizontal="true">
-        <dc:Bounds x="70" y="760" width="2170" height="120" />
+        <dc:Bounds x="70" y="760" width="2360" height="120" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_d_di" bpmnElement="P7_commande_en_ligne_d">
         <dc:Bounds x="197" y="82" width="36" height="36" />
@@ -103,7 +106,7 @@
       <bpmndi:BPMNShape id="P7_commande_en_ligne_g1_di" bpmnElement="P7_commande_en_ligne_g1" isMarkerVisible="true">
         <dc:Bounds x="1140" y="675" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1060" y="643" width="110" height="30" />
+          <dc:Bounds x="1053" y="643" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_t5_di" bpmnElement="P7_commande_en_ligne_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
@@ -113,10 +116,10 @@
         <dc:Bounds x="1470" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_t7_di" bpmnElement="P7_commande_en_ligne_t7" bioc:stroke="#b26a00" bioc:fill="#ffeccc">
-        <dc:Bounds x="1660" y="300" width="150" height="80" />
+        <dc:Bounds x="1850" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_t8_di" bpmnElement="P7_commande_en_ligne_t8" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1850" y="780" width="150" height="80" />
+        <dc:Bounds x="2040" y="780" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_t9_di" bpmnElement="P7_commande_en_ligne_t9" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="1280" y="420" width="150" height="80" />
@@ -125,13 +128,16 @@
         <dc:Bounds x="1470" y="180" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_f1_di" bpmnElement="P7_commande_en_ligne_f1">
-        <dc:Bounds x="2097" y="802" width="36" height="36" />
+        <dc:Bounds x="2287" y="802" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_f2_di" bpmnElement="P7_commande_en_ligne_f2">
         <dc:Bounds x="1527" y="562" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_f3_di" bpmnElement="P7_commande_en_ligne_f3">
-        <dc:Bounds x="1717" y="202" width="36" height="36" />
+        <dc:Bounds x="1907" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P7_commande_en_ligne_gs1_di" bpmnElement="P7_commande_en_ligne_gs1">
+        <dc:Bounds x="1710" y="315" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux1_di" bpmnElement="P7_commande_en_ligne_flux1">
         <di:waypoint x="233" y="100" />
@@ -168,46 +174,56 @@
         <di:waypoint x="1255" y="700" />
         <di:waypoint x="1255" y="340" />
         <di:waypoint x="1280" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1249" y="321" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux8_di" bpmnElement="P7_commande_en_ligne_flux8">
         <di:waypoint x="1190" y="700" />
         <di:waypoint x="1255" y="700" />
         <di:waypoint x="1255" y="460" />
         <di:waypoint x="1280" y="460" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1225" y="441" width="25" height="17" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux9_di" bpmnElement="P7_commande_en_ligne_flux9">
         <di:waypoint x="1430" y="340" />
         <di:waypoint x="1470" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux10_di" bpmnElement="P7_commande_en_ligne_flux10">
-        <di:waypoint x="1620" y="340" />
-        <di:waypoint x="1660" y="340" />
+        <di:waypoint x="2000" y="340" />
+        <di:waypoint x="2015" y="340" />
+        <di:waypoint x="2015" y="820" />
+        <di:waypoint x="2040" y="820" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux11_di" bpmnElement="P7_commande_en_ligne_flux11">
-        <di:waypoint x="1810" y="340" />
-        <di:waypoint x="1825" y="340" />
-        <di:waypoint x="1825" y="820" />
-        <di:waypoint x="1850" y="820" />
+        <di:waypoint x="2190" y="820" />
+        <di:waypoint x="2287" y="820" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux12_di" bpmnElement="P7_commande_en_ligne_flux12">
-        <di:waypoint x="2000" y="820" />
-        <di:waypoint x="2097" y="820" />
+        <di:waypoint x="1620" y="220" />
+        <di:waypoint x="1907" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux13_di" bpmnElement="P7_commande_en_ligne_flux13">
-        <di:waypoint x="1545" y="300" />
-        <di:waypoint x="1545" y="282" />
-        <di:waypoint x="1545" y="282" />
-        <di:waypoint x="1545" y="260" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux14_di" bpmnElement="P7_commande_en_ligne_flux14">
-        <di:waypoint x="1620" y="220" />
-        <di:waypoint x="1717" y="220" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux15_di" bpmnElement="P7_commande_en_ligne_flux15">
         <di:waypoint x="1430" y="460" />
         <di:waypoint x="1502" y="460" />
         <di:waypoint x="1502" y="580" />
         <di:waypoint x="1527" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux14_di" bpmnElement="P7_commande_en_ligne_flux14">
+        <di:waypoint x="1620" y="340" />
+        <di:waypoint x="1710" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux15_di" bpmnElement="P7_commande_en_ligne_flux15">
+        <di:waypoint x="1760" y="340" />
+        <di:waypoint x="1850" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P7_commande_en_ligne_flux16_di" bpmnElement="P7_commande_en_ligne_flux16">
+        <di:waypoint x="1735" y="315" />
+        <di:waypoint x="1735" y="290" />
+        <di:waypoint x="1545" y="290" />
+        <di:waypoint x="1545" y="260" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="P7_commande_en_ligne_legende_di" bpmnElement="P7_commande_en_ligne_legende">
         <dc:Bounds x="70" y="900" width="760" height="30" />
