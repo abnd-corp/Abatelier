@@ -107,4 +107,44 @@ describe('Écran de l’atelier', () => {
     const { wrapper } = await setup({ 'GET /public/ecran': [200, { orders: [], now: ECRAN.now }] })
     expect(wrapper.findAll('.vide')).toHaveLength(4)
   })
+
+  it('descend doucement, marque une pause en bas, puis remonte à la même vitesse sans sauter en haut', async () => {
+    const valeurs: number[] = []
+    const proto = HTMLElement.prototype
+    Object.defineProperty(proto, 'scrollHeight', { configurable: true, get: () => 400 })
+    Object.defineProperty(proto, 'clientHeight', { configurable: true, get: () => 100 })
+    Object.defineProperty(proto, 'scrollTop', { configurable: true, get: () => 0, set: (v: number) => void valeurs.push(v) })
+    let suite: FrameRequestCallback | undefined
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => ((suite = cb), 1))
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+    try {
+      mockApi({ 'GET /public/ecran': [200, ECRAN] })
+      const pinia = freshPinia()
+      useAuthStore().user = ATELIER
+      const router = makeRouter()
+      await router.push('/ecran-atelier')
+      await router.isReady()
+      const wrapper = mount(EcranAtelierView, { global: { plugins: [pinia, router] }, attachTo: document.body })
+      await flushPromises()
+      // Une image par seconde : 30 px/s, 300 px à parcourir, 3 s de pause en haut et en bas
+      for (let t = 0; t <= 30_000; t += 1000) suite?.(t)
+      const bas = valeurs.indexOf(Math.max(...valeurs))
+      expect(Math.max(...valeurs)).toBe(300)
+      const montee = valeurs.slice(bas + 1).filter((v) => v < 300)
+      expect(montee.length).toBeGreaterThan(5)
+      // Chaque pas de la remontée fait 30 px au plus : jamais de retour brutal en haut
+      let precedent = 300
+      for (const v of valeurs.slice(bas)) {
+        expect(precedent - v).toBeLessThanOrEqual(30)
+        precedent = v
+      }
+      expect(valeurs.at(-1)).toBeLessThan(300)
+      wrapper.unmount()
+    } finally {
+      delete (proto as unknown as Record<string, unknown>).scrollHeight
+      delete (proto as unknown as Record<string, unknown>).clientHeight
+      delete (proto as unknown as Record<string, unknown>).scrollTop
+      vi.unstubAllGlobals()
+    }
+  })
 })

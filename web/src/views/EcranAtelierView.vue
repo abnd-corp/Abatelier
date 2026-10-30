@@ -37,10 +37,10 @@ let timer: ReturnType<typeof setInterval> | undefined
 let horloge: ReturnType<typeof setInterval> | undefined
 const REFRESH_MS = 15_000
 // Défilement automatique : un écran au mur n'a personne pour toucher la souris. Chaque colonne trop pleine descend doucement,
-// marque une pause en bas, puis remonte : rien ne reste caché.
+// marque une pause en bas, puis remonte à la même vitesse, jusqu'en haut : rien ne reste caché et rien ne saute.
 const PAUSE_MS = 3000
 const VITESSE = 30 // pixels par seconde
-const etats = new WeakMap<Element, { since: number; phase: 'haut' | 'descend' | 'bas'; pos: number; last: number }>()
+const etats = new WeakMap<Element, { since: number; phase: 'haut' | 'descend' | 'bas' | 'monte'; pos: number; last: number }>()
 let raf = 0
 function defile(now: number) {
   for (const el of document.querySelectorAll<HTMLElement>('.colonne ul')) {
@@ -56,13 +56,12 @@ function defile(now: number) {
       st.pos = Math.min(max, st.pos + ((now - st.last) * VITESSE) / 1000)
       el.scrollTop = st.pos
       if (st.pos >= max) Object.assign(st, { phase: 'bas', since: now })
+    } else if (st.phase === 'monte') {
+      st.pos = Math.max(0, st.pos - ((now - st.last) * VITESSE) / 1000)
+      el.scrollTop = st.pos
+      if (st.pos <= 0) Object.assign(st, { phase: 'haut', since: now })
     } else if (now - st.since >= PAUSE_MS) {
-      if (st.phase === 'haut') {
-        st.phase = 'descend'
-      } else {
-        Object.assign(st, { phase: 'haut', since: now, pos: 0 })
-        el.scrollTop = 0
-      }
+      st.phase = st.phase === 'haut' ? 'descend' : 'monte'
     }
     st.last = now
   }

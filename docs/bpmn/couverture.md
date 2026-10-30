@@ -112,7 +112,7 @@ Les 36 processus de l’atelier sont décrits en BPMN (voir [README](README.md))
 - **Notifications de la direction** : Voir le nombre de notifications non lues dans le menu (pas encore) : Pastille sur une cloche, dans le menu de gauche
 - **Notifications de la direction** : Ouvrir la notification : arriver directement sur la page à traiter (pas encore) : Commande, demande de contact, devis, stock : la page exacte, pas la liste
 - **Notifications de la direction** : Marquer la notification comme lue, puis traitée (pas encore) : Lue pour tous les comptes ou pour chacun : à définir avec le client
-- **Mise en service chez un client** : Installer l’application, créer le compte administrateur, régler les secrets (e-mail, paiement) (en partie) : Docker prêt ; domaine HTTPS et serveur chez le client à finaliser
+- **Mise en service chez un client** : Installer l’application, créer le compte administrateur, régler les secrets (e-mail, paiement, connexion Google) (en partie) : Docker prêt ; domaine HTTPS et serveur chez le client à finaliser
 - **Mise en service chez un client** : Importer les clients et l’historique de l’ancien outil (pas encore) : Facultatif ; dépend de la forme des données existantes
 - **Mise en service chez un client** : Brancher le prestataire de paiement du client et faire un paiement de test (en partie) : Stripe essayé en test ; le choix du prestataire se fait avec le client
 - **Disponibilité et supervision du serveur** : Relancer tout seul un service qui plante (en partie) : Redémarrage automatique des conteneurs prévu ; à vérifier sur le Raspberry
@@ -185,7 +185,7 @@ Schéma : [image](03-connexion-google.svg) · [fichier BPMN](03-connexion-google
 | Cliquer sur « Continuer avec Google » | Visiteur / Client | Dans l’application | Pages Connexion et Créer mon espace ; bouton affiché seulement si Google est configuré |
 | Envoyer le client chez Google (état, nonce et clé PKCE gardés dans un cookie signé de 10 minutes) | Application (automatique) | Dans l’application | Aucun script de Google sur le site : une simple redirection |
 | Choisir son compte Google et accepter | Visiteur / Client | Hors application | Écran de Google |
-| Échanger le code avec Google et contrôler le jeton (émetteur, destinataire, durée, nonce, e-mail vérifié) | Application (automatique) | Dans l’application | Au moindre doute : retour à la connexion avec un message clair, noté au journal |
+| Échanger le code avec Google et contrôler le jeton (émetteur, destinataire, durée, nonce, e-mail vérifié) | Application (automatique) | Dans l’application | Au moindre doute : retour à la connexion avec un message clair, noté au journal. Validé avec le vrai Google le 30 octobre 2026 |
 | Ouvrir la session de l’espace existant | Application (automatique) | Dans l’application | Rattachement automatique de Google à l’espace qui a la même adresse, sans doublon ; noté au journal |
 | Ouvrir l’espace d’une fiche créée par l’atelier | Application (automatique) | Dans l’application | Google prouve que l’adresse est la sienne : pas besoin du lien d’activation |
 | Indiquer particulier ou professionnel (raison sociale) et accepter l’utilisation de ses données | Visiteur / Client | Dans l’application | Une étape après Google, mêmes règles que l’inscription |
@@ -614,7 +614,7 @@ Schéma : [image](31-messages.svg) · [fichier BPMN](31-messages.bpmn)
 |---|---|---|---|
 | Bienvenue, activation de l’espace, mot de passe oublié, mot de passe modifié | Application (automatique) | Dans l’application | Liens à usage unique ; message de sécurité à chaque changement de mot de passe |
 | Commande confirmée, commande refusée et remboursée | Application (automatique) | Dans l’application | Récapitulatif, date estimée, bouton vers l’espace client |
-| Devis, facture ou avoir disponible dans l’espace client | Application (automatique) | Dans l’application | Aucune pièce jointe ; texte modifiable |
+| Devis, facture ou avoir disponible dans l’espace client | Application (automatique) | Dans l’application | Aucune pièce jointe ; texte et mise en page fixés par la maintenance, la direction ajuste seulement le message avant l’envoi |
 | Commande prête, accusé de réception d’une demande de contact | Application (automatique) | Pas encore | Pas encore envoyés au client |
 | Lire le message (rappel de sécurité et lien vers son espace) | Visiteur / Client | Dans l’application | Version mise en page et version texte |
 
@@ -641,7 +641,7 @@ Schéma : [image](33-mise-en-service.svg) · [fichier BPMN](33-mise-en-service.b
 
 | Étape | Qui | Couverture | Où dans l’application, ou précision |
 |---|---|---|---|
-| Installer l’application, créer le compte administrateur, régler les secrets (e-mail, paiement) | Maintenance (nous) | En partie | Docker prêt ; domaine HTTPS et serveur chez le client à finaliser |
+| Installer l’application, créer le compte administrateur, régler les secrets (e-mail, paiement, connexion Google) | Maintenance (nous) | En partie | Docker prêt ; domaine HTTPS et serveur chez le client à finaliser |
 | Renseigner l’hébergeur et le médiateur des pages légales | Maintenance (nous) | Dans l’application | Deux réglages d’installation |
 | Saisir l’entreprise, le logo, le modèle des documents, la numérotation de départ | Direction | Dans l’application | Le dernier numéro de facture de l’ancien outil se saisit avant le premier document |
 | Saisir les tarifs, matières, coloris, modèles de pièces, accessoires, livraison | Direction | Dans l’application | Tarifs et catalogue |

@@ -20,6 +20,15 @@ http://localhost:5173/api/espace/google/debut?simule=marie@exemple.fr:Marie:Mart
 4. Dans `.env` : `GOOGLE_OAUTH_PROVIDER=google` et `GOOGLE_OAUTH_CLIENT_ID=<identifiant>`.
 5. Le secret du client dans `secrets/google_oauth_client_secret.txt`, puis `docker compose up -d api`.
 
+## Au déploiement chez le client
+
+C'est un réglage de mise en service, au même titre que l'envoi d'e-mails.
+
+- Le projet Google Cloud doit appartenir à l'entreprise, pas à un compte personnel du développeur.
+- L'écran de consentement doit passer de « Test » à **« En production »** : en mode Test, seules les adresses listées comme testeurs peuvent se connecter.
+- Ajouter l'adresse de retour du vrai domaine dans la console Google.
+- Essayé le 30 octobre 2026 avec un vrai compte Google en local : rattachement à un espace existant et première visite.
+
 Sans identifiant ni secret, l'API refuse de démarrer en mode `google` (message clair), et en mode `none` le bouton n'apparaît pas.
 
 ## Ce que fait l'application
