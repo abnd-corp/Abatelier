@@ -53,7 +53,9 @@ function normaliser(p) {
     if (dernier <= n[3]) {
       colonne = dernier + 1
       const avant = n[3]
-      for (const x of noeuds) if (x[3] > dernier) x[3] += 1
+      // Entrées dans la même colonne que l'étape : elle passe après la fusion, et ce qui la suit recule de deux colonnes
+      const recul = avant <= dernier ? 2 : 1
+      for (const x of noeuds) if (x[3] > dernier) x[3] += recul
       if (avant <= dernier) n[3] = dernier + 2
     } else {
       colonne = n[3]
