@@ -57,7 +57,7 @@
     <bpmn:userTask id="P2_espace_client_t13" name="Fermer son espace (mot de passe demandé)"><bpmn:documentation>Dans l’application : Espace client › Fermer mon espace</bpmn:documentation><bpmn:incoming>P2_espace_client_flux19</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux20</bpmn:outgoing></bpmn:userTask>
     <bpmn:serviceTask id="P2_espace_client_t14" name="Anonymiser la fiche, garder les factures, libérer l’adresse"><bpmn:documentation>Dans l’application : Les factures sont conservées 10 ans (obligation légale)</bpmn:documentation><bpmn:incoming>P2_espace_client_flux20</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux21</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:endEvent id="P2_espace_client_f" name="Espace fermé"><bpmn:incoming>P2_espace_client_flux21</bpmn:incoming></bpmn:endEvent>
-    <bpmn:exclusiveGateway id="P2_espace_client_gs1" name=""><bpmn:incoming>P2_espace_client_flux22</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux23</bpmn:outgoing><bpmn:outgoing>P2_espace_client_flux24</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="P2_espace_client_gs1" name="SIRET concordant ?"><bpmn:incoming>P2_espace_client_flux22</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux23</bpmn:outgoing><bpmn:outgoing>P2_espace_client_flux24</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:exclusiveGateway id="P2_espace_client_gj2" name=""><bpmn:incoming>P2_espace_client_flux13</bpmn:incoming><bpmn:incoming>P2_espace_client_flux23</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux25</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:exclusiveGateway id="P2_espace_client_gj3" name=""><bpmn:incoming>P2_espace_client_flux11</bpmn:incoming><bpmn:incoming>P2_espace_client_flux14</bpmn:incoming><bpmn:incoming>P2_espace_client_flux18</bpmn:incoming><bpmn:outgoing>P2_espace_client_flux26</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="P2_espace_client_flux1" sourceRef="P2_espace_client_d" targetRef="P2_espace_client_t1" />
@@ -82,8 +82,8 @@
     <bpmn:sequenceFlow id="P2_espace_client_flux20" sourceRef="P2_espace_client_t13" targetRef="P2_espace_client_t14" />
     <bpmn:sequenceFlow id="P2_espace_client_flux21" sourceRef="P2_espace_client_t14" targetRef="P2_espace_client_f" />
     <bpmn:sequenceFlow id="P2_espace_client_flux22" sourceRef="P2_espace_client_t8" targetRef="P2_espace_client_gs1" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux23" name="Concordant" sourceRef="P2_espace_client_gs1" targetRef="P2_espace_client_gj2" />
-    <bpmn:sequenceFlow id="P2_espace_client_flux24" name="Non concordant" sourceRef="P2_espace_client_gs1" targetRef="P2_espace_client_t8b" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux23" name="Oui" sourceRef="P2_espace_client_gs1" targetRef="P2_espace_client_gj2" />
+    <bpmn:sequenceFlow id="P2_espace_client_flux24" name="Non" sourceRef="P2_espace_client_gs1" targetRef="P2_espace_client_t8b" />
     <bpmn:sequenceFlow id="P2_espace_client_flux25" sourceRef="P2_espace_client_gj2" targetRef="P2_espace_client_t9" />
     <bpmn:sequenceFlow id="P2_espace_client_flux26" sourceRef="P2_espace_client_gj3" targetRef="P2_espace_client_t10" />
     <bpmn:textAnnotation id="P2_espace_client_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
@@ -142,10 +142,10 @@
         <dc:Bounds x="1660" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t8b_di" bpmnElement="P2_espace_client_t8b" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="2230" y="540" width="150" height="80" />
+        <dc:Bounds x="2040" y="540" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t9_di" bpmnElement="P2_espace_client_t9" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="2230" y="300" width="150" height="80" />
+        <dc:Bounds x="2610" y="300" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_t10_di" bpmnElement="P2_espace_client_t10" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="2610" y="60" width="150" height="80" />
@@ -178,9 +178,9 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_gj2_di" bpmnElement="P2_espace_client_gj2" isMarkerVisible="true">
-        <dc:Bounds x="2090" y="315" width="50" height="50" />
+        <dc:Bounds x="2280" y="315" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="2010" y="283" width="110" height="30" />
+          <dc:Bounds x="2200" y="283" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P2_espace_client_gj3_di" bpmnElement="P2_espace_client_gj3" isMarkerVisible="true">
@@ -254,16 +254,16 @@
         <di:waypoint x="1660" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux13_di" bpmnElement="P2_espace_client_flux13">
-        <di:waypoint x="2305" y="540" />
-        <di:waypoint x="2305" y="387" />
-        <di:waypoint x="2115" y="387" />
-        <di:waypoint x="2115" y="365" />
+        <di:waypoint x="2190" y="580" />
+        <di:waypoint x="2255" y="580" />
+        <di:waypoint x="2255" y="340" />
+        <di:waypoint x="2280" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux14_di" bpmnElement="P2_espace_client_flux14">
-        <di:waypoint x="2380" y="340" />
-        <di:waypoint x="2445" y="340" />
-        <di:waypoint x="2445" y="100" />
-        <di:waypoint x="2470" y="100" />
+        <di:waypoint x="2685" y="300" />
+        <di:waypoint x="2685" y="147" />
+        <di:waypoint x="2495" y="147" />
+        <di:waypoint x="2495" y="125" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux15_di" bpmnElement="P2_espace_client_flux15">
         <di:waypoint x="2760" y="100" />
@@ -309,17 +309,17 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux23_di" bpmnElement="P2_espace_client_flux23">
         <di:waypoint x="1950" y="340" />
-        <di:waypoint x="2090" y="340" />
+        <di:waypoint x="2280" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux24_di" bpmnElement="P2_espace_client_flux24">
         <di:waypoint x="1950" y="340" />
-        <di:waypoint x="2205" y="340" />
-        <di:waypoint x="2205" y="580" />
-        <di:waypoint x="2230" y="580" />
+        <di:waypoint x="2015" y="340" />
+        <di:waypoint x="2015" y="580" />
+        <di:waypoint x="2040" y="580" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux25_di" bpmnElement="P2_espace_client_flux25">
-        <di:waypoint x="2140" y="340" />
-        <di:waypoint x="2230" y="340" />
+        <di:waypoint x="2330" y="340" />
+        <di:waypoint x="2610" y="340" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P2_espace_client_flux26_di" bpmnElement="P2_espace_client_flux26">
         <di:waypoint x="2520" y="100" />

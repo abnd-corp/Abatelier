@@ -102,10 +102,10 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t3_di" bpmnElement="P18_reception_t3" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1470" y="180" width="150" height="80" />
+        <dc:Bounds x="1280" y="180" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t4_di" bpmnElement="P18_reception_t4" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
-        <dc:Bounds x="1470" y="60" width="150" height="80" />
+        <dc:Bounds x="1660" y="60" width="150" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_t5_di" bpmnElement="P18_reception_t5" bioc:stroke="#2e7d32" bioc:fill="#d8f0dc">
         <dc:Bounds x="1660" y="300" width="150" height="80" />
@@ -150,9 +150,9 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="P18_reception_gj2_di" bpmnElement="P18_reception_gj2" isMarkerVisible="true">
-        <dc:Bounds x="1330" y="75" width="50" height="50" />
+        <dc:Bounds x="1520" y="75" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1250" y="43" width="110" height="30" />
+          <dc:Bounds x="1440" y="43" width="110" height="30" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="P18_reception_flux1_di" bpmnElement="P18_reception_flux1">
@@ -175,27 +175,27 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux5_di" bpmnElement="P18_reception_flux5">
         <di:waypoint x="1190" y="340" />
-        <di:waypoint x="1305" y="340" />
-        <di:waypoint x="1305" y="100" />
-        <di:waypoint x="1330" y="100" />
+        <di:waypoint x="1495" y="340" />
+        <di:waypoint x="1495" y="100" />
+        <di:waypoint x="1520" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux6_di" bpmnElement="P18_reception_flux6">
         <di:waypoint x="1190" y="340" />
-        <di:waypoint x="1445" y="340" />
-        <di:waypoint x="1445" y="220" />
-        <di:waypoint x="1470" y="220" />
+        <di:waypoint x="1255" y="340" />
+        <di:waypoint x="1255" y="220" />
+        <di:waypoint x="1280" y="220" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux7_di" bpmnElement="P18_reception_flux7">
-        <di:waypoint x="1545" y="180" />
-        <di:waypoint x="1545" y="147" />
-        <di:waypoint x="1355" y="147" />
-        <di:waypoint x="1355" y="125" />
+        <di:waypoint x="1430" y="220" />
+        <di:waypoint x="1495" y="220" />
+        <di:waypoint x="1495" y="100" />
+        <di:waypoint x="1520" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux8_di" bpmnElement="P18_reception_flux8">
-        <di:waypoint x="1620" y="100" />
-        <di:waypoint x="1635" y="100" />
-        <di:waypoint x="1635" y="340" />
-        <di:waypoint x="1660" y="340" />
+        <di:waypoint x="1735" y="140" />
+        <di:waypoint x="1735" y="278" />
+        <di:waypoint x="1735" y="278" />
+        <di:waypoint x="1735" y="300" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux9_di" bpmnElement="P18_reception_flux9">
         <di:waypoint x="1810" y="340" />
@@ -256,8 +256,8 @@
         <di:waypoint x="900" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="P18_reception_flux20_di" bpmnElement="P18_reception_flux20">
-        <di:waypoint x="1380" y="100" />
-        <di:waypoint x="1470" y="100" />
+        <di:waypoint x="1570" y="100" />
+        <di:waypoint x="1660" y="100" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="P18_reception_legende_di" bpmnElement="P18_reception_legende">
         <dc:Bounds x="70" y="540" width="760" height="30" />

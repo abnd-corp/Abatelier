@@ -6,7 +6,7 @@ import { GROUPES, PROCESSUS as PROCESSUS_SOURCE, VOIES } from './processus.mjs'
 /**
  * Mise en conformité BPMN : les schémas sont écrits avec des flux simples, et les passerelles que la norme demande sont ajoutées ici.
  *  - une étape qui reçoit plusieurs flux est précédée d'une passerelle de fusion (exclusive) ;
- *  - une étape qui en envoie plusieurs est suivie d'une passerelle de décision (exclusive si un flux porte un libellé, sinon parallèle).
+ *  - une étape qui en envoie plusieurs est suivie d'une passerelle de décision (exclusive si un flux porte un libellé, sinon parallèle). La question du losange vient du champ `questions` du processus.
  * Les colonnes suivantes sont décalées d'un cran pour faire de la place.
  */
 function normaliser(p) {
@@ -21,7 +21,7 @@ function normaliser(p) {
     const id = `gs${++k}`
     const exclusive = sorties.some((f) => f[2])
     decaler(n[3] + 1)
-    noeuds.push([id, exclusive ? 'choix' : 'parallele', n[2], n[3] + 1, n[4], ''])
+    noeuds.push([id, exclusive ? 'choix' : 'parallele', n[2], n[3] + 1, n[4], p.questions?.[n[0]] ?? ''])
     flux = flux.filter((f) => f[0] !== n[0])
     flux.push([n[0], id])
     for (const f of sorties) flux.push([id, f[1], exclusive ? f[2] || 'Sinon' : f[2]].filter((x) => x !== undefined))
@@ -45,8 +45,20 @@ function normaliser(p) {
     const id = `gj${++k}`
     const origines = new Set(entrees.map((f) => origine(f[0])))
     const parallele = origines.size === 1 && [...origines][0] !== null && typeDe([...origines][0]) === 'parallele'
-    const colonne = n[3]
-    decaler(colonne)
+    // La fusion se place juste après le dernier élément qui la précède, pour que le détour d'une étape facultative tienne entre les deux losanges.
+    // Une boucle (un flux qui revient en arrière) garde la fusion devant l'étape.
+    const colonnes = entrees.map((f) => noeuds.find((x) => x[0] === f[0])[3])
+    const dernier = Math.max(...colonnes)
+    let colonne
+    if (dernier <= n[3]) {
+      colonne = dernier + 1
+      const avant = n[3]
+      for (const x of noeuds) if (x[3] > dernier) x[3] += 1
+      if (avant <= dernier) n[3] = dernier + 2
+    } else {
+      colonne = n[3]
+      decaler(colonne)
+    }
     noeuds.push([id, parallele ? 'parallele' : 'choix', n[2], colonne, n[4], ''])
     flux = flux.map((f) => (f[1] === n[0] ? [f[0], id, ...f.slice(2)] : f))
     flux.push([id, n[0]])

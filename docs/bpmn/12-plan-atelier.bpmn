@@ -30,7 +30,7 @@
     <bpmn:userTask id="P12_plan_atelier_t5" name="Cliquer une commande ou un rack pour ouvrir sa page"><bpmn:documentation>Pas encore : Mène à la commande, ou à la référence de feuille</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux4</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux5</bpmn:outgoing></bpmn:userTask>
     <bpmn:userTask id="P12_plan_atelier_t6" name="Placer les machines, les racks et les pièces sur le plan (une fois)"><bpmn:documentation>Pas encore : Dépend de la liste des machines et du plan fourni par le client</bpmn:documentation><bpmn:incoming>P12_plan_atelier_flux9</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux6</bpmn:outgoing></bpmn:userTask>
     <bpmn:endEvent id="P12_plan_atelier_f" name="Atelier compris en un coup d’œil"><bpmn:incoming>P12_plan_atelier_flux5</bpmn:incoming></bpmn:endEvent>
-    <bpmn:exclusiveGateway id="P12_plan_atelier_gs1" name=""><bpmn:incoming>P12_plan_atelier_flux7</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux8</bpmn:outgoing><bpmn:outgoing>P12_plan_atelier_flux9</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="P12_plan_atelier_gs1" name="Première utilisation ?"><bpmn:incoming>P12_plan_atelier_flux7</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux8</bpmn:outgoing><bpmn:outgoing>P12_plan_atelier_flux9</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:exclusiveGateway id="P12_plan_atelier_gj2" name=""><bpmn:incoming>P12_plan_atelier_flux6</bpmn:incoming><bpmn:incoming>P12_plan_atelier_flux8</bpmn:incoming><bpmn:outgoing>P12_plan_atelier_flux10</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="P12_plan_atelier_flux1" sourceRef="P12_plan_atelier_d" targetRef="P12_plan_atelier_t1" />
     <bpmn:sequenceFlow id="P12_plan_atelier_flux2" sourceRef="P12_plan_atelier_t2" targetRef="P12_plan_atelier_t3" />
@@ -39,8 +39,8 @@
     <bpmn:sequenceFlow id="P12_plan_atelier_flux5" sourceRef="P12_plan_atelier_t5" targetRef="P12_plan_atelier_f" />
     <bpmn:sequenceFlow id="P12_plan_atelier_flux6" sourceRef="P12_plan_atelier_t6" targetRef="P12_plan_atelier_gj2" />
     <bpmn:sequenceFlow id="P12_plan_atelier_flux7" sourceRef="P12_plan_atelier_t1" targetRef="P12_plan_atelier_gs1" />
-    <bpmn:sequenceFlow id="P12_plan_atelier_flux8" name="Sinon" sourceRef="P12_plan_atelier_gs1" targetRef="P12_plan_atelier_gj2" />
-    <bpmn:sequenceFlow id="P12_plan_atelier_flux9" name="Première fois" sourceRef="P12_plan_atelier_gs1" targetRef="P12_plan_atelier_t6" />
+    <bpmn:sequenceFlow id="P12_plan_atelier_flux8" name="Non" sourceRef="P12_plan_atelier_gs1" targetRef="P12_plan_atelier_gj2" />
+    <bpmn:sequenceFlow id="P12_plan_atelier_flux9" name="Oui" sourceRef="P12_plan_atelier_gs1" targetRef="P12_plan_atelier_t6" />
     <bpmn:sequenceFlow id="P12_plan_atelier_flux10" sourceRef="P12_plan_atelier_gj2" targetRef="P12_plan_atelier_t2" />
     <bpmn:textAnnotation id="P12_plan_atelier_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
   </bpmn:process>

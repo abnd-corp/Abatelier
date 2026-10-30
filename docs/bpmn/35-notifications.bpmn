@@ -30,7 +30,7 @@
     <bpmn:userTask id="P35_notifications_t4" name="Traiter la demande dans l’application"><bpmn:documentation>Dans l’application : Les pages existent déjà (commandes, demandes reçues, stock)</bpmn:documentation><bpmn:incoming>P35_notifications_flux4</bpmn:incoming><bpmn:outgoing>P35_notifications_flux5</bpmn:outgoing></bpmn:userTask>
     <bpmn:serviceTask id="P35_notifications_t5" name="Marquer la notification comme lue, puis traitée"><bpmn:documentation>Pas encore : Lue pour tous les comptes ou pour chacun : à définir avec le client</bpmn:documentation><bpmn:incoming>P35_notifications_flux5</bpmn:incoming><bpmn:outgoing>P35_notifications_flux6</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:endEvent id="P35_notifications_f" name="Direction informée, rien d’oublié"><bpmn:incoming>P35_notifications_flux6</bpmn:incoming></bpmn:endEvent>
-    <bpmn:exclusiveGateway id="P35_notifications_gs1" name=""><bpmn:incoming>P35_notifications_flux7</bpmn:incoming><bpmn:outgoing>P35_notifications_flux8</bpmn:outgoing><bpmn:outgoing>P35_notifications_flux9</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="P35_notifications_gs1" name="Trop de notifications non lues ?"><bpmn:incoming>P35_notifications_flux7</bpmn:incoming><bpmn:outgoing>P35_notifications_flux8</bpmn:outgoing><bpmn:outgoing>P35_notifications_flux9</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:exclusiveGateway id="P35_notifications_gj2" name=""><bpmn:incoming>P35_notifications_flux2</bpmn:incoming><bpmn:incoming>P35_notifications_flux8</bpmn:incoming><bpmn:outgoing>P35_notifications_flux10</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="P35_notifications_flux1" sourceRef="P35_notifications_d" targetRef="P35_notifications_t1" />
     <bpmn:sequenceFlow id="P35_notifications_flux2" sourceRef="P35_notifications_t6" targetRef="P35_notifications_gj2" />
@@ -39,8 +39,8 @@
     <bpmn:sequenceFlow id="P35_notifications_flux5" sourceRef="P35_notifications_t4" targetRef="P35_notifications_t5" />
     <bpmn:sequenceFlow id="P35_notifications_flux6" sourceRef="P35_notifications_t5" targetRef="P35_notifications_f" />
     <bpmn:sequenceFlow id="P35_notifications_flux7" sourceRef="P35_notifications_t1" targetRef="P35_notifications_gs1" />
-    <bpmn:sequenceFlow id="P35_notifications_flux8" name="Sinon" sourceRef="P35_notifications_gs1" targetRef="P35_notifications_gj2" />
-    <bpmn:sequenceFlow id="P35_notifications_flux9" name="Trop de non lues" sourceRef="P35_notifications_gs1" targetRef="P35_notifications_t6" />
+    <bpmn:sequenceFlow id="P35_notifications_flux8" name="Non" sourceRef="P35_notifications_gs1" targetRef="P35_notifications_gj2" />
+    <bpmn:sequenceFlow id="P35_notifications_flux9" name="Oui" sourceRef="P35_notifications_gs1" targetRef="P35_notifications_t6" />
     <bpmn:sequenceFlow id="P35_notifications_flux10" sourceRef="P35_notifications_gj2" targetRef="P35_notifications_t2" />
     <bpmn:textAnnotation id="P35_notifications_legende"><bpmn:text>Légende : vert = dans l’application · orange = en partie · rouge = pas encore · gris = hors application (geste manuel)</bpmn:text></bpmn:textAnnotation>
   </bpmn:process>
