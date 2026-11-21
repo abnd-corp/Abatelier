@@ -1,34 +1,21 @@
-# Images de production sur GHCR (charte Abnd, R44) : une image par mise en production,
-# construite uniquement quand une promotion arrive sur main (merge staging → main).
-# Jamais sur dev, staging ni sur une PR. Images privées, amd64 et arm64 (Raspberry Pi).
+# Images sur GHCR (charte Abnd, R44, ADR 0002) : chaque image est construite une seule fois, à la fusion dans dev,
+# et seulement si les sources de son service ont changé (.github/images/services.json). staging, main et les versions
+# la reprennent sans la reconstruire (promotion.yml). Images privées, amd64 et arm64 (Raspberry Pi). Jamais latest.
 name: Images
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      publier:
-        description: 'false : construit sans publier (essai)'
-        type: boolean
-        default: false
+    branches: [dev]
 
-permissions:
-  contents: read
-  packages: write
+concurrency:
+  group: images-dev
+  cancel-in-progress: false
 
 jobs:
-  api:
-    uses: abnd-corp/gouvernance/.github/workflows/publier-image.yml@ef4919b6d078e96c6fc00d21d90be4d1fb84a8cb # gouvernance, 23 octobre 2026
-    with:
-      nom: abatelier-api
-      contexte: ./api
-      cible: prod
-      publier: ${{ github.event_name == 'push' || inputs.publier }}
-  web:
-    uses: abnd-corp/gouvernance/.github/workflows/publier-image.yml@ef4919b6d078e96c6fc00d21d90be4d1fb84a8cb # gouvernance, 23 octobre 2026
-    with:
-      nom: abatelier-web
-      contexte: ./web
-      cible: prod
-      publier: ${{ github.event_name == 'push' || inputs.publier }}
+  ci:
+    uses: ./.github/workflows/ci.yml
+  images:
+    needs: ci
+    permissions: { contents: read, packages: write }
+    uses: abnd-corp/gouvernance/.github/workflows/images-dev.yml@8bea9c55412c228911d6157ce327f22bf1bfeb43 # gouvernance, 21 novembre 2026
+    with: { gouvernance: 8bea9c55412c228911d6157ce327f22bf1bfeb43 }

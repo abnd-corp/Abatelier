@@ -1,0 +1,21 @@
+# Chaque lundi : supprime les images jamais promues (ni dev, staging, prod, ni version) de plus de 14 jours.
+# Lancé à la main, il ne fait que lister, sauf si on décoche l'essai.
+name: Nettoyage des images
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      essai:
+        description: "Essai : lister sans supprimer"
+        type: boolean
+        default: true
+
+jobs:
+  nettoyage:
+    permissions: { contents: read, packages: write }
+    uses: abnd-corp/gouvernance/.github/workflows/nettoyer-images-non-promues.yml@8bea9c55412c228911d6157ce327f22bf1bfeb43 # gouvernance, 21 novembre 2026
+    with:
+      gouvernance: 8bea9c55412c228911d6157ce327f22bf1bfeb43
+      essai: ${{ github.event_name == 'workflow_dispatch' && inputs.essai || false }}

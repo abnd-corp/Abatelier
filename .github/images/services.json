@@ -1,0 +1,20 @@
+{
+  "projet": "abatelier",
+  "plateformes": "linux/amd64,linux/arm64",
+  "services": {
+    "api": {
+      "image": "abatelier-api",
+      "contexte": "api",
+      "dockerfile": "api/Dockerfile",
+      "cible": "prod",
+      "sources": ["api"]
+    },
+    "web": {
+      "image": "abatelier-web",
+      "contexte": "web",
+      "dockerfile": "web/Dockerfile",
+      "cible": "prod",
+      "sources": ["web"]
+    }
+  }
+}
