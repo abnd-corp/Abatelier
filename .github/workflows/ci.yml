@@ -1,9 +1,11 @@
 name: CI
 
+# Sur dev, la CI est lancée par images.yml avant le build des images (sinon elle tournerait deux fois).
 on:
   pull_request:
   push:
-    branches: [dev, staging, main]
+    branches: [staging, main]
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.ref }}

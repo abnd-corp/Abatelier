@@ -1,0 +1,14 @@
+# Promotion sans reconstruction (R44, ADR 0002) : staging → tag staging, main → tag prod,
+# tag vX.Y.Z sur main (make release V=X.Y.Z) → tag de version et release GitHub avec le manifeste.
+name: Promotion
+
+on:
+  push:
+    branches: [staging, main]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+jobs:
+  promotion:
+    permissions: { contents: write, packages: write }
+    uses: abnd-corp/gouvernance/.github/workflows/promouvoir-images.yml@8bea9c55412c228911d6157ce327f22bf1bfeb43 # gouvernance, 21 novembre 2026
+    with: { gouvernance: 8bea9c55412c228911d6157ce327f22bf1bfeb43 }

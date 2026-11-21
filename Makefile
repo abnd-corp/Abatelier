@@ -146,3 +146,9 @@ promote-staging: ## Ouvre la PR dev → staging
 
 promote-main: ## Ouvre la PR staging → main (mise en production)
 	gh pr create --base main --head staging --title "Mise en production" --body "Promotion de staging vers main."
+
+GOUVERNANCE := 8bea9c55412c228911d6157ce327f22bf1bfeb43
+
+.PHONY: release
+release: ## Pose la version V=X.Y.Z sur main (en production) : la CI tague les images et crée la release avec le manifeste
+	@curl -fsSL https://raw.githubusercontent.com/abnd-corp/gouvernance/$(GOUVERNANCE)/scripts/poser-version.sh | bash -s -- $(V)
